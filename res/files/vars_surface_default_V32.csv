@@ -1,0 +1,71 @@
+; This file is parsed by IDL to post-process the WRF original output files,,,,,,,
+; WRF Version: 3.2,,,,,,,
+; Dimensions: Time, DateStrLen, west_east, south_north,,,,
+DIMENSIONS,Time, DateStrLen, west_east, south_north,,,
+; Format:,,,,,,,
+; Var,Keep,Static,Acc ,Diff,3D_to_surf,Unstag,Comment
+Times,+, , ,, ,,Time str in bytes
+LU_INDEX,+,+, ,, ,,land use category
+U,,,,,+,+,x-wind component
+V,,,,,+,+,y-wind component
+W,,,,,+,,z-wind component
+T,,,,,+,,perturbation potential temperature (theta-t0)
+PH,,,,,+,,perturbation geopotential
+PHB,,,,,+,,base-state geopotential
+MU,,,,,,,perturbation dry air mass in column
+MUB,,,,,,,base state dry air mass in column
+NEST_POS,+,+,,,,,mask with nest position in domain
+P,,,,,+,,perturbation pressure
+PB,,,,,+,,base state pressure
+P_HYD,,,,,+,,hydrostatic pressure
+Q2,+, , ,, ,,qv at 2 m 
+T2,+, , ,, ,,temp at 2 m 
+TH2,+, , ,, ,,pot temp at 2 m
+PSFC,+, , ,, ,,sfc pressure
+U10,+, , ,, ,,u at 10 m
+V10,+, , ,, ,,v at 10 m
+LANDMASK,,+, ,, ,,1 for land 0 fo water
+SEAICE,,,,,,,sea ice
+XICEM,,,,,,,sea ice flag (previous step)
+SFROFF,+, , ,, ,,surface runoff
+UDROFF,+,,,, ,,underground runoff
+IVGTYP,+,+,,, ,,dominant vegetation category
+ISLTYP,+,+, ,, ,,dominant soil category 
+VEGFRA,+,+, ,, ,,vegetation fraction
+GRDFLX,+, , ,, ,,ground heat flux 
+ACGRDFLX,, ,+,, ,,accumulated ground heat flux
+SNOW,+, , ,+, ,,snow water equivalent
+SNOWH,+, , ,+, ,,physical snow depth
+CANWAT,,,,, ,,canopy water
+SST,+,,,,,,sea surface temperature
+SSTSK,+,,,,,,skin sea surface temperature
+LAI,,+,,,,,leaf area index
+HGT,+,+, ,, ,,terrain height
+TSK,+, , ,, ,,surface skin temperature
+RAINC,+, ,+,, ,,accumulated total cumulus precipitation
+RAINNC,+, ,+,, ,,accumulated total grid scale precipitation 
+SNOWNC,+, ,+,,,,accumulated total grid scale snow and ice 
+GRAUPELNC,, ,+,, ,,accumulated total grid scale graupel
+HAILNC,, ,+,, ,,accumulated total grid scale hail
+SWDOWN,+, ,,, ,,downward short wave flux at ground surface
+GLW,+, ,,, ,,downward long wave flux at ground surface
+OLR,+, ,,, ,,toa outgoing long wave
+XLAT,+,+, ,, ,,Latitude south is negative
+XLONG,+,+, ,, ,,Longitude west is negative
+ALBEDO,+,, ,, ,,albedo
+ALBBCK,,, ,, ,,background albedo
+EMISS,+,, ,, ,,surface emissivity
+TMN,, , ,, ,,soil temperature at lower boundary 
+XLAND,,+, ,, ,,land mask (1 for land  2 for water) 
+PBLH,, , ,, ,,pbl height
+HFX,+, , ,, ,,upward heat flux at the surface
+QFX,+,, ,, ,,upward moisture flux at the surface 
+LH,+, , ,, ,,latent heat flux at the surface 
+ACHFX,, ,+,, ,,accumulated upward heat flux at the surface
+ACLHF,, ,+,, ,,accumulated upward latent heat flux at the surface
+SOILT1,+,,,, ,,temperature inside snow
+SNOWC,+, ,,, ,,flag indicating snow coverage (1 for snow cover)
+SR,,, ,, ,,fraction of frozen precipitation
+POTEVP,+, ,+,, ,,accumulated potential evaporation
+SNOPCX,+, , ,, ,,snow phase change heat flux
+SOILTB,, , ,, ,,bottom soil temperature
