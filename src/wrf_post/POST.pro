@@ -595,8 +595,7 @@ end
 ;-
 pro POST_aggregate_directory,  directory, domain, end_time = end_time, spinup_index = spinup_index, start_time = start_time, timestep = timestep, OUTdirectory = OUTdirectory, vartokeep_file = vartokeep_file
 
-; THE UNIQUE PROCEDURE TO CALL.
-; INPUT: 
+; THE UNIQUE PROCEDURE TO CALL. INPUT: 
 ; directory: dir where to search for files
 ; domain: domain id (1, 2, 3, ...)
 ; t1: end time in {ABS_DATE} (t1 = MAKE_ABS_DATE(year = ...) )
