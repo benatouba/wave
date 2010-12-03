@@ -1,17 +1,6 @@
+How to make the WAVE work
 
-The WAVE lib works just like the TNT, but needs COYOTE to work properly.
-
-Just change your Startup.pro file like this:
-
-----------------------------------------------------------------
-print, 'Start the TNT with @TNTstart.mac'
-print, 'Start the WAVE and the TNT with @WAVEstart.mac'
-
-!path = !path + ':/path_to_the/TNT/V2_2/'
-!path = !path + ':/path_to_the/COYOTE/'
-!path = !path + ':/path_to_the/WAVE/'
-
-
-device,decomposed=0
-!order = 0
-------------------------------------------------------------------
+1. Have a look to the ./doc folder
+2. Check that all dependencies are respected: TNT (V2.2 SR5 at least), COYOTE (last version)
+3. Add the WAVE folder to your IDL Path
+4. execute '@WAVEstart.mac'
