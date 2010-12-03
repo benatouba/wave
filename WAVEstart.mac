@@ -1,0 +1,62 @@
+;***********************************************************************
+;                                                                      *
+; Author(s)   :  D. Scherer, F. Maussion                               *
+; Name        :  WAVEstart.mac                                         *
+; Version     :  WAVE 0.1                                              *
+; Language    :  IDL 7.0 and higher                                    *
+; Date        :  04-Jan-2009                                           *
+; Last Update :  04-Nov-2010 FaM                                       *
+;                                                                      *
+;                                                                      *
+; IDL macro for starting the WAVE library system.                      *
+;                                                                      *
+;***********************************************************************
+
+@TNTstart.mac
+
+; Reset IDL session
+retall
+widget_control, /RESET
+close, /ALL
+heap_gc
+
+; Get WAVE root
+.run WAVE_root.pro
+WAVE_root, root
+
+pushd, root
+
+; Compile modules
+.run WAVE.pro
+.run TIME.pro
+.run UTILS.pro
+.run POST.pro
+.run WQuickPlot.pro
+.run WLinePlot.pro
+
+.run PLO.pro
+.run NICE_PLOTS.pro
+
+; Compile objects
+.run Grid2D__Define.pro
+.run HDF__Define.pro
+.run HDF_EOS__Define.pro
+.run NCDF__Define.pro
+.run GEO_nc__Define.pro
+
+.run TRMM_nc__Define.pro
+.run WRF_nc__Define.pro
+.run MODIS_Grid__Define.pro
+.run AMSR_E__Define.pro
+.run WDTM__Define.pro
+
+resolve_all, /QUIET
+
+; Initialize WAVE
+@WAVE.inc
+
+popd
+
+WAVE_init
+
+delvar, root
