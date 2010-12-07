@@ -412,9 +412,7 @@ function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, 
   
   if N_ELEMENTS(refTime) eq 0 then refTime = QMS_TIME()
   
-  if arg_okay(refTime, /NUMERIC) then outDate = refTime  $ 
-      else if arg_okay(refTime, STRUCT={ABS_DATE}) then outDate = refTime.qms    $
-         else Message, WAVE_Std_Message('refTime', /ARG)
+  if ~check_WTIME(refTime, OUT_QMS=outDate) then Message, WAVE_Std_Message('refTime', /ARG)
   
   if not keyword_set(day) then day = 0L
   if not keyword_set(hour) then hour = 0L
@@ -748,9 +746,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   
   if N_ELEMENTS(refDate) eq 0 then refDate = MAKE_ABS_DATE()
   
-  if arg_okay(refDate, /NUMERIC) then outDate = MAKE_ABS_DATE(qms = REFdate)   $ 
-      else if arg_okay(refDate, STRUCT={ABS_DATE}) then outDate = REFdate    $
-         else Message, WAVE_Std_Message('refDate', /ARG)
+  if ~check_WTIME(refDate, OUT_ABSDATE=outDate) then Message, WAVE_Std_Message('refDate', /ARG)
    
   n_year = n_elements(year)
   n_month = n_elements(month)
@@ -912,9 +908,7 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
   
   if N_ELEMENTS(time) eq 0 then mytime = MAKE_ABS_DATE()
   
-  if arg_okay(time, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = time)   $ 
-   else if arg_okay(time, STRUCT={ABS_DATE}) then mytime = time    $
-    else Message, WAVE_Std_Message('time', /ARG)
+  if ~check_WTIME(time, OUT_ABSDATE=mytime) then Message, WAVE_Std_Message('time', /ARG)
   
   n = N_ELEMENTS(mytime)
 
@@ -1236,9 +1230,7 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
   if N_ELEMENTS(startTime) ne 1 then  Message, WAVE_Std_Message('startTime', /SCALAR)
   if N_ELEMENTS(nsteps) ne 1 then nsteps = 1
   
-  if arg_okay(startTime, /NUMERIC) then t = startTime  $ 
-      else if arg_okay(startTime, STRUCT={ABS_DATE}) then t = startTime.qms    $
-         else Message, WAVE_Std_Message('startTime', /ARG)
+  if ~check_WTIME(startTime, OUT_QMS=t) then Message, WAVE_Std_Message('startTime', /ARG)
   
   ;KEYWORDS Handling
   mode = 0
@@ -1382,14 +1374,9 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
     RETURN, 0
   ENDIF
   
-  if arg_okay(startTime, /NUMERIC) then t1 = startTime  $ 
-    else if arg_okay(startTime, STRUCT={ABS_DATE}) then t1 = startTime.qms    $
-       else Message, WAVE_Std_Message('startTime', /ARG)
-       
-  if arg_okay(endTime, /NUMERIC) then t2 = endTime  $ 
-    else if arg_okay(endTime, STRUCT={ABS_DATE}) then t2 = endTime.qms    $
-       else Message, WAVE_Std_Message('endTime', /ARG)
-    
+  if ~check_WTIME(startTime, OUT_QMS=t1) then Message, WAVE_Std_Message('startTime', /ARG)
+  if ~check_WTIME(endTime, OUT_QMS=t2) then Message, WAVE_Std_Message('endTime', /ARG)
+      
   if t1 le t2 then sign = 1 else sign = -1
   
   if KEYWORD_SET(timestep) then begin
@@ -1567,12 +1554,7 @@ function check_TS, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
   if N_PARAMS() lt 1 then Message, WAVE_Std_Message(/NARG)
   if N_ELEMENTS(ts) lt 2 then Message, WAVE_Std_Message(/NARG)
   
-  was_Str = FALSE
-  if arg_okay(ts, /NUMERIC) then mytime = ts   $ 
-   else if arg_okay(ts, STRUCT={ABS_DATE}) then begin 
-    mytime = ts.qms 
-    was_Str = TRUE
-   endif else Message, WAVE_Std_Message('ts', /ARG)
+  if ~check_WTIME(ts, OUT_QMS=mytime, WAS_ABSDATE=was_Str) then Message, WAVE_Std_Message('ts', /ARG)
 
   n = N_ELEMENTS(mytime)
   steps = mytime[1:n-1] - mytime[0:n-2]
@@ -1624,4 +1606,77 @@ function check_TS, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
   
 end
 
+;+
+; :Description:
+;    This function checks if a time (e.g. a parameter of a procedure) is 
+;    in a Format that WAVE can understand and retrieves the time in one 
+;    of the both formats (qms or {ABS_DATE}) if desired. 
+;       
+; :Categories:
+;    General/Time
+;
+; :Params:
+;    time: in, required , type={ABS_DATE}/qms vector, default = none
+;          the parameter to check
+;
+;      
+; :Keywords:
+;    OUT_QMS: out, optional, type=qms, default=none
+;             if set to a named variable, returns the 'time' in qms
+;    OUT_ABSDATE: out, optional, type={ABS_DATE}, default=none
+;                 if set to a named variable, returns the 'time' in {ABS_DATE}
+;    WAS_ABSDATE: out, optional, type=boolean, default=none
+;                 if set to a named variable, returns True if 'time' is a {ABS_DATE} or False in all other cases
+;    WAS_QMS: out, optional, type=boolean, default=none
+;             if set to a named variable, returns True if 'time' is a QMS or False in all other cases
+;
+; :Returns:
+;    TRUE if the 'time' is a good WAVE time format, FALSE in all other cases.
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;       Written by FaM, 2010.
+;       
+;       Modified::
+;          07-Dec-2010 FaM
+;          first appearance
+;-
+function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_ABSDATE = was_absdate, WAS_QMS = was_qms
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /CANCEL
+    void = WAVE_Error_Message()
+    RETURN, FALSE
+  ENDIF  
+  
+  was_qms = FALSE
+  was_absdate = FALSE
+  
+  if arg_okay(time, /NUMERIC) then begin
+    if ARG_PRESENT(OUT_QMS) then OUT_QMS = time
+    if ARG_PRESENT(OUT_ABSDATE) then OUT_ABSDATE = MAKE_ABS_DATE(QMS = time)
+    was_qms = TRUE
+    return, TRUE
+  endif 
+  
+  if arg_okay(time, STRUCT={ABS_DATE}) then begin
+    if ARG_PRESENT(OUT_QMS) then OUT_QMS = time.qms
+    if ARG_PRESENT(OUT_ABSDATE) then OUT_ABSDATE = time
+    was_absdate = TRUE
+    return, TRUE
+  endif
+  
+  ; If we are here there is a problem
+  OUT_QMS = QMS_TIME()
+  out_absdate = MAKE_ABS_DATE()
+  return, FALSE
+
+end

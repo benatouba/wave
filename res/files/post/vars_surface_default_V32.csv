@@ -69,3 +69,4 @@ SR,,, ,, ,,fraction of frozen precipitation
 POTEVP,+, ,+,, ,,accumulated potential evaporation
 SNOPCX,+, , ,, ,,snow phase change heat flux
 SOILTB,, , ,, ,,bottom soil temperature
+XTIME,, , ,, ,,minutes since simulation start

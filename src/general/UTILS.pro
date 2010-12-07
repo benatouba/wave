@@ -142,15 +142,16 @@ end
 
 ;+
 ; :Description:
-;    TODO: Describe procedure etc.
+;    This function simply deaccumulates a field (like RAINNC).
+;    It substracts the step i from the step i+1 on the last 
+;    dimension of the array, supposed to be time.
 ;
 ; :Categories:
 ;    WAVE/UTILS
 ;    
 ; :Params:
-;    accumulated: in, required, type= , default=none
-;
-; :Examples:
+;    accumulated: in, required, default=none
+;                 the accumulated variable (dim 1 or 3)
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -426,52 +427,19 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
         quad = (tflon[i] - tilon)^2 + (tflat[i]- tilat)^2
         minquad = min(quad, p)
         if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....       
-        out[i] = p & DISTANCES[i] = minquad        
+        out[i] = p 
+        DISTANCES[i] = minquad        
       endfor
       
     end
     
     'CLASSICAL_F': begin
     
-      for i = 0l, n - 1 do begin      
-        quad = (tflon[i] - tilon)^2 + (tflat[i]- tilat)^2        
-        for j=0L, 3 do begin
-          minquad = min(quad, p)
-          if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....
-          out[j,i] = p & DISTANCES[j,i] = minquad
-          quad[p] = max(quad) * 2. ;dummy large distance
-        endfor        
-      endfor
-      
-    end
-    
-    'ROW': begin
-    
-      n1 = n_elements(tilon)
-      x1 = tilon[*] & y1 = tilat[*]
-      x2 = tflon[*] & y2 = tflat[*]
-      
-      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
-        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
-        
-      m = MIN(d, DIMENSION=2, s)
-      out[*] = s[*]/n & distances[*] = d[s]
-      
-    end
-    
-    'ROW_F': begin
-    
-      n1 = n_elements(tilon)
-      x1 = tilon[*] & y1 = tilat[*]
-      x2 = tflon[*] & y2 = tflat[*]
-      
-      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
-        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
-        
-      for j=0L, 3 do begin
-        m = MIN(d, DIMENSION=2, s)
-        out[j,*] = s[*]/n & distances[j,*] = d[s]
-        d[s] = max(d) * 2. ;dummy large distance
+      for i = 0l, n - 1 do begin
+        quad = (tflon[i] - tilon)^2 + (tflat[i]- tilat)^2
+        s = sort(quad)
+        out[*,i] = s[0:3]
+        DISTANCES[*,i] = quad[s[0:3]]
       endfor
       
     end
@@ -489,51 +457,82 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
       
     end
     
-    'TRIANGLE_F': begin
-    
-      n1 = n_elements(tilon)
+;    'ROW': begin
+;    
+;      n1 = n_elements(tilon)
 ;      x1 = tilon[*] & y1 = tilat[*]
-      x2 = TEMPORARY(tflon[*]) 
-      y2 = TEMPORARY(tflat[*])     
-      
-      triangulate, tilon[*], tilat[*], c ; Compute Delaunay triangulation     
-      subsets = LINDGEN(SIZE(tilon, /DIMENSIONS))
-      tout = GRIDDATA(tilon[*],tilat[*], subsets[*], XOUT=x2, YOUT=y2, /NEAREST_N, TRIANGLES =c)
-      
-      inds = ARRAY_INDICES(tilon, tout)
-      subindX = [[REFORM(inds[0,*]) - 3],[REFORM(inds[0,*]) + 3]]
-      subindY = [[REFORM(inds[1,*]) - 3],[REFORM(inds[1,*]) + 3]]
-      
-      indmax = N_ELEMENTS(tilon[*,0])-1
-      p = where(subindX gt indmax, cnt)
-      if cnt ne 0 then subindX[p] = indmax
-      p = where(subindX lt 0, cnt)
-      if cnt ne 0 then subindX[p] = 0  
-      
-      indmax = N_ELEMENTS(tilon[0,*]) -1
-      p = where(subindY gt indmax, cnt)
-      if cnt ne 0 then subindY[p] = indmax            
-      p = where(subindY lt 0, cnt)
-      if cnt ne 0 then subindY[p] = 0      
-      
-      for i = 0l, n - 1 do begin
-                     
-        sublons = tilon[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-        sublats = tilat[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-        subsub = subsets[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-        
-        quad = (tflon[i] - sublons)^2 + (tflat[i]- sublats)^2
-        
-        for j=0L, 3 do begin
-          minquad = min(quad, p)
-          if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....          
-          out[j,i] = subsub[p] & DISTANCES[j,i] = minquad
-          quad[p] = max(quad) * 2. ;dummy large distance
-        endfor
-        
-      endfor
-     
-    end
+;      x2 = tflon[*] & y2 = tflat[*]
+;      
+;      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
+;        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
+;        
+;      m = MIN(d, DIMENSION=2, s)
+;      out[*] = s[*]/n & distances[*] = d[s]
+;      
+;    end
+;    
+;    'ROW_F': begin
+;    
+;      n1 = n_elements(tilon)
+;      x1 = tilon[*] & y1 = tilat[*]
+;      x2 = tflon[*] & y2 = tflat[*]
+;      
+;      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
+;        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
+;        
+;      for j=0L, 3 do begin
+;        m = MIN(d, DIMENSION=2, s)
+;        out[j,*] = s[*]/n & distances[j,*] = d[s]
+;        d[s] = max(d) * 2. ;dummy large distance
+;      endfor
+;      
+;    end
+;    
+;    'TRIANGLE_F': begin
+;    
+;      n1 = n_elements(tilon)
+;;      x1 = tilon[*] & y1 = tilat[*]
+;      x2 = TEMPORARY(tflon[*]) 
+;      y2 = TEMPORARY(tflat[*])     
+;      
+;      triangulate, tilon[*], tilat[*], c ; Compute Delaunay triangulation     
+;      subsets = LINDGEN(SIZE(tilon, /DIMENSIONS))
+;      tout = GRIDDATA(tilon[*],tilat[*], subsets[*], XOUT=x2, YOUT=y2, /NEAREST_N, TRIANGLES =c)
+;      
+;      inds = ARRAY_INDICES(tilon, tout)
+;      subindX = [[REFORM(inds[0,*]) - 3],[REFORM(inds[0,*]) + 3]]
+;      subindY = [[REFORM(inds[1,*]) - 3],[REFORM(inds[1,*]) + 3]]
+;      
+;      indmax = N_ELEMENTS(tilon[*,0])-1
+;      p = where(subindX gt indmax, cnt)
+;      if cnt ne 0 then subindX[p] = indmax
+;      p = where(subindX lt 0, cnt)
+;      if cnt ne 0 then subindX[p] = 0  
+;      
+;      indmax = N_ELEMENTS(tilon[0,*]) -1
+;      p = where(subindY gt indmax, cnt)
+;      if cnt ne 0 then subindY[p] = indmax            
+;      p = where(subindY lt 0, cnt)
+;      if cnt ne 0 then subindY[p] = 0      
+;      
+;      for i = 0l, n - 1 do begin
+;                     
+;        sublons = tilon[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
+;        sublats = tilat[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
+;        subsub = subsets[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
+;        
+;        quad = (tflon[i] - sublons)^2 + (tflat[i]- sublats)^2
+;        
+;        for j=0L, 3 do begin
+;          minquad = min(quad, p)
+;          if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....          
+;          out[j,i] = subsub[p] & DISTANCES[j,i] = minquad
+;          quad[p] = max(quad) * 2. ;dummy large distance
+;        endfor
+;        
+;      endfor
+;     
+;    end
         
   ENDCASE
           
@@ -608,30 +607,24 @@ function utils_COMPUTE_NEAREST_NEIGHBORHOOD, pos, data, output_size
   
 end
 
-
-;-----------------------------------------------------------------------
 ;+
 ; :Description:
 ;    This procedure reads all TRMM netcdf files from a directory, sorts them by date
-;       and aggregates the pcp field. 
-;       Returns TRUE if time is found, FALSE in all other cases.
+;       and aggregates the precipitation field. 
+;       
+;    !!!! Carefull: not tested since a long time
 ;       
 ; :Categories:
 ;    WAVE/UTILS
 ;
 ; :Params:
-;    fname: in, required, type= , default=none
-;       
+;    fname: in, required, type=string , default=none
+;           any TRMM file in the directory to aggregate
 ; :Keywords:
-;    SUBSET: in, optional, type= , default=none
-;    VERBOSE: in, optional, type= , default=none
-;    NOSHIFT: in, optional, type= , default=none
+;    SUBSET: in, optional, default=none
+;    VERBOSE: in, optional, default=none
+;    NOSHIFT: in, optional, default=none
 ;    
-; :Examples:
-;        Calling Sequence::
-;                 Result = utils_TRMM_aggregate(fname)
-;     
-; TODO: correct documentation, old documentation wasn't up to date for this procedure
 ; 
 ; :Author:
 ;       Fabien Maussion::
