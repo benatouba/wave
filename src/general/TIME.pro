@@ -1,4 +1,5 @@
 ; docformat = 'rst'
+
 ;+
 ; 
 ; This bundle of structures and procedures gives a background to the WAVE user
@@ -200,12 +201,13 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   mytime = 0LL
   
@@ -403,12 +405,13 @@ function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, 
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if N_ELEMENTS(refTime) eq 0 then refTime = QMS_TIME()
   
@@ -566,12 +569,13 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if KEYWORD_SET(qms) then begin ; Make an absolute date from QMS
   
@@ -737,12 +741,13 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if N_ELEMENTS(refDate) eq 0 then refDate = MAKE_ABS_DATE()
   
@@ -899,12 +904,13 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if N_ELEMENTS(time) eq 0 then mytime = MAKE_ABS_DATE()
   
@@ -993,12 +999,13 @@ function TIME_to_JD, time
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
  
   if N_ELEMENTS(time) eq 0 then TIME = QMS_TIME()
   
@@ -1096,12 +1103,13 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
     
   tstep = {TIME_STEP}
   
@@ -1220,12 +1228,13 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if N_ELEMENTS(startTime) ne 1 then  Message, WAVE_Std_Message('startTime', /SCALAR)
   if N_ELEMENTS(nsteps) ne 1 then nsteps = 1
@@ -1367,12 +1376,13 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
   COMPILE_OPT IDL2
   
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if ~check_WTIME(startTime, OUT_QMS=t1) then Message, WAVE_Std_Message('startTime', /ARG)
   if ~check_WTIME(endTime, OUT_QMS=t2) then Message, WAVE_Std_Message('endTime', /ARG)
@@ -1544,12 +1554,13 @@ function check_TS, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
   COMPILE_OPT IDL2
     
   ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, FALSE
-  ENDIF  
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   if N_PARAMS() lt 1 then Message, WAVE_Std_Message(/NARG)
   if N_ELEMENTS(ts) lt 2 then Message, WAVE_Std_Message(/NARG)
@@ -1650,12 +1661,14 @@ function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_AB
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, FALSE
-  ENDIF  
+  ; Standard error handling.
+  ON_ERROR, 2
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /CANCEL
+;    void = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF  
   
   was_qms = FALSE
   was_absdate = FALSE

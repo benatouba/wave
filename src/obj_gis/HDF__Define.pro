@@ -20,7 +20,9 @@
 ;       HDF files and provides some tools for rapid visualisation and
 ;       to analyse the content of a HDF file.
 ;       
-;       It should be the superclass from all HDF related objects 
+;       It should be the superclass from all HDF related objects.
+;       
+;        TODO: add the same functionalities as Ncdf.
 ;              
 ;       =================================================================
 ;       Superclass:

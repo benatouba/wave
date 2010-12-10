@@ -362,7 +362,7 @@ function ARCLake_mask::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_
   ;*****************************************
   ; First, define the ORIGINAL grid geoloc *
   ;*****************************************
-  lok = geo_nc_LonLat(self.cdfid, lon, lat)
+  lok = utils_nc_LonLat(self.cdfid, lon, lat)
   if lok eq FALSE then message, 'Could not read lats or lons from this file...'
   lat = ROTATE(lat,2)
     

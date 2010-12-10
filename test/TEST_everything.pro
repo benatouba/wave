@@ -1,3 +1,8 @@
+function TEST_file_directory
+   ; Put the WAVE test pack path here.
+   return, '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/'     
+end
+
 pro TEST_MAKE_ABS_DATE
 
   error= 0
@@ -614,7 +619,387 @@ pro TEST_TIME
   TEST_check_TS
 end
 
+
+pro TEST_TRMM_3B42
+    
+    fdir = TEST_file_directory() + 'TRMM/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    trmm_3B42 = OBJ_NEW('TRMM_nc', FILE=fdir+'3B42.081001.3.6A.nc')
+    
+    trmm_3B42->get_time, time, nt, t0, t1    
+    if nt ne 1 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 01, hour = 3) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 01, hour = 3) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time ne QMS_TIME(year = 2008, month = 10, day = 01, hour = 3) then error += 1
+    
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1
+    
+    trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    varPcp = trmm_3B42->get_Var('precipitation', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    
+    trmm_3B42->GetProperty, cdfid = trmm_3B42_ID, TYPE=type
+    NCDF_VARGET, trmm_3B42_ID,  'precipitation', varOrig        
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1
+    if TYPE ne '3B42_h' then  error += 1
+    
+    undefine, vtime, vn
+    varPcp = trmm_3B42->get_prcp(vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1
+    
+    ;-------------
+    ; Test Subset
+    ;-------------    
+    
+    ; Simple subset
+    ok = trmm_3B42->define_subset(SUBSET_IJ=[4,400,4,100])
+    if ok ne 1 THEN error +=1    
+    varPcp = trmm_3B42->get_prcp(vtime, vnt)
+    varOrigCrop = varOrig[4:4+399,4:4+99]
+    if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
+    
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 400 then  error += 1
+    if ny ne 100 then  error += 1
+    if lon[0,0] ne -179.875 + 1. then  error += 1
+    if lat[0,0] ne -49.875 + 1. then  error += 1
+    
+    if lon[399,99] ne -179.875 + (399. + 4.) * 0.25 then  error += 1
+    if lat[399,99] ne -49.875  + (99. + 4.) * 0.25 then  error += 1
+    
+    trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    ; reset subset
+    ok = trmm_3B42->define_subset()
+    if ok ne 1 THEN error +=1  
+    varPcp = trmm_3B42->get_Var('precipitation', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1    
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1    
+    trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    ; Lat-Lon subset
+    ok = trmm_3B42->define_subset(SUBSET_LL=[70.01,10.02,120.01,45.0001], SUBSET_IJ=mysubs)
+    if ok ne 1 THEN error +=1  
+            
+    trmm_3B42->QuickPlotPrcp
+    ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
+    if ok eq 'No' then error += 1
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny    
+    if lon[0,0] ne 70.125 then error += 1
+    if lon[0,ny-1] ne 70.125 then error += 1
+    if lon[nx-1,0] ne 120.125 then error += 1
+    if lon[nx-1,ny-1] ne 120.125 then error += 1    
+    if lat[0,0] ne 10.125 then error += 1
+    if lat[nx-1,0] ne 10.125 then error += 1
+    if lat[0,ny-1] ne 45.125 then error += 1
+    if lat[nx-1,ny-1] ne 45.125 then error += 1   
+    
+    trmm_3B42->Get_LonLat, gislon, gislat, gisnx, gisny
+    if gisnx ne nx then  error += 1
+    if gisny ne ny then  error += 1    
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    varPcp = trmm_3B42->get_prcp(vtime, vnt)
+    varOrigCrop = varOrig[mysubs[0]:mysubs[0]+mysubs[1]-1,mysubs[2]:mysubs[2]+mysubs[3]-1]
+    if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
+    
+    ; reset subset
+    ok = trmm_3B42->define_subset()
+    if ok ne 1 THEN error +=1  
+    varPcp = trmm_3B42->get_Var('precipitation', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1    
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1    
+    trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    OBJ_DESTROY, trmm_3B42     
+    if error ne 0 then message, 'TEST_TRMM_3B42 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42 passed'
+  
+end
+
+pro TEST_TRMM_3B42_daily
+    
+    fdir = TEST_file_directory() + 'TRMM/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    TRMM_3B42_daily = OBJ_NEW('TRMM_nc', FILE=fdir+'3B42_daily.2008.10.01.6.nc')
+    
+    TRMM_3B42_daily->get_time, time, nt, t0, t1    
+    if nt ne 1 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 01) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 01) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time ne QMS_TIME(year = 2008, month = 10, day = 01) then error += 1
+    
+    TRMM_3B42_daily->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne 0.125 then error += 1
+    if lon[0,399] ne 0.125 then error += 1
+    if lon[1439,0] ne 359.875 then error += 1
+    if lon[1439,399] ne 359.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1
+    
+    TRMM_3B42_daily->Get_LonLat, gislon, gislat, nx, ny
+    if gislon[0,0] ne -179.875 then error += 1
+    if gislon[0,399] ne -179.875 then error += 1
+    if gislon[1439,0] ne 179.875 then error += 1
+    if gislon[1439,399] ne 179.875 then error += 1    
+    if gislat[0,0] ne -49.875 then error += 1
+    if gislat[1439,0] ne -49.875 then error += 1
+    if gislat[0,399] ne 49.875 then error += 1
+    if gislat[1439,399] ne 49.875 then error += 1        
+    
+    if total(abs(gislon[0:719,*]-(lon[720:*,*]-360.))) gt 1e-6 then  error += 1
+    if total(abs(gislat[0:719,*]-lat[720:*,*])) gt 1e-6 then  error += 1
+    
+    !QUIET = 1
+    varOrig = TRMM_3B42_daily->get_Var('hrf', vtime, vnt)  
+    !QUIET = 0    
+    undefine, vtime, vn      
+    varPcp = TRMM_3B42_daily->get_prcp(vtime, vnt) 
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig[0:719,*]-varPcp[720:*,*])) ne 0 then  error += 1
+    
+    OBJ_DESTROY, TRMM_3B42_daily     
+    if error ne 0 then message, 'TEST_TRMM_3B42_daily NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42_daily passed'
+  
+end
+
+pro TEST_TRMM_3B43
+    
+    fdir = TEST_file_directory() + 'TRMM/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    trmm_3B43 = OBJ_NEW('TRMM_nc', FILE=fdir+'3B43.000801.6.nc')
+    
+    trmm_3B43->get_time, time, nt, t0, t1    
+    if nt ne 1 then error += 1    
+    if t0 ne QMS_TIME(year = 2000, month = 08, day = 01, hour = 0) then error += 1
+    if t1 ne QMS_TIME(year = 2000, month = 08, day = 01, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time ne QMS_TIME(year = 2000, month = 08, day = 01, hour = 0) then error += 1
+    
+    trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1
+    
+    trmm_3B43->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    varPcp = trmm_3B43->get_Var('pcp', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    
+    trmm_3B43->GetProperty, cdfid = trmm_3B43_ID, TYPE=type
+    NCDF_VARGET, trmm_3B43_ID,  'pcp', varOrig        
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1
+    if TYPE ne '3B43' then  error += 1
+    
+    undefine, vtime, vn
+    varPcp = trmm_3B43->get_prcp(vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1
+    
+    ;-------------
+    ; Test Subset
+    ;-------------    
+    
+    ; Simple subset
+    ok = trmm_3B43->define_subset(SUBSET_IJ=[4,400,4,100])
+    if ok ne 1 THEN error +=1    
+    varPcp = trmm_3B43->get_prcp(vtime, vnt)
+    varOrigCrop = varOrig[4:4+399,4:4+99]
+    if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
+    
+    trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 400 then  error += 1
+    if ny ne 100 then  error += 1
+    if lon[0,0] ne -179.875 + 1. then  error += 1
+    if lat[0,0] ne -49.875 + 1. then  error += 1
+    
+    if lon[399,99] ne -179.875 + (399. + 4.) * 0.25 then  error += 1
+    if lat[399,99] ne -49.875  + (99. + 4.) * 0.25 then  error += 1
+    
+    trmm_3B43->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    ; reset subset
+    ok = trmm_3B43->define_subset()
+    if ok ne 1 THEN error +=1  
+    varPcp = trmm_3B43->get_Var('pcp', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1    
+    trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1    
+    trmm_3B43->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    ; Lat-Lon subset
+    ok = trmm_3B43->define_subset(SUBSET_LL=[-70.01,-10.02,-29.76,25.0001], SUBSET_IJ=mysubs)
+    if ok ne 1 THEN error +=1  
+            
+    trmm_3B43->QuickPlotPrcp
+    ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
+    if ok eq 'No' then error += 1
+    trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny    
+    if lon[0,0] ne -70.125 then error += 1
+    if lon[0,ny-1] ne -70.125 then error += 1
+    if lon[nx-1,0] ne -29.875 then error += 1
+    if lon[nx-1,ny-1] ne -29.875 then error += 1    
+    if lat[0,0] ne -10.125 then error += 1
+    if lat[nx-1,0] ne -10.125 then error += 1
+    if lat[0,ny-1] ne 25.125 then error += 1
+    if lat[nx-1,ny-1] ne 25.125 then error += 1   
+    
+    trmm_3B43->Get_LonLat, gislon, gislat, gisnx, gisny
+    if gisnx ne nx then  error += 1
+    if gisny ne ny then  error += 1    
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    varPcp = trmm_3B43->get_prcp(vtime, vnt)
+    varOrigCrop = varOrig[mysubs[0]:mysubs[0]+mysubs[1]-1,mysubs[2]:mysubs[2]+mysubs[3]-1]
+    if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
+    
+    ; reset subset
+    ok = trmm_3B43->define_subset()
+    if ok ne 1 THEN error +=1  
+    varPcp = trmm_3B43->get_Var('pcp', vtime, vnt)  
+    if vnt ne nt then error += 1
+    if vtime ne time then error += 1
+    if total(abs(varOrig-varPcp)) ne 0 then  error += 1    
+    trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny
+    if nx ne 1440 then error += 1
+    if ny ne 400 then error += 1        
+    if lon[0,0] ne -179.875 then error += 1
+    if lon[0,399] ne -179.875 then error += 1
+    if lon[1439,0] ne 179.875 then error += 1
+    if lon[1439,399] ne 179.875 then error += 1    
+    if lat[0,0] ne -49.875 then error += 1
+    if lat[1439,0] ne -49.875 then error += 1
+    if lat[0,399] ne 49.875 then error += 1
+    if lat[1439,399] ne 49.875 then error += 1    
+    trmm_3B43->Get_LonLat, gislon, gislat, nx, ny
+    if total(abs(gislon-lon)) gt 1e-6 then  error += 1
+    if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    OBJ_DESTROY, trmm_3B43     
+    if error ne 0 then message, 'TEST_TRMM_3B43 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B43 passed'
+  
+end
+
+pro TEST_TRMM_AGG
+    
+    fdir = TEST_file_directory() + 'TRMM/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    fname = fdir + '3B42.081001.0.6A.nc'
+;    utils_TRMM_aggregate, fname, /NOSHIFT
+    
+    if error ne 0 then message, 'TEST_TRMM_AGG NOT passed', /CONTINUE else print, 'TEST_TRMM_AGG passed'
+
+end
+
+pro TEST_DATASETS
+  TEST_TRMM_3B42
+  TEST_TRMM_3B42_daily
+  TEST_TRMM_3B43
+  
+end
+
 pro TEST_everything
   TEST_TIME
+  TEST_DATASETS
 end
 

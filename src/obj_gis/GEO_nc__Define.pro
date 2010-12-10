@@ -1,92 +1,86 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  GEO_nc__Define.pro                                    *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  24-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
-
-;-----------------------------------------------------------------------
+; docformat = 'rst'
 ;+
-; NAME:
-;       GENERAL INFORMATION
-;
-;       GEO_nc is the basis class for all kinds of NCDF files that 
-;       contin geolocalisation data. It will try to detect the geolocalistion
-;       info from both dimensions and variables, as well as detetecting
-;       time and Z dimensions. 
-;       This is done based on the COARDS conventions and extended based on
-;       the datasets already implemented in WAVE.
-;        
-;       The major feature of this class is to be able to call the 
-;       #NCDF::get_Var()# method with subsets that have to be previously
-;       defined. For example, WRF and TRMM classes inherits from this
-;       superclass.
-;              
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       NCDF
+; 
+; GEO_nc is the basis class for all kinds of NCDF files that 
+; contain geolocalisation data. It will try to detect the geolocalistion
+; info from both dimensions and variables, as well as detetecting
+; time and Z dimensions. 
+; 
+; This is achieved by checking if the NetCDF file follow the COARDS conventions,
+; and by verifiying some dimension names against a list of known suitable names.
+; TODO: currently this list is hard coded, it should be done using configuration files
+; 
+; The major feature of this class is to be able to call the 
+; 'NCDF::get_Var()' method using subseting. The subset have to be previously
+;  defined with 'define_subset'. 
+;  
+; :Properties: 
+;    XID: in, optional, type = integer
+;         ncdf ID of the X dimension
+;    YID: in, optional, type = integer
+;         ncdf ID of the Y dimension
+;    time: in, optional, type = ptr
+;          the time in qms (-1 if not found)  
+;    t0: in, optional, type = LL64
+;          first time in qms         (-1 if not found)   
+;    t1: in, optional, type = LL64
+;          end time in qms         (-1 if not found)   
+;    nt: in, optional, type = interger
+;          number of elements in time
+;    subset: in, optional, type = integer array 
+;              Four elements array::              
+;                first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
+;                second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
+;                third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
+;                fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
+;   cropped: if it is cropped or not (private)
 ;       
-;       =================================================================
-;       Attributes:
-;       ----------------------
-;          XID:  ID of the X dimension 
-;          YID:  ID of the Y dimension 
-;          TID:  ID of the time dimension  (-1 if not found)
-;          time: ptr_new() the time in qms (null if not found)   
-;          t0  : first time in qms         (-1 if not found)   
-;          t1  : last time in qms          (-1 if not found)  
-;          nt  : number of time            (-1 if not found)
-;          isCropped : '' 
-;          Xsubset : [0L,0L] 
-;                          first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
-;                          second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
-;          Ysubset : [0L,0L] 
-;                          first  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
-;                          second el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.                   
-;    
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the NCDF file. If not set, a dialog window will open
-;              
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-;       =================================================================
-;       Methods:
-;       ----------------------
-;       The following methods can be used directly. Non ducumented methods 
-;       are not for external use.
-;       
-;       
-;       =================================================================
-;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 
-;-----------------------------------------------------------------------
+
 ;+
-; NAME:
-;       GEO_nc__Define
+; :Description:
+; 
+;   Defines the attributes of the class Grid2D. Attributes::
+;   
+;     GEO_nc                      
+;            INHERITS NCDF               
+;            XID : 0L                    
+;            YID : 0L                    
+;            TID : 0L                    
+;            time: ptr_new()           
+;            t0  : 0LL                   
+;            t1  : 0LL                   
+;            nt  : 0L                    
+;            cropped :   ''             
+;            subset : [0L,0L,0L,0L]        
+;            
+;            
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; PURPOSE:
-;       Object structure definition
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 PRO GEO_nc__Define
  
   ; SET UP ENVIRONNEMENT
@@ -108,30 +102,51 @@ PRO GEO_nc__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GEO_nc::Init
-;
-; PURPOSE:
+; :Description:
 ;       Build function. 
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Categories:
+;            WAVE/OBJ_GIS   
 ;
-; KEYWORDS:
-;       FILE: the path to the NCDF file. If not set, a dialog window will open
+; :Keywords:
+;    nx: in, optional, type = integer
+;        number of elements in x-direction
+;    ny: in, optional, type = integer
+;        number of elements in y-direction
+;    x0: in, optional, type = float
+;        most western (most left) x-coordinate
+;    y0: in, optional, type = float
+;        most northern (most upper) y-coordinate
+;    x1: in, optional, type = float
+;        most eastern (most right) x-coordinate
+;    y1: in, optional, type = float
+;        most southern (most lower) y-coordinate
+;    dx: in, optional, type = float
+;        resolution in x-direction
+;    dy: in, optional, type = float
+;        resolution in y-direction
+;    tnt_c: in, optional, type = {TNT_COORD}
+;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
+;    proj: in, optional, type = {TNT_PROJ}
+;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
+;    meta: in, optional, type = string
+;         a string containing any kind of info
+;       
 ;
-; OUTPUT:
-;       1 if the GEO_nc object is updated successfully, 0 if not
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;      Written by FaM, 2010.
+;       
+;       Modified::
+;          22-Nov-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
 ;-
-;-----------------------------------------------------------------------
-Function GEO_nc::Init, FILE = file
+Function GEO_nc::Init, FILE = file, SUBSET = subset
            
            
   ; SET UP ENVIRONNEMENT
@@ -163,7 +178,7 @@ Function GEO_nc::Init, FILE = file
   foundT = -1
   
   for i=0, self.Ndims-1 do begin
-    dimn = self.dimNames[i]
+    dimn = (*self.dimNames)[i]
     p = where(str_equiv(xp) eq str_equiv(dimn), cnt)
     if cnt ne 0 then foundX = i
     p = where(str_equiv(yp) eq str_equiv(dimn), cnt)
@@ -181,21 +196,29 @@ Function GEO_nc::Init, FILE = file
   ;******************************
   ; Check  coordinate variables *
   ;******************************
-  if ~geo_nc_LonLat(slef.cdfid) then  Message, 'X and Y variables could not be found.'
+  if ~utils_nc_LonLat(self.cdfid) then  Message, 'X and Y variables could not be found.'
   
   self.t0 = -1LL
-  self.t1 = -1LL  
-  if foundT gt 0 then begin
-    if ~ geo_nc_COARDS_time(self.cdfid, time, time0, time1, nt) then Message, 'Time dimension found but time could not be parsed.', /INFORMATIONAL
-    self.t0 = time0
-    self.t1 = time1
-    self.time = PTR_NEW(time, /NO_COPY)    
-  endif
+  self.t1 = -1LL 
+  self.time = PTR_NEW(-1LL, /NO_COPY) 
+  if foundT ge 0 then begin
+    if utils_nc_COARDS_time(self.cdfid, time, time0, time1, nt) then begin
+      self.t0 = time0
+      self.t1 = time1
+      self.time = PTR_NEW(time, /NO_COPY)    
+    endif else if utils_wrf_time(self.cdfid, time, time0, time1, nt) then begin
+      self.t0 = time0
+      self.t1 = time1
+      self.time = PTR_NEW(time, /NO_COPY)   
+    endif ; else Message, 'Time dimension found but time could not be parsed.', /INFORMATIONAL
+  endif  
+  
+  self.nT = N_ELEMENTS(*self.time)
   
   ;***********************
   ; Check  crop variable *
   ;***********************
-  if ~self->define_subset(SUBSET = subset) then RETURN, 0 
+  if ~self->GEO_nc::define_subset(SUBSET = subset) then RETURN, 0 
   
   RETURN, 1
   
@@ -262,17 +285,16 @@ END
 ;-
 ;-----------------------------------------------------------------------
 PRO GEO_nc::GetProperty, $
-    path = path, $
-    cdfid = cdfid, $
-    fname = fname, $
-    directory = directory, $
-    Ndims = Ndims, $
-    Nvars = Nvars, $
-    Ngatts = Ngatts, $
-    varNames = varNames, $
-    dimNames = dimNames, $
-    dimSizes = dimSizes, $
-    RecDim = RecDim
+            XID = XID        , $
+            YID = YID    , $
+            TID = TID             , $
+            time = time       , $ 
+            t0 = t0               , $
+            t1 =  t1              , $
+            nt =  nt           , $
+            cropped = cropped          , $
+            subset = subset       ,$
+            _Ref_Extra=extra
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -285,64 +307,87 @@ PRO GEO_nc::GetProperty, $
     RETURN
   ENDIF
   
-  IF Arg_Present(path) NE 0 THEN path = self.path
-  IF Arg_Present(fname) NE 0 THEN fname = self.fname
-  IF Arg_Present(directory) NE 0 THEN directory = self.directory
-  IF Arg_Present(cdfid) NE 0 THEN cdfid = self.cdfid
-  IF Arg_Present(Ndims) NE 0 THEN Ndims = self.Ndims
-  IF Arg_Present(Nvars) NE 0 THEN Nvars = self.Nvars
-  IF Arg_Present(Ngatts) NE 0 THEN Ngatts = self.Ngatts
-  IF Arg_Present(varNames) NE 0 THEN varNames = self.varNames
-  IF Arg_Present(dimNames) NE 0 THEN dimNames = self.dimNames
-  IF Arg_Present(dimSizes) NE 0 THEN dimSizes = self.dimSizes
-  IF Arg_Present(RecDim) NE 0 THEN RecDim = self.RecDim
+  IF Arg_Present(XID) NE 0 THEN XID = self.XID
+  IF Arg_Present(YID) NE 0 THEN YID = self.YID
+  IF Arg_Present(TID) NE 0 THEN TID = self.TID
+  IF Arg_Present(time) NE 0 THEN time = *self.time
+  IF Arg_Present(t0) NE 0 THEN t0 = self.t0
+  IF Arg_Present(t1) NE 0 THEN t1 = self.t1
+  IF Arg_Present(nt) NE 0 THEN nt = self.nt
+  IF Arg_Present(cropped) NE 0 THEN cropped = self.cropped
+  IF Arg_Present(subset) NE 0 THEN subset = self.subset
+  
+  self->NCDF::GetProperty, _Extra=extra
+    
+end
+
+pro GEO_nc::get_time, time, nt, t0, t1
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+    
+  time = *self.time
+  nt = self.nt
+  t0 = self.t0
+  t1 = self.t1
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GEO_nc::get_Var
+; :Description:
+;    This function reads a variable from the netcdf file and make a
+;    subset of it if desired.    
 ;
-; PURPOSE:
-;       extracts the desired variable from the GEO_nc file
+; :Params:
+;    Varid: in, required
+;           the variable ID (string or integer) to check
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; INPUT:
-;       varid : the netCDF variable ID, returned from a previous call to GEO_nc_VARDEF or GEO_nc_VARID, or the name of the variable. 
-;       
-; OUTPUT:
-;       the variable
-;       
-; KEYWORDS:
-;        COUNT: An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
-;        OFFSET: An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
-;        STRIDE: An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-;        varinfo: (O) structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) } 
-;        description: (O) If available, the description of the variable
-;        units: (O) If available, the units of the variable
-;        varname: (O) the name of the variable
-;        dims : (O) the variable dimensions
-;        dimnames : (O) the dimensions names
+; :Keywords:
+;  TODO:  doc
+;   t0: in, type = qms / {ABS_DATE}
+;       if set, it defines the first available time 
+;   times: out, type = qms  
+;          if available, the time of the variable 
+;   varinfo: out
+;            structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;   description: out
+;               If available, the description of the variable
+;   units: out
+;          If available, the units of the variable
+;   varname: out
+;            the name of the variable
+;   dims: out
+;         the variable dimensions
+;   dimnames: out
+;             the dimensions names
+; 
+; :Returns:
+;         1 if the variable id is valid, 0 if not
+; 
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          First apparition for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to GEO_nc_VARDEF or GEO_nc_VARID, or the name of the variable. 
-                        COUNT=COUNT, $ ; An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
-                        OFFSET=OFFSET, $ ; An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
-                        STRIDE=STRIDE, $ ; An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-                        varinfo = varinfo , $ ; 
-                        units = units, $
-                        description = description, $
-                        varname = varname , $ ; 
-                        dims = dims, $ ;
-                        dimnames = dimnames ;
+                          time,  $
+                          nt,  $
+                          t0 = t0, $
+                          t1 = t1, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames ;
                         
   
   ; SET UP ENVIRONNEMENT
@@ -356,59 +401,155 @@ function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
     RETURN, -1
   ENDIF
   
-  if arg_okay(VarId, TYPE=IDL_STRING, /SCALAR) then begin
-    p = WHERE(str_equiv(*self.varNames) eq str_equiv(varid), cnt)
-    if cnt ne 0 then vid = p[0] else MESSAGE, 'VarId is not a correct variable name.'
-  endif else if arg_okay(VarId, /INTEGER, /SCALAR) then begin
-    vid = varid  
-  endif else MESSAGE, WAVE_Std_Message('VarId', /ARG)
+  undefine, count, offset
+  value = -1
   
-  ncdf_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
+  if ~self->NCDF::get_Var_Info (Varid, $
+    out_id = vid, $
+    varinfo = varinfo , $
+    units = units, $
+    description = description, $
+    varname = varname , $
+    dims = dims, $
+    dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
+    
+  ndims = N_ELEMENTS(dims)
+  count = LONARR(ndims) - 1
+  offset = LONARR(ndims) - 1
   
-  varinfo = ncdf_VARINQ(self.Cdfid, vid)
+  if self.cropped ne 'FALSE' and self.cropped ne '' then begin
   
-  if ARG_PRESENT(varname) then varname = varinfo.Name
-  
-  if ARG_PRESENT(description) then begin 
-    description = ''
-    for i = 0, varinfo.natts -1 do begin
-      AttName = ncdf_ATTNAME(self.Cdfid, vid, i)
-      if str_equiv(AttName) eq str_equiv('description') $
-        or str_equiv(AttName) eq str_equiv('long_name') $
-          then ncdf_ATTGET, self.Cdfid, vid, AttName, description
-    endfor
-    description = STRING(description)
+    p = where(dimnames eq (*self.dimNames)[self.XID], cnt)
+    if cnt ne 0 then begin
+      offset[p[0]] = self.subset[0]
+      count[p[0]] = self.subset[1]
+    endif
+    p = where(dimnames eq (*self.dimNames)[self.YID], cnt)
+    if cnt ne 0 then begin
+      offset[p[0]] = self.subset[2]
+      count[p[0]] = self.subset[3]
+    endif
+    
   endif
   
-  if ARG_PRESENT(units) then begin 
-    units = ''
-    for i = 0, varinfo.natts -1 do begin
-      AttName = ncdf_ATTNAME(self.Cdfid, vid, i)
-      if str_equiv(AttName) eq str_equiv('units') $
-        or str_equiv(AttName) eq str_equiv('unit') $
-          then ncdf_ATTGET, self.Cdfid, vid, AttName, units
-    endfor
-    units = STRING(units)
+  time = *self.time
+  if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file
+  
+    p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
+    if cnt ne 0 then begin ; the variable has a time dimension
+      p0 = 0
+      p1 = self.nt-1
+      if check_WTIME(t0, OUT_QMS= it0) then begin
+        v = 0 > VALUE_LOCATE(time, it0) < (self.nt-1)
+        p0 = v[0]
+      endif
+      if check_WTIME(t1, OUT_QMS= it1) then begin
+        v = 0 > VALUE_LOCATE(time, it1) < (self.nt-1)
+        p1 = v[0]
+      endif
+      ; Ok, now set the offset and count accordingly
+      time = time[p0:p1]
+      offset[p[0]] = p0
+      count[p[0]] = p1 - p0 + 1
+                  
+    endif else begin ; the variable has no time dimension
+      time = self.t0
+    endelse
+    
   endif  
-  
-  if ARG_PRESENT(dims) then begin
-    dims = LONARR(varinfo.Ndims)
-    for i = 0, varinfo.Ndims - 1 do begin
-      ncdf_DIMINQ, self.Cdfid, varinfo.Dim[i], dimName, dimSize
-      dims[i] = dimSize
-    endfor
-  endif
-  
-  if ARG_PRESENT(dimnames) then begin
-    dimnames = STRARR(varinfo.Ndims)
-    for i = 0, varinfo.Ndims - 1 do begin
-      ncdf_DIMINQ, self.Cdfid, varinfo.Dim[i], dimName, dimSize
-      dimnames[i] = dimName
-    endfor
-  endif
+  nt = N_ELEMENTS(time)
+      
+  ; Now fill every dimension that have not been cropped with std values
+  pnok = where(offset lt 0, cnt)
+  if cnt ne 0 then for i=0, cnt-1 do offset[pnok[i]] = 0  
+  pnok = where(count lt 0, cnt)
+  if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
+    
+  value = self->NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
   
   return, value
   
+end
+
+
+pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF  
+  
+  ok = utils_nc_LonLat(self.cdfid, lon_id, lat_id)
+  
+  lon = self->GEO_nc::get_Var(lon_id, dimnames = londims)  
+  lat = self->GEO_nc::get_Var(lat_id, dimnames = latdims)  
+  
+  nlondims = N_ELEMENTS(londims)
+  nlatdims = N_ELEMENTS(latdims)
+  
+  ok = FALSE
+  if nlondims eq 1 and nlatdims eq 1 then begin
+    utils_1d_to_2d, lon, lat, lon, lat
+    ok = TRUE
+  endif
+  
+  if nlondims eq 2 and nlatdims eq 2 then begin
+    ok = TRUE
+  endif
+  
+  if nlondims eq 3 and nlatdims eq 3 then begin
+    if self.TID ge 0 then begin ; We found the time dimension in the file  
+      p = where(londims eq (*self.dimNames)[self.TID], cnt)  
+      ok = TRUE  
+      case (p[0]) of
+        0: begin
+          lon = lon[0,*,*]
+        end
+        1: begin
+          lon = lon[*,0,*]
+        end
+        2: begin
+          lon = lon[*,*,0]
+        end        
+        else: begin
+           ok = FALSE
+        end
+      endcase
+      
+      p = where(latdims eq (*self.dimNames)[self.TID], cnt)    
+      case (p[0]) of
+        0: begin
+          lat = lat[0,*,*]
+        end
+        1: begin
+          lat = lat[*,0,*]
+        end
+        2: begin
+          lat = lat[*,*,0]
+        end        
+        else: begin
+           ok = FALSE
+        end
+      endcase      
+      
+    endif else ok = FALSE ; We did not fiund the time dimension in the file  
+ 
+  endif
+  
+  if not ok then Message, 'Still do not know how to get the info.'
+  
+  lon = REFORM(lon)
+  lat = REFORM(lat)
+  
+  nx = N_ELEMENTS(lon[*,0])
+  ny = N_ELEMENTS(lon[0,*])
+   
 end
 
 ;-----------------------------------------------------------------------
@@ -437,14 +578,23 @@ end
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
 ;-----------------------------------------------------------------------
-pro GEO_nc::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
+pro GEO_nc::quickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
 
-  var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
-  
+  var = self->get_Var(Varid, t0 = t0, t1 = t1, time = time, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
+  if N_ELEMENTS(var) eq 1 and var[0] eq -1 then return
+
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
+  self->get_ncdf_coordinates, lon, lat, nx, ny  
+  
+  if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file  
+    p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
+    if cnt ne 0 then tsrt = TIME_to_STR(time)
+  endif   
+  
+  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
+        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt
 
 end
 
@@ -490,6 +640,8 @@ function GEO_nc::define_subset, SUBSET = subset
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    self.subset = [0L,0L,0L,0L]
+    self.cropped = 'FALSE'
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont do the subset. Returning... ')
     RETURN, 0
   ENDIF
@@ -502,218 +654,14 @@ function GEO_nc::define_subset, SUBSET = subset
     self.cropped = 'FALSE'
   endif else begin
     if ~ arg_okay(SUBSET, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET', /ARG)
-    if SUBSET[0] lt 0 or SUBSET[0] gt (self.dimSizes[self.XID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[0]', /RANGE)
-    if SUBSET[1] lt 0 or SUBSET[1] gt (self.dimSizes[self.XID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
-    if SUBSET[2] lt 0 or SUBSET[2] gt (self.dimSizes[self.YID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
-    if SUBSET[3] lt 0 or SUBSET[3] gt (self.dimSizes[self.YID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[3]', /RANGE)
+    if SUBSET[0] lt 0 or SUBSET[0] gt ((*self.dimSizes)[self.XID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[0]', /RANGE)
+    if SUBSET[1] lt 0 or SUBSET[1] gt ((*self.dimSizes)[self.XID] - 1 - SUBSET[0]) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
+    if SUBSET[2] lt 1 or SUBSET[2] gt ((*self.dimSizes)[self.YID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
+    if SUBSET[3] lt 1 or SUBSET[3] gt ((*self.dimSizes)[self.YID] - 1 - SUBSET[2]) then MESSAGE, WAVE_Std_Message('SUBSET[3]', /RANGE)
     self.subset  = SUBSET
     self.cropped = 'TRUE'           
   endelse
 
   return, 1 ;OK
   
-end
-
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       utils_ncdf_COARDS_time
-;
-; PURPOSE:
-;       This procedure reads a time from a ncdf file that uses the COARDS convention.
-;       Returns TRUE if time is found, FALSE in all other cases
-;       
-; CATEGORY:
-;       WAVE utils
-;
-; CALLING SEQUENCE:
-;       result = utils_ncdf_COARDS_time(cdfid, time, time0, time1, nt)
-;
-; INPUT:
-;       cdfid: the active file cdfid
-;
-; OUTPUT:
-;       time : the qms time array
-;       time0 : the first qms
-;       time1 : the last qms
-;       nt : number of elements
-;
-; MODIFICATION HISTORY:
-;       Written by: FM, 2010
-;-
-;-----------------------------------------------------------------------
-function geo_nc_COARDS_time, cdfid, time, time0, time1, nt
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, FALSE
-  ENDIF  
-  
-  s_list = ['time','times','xtime']
-  
-  inq = NCDF_INQUIRE(Cdfid)
-  vok = -1
-  for varid = 0, inq.NVARS - 1 do begin
-    vinf = NCDF_VARINQ(Cdfid, varid)
-    vname = vinf.name
-    vtype = vinf.DATATYPE
-    p = where(str_equiv(s_list) eq str_equiv(vname), cnt)
-    if cnt ne 0 then begin
-     test = 1 
-    endif
-    
-    if cnt ne 0 and vtype ne 'CHAR' and  vtype ne 'BYTE' then begin
-       vok = varid
-       break
-    endif
-  endfor
-      
-  if vok lt 0 then return, FALSE
-  
-  ; Read time0 from att
-  NCDF_ATTGET, Cdfid, vok , 'units', ts
-  ts = STRSPLIT(STRING(ts), ' ', /EXTRACT)
-  psince = WHERE(str_equiv(ts) eq str_equiv('since'), csince)
-  if csince ne 1 then begin
-    ; Read time0 from att
-    NCDF_ATTGET, Cdfid, vok , 'description', ts
-    ts = STRSPLIT(STRING(ts), ' ', /EXTRACT)
-    psince = WHERE(str_equiv(ts) eq str_equiv('since'), csince)    
-  endif
-  if csince ne 1 then return, FALSE
-  
-  unit = ts[psince - 1]
-  d = ts[psince + 1]
-  t = ts[psince + 2]  
-  if N_ELEMENTS(ts) gt psince + 3 then Message, 'Time contains a zone (which is currently not supported) or is not of suitable format'
-   
-  d = STRSPLIT(d,'-', /EXTRACT)   
-  if N_ELEMENTS(d) ne 3 then return, FALSE  
-  y = LONG(d[0])
-  mo = LONG(d[1])
-  d = LONG(d[2])
-  
-  t = STRSPLIT(t,':', /EXTRACT)   
-  if N_ELEMENTS(t) eq 1 then begin
-   h = LONG(t[0])
-  endif else if N_ELEMENTS(t) eq 2 then begin
-   h = LONG(t[0])
-   mi = LONG(t[1])
-  endif else if N_ELEMENTS(t) eq 3 then begin
-   h = LONG(t[0])
-   mi = LONG(t[1])
-   s = LONG(t[2])
-   milli = LONG64((DOUBLE(t[2]) - FLOOR(t[2])) * 1000D)
-  endif else return, FALSE  
-      
-  time0 = (MAKE_ABS_DATE(YEAR=y, MONTH=mo, DAY=d, HOUR = h, MINUTE=mi, SECOND=s, MILLISECOND=milli)).qms
-  
-  NCDF_VARGET, Cdfid, vok, u
-  
-  fac = 0LL
-  case (str_equiv(UNIT)) of
-    'SEC': fac = S_QMS
-    'SECS': fac = S_QMS
-    'S': fac = S_QMS
-    'SS': fac = S_QMS
-    'SECOND': fac = S_QMS
-    'SECONDS': fac = S_QMS
-    'MINUTE':  fac = M_QMS
-    'MINUTES': fac = M_QMS
-    'MIN': fac = M_QMS
-    'MINS': fac = M_QMS
-    'HOUR': fac = H_QMS
-    'HOURS': fac = H_QMS
-    'HR': fac = H_QMS
-    'HRS': fac = H_QMS
-    'H': fac = H_QMS
-    'HS': fac = H_QMS
-    'DAY': fac = D_QMS
-    'DAYS': fac = D_QMS
-    'D': fac = D_QMS
-    'DS': fac = D_QMS
-    else: return, FALSE
-  endcase
-
-  time = time0 + fac * LONG64(u)
-  nt = N_ELEMENTS(time)
-  time0 = time[0]
-  time1 = time[nt-1]
-  
-  return, TRUE
-
-end
-
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       utils_ncdf_LonLat
-;
-; PURPOSE:
-;       This procedure reads lons and lats from a ncdf file, trying several known variable names. 
-;       Returns TRUE if time is found, FALSE in all other cases
-;       
-; CATEGORY:
-;       WAVE utils
-;
-; CALLING SEQUENCE:
-;       result = utils_ncdf_LonLat(cdfid, lon, lat)
-;
-; INPUT:
-;       cdfid: the active file cdfid
-;
-; OUTPUT:
-;       lon 
-;       lat  
-;
-; MODIFICATION HISTORY:
-;       Written by: FM, 2010
-;-
-;-----------------------------------------------------------------------
-function geo_nc_LonLat, cdfid, lon, lat
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-    
-  ; Standard error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    void = WAVE_Error_Message()
-    RETURN, FALSE
-  ENDIF  
-  
-  lon_list = ['lon','longitude','lon','longitudes','lons','xlong','xlong_m']
-  lat_list = ['lat','latitude' ,'lat','latitudes' ,'lats','xlat' ,'xlat_m']
-  
-  inq = NCDF_INQUIRE(Cdfid)
-  
-  vlonok = -1
-  vlatok = -1
-  for varid = 0, inq.NVARS - 1 do begin
-    vname = (NCDF_VARINQ(Cdfid, varid)).name
-    p = where(str_equiv(lon_list) eq str_equiv(vname), cnt)
-    if cnt ne 0 then vlonok = varid
-    p = where(str_equiv(lat_list) eq str_equiv(vname), cnt)
-    if cnt ne 0 then vlatok = varid
-    if vlatok ge 0 and vlonok ge 0 then break
-  endfor
-  
-  if vlatok lt 0 or vlonok lt 0 then return, FALSE
-  
-  ; Read Lon
-  NCDF_VARGET, Cdfid, vlonok, lon
-  ; Read Lat
-  NCDF_VARGET, Cdfid, vlatok, lat
-  
-  return, TRUE
-
 end

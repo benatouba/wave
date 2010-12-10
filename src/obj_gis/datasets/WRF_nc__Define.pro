@@ -618,7 +618,7 @@ end
 pro WRF_nc::quickPlotVar, Varid
 
   var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
-  if var[0] eq -1 then return
+  if N_ELEMENTS(var) eq 1 and var[0] eq -1 then return
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   

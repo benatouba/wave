@@ -100,14 +100,8 @@ PRO TRMM_nc__Define
   
   struct = { TRMM_nc                  ,  $
             INHERITS Grid2D           ,  $
-            INHERITS NCDF             ,  $
-            subset:  [0l,0l,0l,0l]    ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL ncdf grid array where to subset (format: [x_dl,y_dl,x_ur,y_ur])
-            type:               ''    ,  $ ; type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_a', '3B43_a'
-            cropped:            ''    ,  $ ; set to true or false at initialisation.
-            t0:         {ABS_DATE}    ,  $ ; first available time
-            t1:         {ABS_DATE}    ,  $ ; last available time
-            time:        PTR_NEW()    ,  $ ; available times
-            nt:                 0L       $ ; n times
+            INHERITS GEO_nc           ,  $
+            type:               ''       $ ; type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_a', '3B43_a'
             }
     
 END
@@ -129,7 +123,7 @@ END
 ;       SUBSET_LL : set it to the desired subset corners to automatically subset the data.
 ;                   Format : [ul_lon, ul_lat, dr_lon, dr_lat]. (it is assumed that
 ;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : indexes in the ORIGINAL ncdf grid array in the form [x_dl,y_dl,x_ur,y_ur]. 
+;       SUBSET_IJ : indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
 ;                   Unless you know what you do, it should not be set manually but 
 ;                   retrieved using the #define_subset# method.
 ;       LL_DATUM  : datum in which the Lat and Lons are defined. Default: WGS-84
@@ -160,7 +154,7 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   ; Check arguments *
   ;******************
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select TRMM ncdf file to read', /MUST_EXIST)  
-  IF NOT self->NCDF::Init(file = file) THEN RETURN, 0    
+  IF NOT self->GEO_nc::Init(file = file) THEN RETURN, 0    
  
   ;*****************
   ; Check filename *
@@ -185,13 +179,13 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   ; Geoloc *
   ;*********
   self.cropped = ''
-  if NOT self->define_subset(SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum) THEN RETURN, 0
+  if NOT self->TRMM_nc::define_subset(SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum) THEN RETURN, 0
   
   
   ;****************
   ; Read metadata *
   ;****************    
-  tok = geo_nc_COARDS_time(self.cdfid, time, time0, time1, nt)
+  tok = utils_nc_COARDS_time(self.cdfid, time, time0, time1, nt)
   
   ; Read time from fname : 3B42.081001.0.6A.nc
   if tok eq FALSE and type eq '3B42_h' then begin
@@ -202,19 +196,18 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
     m = LONG(STRMID(tsd,2,2))
     d = LONG(STRMID(tsd,4,2))
     h = LONG(tsp[2])
-    time0 = MAKE_ABS_DATE(YEAR=y, MONTH=m, DAY=d, HOUR=h)
+    time0 = QMS_TIME(YEAR=y, MONTH=m, DAY=d, HOUR=h)
     time1 = time0
     time = time0
     nt = 1
     tok = TRUE
   endif  
-  if tok eq FALSE then message, 'Could not read time from this file...'
-  
+    
   self.t0 = time0
   self.t1 = time1
   self.time = PTR_NEW(time, /NO_COPY)
   self.nt = nt
-  
+    
   ; Ok
   RETURN, 1
   
@@ -304,6 +297,25 @@ PRO TRMM_nc::GetProperty,  $
   
 end
 
+function TRMM_nc::get_Var, varid, time, nt, _Ref_Extra = extra                     
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, -1
+  ENDIF
+  
+  if self.type eq '3B42_d' then Message, 'The function get_var does not work with daily files because their format is stupid. Use get_Prcp instead.', /INFORMATIONAL
+    
+  return, self->GEO_nc::get_Var(varid, time, nt, _Extra=extra)
+
+end  
+
 ;-----------------------------------------------------------------------
 ;+
 ; NAME:
@@ -339,7 +351,7 @@ end
 ;                   Written for upgrade to WAVE 0.1
 ;-
 ;-----------------------------------------------------------------------
-function TRMM_nc::get_prcp, times, nt, units = units, t0 = t0, t1 = t1
+function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -352,43 +364,29 @@ function TRMM_nc::get_prcp, times, nt, units = units, t0 = t0, t1 = t1
     RETURN, 0
   ENDIF 
   
-  if self.type eq '3B42_h' then begin
-    NCDF_VARGET, self.cdfid, 'precipitation', pcp
-    units = 'mm hr-1'
-  endif else if self.type eq '3B42_d' then begin
+ if self.type eq '3B42_d' then begin
     NCDF_VARGET, self.cdfid, 'hrf', pcp
     pcp = [pcp[720:*,*] , pcp[0:719,*]]
     units = 'mm d-1'
-  endif else if self.type eq '3B43' then begin
-    NCDF_VARGET, self.cdfid, 'pcp', pcp 
+    time = *self.time
+    nt = 1
+    if self.cropped ne 'FALSE' then begin
+      urx = self.subset[0] + self.subset[1] - 1
+      ury = self.subset[2] + self.subset[3] - 1
+      pcp = pcp[self.subset[0]:urx,self.subset[2]:ury]
+    endif
+  endif else if self.type eq '3B42_h' then begin
+    pcp = self->GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
     units = 'mm hr-1'
-  endif else begin
-    NCDF_VARGET, self.cdfid, 'precipitation', pcp 
+  endif else if self.type eq '3B43' then begin
+    pcp = self->GEO_nc::get_Var('pcp', time, nt, t0 = t0, t1 = t1) 
+    units = 'mm hr-1'
+  endif else begin ; agg files
+    pcp = self->GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
     NCDF_ATTGET, self.cdfid, 'precipitation', 'units', units
     units = STRING(units)
-  endelse
-  
-  times = *self.time
-  
-  n = self.nt
-  p1 = 0
-  p2 = n - 1
-  
-  if arg_okay(time0, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time0.qms) < (n-1)
-     p1 = v[0]
-  endif 
-  if arg_okay(time1, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time1.qms) < (n-1)
-     p2 = v[0] 
-  endif
-  
-  nt = p2 - p1 + 1 
-  times = times[p1:p2]
-    
-  if TOTAL(self.subset) ne 0 then pcp = pcp[self.subset[0]:self.subset[2],self.subset[1]:self.subset[3],p1:p2] $
-  else pcp = pcp[*,*,p1:p2]
-  
+  endelse 
+
   return, pcp
     
 end
@@ -434,8 +432,9 @@ pro TRMM_nc::QuickPlotPrcp
     RETURN
   ENDIF 
 
-  pcp = self->get_prcp(times, units = units)  
-  self->Get_LonLat, lon, lat
+  pcp = self->get_prcp(times, units = units)
+  
+  if self.type eq '3B42_d' then self->Get_LonLat, lon, lat else self->get_ncdf_coordinates, lon, lat
   
   if N_ELEMENTS(times) eq 1 then QuickPLot, pcp, COLORTABLE=2, TITLE= self.meta, $
     WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat'] $
@@ -463,9 +462,9 @@ end
 ;       SUBSET_LL : (I)   set it to the desired subset corners to automatically subset the data.
 ;                         Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
 ;                         lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : (I/O) indexes in the ORIGINAL ncdf grid array in the form [x_dl,y_dl,x_ur,y_ur]. 
+;       SUBSET_IJ : (I/O) indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
 ;                         Unless you know what you do, it should not be set manually.
-;                         One can retrive it from this method by setting it to a named variable                         
+;                         One can retrive it from this method by setting SUBSET_IJ to a named variable                         
 ;       LL_DATUM  : (I)   datum in which the Lat and Lons are defined. Default: WGS-84
 ;
 ; OUTPUT:
@@ -510,11 +509,14 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   ;*****************************************
   ; First, define the ORIGINAL grid geoloc *
   ;*****************************************
-  lok = geo_nc_LonLat(self.cdfid, lon, lat)
-  if lok eq FALSE then message, 'Could not read lats or lons from this file...'
-  if self.type eq '3B42_d' then lon = [lon[720:*] - 360., lon[0:719]] ; Fucking conventions
+  ok = self->GEO_nc::define_subset()
+  ok = utils_nc_LonLat(self.cdfid, lon_id, lat_id)  
+  lon = self->GEO_nc::get_Var(lon_id)  
+  lat = self->GEO_nc::get_Var(lat_id)
   nx = N_ELEMENTS(lon)
   ny = N_ELEMENTS(lat)
+  
+  if self.type eq '3B42_d' then lon = [lon[720:*] - 360., lon[0:719]] ; Fucking conventions
   
   ;Projection
   GIS_make_proj, ret, proj, PARAM='1, WGS-84'
@@ -551,6 +553,8 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   ; SUBSET *
   ;*********  
   self.cropped = 'FALSE'
+  ok = FALSE
+  
   if N_ELEMENTS(SUBSET_LL) eq 4 then begin
     if KEYWORD_SET(ll_datum) then begin
       if not arg_okay(ll_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('ll_datum', STRUCT={TNT_DATUM})
@@ -599,20 +603,23 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
     cx = iur - idl + 1
     cy = jur - jdl + 1
     if (cx lt 1) or (cy lt 1) then MESSAGE, 'Subset_LL corners are not compatible.'  ; Fatal error
-    self.subset = [idl,jdl,iur,jur]
-    
+    ok = self->GEO_nc::define_subset(SUBSET=[idl,cx,jdl,cy])
   endif else if N_ELEMENTS(SUBSET_ij) eq 4 then begin
-    if (SUBSET_ij[0] lt 0) or (SUBSET_ij[1] lt 0) or (SUBSET_ij[2] gt self.tnt_c.nx-1) or (SUBSET_ij[3] gt self.tnt_c.ny-1) $
-      then MESSAGE, 'Subset_IJ corners are not compatible.'  ; Fatal error
-    self.subset = SUBSET_ij
-  endif else self.subset = [0,0,0,0] ; NO subset
+    ok = self->GEO_nc::define_subset(SUBSET=SUBSET_ij)
+  endif else begin
+   if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = [0L,0L,0L,0L]
+   return, self->GEO_nc::define_subset()
+  endelse
   
-  if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = self.subset
+  if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = self.subset  
+  if not ok then return, 0   
   
   if TOTAL(self.subset) ne 0 then begin
   
-    lon = lon[self.subset[0]:self.subset[2]]
-    lat = lat[self.subset[1]:self.subset[3]]
+    urx = self.subset[0] + self.subset[1] - 1
+    ury = self.subset[2] + self.subset[3] - 1
+    lon = lon[self.subset[0]:urx]
+    lat = lat[self.subset[2]:ury]
     nx = N_ELEMENTS(lon)
     ny = N_ELEMENTS(lat)
     
@@ -623,9 +630,10 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
       x0 = lon[0]            , $
       y0 = lat[ny-1]         , $
       proj = proj            , $
-      meta = meta ) THEN RETURN, 0
-    
-    self.cropped = 'TRUE'
+      meta = meta ) THEN begin
+        dummy = self->GEO_nc::define_subset() ; NO subset
+        RETURN, 0
+      endif
     
   endif
   

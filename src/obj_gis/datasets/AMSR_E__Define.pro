@@ -1,3 +1,5 @@
+;TODO: HDF inheritance and documentation
+
 PRO AMSR_E__Define
  
   ; SET UP ENVIRONNEMENT

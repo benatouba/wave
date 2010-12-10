@@ -497,26 +497,104 @@ function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previ
     RETURN, -1
   ENDIF
   
+  
+  if ~self->get_Var_Info (Varid, $
+                            out_id = vid, $
+                            varinfo = varinfo , $  
+                            units = units, $
+                            description = description, $
+                            varname = varname , $ 
+                            dims = dims, $ 
+                            dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
+
+  
+  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride  
+  
+  return, value
+  
+end
+
+
+;+
+; :Description:
+;    This function checks if a variable ID is valid and returns 1 if it is. Additionally,
+;    it tries to obtain a maximum of information about the desired variable.
+;
+; :Params:
+;    Varid: in, required
+;           the variable ID (string or integer) to check
+;
+; :Keywords:
+;   out_id: out
+;           the netcdf variable ID (long)
+;   varinfo: out
+;            structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;   description: out
+;               If available, the description of the variable
+;   units: out
+;          If available, the units of the variable
+;   varname: out
+;            the name of the variable
+;   dims: out
+;         the variable dimensions
+;   dimnames: out
+;             the dimensions names
+; 
+; :Returns:
+;         1 if the variable id is valid, 0 if not
+; 
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          First apparition for upgrade to WAVE 0.1
+;
+;-
+function NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+                            out_id = out_id, $
+                            varinfo = varinfo , $ ; 
+                            units = units, $
+                            description = description, $
+                            varname = varname , $ ; 
+                            dims = dims, $ ;
+                            dimnames = dimnames ;
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, FALSE
+  ENDIF
+  
   if arg_okay(VarId, TYPE=IDL_STRING, /SCALAR) then begin
     p = WHERE(str_equiv(*self.varNames) eq str_equiv(varid), cnt)
-    if cnt ne 0 then vid = p[0] else MESSAGE, 'VarId is not a correct variable name.'
+    if cnt ne 0 then out_id = p[0] else return, FALSE
   endif else if arg_okay(VarId, /INTEGER, /SCALAR) then begin
-    vid = varid  
+    if varid lt 0 or varid ge self.Nvars then return, FALSE
+    out_id = varid    
   endif else MESSAGE, WAVE_Std_Message('VarId', /ARG)
-  
-  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
-  
-  varinfo = NCDF_VARINQ(self.Cdfid, vid)
+    
+  varinfo = NCDF_VARINQ(self.Cdfid, out_id)
   
   if ARG_PRESENT(varname) then varname = varinfo.Name
   
   if ARG_PRESENT(description) then begin 
     description = ''
     for i = 0, varinfo.natts -1 do begin
-      AttName = NCDF_ATTNAME(self.Cdfid, vid, i)
+      AttName = NCDF_ATTNAME(self.Cdfid, out_id, i)
       if str_equiv(AttName) eq str_equiv('description') $
         or str_equiv(AttName) eq str_equiv('long_name') $
-          then NCDF_ATTGET, self.Cdfid, vid, AttName, description
+          then NCDF_ATTGET, self.Cdfid, out_id, AttName, description
     endfor
     description = STRING(description)
   endif
@@ -524,10 +602,10 @@ function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previ
   if ARG_PRESENT(units) then begin 
     units = ''
     for i = 0, varinfo.natts -1 do begin
-      AttName = NCDF_ATTNAME(self.Cdfid, vid, i)
+      AttName = NCDF_ATTNAME(self.Cdfid, out_id, i)
       if str_equiv(AttName) eq str_equiv('units') $
         or str_equiv(AttName) eq str_equiv('unit') $
-          then NCDF_ATTGET, self.Cdfid, vid, AttName, units
+          then NCDF_ATTGET, self.Cdfid, out_id, AttName, units
     endfor
     units = STRING(units)
   endif  
@@ -548,7 +626,7 @@ function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previ
     endfor
   endif
   
-  return, value
+  return, TRUE
   
 end
 
@@ -581,6 +659,7 @@ end
 pro NCDF::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
   var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
+  if N_ELEMENTS(var) eq 1 and var[0] eq -1 then return
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)

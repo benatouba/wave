@@ -1,4 +1,5 @@
 ; docformat = 'rst'
+
 ;+
 ;
 ;This bundle of procedures is a tool set available to the WAVE user.
@@ -636,26 +637,32 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-pro utils_TRMM_aggregate, fname, SUBSET = subset, VERBOSE = VERBOSE, NOSHIFT = noshift
+pro utils_TRMM_aggregate, file, outfile, SUBSET = subset, VERBOSE = VERBOSE, NOSHIFT = noshift
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
-  
-  file1 = dialog_pickfile(TITLE='Enter one TRMM dataset', PATH='/home/fab/disk/Data/TRMM/' , GET_PATH=path)
+ 
+  if N_ELEMENTS(file) eq 0 then file = DIALOG_PICKFILE(TITLE='Please select TRMM ncdf file to aggregate', /MUST_EXIST)  
+  path = FILE_DIRNAME(file)
   pattern = '*.nc'
   filelist = file_search(path, pattern, COUNT=cnt)
   filelist = filelist[SORT(filelist)]
   
-  t0 = OBJ_NEW('TRMM_nc', FILE=file1, SUBSET=SUBSET)
+  if KEYWORD_SET(subset) then mysubs = subset
+  
+  t0 = OBJ_NEW('TRMM_nc', FILE=file, SUBSET_IJ=mysubs)
   t0->GetProperty, type = type
   t0->Get_LonLat, lon, lat  
   OBJ_DESTROY, t0
   
+  undefine, mysubs
+  if KEYWORD_SET(subset) then mysubs = subset
+  
   if KEYWORD_SET(VERBOSE) then print, 'Selected file is of type: ' + type + '. All other files will be ignored.'
   
   for f = 0, N_ELEMENTS(filelist)-1 do begin
-    t0 = OBJ_NEW('TRMM_nc', FILE=filelist[f], SUBSET=SUBSET)
+    t0 = OBJ_NEW('TRMM_nc', FILE=filelist[f], SUBSET_IJ=mysubs)
     if not OBJ_VALID(t0) then begin
       if KEYWORD_SET(VERBOSE) then print, FILE_BASENAME(filelist[f]) + ' not recognized. Ignored.'
       continue
@@ -798,4 +805,300 @@ function utils_EOD_get_metadata, pvlstring, objstring, n_char
   info = strmid(pvlstring,obj_start,n_char)
   return, info
     
+end
+
+
+;+
+; :Description:
+;    This procedure reads a time from a ncdf file that uses the COARDS convention.    
+;    Returns TRUE if time is found, FALSE in all other cases
+;
+; :Params:
+;    cdfid: in, required, type = long
+;           the active file cdfid
+;    time: out, optional, type = time
+;          the time serie (if found)
+;    time0: out, optional, type = time
+;           the first time in the time serie (if found)
+;    time1: out, optional, type = time
+;           the last time in the time serie (if found)
+;    nt: out, optional, type = long
+;        the number of elements in the time serie
+;        
+; :Returns:
+;   TRUE if time is found, FALSE in all other cases
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          10-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-
+function utils_nc_COARDS_time, cdfid, time, time0, time1, nt
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ; Standard error handling.
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /CANCEL
+    void = WAVE_Error_Message()
+    RETURN, FALSE
+  ENDIF  
+  
+  s_list = ['time','times','xtime']
+  
+  inq = NCDF_INQUIRE(Cdfid)
+  vok = -1
+  for varid = 0, inq.NVARS - 1 do begin
+    vinf = NCDF_VARINQ(Cdfid, varid)
+    vname = vinf.name
+    vtype = vinf.DATATYPE
+    p = where(str_equiv(s_list) eq str_equiv(vname), cnt)
+    if cnt ne 0 then begin
+     test = 1 
+    endif
+    
+    if cnt ne 0 and vtype ne 'CHAR' and  vtype ne 'BYTE' then begin
+       vok = varid
+       break
+    endif
+  endfor
+      
+  if vok lt 0 then return, FALSE
+  
+  ; Read time0 from att
+  NCDF_ATTGET, Cdfid, vok , 'units', ts
+  ts = STRSPLIT(STRING(ts), ' ', /EXTRACT)
+  psince = WHERE(str_equiv(ts) eq str_equiv('since'), csince)
+  if csince ne 1 then begin
+    ; Read time0 from att
+    NCDF_ATTGET, Cdfid, vok , 'description', ts
+    ts = STRSPLIT(STRING(ts), ' ', /EXTRACT)
+    psince = WHERE(str_equiv(ts) eq str_equiv('since'), csince)    
+  endif
+  if csince ne 1 then return, FALSE
+  
+  unit = ts[psince - 1]
+  d = ts[psince + 1]
+  t = ts[psince + 2]  
+  if N_ELEMENTS(ts) gt psince + 3 then Message, 'Time contains a zone (which is currently not supported) or is not of suitable format'
+   
+  d = STRSPLIT(d,'-', /EXTRACT)   
+  if N_ELEMENTS(d) ne 3 then return, FALSE  
+  y = LONG(d[0])
+  mo = LONG(d[1])
+  d = LONG(d[2])
+  
+  t = STRSPLIT(t,':', /EXTRACT)   
+  if N_ELEMENTS(t) eq 1 then begin
+   h = LONG(t[0])
+  endif else if N_ELEMENTS(t) eq 2 then begin
+   h = LONG(t[0])
+   mi = LONG(t[1])
+  endif else if N_ELEMENTS(t) eq 3 then begin
+   h = LONG(t[0])
+   mi = LONG(t[1])
+   s = LONG(t[2])
+   milli = LONG64((DOUBLE(t[2]) - FLOOR(t[2])) * 1000D)
+  endif else return, FALSE  
+      
+  time0 = (MAKE_ABS_DATE(YEAR=y, MONTH=mo, DAY=d, HOUR = h, MINUTE=mi, SECOND=s, MILLISECOND=milli)).qms
+  
+  NCDF_VARGET, Cdfid, vok, u
+  
+  fac = 0LL
+  case (str_equiv(UNIT)) of
+    'SEC': fac = S_QMS
+    'SECS': fac = S_QMS
+    'S': fac = S_QMS
+    'SS': fac = S_QMS
+    'SECOND': fac = S_QMS
+    'SECONDS': fac = S_QMS
+    'MINUTE':  fac = M_QMS
+    'MINUTES': fac = M_QMS
+    'MIN': fac = M_QMS
+    'MINS': fac = M_QMS
+    'HOUR': fac = H_QMS
+    'HOURS': fac = H_QMS
+    'HR': fac = H_QMS
+    'HRS': fac = H_QMS
+    'H': fac = H_QMS
+    'HS': fac = H_QMS
+    'DAY': fac = D_QMS
+    'DAYS': fac = D_QMS
+    'D': fac = D_QMS
+    'DS': fac = D_QMS
+    else: return, FALSE
+  endcase
+
+  time = time0 + fac * LONG64(u)
+  nt = N_ELEMENTS(time)
+  time0 = time[0]
+  time1 = time[nt-1]
+  
+  return, TRUE
+
+end
+
+;+
+; :Description:
+;    This procedure reads a time from a WRF ncdf file
+;    Returns TRUE if time is found, FALSE in all other cases
+;
+; :Params:
+;    cdfid: in, required, type = long
+;           the active file cdfid
+;    time: out, optional, type = time
+;          the time serie (if found)
+;    time0: out, optional, type = time
+;           the first time in the time serie (if found)
+;    time1: out, optional, type = time
+;           the last time in the time serie (if found)
+;    nt: out, optional, type = long
+;        the number of elements in the time serie
+;        
+; :Returns:
+;   TRUE if time is found, FALSE in all other cases
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          10-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-
+function utils_wrf_time, cdfid, time, time0, time1, nt
+
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ; Standard error handling.
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /CANCEL
+    RETURN, FALSE
+  ENDIF  
+  
+  NCDF_VARGET, cdfid, 'Times', stimes
+  ntimes = N_ELEMENTS(stimes[0,*])
+  stimes = STRING(stimes[*,0:ntimes-1])    
+  
+  if stimes[0] eq '0000-00-00_00:00:00' then begin ;Check if geogrid
+    NCDF_ATTGET, cdfid, 'TITLE', title, /GLOBAL
+    isHere = STRPOS(str_equiv(title), 'GEOGRID')
+    if isHere ne -1 then time = QMS_TIME(year = 2000, month = 01, day = 01) else Message, 'Really dont know whate this is'
+  endif else begin  
+  ;String format : '2008-10-26_12:00:00; length 19
+  time = QMS_TIME(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
+      HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
+  endelse
+  
+  nt = N_ELEMENTS(time)
+  time0 = time[0]
+  time1 = time[nt-1]
+  
+  return, TRUE
+
+end
+;-----------------------------------------------------------------------
+;+
+; NAME:
+;       utils_ncdf_LonLat
+;
+; PURPOSE:
+;       
+;       
+; CATEGORY:
+;       WAVE utils
+;
+; CALLING SEQUENCE:
+;       result = utils_ncdf_LonLat(cdfid, lon, lat)
+;
+; INPUT:
+;       cdfid: the active file cdfid
+;
+; OUTPUT:
+;       lon 
+;       lat  
+;
+; MODIFICATION HISTORY:
+;       Written by: FM, 2010
+;-
+;-----------------------------------------------------------------------
+;+
+; :Description:
+;   This procedure reads lons and lats from a ncdf file, trying several known variable names. 
+;   Returns TRUE if time is found, FALSE in all other cases
+;   
+; :Params:
+;    cdfid: in, required, type = long
+;           the active file cdfid
+;    lon_id: out, optional, type = long
+;            the netcdf variable ID of the longitudes (if found)
+;    lat_id: out, optional, type = long
+;            the netcdf variable ID of the latitudes (if found)
+;        
+; :Returns:
+;   TRUE if time is found, FALSE in all other cases
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          10-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-
+function utils_nc_LonLat, cdfid, lon_id, lat_id
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+    
+  ; Standard error handling.
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /CANCEL
+    void = WAVE_Error_Message()
+    RETURN, FALSE
+  ENDIF  
+  
+  lon_list = ['lon','longitude','lon','longitudes','lons','xlong','xlong_m']
+  lat_list = ['lat','latitude' ,'lat','latitudes' ,'lats','xlat' ,'xlat_m']
+  
+  inq = NCDF_INQUIRE(Cdfid)
+  
+  lon_id = -1
+  lat_id = -1
+  for varid = 0, inq.NVARS - 1 do begin
+    vname = (NCDF_VARINQ(Cdfid, varid)).name
+    p = where(str_equiv(lon_list) eq str_equiv(vname), cnt)
+    if cnt ne 0 then lon_id = varid
+    p = where(str_equiv(lat_list) eq str_equiv(vname), cnt)
+    if cnt ne 0 then lat_id = varid
+    if lat_id ge 0 and lon_id ge 0 then break
+  endfor
+  
+  if lat_id lt 0 or lon_id lt 0 then return, FALSE
+  
+  return, TRUE
+
 end

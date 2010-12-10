@@ -1,124 +1,92 @@
 ; docformat = 'rst'
+
 ;+
 ; 
-; Grid2D is a central class in the WAVE library, superclass from all
-; "geolocalised" dataset-classes. It provides the necessary tools to 
-; make transformations from geolocalised information to himself.
+; Grid2D is a central class in the WAVE library. All geolocalised
+; gridded dataset inherit Grid2D and can use the Grid2D methods. 
+; These are mainly transformation tools from Grid to Grid or 
+; Lon-Lat to grid, etc.       
 ;       
-; Every gridded dataset in WAVE should inherit from this superclass.
-;       
-; The concrete transformations are actually made by the TNT GIS library:
+; The transformation computations are internally made by the TNT GIS library:
 ; the Grid2D class simply provides an object oriented encapsulation of
 ; the GIS routines, as well as several improvements, such as remapping,
-; interpolation, LonLat computation, etc.
+; interpolation, LonLat to grid transformations, etc.
 ;       
-; Currently, only POINT valid grids are supported. This should be enough
+; Currently, only POINT valid grids are supported. This should be sufficient
 ; for most applications.
 ;          
-; Careful! 
+; Careful!
+; --------
+;  
 ; Althought Grid2D is defined using UL and DR corners to be consistent
 ; with the GIS library, the convention used in the WAVE is based on the 
 ; WRF convention, that means: the (i,j) = (0,0) index refers to the 
 ; DL corner and the (i,j) = (nx-1,ny-1) index refers to the UR corner.
-; One has to be carefull when parsing new gridded datasets. One good 
-; method is to test the data using `Quickplot`. If it is upside down,
-; the array have to be rotated like this: 
-; array = rotate(array, 7) 
+; One has to be carefull when defining new gridded datasets.
+; 
+; It is not recommended to work directly with {TNT_COORD} structures 
+; anymore, but to define GRID2d objects using your {TNT_COORD} structures
+; as parameter. Probably, your data will be uspide down with respect to 
+; the WAVE conventions. One good method to test your gridded data is
+; to use `Quickplot`. If your image is upside down,the array have to be 
+; rotated like this: array = rotate(array, 7) 
 ;        
-; Here is a non-exhaustive list of dataset conventions::
+; Here is a non-exhaustive list of dataset conventions::       
+;   DATASET                    To ROTATE
+;   -------------------------------------
+;   WRF                        NO
+;   TRMM                       NO
+;   MODIS                      YES
+;   AMSR                       YES
+;   ArcLakeMask                YES
+;   ======================================
+; 
+; :Properties: 
+;    nx: in, optional, type = integer
+;        number of elements in x-direction
+;    ny: in, optional, type = integer
+;        number of elements in y-direction
+;    x0: in, optional, type = float
+;        most western (most left) x-coordinate
+;    y0: in, optional, type = float
+;        most northern (most upper) y-coordinate
+;    x1: in, optional, type = float
+;        most eastern (most right) x-coordinate
+;    y1: in, optional, type = float
+;        most southern (most lower) y-coordinate
+;    dx: in, optional, type = float
+;        resolution in x-direction
+;    dy: in, optional, type = float
+;        resolution in y-direction
+;    tnt_c: in, optional, type = {TNT_COORD}
+;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
+;    proj: in, optional, type = {TNT_PROJ}
+;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
+;    meta: in, optional, type = string
+;         a string containing any kind of info
+;    lat: out, optional, type = float array
+;         the latitudes of each grid point (place holder, computed only at the first user request)
+;    lon: out, optional, type = float array
+;         the longitudes of each grid point (place holder, computed only at the first user request)
 ;       
-;                 DATASET                    To ROTATE
-;                -------------------------------------
-;                  WRF                        NO
-;                  TRMM                       NO
-;                  MODIS                      YES
-;                  AMSR                       YES
-;                =================================================================
-;                
-;                 Superclass
-;                ----------------------
-;                 none
-;                =================================================================    
-;                
-;                 Attributes
-;               ----------------------
-;                 lon   : PTR_NEW()    ,  $ 2D array containing the longitudes of the grid
-;                 lat   : PTR_NEW()    ,  $  2D array containing the latitudes  of the grid
-;                 tnt_c : {TNT_COORD}  ,  $  intern {TNT_COORD} structure (see GIS.pro)
-;                 meta  : ''              $  If set, a string containg infos about the grid.
-;    
-;                 Rq: lon and lat are not initialized per default, but are computed and 
-;                 stored with the firt call of #Grid2D::Get_LonLat#
-;               =================================================================
-;                 
-;                 Object initialisation
-;               ----------------------
-;                 KEYWORDS
-;                 nx : elements/intervals in x-direction
-;                 ny : elements/intervals in y-direction
-;                 x0 : most western (most left) x-coordinate
-;                 y0 : most northern (most upper) y-coordinate
-;                 x1 : most eastern (most right) x-coordinate
-;                 y1 : most southern (most lower) y-coordinate
-;                 dx : resolution in x-direction
-;                 dy : resolution in y-direction
-;                 tnt_c : TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
-;                 proj : TNT_GIS {TNT_PROJ} struct. MUST be SET.
-;                 meta : a string containing any kind of info
-;                 
-;                 A coherent combination of keywords must be given. For example,
-;                 x1 and y1 can be computed using x0, y0, nx and ny
-;      
-;                =================================================================
-;                  Methods
-;                ----------------------
-;                The following methods can be used directly. Non ducumented methods 
-;                are not for external use.
-;       
-;                + General methods:
-;                obj->ReInit()    : reinitialises completely the grid with new parameters
-;                                  (should be used only is special cases by subclasses)
-;                obj->GetProperty : get access to some attributes
-;                obj->Get_LonLat  : computes and returns the lon and lat array of the grid
-;                obj->Get_XY      : computes and returns the X and Y arrays of the grid (trivial)
-;                obj->reGrid()    : returns a Grid2D instance of the object 
-;                                  (usefull for resampling/plotting purposes)
-;       
-;                + From OUTSIDE to GRID indexes (i,j) methods:
-;                obj->transform_LonLat: transform lons and lats into the grid (i,j) indexes
-;                obj->transform_XY: transform xs and xs into the grid (i,j) indexes
-;                obj->transform_IJ: transform is and is into the grid (i,j) indexes
-;                obj->transform: transform anything into the grid (i,j) indexes
-;                               (useful if the nature of the argument is not known, or if you want 
-;                                to obtain other informations such as eastings/norhtings, lat and lons...)             
-;       
-;                + From OUTSIDE to GRID mapping methods (backwards, recommended):
-;                obj->map_gridded_data: transforms a data array defined on ANY grid onto the OBJECT grid,
-;                                       using several interpolation methods (currently NN and BILI)       
-;                obj->map_latlon_data: transforms a data array defined only by its lat-lons (irregular)
-;                                      onto the OBJECT grid     
-;        
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
 ;           TU Berlin
 ;  
 ; :Version:
-;       WAVE V 0.1
+;       WAVE V0.1
 ;       
 ; :History:
-;     Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Last modification:  09-Dec-2010 FaM
 ;-
+
 
 ;+
 ; :Description:
 ; 
-;   Object attributes definition::
-;     Grid2D    
+;   Defines the attributes of the class Grid2D. Attributes::
+;   
 ;       lon   : PTR_NEW()   
 ;               2D array containing the longitudes of the grid
 ;       lat   : PTR_NEW()   
@@ -127,21 +95,21 @@
 ;               intern {TNT_COORD} structure 
 ;       meta  : ''          
 ;               If set, a string containg infos about the grid.
-;               
+;   
 ; :Categories:
 ;         WAVE/OBJ_GIS   
 ;
-; :Examples:
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
 ;
 ; :History:
-;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          22-Nov-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
 PRO Grid2D__Define
  
@@ -164,34 +132,35 @@ END
 ;       and should be called possibly by inherited objects but not externally. 
 ;       Output: 1 if the GRID2D object is updated successfully, 0 if not
 ;       
+; :Private: 
+;            
 ; :Categories:
 ;            WAVE/OBJ_GIS   
 ;
 ; :Keywords:
-;    nx: 
-;        elements/intervals in x-direction
-;    ny: 
-;        elements/intervals in y-direction
-;    x0: 
+;    nx: in, optional, type = integer
+;        number of elements in x-direction
+;    ny: in, optional, type = integer
+;        number of elements in y-direction
+;    x0: in, optional, type = float
 ;        most western (most left) x-coordinate
-;    y0: 
+;    y0: in, optional, type = float
 ;        most northern (most upper) y-coordinate
-;    x1: 
+;    x1: in, optional, type = float
 ;        most eastern (most right) x-coordinate
-;    y1: 
+;    y1: in, optional, type = float
 ;        most southern (most lower) y-coordinate
-;    dx: 
+;    dx: in, optional, type = float
 ;        resolution in x-direction
-;    dy: 
+;    dy: in, optional, type = float
 ;        resolution in y-direction
-;    proj:  
-;        TNT_GIS {TNT_PROJ} struct.
-;    tnt_c: 
-;        TNT_GIS {TNT_COORD} struct. If set, all other parameters are ignored.
-;    meta:  
-;        a string containing any kind of info
+;    tnt_c: in, optional, type = {TNT_COORD}
+;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
+;    proj: in, optional, type = {TNT_PROJ}
+;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
+;    meta: in, optional, type = string
+;         a string containing any kind of info
 ;
-; :Examples:
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -320,6 +289,7 @@ Function Grid2D::ReInit ,  $
   
 END
 
+
 ;+
 ; :Description:
 ;       Build function. 
@@ -328,30 +298,29 @@ END
 ;            WAVE/OBJ_GIS   
 ;
 ; :Keywords:
-;       nx: 
-;           elements/intervals in x-direction
-;       ny: 
-;           elements/intervals in y-direction
-;       x0: 
-;           most western (most left) x-coordinate
-;       y0: 
-;           most northern (most upper) y-coordinate
-;       x1: 
-;           most eastern (most right) x-coordinate
-;       y1: 
-;           most southern (most lower) y-coordinate
-;       dx: 
-;           resolution in x-direction
-;       dy: 
-;           resolution in y-direction
-;       proj:  
-;           TNT_GIS {TNT_PROJ} struct.
-;       tnt_c: 
-;           TNT_GIS {TNT_COORD} struct. If set, all other parameters are ignored.
-;       meta:  
-;           a string containing any kind of info
+;    nx: in, optional, type = integer
+;        number of elements in x-direction
+;    ny: in, optional, type = integer
+;        number of elements in y-direction
+;    x0: in, optional, type = float
+;        most western (most left) x-coordinate
+;    y0: in, optional, type = float
+;        most northern (most upper) y-coordinate
+;    x1: in, optional, type = float
+;        most eastern (most right) x-coordinate
+;    y1: in, optional, type = float
+;        most southern (most lower) y-coordinate
+;    dx: in, optional, type = float
+;        resolution in x-direction
+;    dy: in, optional, type = float
+;        resolution in y-direction
+;    tnt_c: in, optional, type = {TNT_COORD}
+;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
+;    proj: in, optional, type = {TNT_PROJ}
+;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
+;    meta: in, optional, type = string
+;         a string containing any kind of info
 ;       
-; :Examples:
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -409,12 +378,10 @@ END
 
 ;+
 ; :Description:
-;    Destroy function. 
+;    Destroy prcocedure. 
 ;
 ; :Categories:
-;            WAVE/OBJ_GIS   
-;
-; :Examples:
+;    WAVE/OBJ_GIS   
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -442,22 +409,25 @@ END
 
 ;+
 ; :Description:
-;    Get access to some params. 
+;    Get access to some fields.
 ;
 ; :Categories:
 ;            WAVE/OBJ_GIS   
 ;
 ; :Keywords:
-;       lon   : out, 
+;       lon: out, optional, type = float array 
 ;               2D array containing the longitudes of the grid 
-;       lat   : out, 
+;               (the longitudes will be computed at the first call and stored
+;               as a pointer: by large grids, this may cause some memory problems)
+;       lat: out, optional, type = float array 
 ;               2D array containing the latitudes of the grid 
-;       tnt_c : out, 
+;               (the latitudes will be computed at the first call and stored
+;               as a pointer: by large grids, this may cause some memory problems)
+;       tnt_c: out,  optional, type = {TNT_COORD}
 ;               grid {TNT_COORD} structure 
-;       meta  : out, 
+;       meta: out, optional, type = string
 ;               a string containg infos about the grid.
 ;
-; :Examples:
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -489,7 +459,7 @@ pro Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longit
   ENDIF
   
   ; Set properties if keyword is present.  
-  IF Arg_Present(lon) or ARG_PRESENT(lat) THEN self->Get_LonLat, lon, lat
+  IF Arg_Present(lon) or ARG_PRESENT(lat) THEN self->Get_LonLat, lon, lat, datum
   IF Arg_Present(tnt_c) THEN tnt_c = self.tnt_c
   IF Arg_Present(meta) THEN meta = self.meta
   
@@ -497,24 +467,27 @@ END
 
 ;+
 ; :Description:
-;    Get function. 
+;    Get the latitudes and longitudes of the grid. 
 ;
 ; :Categories:
 ;            WAVE/OBJ_GIS  
 ;
 ; :Params:
-;       lon: out,
-;            the longitudes 2D array
-;       lat: out,
-;            the latitudes 2D array
-;       nx : out,
+;       lon: out, optional, type = float array 
+;               2D array containing the longitudes of the grid 
+;               (the longitudes will be computed at the first call and stored
+;               as a pointer: by large grids, this may cause some memory problems)
+;       lat: out, optional, type = float array 
+;               2D array containing the latitudes of the grid 
+;               (the latitudes will be computed at the first call and stored
+;               as a pointer: by large grids, this may cause some memory problems)
+;       nx : out, optional, type = integer
 ;            number of x elements 
-;       ny : out, 
+;       ny : out, optional, type = integer
 ;            number of y elements
-;       datum : out,
+;       datum : out, optional, type = {TNT_DATUM}
 ;               the datum in which the lat and lon are defined
 ;
-; :Examples:
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -537,6 +510,7 @@ pro Grid2D::Get_LonLat, lon, lat, nx, ny, datum
   nx = self.tnt_c.nx
   ny = self.tnt_c.ny
   datum = self.tnt_c.proj.datum
+  undefine, lon, lat
   
   if N_ELEMENTS(*self.lon) eq 1 and (*self.lon)[0] eq -1 then begin
     
@@ -578,27 +552,25 @@ pro Grid2D::Get_LonLat, lon, lat, nx, ny, datum
   
 END
 
-;-----------------------------------------------------------------------
 ;+
 ; :Description:
-;    TODO:Describe the procedure.
+;    Get the latitudes and longitudes of the grid. 
 ;    
 ; :Categories:
-;         WAVE/OBJ_GIS   
+;            WAVE/OBJ_GIS  
 ;
 ; :Params:
-;       x: 
-;          the x 2D array
-;       y: 
-;          the y 2D array
-;       nx: 
-;             number of x elements 
-;       ny: 
-;             number of y elements
-;       proj: 
-;             the projection in which x and y are defined
+;       x: out, optional, type = float array 
+;               2D array containing the eastings of the grid 
+;       y: out, optional, type = float array 
+;               2D array containing the northings of the grid 
+;       nx : out, optional, type = integer
+;            number of x elements 
+;       ny : out, optional, type = integer
+;            number of y elements
+;       proj : out, optional, type = {TNT_PROJ}
+;               the projection in which the E/N are defined
 ;
-; :Examples:
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -631,39 +603,36 @@ END
 ;+
 ; :Description:
 ;    Generic routine to do any kind of transformation into the object grid (the destination grid is the object grid itself). 
-;       You can also compute eastings and northings in the grid projection, as well as
-;       lat and lons in the grid datum. 
+;    You can also compute eastings and northings in the grid projection, as well as lat and lons in the grid datum. 
 ;       
-;       In many cases, the more specific #transform_LonLat#, #transform_IJ# or #transform_XY# can be used instead.
+;    In many cases, the more specific 'transform_LonLat', 'transform_IJ' or 'transform_XY' can be used instead.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    x: in, 
-;       x coordinates in SRC (if they are indexes,  be carefull with orientation!)
-;    y: in, 
-;       y coordinates in SRC (if they are indexes,  be carefull with orientation!)
-;    i_dst: out, 
+;    x: in, required, type = float/double 
+;       x coordinates in SRC (if they are indexes,  be carefull with orientation! (0,0) is down left!)
+;    y: in, required, type = float/double 
+;       y coordinates in SRC (if they are indexes,  be carefull with orientation! (0,0) is down left!)
+;    i_dst: out, type = double 
 ;           the i coordinates of (x,y) in the object grid 
-;    j_dst: out, 
+;    j_dst: out, type = double 
 ;           the j coordinates of (x,y) in the object grid 
 ;
 ; :Keywords:
-;    SRC: 
-;         src the initial coordinate system ({TNT_COORD} or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
-;    LON_DST: out, 
+;    SRC: in, required
+;         src the initial coordinate system (Grid2d or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
+;    LON_DST: out, type = float/double 
 ;             the longitudes of (x,y) in the object grid 
-;    LAT_DST: out, 
+;    LAT_DST: out, type = float/double  
 ;             the latitudes of (x,y) in the object grid 
-;    E_DST: out, 
+;    E_DST: out,  type = float/double 
 ;            the eastings of (x,y) in the object grid 
-;    N_DST: out, 
+;    N_DST: out,  type = float/double 
 ;           the northings of (x,y) in the object grid 
-;    NEAREST: 
-;             if the nearest i,j couple is desired
-;
-; :Examples:
+;    NEAREST: in, optional
+;             set if the nearest i,j couple is desired
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -738,27 +707,26 @@ end
 ;+
 ; :Description:
 ;    Specific routine to transforms lons and lats into the object grid (the destination grid is the object grid itself).
+;    (wrapper for the 'transform' routine)
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    lon: in, 
-;         lon coordinates in the datum
-;    lat: in, 
-;         lat coordinates in the datum
-;    datum: in, 
+;    lon: in, required, type = float/double 
+;       lon coordinates in datum
+;    lat: in, required, type = float/double 
+;       lat coordinates in datum
+;    datum: in, required, type = {TNT_DATUM}
 ;           the lon/lat datum system {TNT_DATUM}
-;    i: out, 
+;    i: out, type = double
 ;       the i coordinates of (lon,lat) in the object grid 
-;    j: out, 
+;    j: out, type = double
 ;       the j coordinates of (lon,lat) in the object grid 
 ;
 ; :Keywords:
-;    NEAREST: 
-;             if the nearest i,j couple is desired
-;
-; :Examples:
+;    NEAREST: in, optional
+;             set if the nearest i,j couple is desired
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -794,27 +762,26 @@ end
 ;+
 ; :Description:
 ;    Gpecific routine to transforms eastings and northings into the object grid (the destination grid is the object grid itself).    
+;    (wrapper for the 'transform' routine)
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    x: in, 
+;    x: in, required, type = float/double 
 ;       northings in the proj
-;    y: in, 
+;    y: in, required, type = float/double 
 ;       eastings in the proj 
-;    proj: in, 
+;    proj: in, required, type = {TNT_PROJ}
 ;          the x/y projection system {TNT_PROJ}
-;    i: out, 
+;    i: out, type = double
 ;       the i coordinates of (lon,lat) in the object grid 
-;    j: out, 
+;    j: out, type = double
 ;       the j coordinates of (lon,lat) in the object grid 
 ;
 ; :Keywords:
-;    NEAREST: 
-;             if the nearest i,j couple is desired
-;
-; :Examples:
+;    NEAREST: in, optional
+;             set if the nearest i,j couple is desired
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -850,27 +817,26 @@ end
 ;+
 ; :Description:
 ;    Specific routine to transforms i and j from a grid into the object grid (the destination grid is the object grid itself).      
-;
+;    (wrapper for the 'transform' routine)
+;    
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    i_src: in, 
-;           i indexes into the grid
-;    j_src: in, 
-;           j indexes into the grid
-;    grid: in, 
+;    i_src: in, required, type = integer
+;           i indexes into the grid (be carefull with orientation! (0,0) is down left!)
+;    j_src: in, required, type = integer
+;           j indexes into the grid (be carefull with orientation! (0,0) is down left!)
+;    grid: in, required, type = Grid2D
 ;          the grid system (instance of Grid2D)
-;    i: out, 
+;    i: out, type = double
 ;       the i coordinates of (lon,lat) in the object grid 
-;    j: out, 
+;    j: out, type = double
 ;       the j coordinates of (lon,lat) in the object grid 
 ;
 ; :Keywords:
-;    NEAREST: 
-;             if the nearest i,j couple is desired
-;
-; :Examples:
+;    NEAREST: in, optional
+;             set if the nearest i,j couple is desired
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -906,44 +872,45 @@ end
 
 ;+
 ; :Description:
-;    Generic routine to transform any georeferenced grid without projection (e.g. lon and lat grid from swath files) 
-;       into the object grid using nearest neighborhood.
+;    Generic routine to transform any georeferenced grid without projection
+;    into the object grid using nearest neighborhood. (for example lon and lat grid from swath files)
 ;       
-;       The default method is to transform it forwards: the LatLon points are transformed into
-;       the grid and the data value is affected to the neirest grid point. This method is not
-;       recomended because the end grid may not be filled entirely if its resolution is finer
-;       than the lat-lon grid, for example.
+;    The default method is to transform it forwards: the LatLon points are transformed into
+;    the grid and the data value is affected to the neirest grid point. This method is not
+;    recomended because the end grid may not be filled entirely if its resolution is finer
+;    than the lat-lon grid, for example.
 ;       
-;       The second method (BACKWARDS keyword) transforms the grid points into lat-lon and looks
-;       for the neirest points into the input lat-lon grid to perform interpolation. This method 
-;       is recomended. However, this implies using interpolation algorithm into irregular grids,
-;       which is very demanding in both memory and processor use. If your LatLon arrays are too
-;       large, the programm may lag or even go out of memory.
-;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-;       ! 05.11.2010: NOT IMPLEMENTED YET !
-;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-;       Output: the remaped data array, of object grid X and Y dimensions. (if there, time is third dimension)
+;    The second method (BACKWARDS keyword) transforms the grid points into lat-lon and looks
+;    for the neirest points into the input lat-lon grid to perform interpolation. This method 
+;    is recomended. However, this implies using NN interpolation algorithm into irregular grids,
+;    which is very demanding in both memory and processor use. If your LatLon arrays are too
+;    large, the program may lag or even go out of memory.
+;       
+;    ! 05.11.2010: BACKWARDS METHOD NOT IMPLEMENTED YET !
+;    ====================================================
+;       
 ;       
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    data: in, 
-;          the data to map on the object grid. The two first dimenstions are X and Y, the third is handled as time
-;    src_datum: in, 
+;    data: in, required, type = float array
+;          the data to map on the object grid. The two first dimenstions are X and Y, the third is handled as time or Z dim 
+;    src_datum: in, required, type = {TNT_DATUM}
 ;               the datum of the grid
-;    src_lon: in, 
-;             the longitudes of the grid
-;    src_lat: in, 
-;             the latitudes of the grid
+;    src_lon: in, required, type = float array
+;             the longitudes of the data
+;    src_lat: in, required, type = float array
+;             the latitudes of the data
 ;
 ; :Keywords:
-;    MISSING: 
-;             value to set to missing values in the final grid. 0 is the default value
-;    BACKWARDS: 
-;               to use the bacwards method (NOT IMPLEMENTED YET)
+;    MISSING: in, optional
+;             value to set to missing values in the final grid. 0. is the default value
+;    BACKWARDS: in, optional
+;               set to use the backwards method (NOT IMPLEMENTED YET)
 ;
-; :Examples:
+; :Returns:
+;    the transformed data array in the grid (same dims)
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -1014,27 +981,27 @@ end
 
 ;+
 ; :Description:
-;    Generic routine to transform a data array defined in any other GRID the OBJECT GRID. 
-;       Default is to use Neirest Neighbor algorithm.
-;       Output is the remaped data array, of the same dimensions of the object grid. and with an eventual 3rd dim (time).
+;    Important routine to transform a data array defined in any other GRID the OBJECT GRID. 
+;    Default is to use Neirest Neighbor algorithm, BILINEAR is also implemented.
 ;       
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
-;    data: in, 
+;    data: in, required, type = float array
 ;          the data to map on the grid itself. The two first dimenstions are X and Y, the third is handled as time
-;    src_grid: in, 
+;    src_grid: in,  type = Grid2d
 ;              the data grid (Grid2d Object)
 ;
 ; :Keywords:
-;    MISSING: 
-;             value to set to missing values in the arrival grid. 0 is the default value
-;    BILINEAR: 
-;             if bilinear interpolation have to be used
+;    MISSING: in, optional
+;             value to set to missing values in the final grid. 0. is the default valuel
+;    BILINEAR: in, optional
+;             set to use bilinear interpolation instead of NN
 ;
-; :Examples:
-;
+; :Returns:
+;    The remaped data array, of the same dimensions of the object grid, with an eventual 3rd dim (time/Z)
+;    
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -1141,19 +1108,18 @@ end
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
-;
 ; :Keywords:
-;    Xsize: 
-;           the new X dimension (the original X/Y ratio is conserved) 
-;    Ysize: 
-;           the new Y dimension (the original X/Y ratio is conserved) (if set, Xsize is ignored)
-;    FACTOR: 
+;    Xsize:  in, optional, type = integer
+;           the new X dimension size (the original X/Y ratio is conserved) 
+;    Ysize: in, optional, type = integer
+;           the new Y dimension size (the original X/Y ratio is conserved) (if set, Xsize is ignored)
+;    FACTOR: in, optional, type = float
 ;           a factor to multiply to nx and ny (if set, Xsize and Ysize are ignored)
-;    PLOT: 
-;         to set if the resampled grid is used to plot pruposes (grid containing half of the border pixels)
+;    PLOT: in, optional
+;         to set if the resampled grid is used to plot pruposes (output grid containing the missing half of the border pixels)
 ;
-; :Examples:
-;
+; :Returns:
+;     A new Grid2D, which is a resampled version of the object grid
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
