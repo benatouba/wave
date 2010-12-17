@@ -1,97 +1,60 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  TRMM_nc__Define.pro                                   *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  05-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
+; docformat = 'rst'
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GENERAL INFORMATION
 ;
-;       TRMM_nc is the basis class for TRMM datasets in NetCDF format.
-;       It reads the geolocalisation from the file and provides subseting 
-;       tools to the user, as well as all the #GRID2d# transformation tools.
+;  TRMM_nc is the basis class for TRMM datasets in NetCDF format.
+;  It reads the geolocalisation from the file and provides subseting 
+;  tools to the user, as well as all the 'Grid2D' transformation tools.
 ;              
-;       Accepted products so far:
+;  Accepted products so far::
+;  
 ;       3B43 (Monthly)
 ;       3B42 (Hourly)
-;       3B42_daily (Daily)
-;       3B42_agg : 3B42 products aggregated with the WAVE #utils_TRMM_aggregate# procedure
-;       3B43_agg : 3B43 products aggregated with the WAVE #utils_TRMM_aggregate# procedure
+;       3B42_daily (Daily) (!Carefull with geoloc: use exclusively get_Prcp method!)
+;       3B42_agg : 3B42 products aggregated with the WAVE 'utils_TRMM_aggregate_3B42' procedure
+;       3B43_agg : 3B43 products aggregated with the WAVE 'utils_TRMM_aggregate_3B43' procedure
 ;      
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       NCDF
-;       Grid2D
-;       
-;       =================================================================
-;       Attributes:
-;       ----------------------
-;          +NCDF attributes  
-;          +Grid2D attributes  
-;            subset:  [0l,0l,0l,0l]    ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL ncdf grid array where to subset
-;            type:               ''    ,  $ ; type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_agg', '3B43_agg'
-;            cropped:            ''    ,  $ ; set to true or false at initialisation.
-;            t0:         {ABS_DATE}    ,  $ ; first available time
-;            t1:         {ABS_DATE}    ,  $ ; last available time
-;            time:        PTR_NEW()    ,  $ ; available times
-;            nt:                 0L       $ ; n times
-;          
-;                    
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the MODIS file. If not set, a dialog window will open
-;         SUBSET_LL : Subset corners in Lat Lons
-;         SUBSET_IJ : subset indexes in the NCDF file (to define using SUBSET_LL)
-;         LL_DATUM  : datum in which the Lat and Lons are defined. Default: WGS-84
+; :Properties:
+;         type: type = string              
+;               type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_agg', '3B43_agg'
 ;              
-;       
-;       =================================================================
-;       Methods:
-;       ----------------------
-;       The following methods can be used directly. Non ducumented methods 
-;       are not for external use.
-;       + NCDF methods
-;       + GRID2D methods
-;       Overrided methods:
-;       obj->Get_Var()  : get a specific variable along with some information, coherent with the grid geoloc
-;       New methods:
-;       obj->define_subset() : to subset TRMM data to a rgion of interest accordingly to its intern geoloc.
-;       obj->quickPlotPrcp    : plots a "flat" image of TRMM pcp 
-;              
-;       =================================================================
-;       
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TRMM_nc__Define
+; :Description:
+;    Defines the attributes of the class Grid2D. Attributes::
 ;
-; PURPOSE:
-;       Object structure definition
+;    TRMM_nc
+;            INHERITS Grid2D           
+;            INHERITS GEO_nc         
+;            type : ''
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Upgrade to WAVE 0.1
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 PRO TRMM_nc__Define
  
   ; SET UP ENVIRONNEMENT
@@ -106,37 +69,49 @@ PRO TRMM_nc__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TRMM_nc::Init
+; :Description:
+; 
+;    Build function.
 ;
-; PURPOSE:
-;       Build function. I proposes subsetting tools, but subsetting is also
-;       possible once the object is created using the #define_subset# method.
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; KEYWORDS:
-;       FILE      : the path to the TRMM file. If not set, a dialog window will open
-;       SUBSET_LL : set it to the desired subset corners to automatically subset the data.
-;                   Format : [ul_lon, ul_lat, dr_lon, dr_lat]. (it is assumed that
+; :Keywords:
+;       FILE      : in, optional, type = string
+;                   the path to the TRMM file. If not set, a dialog window will open
+;       SUBSET_LL : in, optional, type = float vector 
+;                   set it to the desired subset corners to automatically subset the data.
+;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
 ;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
+;       SUBSET_IJ : in, type = long vector
+;                    Four elements array::              
+;                      first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
+;                      second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
+;                      third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
+;                      fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
+;                   
 ;                   Unless you know what you do, it should not be set manually but 
-;                   retrieved using the #define_subset# method.
-;       LL_DATUM  : datum in which the Lat and Lons are defined. Default: WGS-84
+;                   retrieved using the 'define_subset' method.
+;                   
+;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
+;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
 ;
-; OUTPUT:
-;       1 if the TRMM_nc object is created successfully, 0 if not
+; :Returns:
+;    1 if the object is created successfully. 
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Upgrade to WAVE 0.1
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
            
   ; SET UP ENVIRONNEMENT
@@ -180,8 +155,7 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   ;*********
   self.cropped = ''
   if NOT self->TRMM_nc::define_subset(SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum) THEN RETURN, 0
-  
-  
+      
   ;****************
   ; Read metadata *
   ;****************    
@@ -213,67 +187,69 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TRMM_nc::Cleanup
+; :Description:
+;    Destroy function. 
+;    
+; :Categories:
+;    WAVE/OBJ_GIS   
 ;
-; PURPOSE:
-;       Destroy. 
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
+; :History:
+;      Written by FaM, 2010.
+;       
+;       Modified::
+;          22-Nov-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
 ;-
-;-----------------------------------------------------------------------
 pro TRMM_nc::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
 
+  NCDF_CLOSE, self.cdfid
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
-  Ptr_Free, self.time
-  NCDF_CLOSE, self.cdfid
+  PTR_FREE, self.varNames
+  PTR_FREE, self.dimNames
+  PTR_FREE, self.dimSizes
+  PTR_FREE, self.time
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TRMM_nc::GetProperty
+; :Description:
+;    Get access to some params. 
 ;
-; PURPOSE:
-;       Get access to some params. 
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; KEYWORDS:
-;      Output:
-;       type
-;       t0 
-;       t1     
-;       time
-;       nt
-;       _Ref_Extra : see #NCDF:GetProperty# and #Grid2D::GetProperty#
+; :Keywords:
+;    type: out, optional, type = string
+;          type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_agg', '3B43_agg'
+;    _Ref_Extra: 
+;        see 'GEO_nc:GetProperty' and 'Grid2D::GetProperty'
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Upgrade to WAVE 0.1
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 PRO TRMM_nc::GetProperty,  $
-    type = type     ,  $ ; type of active file
-    t0 = t0  ,  $ ; first available time
-    t1 = t1   ,  $ ; last available time
-    time = time   ,  $ ; available times
-    nt = nt  ,  $ ; n times
-    _Ref_Extra=extra
+                       type = type     ,  $ ; type of active file
+                       _Ref_Extra=extra
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -287,16 +263,49 @@ PRO TRMM_nc::GetProperty,  $
   ENDIF
       
   IF Arg_Present(type) NE 0 THEN type = self.type
-  IF Arg_Present(t0) NE 0 THEN t0 = self.t0
-  IF Arg_Present(t1) NE 0 THEN t1 = self.t1
-  IF Arg_Present(time) NE 0 THEN time = *self.time
-  IF Arg_Present(nt) NE 0 THEN nt = self.nt
   
   self->GRID2D::GetProperty, _Extra=extra
-  self->NCDF::GetProperty, _Extra=extra
+  self->GEO_nc::GetProperty, _Extra=extra
   
 end
 
+;+
+; :Description:
+;    see 'GEO_nc:get_Var'
+;    
+;    This function has been redefined because of the TRMM daily files that have
+;    stupidly an other format.
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;
+; :Params:
+;    Varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;    time:  out, type = qms
+;           the variable times
+;    nt: out, type = long
+;        the variable number of times
+;
+; :Keywords:
+;   _Ref_Extra: 
+;        see 'GEO_nc:get_Var'
+; 
+; :Returns:
+;         The variable
+; 
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;      Written by FaM, 2010.
+;       
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;-
 function TRMM_nc::get_Var, varid, time, nt, _Ref_Extra = extra                     
   
   ; SET UP ENVIRONNEMENT
@@ -310,47 +319,52 @@ function TRMM_nc::get_Var, varid, time, nt, _Ref_Extra = extra
     RETURN, -1
   ENDIF
   
-  if self.type eq '3B42_d' then Message, 'The function get_var does not work with daily files because their format is stupid. Use get_Prcp instead.', /INFORMATIONAL
+  if self.type eq '3B42_d' then Message, 'The function get_var does not work properly with 3B42 daily files because their format is stupid. Use get_Prcp instead.', /INFORMATIONAL
     
   return, self->GEO_nc::get_Var(varid, time, nt, _Extra=extra)
 
-end  
+end
 
-;-----------------------------------------------------------------------
+
 ;+
-; NAME:
-;       TRMM_nc::get_prcp
-;
-; PURPOSE:
-;             
-;       Extracts the precipitation variable from the NCDF file. The data obtained from this method
-;       is consistent with the grid geolocalisation and should not be modified externally
-;       without using the suitable methods (see #Grid2D#).
-;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; INPUT:
-;       none
-;       
-; OUTPUT:
-;       precipitation
-;       
-; PARAMS:
-;        times (O) times
-;        nt    (O) n times
+; :Description:
 ; 
-; KEYWORDS:
-;        units: (O) the units of prcp
-;        t0:    (I) if set, the start time of the desired time serie
-;        t1:    (I) if set, the end time of the desired time serie
+;    Extracts the precipitation variable from the TRMM file. The data obtained from this method
+;    is consistent with the grid geolocalisation and should not be modified externally
+;    without using the suitable methods (see 'Grid2D').
+;    
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Params:
+;    time:  out, type = qms
+;           the variable times
+;    nt: out, type = long
+;        the variable number of times
+;        
+; :Keywords:
+;    units: out, optional, type = string
+;           the units of prcp
+;    T0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    T1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+; 
+;  :Returns:
+;     precipitation
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 
   ; SET UP ENVIRONNEMENT
@@ -391,34 +405,81 @@ function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
     
 end
 
-;-----------------------------------------------------------------------
+
+function TRMM_nc::get_Pcp_TS, x, y, $
+                              time, nt, $
+                              t0 = t0, t1 = t1, $
+                              src = src, $
+                              units = units, $
+                              point_i = point_i, $
+                              point_j = point_j, $
+                              point_lon = point_lon, $
+                              point_lat = point_lat
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ON_ERROR, 2
+  
+  pcp = -1
+  
+  if N_PARAMS() lt 2 then Message, WAVE_Std_Message(/NARG)
+  
+  ; no go threw the possibilites:
+  if N_ELEMENTS(src) EQ 0 then mysrc = self else mysrc = src
+  
+  ; This is to obtain the indexes in the grid
+  self->transform,  x, y, point_i, point_j, SRC = mysrc, /NEAREST
+  
+  ; This is to obtain lat and lons of the selected grid point
+  self->transform, point_i, point_j, dummy1, dummy2, src=self, $
+    LON_DST=point_lon, LAT_DST=point_lat
+    
+  if self.type eq '3B42_d' then begin
+    NCDF_VARGET, self.cdfid, 'hrf', pcp
+    pcp = [pcp[720:*,*] , pcp[0:719,*]]
+    units = 'mm d-1'
+    time = *self.time
+    nt = 1
+    if self.cropped ne 'FALSE' then pcp = pcp[self.subset[0]+point_i,self.subset[2]+point_j]
+  endif else if self.type eq '3B42_h' then begin
+    pcp = self->GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    units = 'mm hr-1'
+  endif else if self.type eq '3B43' then begin
+    pcp = self->GEO_nc::get_TS('pcp', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    units = 'mm hr-1'
+  endif else begin ; agg files
+    pcp = self->GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    NCDF_ATTGET, self.cdfid, 'precipitation', 'units', units
+    units = STRING(units)
+  endelse
+  
+  return, pcp
+  
+end
+
+
 ;+
-; NAME:
-;       TRMM_nc::QuickPlotPrcp
-;
-; PURPOSE:
-;       flat plot of prcp variable for quick visualisation purposes
-;
-; CATEGORY:
-;       WAVE grid objects
+; :Description:
 ; 
-; INPUT:
-;       
-;       
-; OUTPUT:
-;       a plot
-;       
-; KEYWORDS:
-;        /NO_CALIB: the default behaviour id to check if calibration data is contained 
-;                   in the HDF variable attributes and apply it to the variable. Set this
-;                   keyword to avoid making an automatic calibration
+;    Plots the prcp variable for quick visualisation purposes.
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 pro TRMM_nc::QuickPlotPrcp
 
   ; SET UP ENVIRONNEMENT
@@ -436,46 +497,97 @@ pro TRMM_nc::QuickPlotPrcp
   
   if self.type eq '3B42_d' then self->Get_LonLat, lon, lat else self->get_ncdf_coordinates, lon, lat
   
-  if N_ELEMENTS(times) eq 1 then QuickPLot, pcp, COLORTABLE=2, TITLE= self.meta, $
+  if N_ELEMENTS(times) eq 1 then QuickPLot, pcp, COLORTABLE=2, TITLE= self.meta + ' ' + TIME_to_STR(times), $
     WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat'] $
       else QuickPLot, pcp, COLORTABLE=2, TITLE= self.meta, dim3tags=TIME_to_STR(times), $
           WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat','time']
 
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TRMM_nc::define_subset
-;
-; PURPOSE:
-;       It is called during the object instancing but can be called also once the object is created.
-;       It subsets the original data to a region of interest and actualises Geolocalisation accordingly.
-;       Future calls to #TRMM_nc::get_var# will return the subseted data. 
+; :Description:
+;    It is called during the object instancing but can be called also once the object is created.
+;    It subsets the original data to a region of interest and actualises Geolocalisation accordingly.
+;    Future calls to #TRMM_nc::get_var# will return the subseted data. 
 ;       
-;       To reset to the original geoloc just call this method without arguments.
+;    To reset to the original geoloc just call this method without arguments.
+;    Output: 1 if the MODIS_Grid object is updated successfully, 0 if not.
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; KEYWORDS:
-;       SUBSET_LL : (I)   set it to the desired subset corners to automatically subset the data.
-;                         Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
-;                         lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : (I/O) indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
-;                         Unless you know what you do, it should not be set manually.
-;                         One can retrive it from this method by setting SUBSET_IJ to a named variable                         
-;       LL_DATUM  : (I)   datum in which the Lat and Lons are defined. Default: WGS-84
+; :Keywords:
+; todo: complete keyword description
+;       SUBSET_LL : in, optional, type = string
+;                   set it to the desired subset corners to automatically subset the data.
+;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
+;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
+;       SUBSET_IJ : in, type =
+;                   indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
+;                   Unless you know what you do, it should not be set manually.
+;                   One can retrive it from this method by setting SUBSET_IJ to a named variable.
+;       LL_DATUM  : in, type =
+;                   datum in which the Lat and Lons are defined. Default: WGS-84
 ;
-; OUTPUT:
-;       1 if the MODIS_Grid object is updated successfully, 0 if not
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
+
+;+
+; :Description:
+; 
+;    This function defines a new automatic subset for the TRMM file. It encapsulates
+;    the 'GEO_nc::define_dubset' method by replacing the SUBSET keyword with 'SUBSET_IJ'
+;    and adding the 'SUBSET_LL' keyword for Lon-Lat corners subset.
+;    
+;    It is called during the object instancing but can be called also once the instance is active.
+;    It subsets the original data to a region of interest and actualises geolocalisation accordingly.
+;    Future calls to 'get_Var' will return the subseted data. 
+;       
+;    To reset to the original geoloc just call this method without arguments.
+;    Output is 1 if the TRMM_nc object is updated successfully, 0 if not.
+;    
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;
+; :Keywords:
+;       SUBSET_LL : in, optional, type = float vector 
+;                   set it to the desired subset corners to automatically subset the data.
+;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
+;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.);                   
+;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
+;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
+;       SUBSET_IJ:  in/out, optional, type = integer array 
+;                   Four elements array::              
+;                     first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
+;                     second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
+;                     third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
+;                     fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.                       
+; :Returns:
+;     1 if the subset was defined succesfully.
+;          
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;      Written by FaM, 2010.
+;       
+;       Modified::
+;          15-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;-
 function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
   ; SET UP ENVIRONNEMENT

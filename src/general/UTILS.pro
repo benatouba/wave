@@ -610,22 +610,40 @@ end
 
 ;+
 ; :Description:
-;    This procedure reads all TRMM netcdf files from a directory, sorts them by date
-;       and aggregates the precipitation field. 
-;       
-;    !!!! Carefull: not tested since a long time
+;    This procedure reads all TRMM 3B42 netcdf files from a directory, 
+;    sorts them by date and aggregates the precipitation field to a 
+;    single NCDF file.
+;    
+;    Various options are given to the user, one of them being the possibility
+;    to "shift" the time serie. Originaly, TRMM 3hourly files at e.g. 09H UTC
+;    represent the rainfall rate from 07H30 to 10H30. The user can choose 
+;    wether to keep the time as it is with the keyword 'NOSHIFT'(standard method 
+;    also used by the NASA to aggregate 3 Hourly files to daily files) () or
+;    to "shift" the time serie: the prcp at 09H UTC is then the summ of half 
+;    the prcp in the 06H file and half the prcp in the 09H file.
+;    
 ;       
 ; :Categories:
 ;    WAVE/UTILS
 ;
 ; :Params:
-;    fname: in, required, type=string , default=none
-;           any TRMM file in the directory to aggregate
+;    directory: in, required, type=string , default=none
+;               all the 3B42 files in this directory will be recursively parsed.
 ; :Keywords:
-;    SUBSET: in, optional, default=none
-;    VERBOSE: in, optional, default=none
-;    NOSHIFT: in, optional, default=none
-;    
+;    START_TIME: in, optional, type=time, default=first available time in directory
+;                starting time in the aggregated output file.
+;    END_TIME: in, optional, type=time, default=last available time in directory
+;             ending time in the aggregated output file.
+;    OUTFILE: in, optional, type=string, default= directory+'/3B42_agg.'+date+'.nc'
+;             path tto the output file. TO BE WAVE compliant, the file MUST BEGIN with "3B42_agg"
+;    NOSHIFT: in, optional
+;             if set, aggregat the files using their original timestamp.
+;    SUBSET_IJ: in, optional
+;              set to aggregate only a subset of the file (see 'TRMM_nc')
+;    SUBSET_LL: in, optional
+;              set to aggregate only a subset of the file (see 'TRMM_nc')
+;    LL_DATUM: in, optional
+;               the datum for 'SUBSET_LL'  (see 'TRMM_nc')
 ; 
 ; :Author:
 ;       Fabien Maussion::
@@ -634,137 +652,197 @@ end
 ;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+;       Modified:   15-Dec-2010 FaM
+;                   Written for upgrade to WAVE 0.1
 ;-
-pro utils_TRMM_aggregate, file, outfile, SUBSET = subset, VERBOSE = VERBOSE, NOSHIFT = noshift
-
-  ; SET UP ENVIRONNEMENT
+pro utils_TRMM_aggregate_3B42, directory, START_TIME = start_time, END_TIME = end_time, OUTFILE = outfile, $
+    NOSHIFT = noshift, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
+    
+  ; Set Up environnement
+  COMPILE_OPT idl2
   @WAVE.inc
-  COMPILE_OPT IDL2
- 
-  if N_ELEMENTS(file) eq 0 then file = DIALOG_PICKFILE(TITLE='Please select TRMM ncdf file to aggregate', /MUST_EXIST)  
-  path = FILE_DIRNAME(file)
-  pattern = '*.nc'
-  filelist = file_search(path, pattern, COUNT=cnt)
-  filelist = filelist[SORT(filelist)]
+    Catch, theError
+    IF theError NE 0 THEN BEGIN
+      Catch, /Cancel
+      ok = WAVE_Error_Message(!Error_State.Msg) + ' Will not aggregate...'
+      if arg_okay(outfile, TYPE = IDL_STRING) then if FILE_TEST(outfile) then FILE_DELETE, outfile
+      close, 1
+      RETURN
+    ENDIF
   
-  if KEYWORD_SET(subset) then mysubs = subset
+  ; ---------------
+  ; Check the input
+  ; ---------------
   
-  t0 = OBJ_NEW('TRMM_nc', FILE=file, SUBSET_IJ=mysubs)
-  t0->GetProperty, type = type
-  t0->Get_LonLat, lon, lat  
-  OBJ_DESTROY, t0
+  if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select directory to parse', /DIRECTORY)
+  if not FILE_TEST(directory, /DIRECTORY) then message, 'Directory is not a directory'
   
-  undefine, mysubs
-  if KEYWORD_SET(subset) then mysubs = subset
+  fileList = FILE_SEARCH(directory, '3B42.*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, count = cfiles)
+  fileList = fileList[SORT(fileList)]
+  if cfiles eq 0 then Message, '$directory is not set properly.'
   
-  if KEYWORD_SET(VERBOSE) then print, 'Selected file is of type: ' + type + '. All other files will be ignored.'
+  step = MAKE_TIME_STEP(hour=3)
   
-  for f = 0, N_ELEMENTS(filelist)-1 do begin
-    t0 = OBJ_NEW('TRMM_nc', FILE=filelist[f], SUBSET_IJ=mysubs)
-    if not OBJ_VALID(t0) then begin
-      if KEYWORD_SET(VERBOSE) then print, FILE_BASENAME(filelist[f]) + ' not recognized. Ignored.'
-      continue
-    end
-    t0->GetProperty, type = type0
-    if str_equiv(type0) ne str_equiv(type) then begin
-      if KEYWORD_SET(VERBOSE) then print, FILE_BASENAME(filelist[f]) + ' not of correct type. Ignored.'
-      OBJ_DESTROY, t0
-      continue
-    end
-    time0 = t0->get_time()    
-    if N_ELEMENTS(time) eq 0 then time = time0 else time = [time, time0]
-    pcp0 = 0 > t0->get_prcp() ; Remove missing vals
-    if N_ELEMENTS(pcp) eq 0 then pcp = pcp0 else pcp = [[[pcp]], [[pcp0]]]
-       
-    if KEYWORD_SET(VERBOSE) then print, TIME_to_STR(time0) + ' read.'
-    OBJ_DESTROY, t0
-          
+  ; ---------------------
+  ; Create the time serie
+  ; ---------------------
+  ;Parse names for available times wrfout_d01_2008-10-26_12:00:00
+  fname = FILE_BASENAME(fileLIST)
+  for i=0, cfiles-1 do begin
+    tsp = STRSPLIT(fname[i], '.',/EXTRACT)
+    tsd = tsp[1]
+    y = LONG(STRMID(tsd,0,2))
+    if y lt 80 then y +=2000 else y+=1900
+    m = LONG(STRMID(tsd,2,2))
+    d = LONG(STRMID(tsd,4,2))
+    h = LONG(tsp[2])
+    if N_ELEMENTS(time) eq 0 then time = QMS_TIME(YEAR=y, MONTH=m, DAY=d, HOUR=h) $
+    else  time = [time, QMS_TIME(YEAR=y, MONTH=m, DAY=d, HOUR=h)]
   endfor
-  if KEYWORD_SET(VERBOSE) then print, ''
-  iqms = time.qms
-  s = sort(iqms)
-  iqms = iqms[s]
-  pcp = pcp[*,*,s]
+  time = time[sort(time)]    
+  if ~check_TS(time) then message, '  The files do not form a continous time serie.'
   
-  check = check_TS(iqms, timestep)
-  if check ne TRUE then MESSAGE, 'Time serie not complete!'
+  if ~KEYWORD_SET(NOSHIFT) then time = time[1:(N_ELEMENTS(time)-1)]
+  nt = N_ELEMENTS(time)
+  p0 = 0
+  p1 = nt-1
+  if KEYWORD_SET(START_TIME) then begin
+    if ~check_WTIME(START_TIME, OUT_QMS=t0) then Message, WAVE_Std_Message('START_TIME', /ARG)
+    p0 = where(time eq t0, cnt)
+    if cnt ne 1 then Message, 'Your start time (' + TIME_to_STR(t0) + $
+      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+').'
+  endif
+  if KEYWORD_SET(END_TIME) then begin
+    if ~check_WTIME(END_TIME, OUT_QMS=t1) then Message, WAVE_Std_Message('END_TIME', /ARG)
+    p1 = where(time eq t1, cnt)
+    if cnt ne 1 then Message, 'Your end time (' + TIME_to_STR(t1) + $
+      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+').'
+  endif
   
-  ni = N_ELEMENTS(iqms)
- 
-  if type eq '3B42_h' then begin
-    if  KEYWORD_SET(NOSHIFT) then begin
-     fqms = iqms
-     fpcp = pcp*3.
+  time = time[p0:p1]
+  nt = N_ELEMENTS(time)
+  t0 = time[0]
+  t1 = time[nt-1]
+  
+  ; -------------------
+  ; Create the log file
+  ; -------------------
+  str = TIME_to_STR(t0) ; 22.10.2008 03:00:00
+  str = strmid(str,6,4) + '_' + strmid(str,3,2) + '_' + strmid(str,0,2)
+  
+  if ~KEYWORD_SET(OUTFILE) then outfile = DIRECTORY + '/3B42_agg.' + str + '.nc'
+  if STRMID(FILE_BASENAME(OUTFILE),0,8) ne '3B42_agg' then Message, 'The output file MUST have the suffix 3B42_agg'
+  
+  OPENW, 1, DIRECTORY + '/trmm_agg_'+ str + '.log'
+  
+  printf, 1, 'TRMM 3B42 aggregation'
+  printf, 1, ''
+  printf, 1, 'Number of files: ' + str_equiv(cfiles)  
+  printf, 1, 'Start date : ' + TIME_to_STR(time[0])
+  printf, 1, 'End   date : ' + TIME_to_STR(time[nt-1])
+  
+  ; Open the file you just created and copy the information in it to another file.
+  printf, 1, ''
+  text = 'Destination file : ' + outfile
+  printf, 1, text
+  
+  ; ---------------------------
+  ; Read the Netcdf template file
+  ; ---------------------------
+  template = OBJ_NEW('TRMM_nc', FILE=fileLIST[0], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+  TEMPLATE->get_ncdf_coordinates, lon, lat, nx, ny
+  TEMPLATE->GetProperty, SUBSET = subset
+  OBJ_DESTROY, TEMPLATE
+  ; ---------------------------
+  ; Create the Netcdf out file
+  ; ---------------------------
+  tid = NCDF_CREATE(outfile, /CLOBBER)
+  NCDF_CONTROL, tid, /FILL
+  ;Define dimensions
+  dimTimeid  = NCDF_DIMDEF(tid, 'time', nt)
+  dimLonid  = NCDF_DIMDEF(tid, 'lon', nx)
+  dimLatid  = NCDF_DIMDEF(tid, 'lat', ny)
+  
+  ; Define tvariables
+  Timeid = NCDF_VarDef(tid, 'time', dimTimeid, /LONG)
+  ; Add attributes
+  NCDF_AttPut, tid, Timeid, 'zone', 'UTC', /CHAR
+  d = TIME_to_STR(time[0])
+  str = 'hours since ' + STRMID(d,6,4) + '-' + STRMID(d,3,2) + '-' + STRMID(d,0,2) + ' ' + STRMID(d,11,2)
+  NCDF_AttPut, tid, Timeid, 'units', str, /CHAR
+  
+  Lonid = NCDF_VarDef(tid, 'lon', dimLonid, /FLOAT)
+  NCDF_AttPut, tid, Lonid, 'units', 'degrees_east', /CHAR
+  Latid = NCDF_VarDef(tid, 'lat', dimLatid, /FLOAT)
+  NCDF_AttPut, tid, Latid, 'units', 'degrees_north', /CHAR
+  
+  pcpid = NCDF_VarDef(tid, 'precipitation', [dimLonid, dimLatid, dimTimeid], /FLOAT)
+  NCDF_AttPut, tid, pcpid, 'units', 'mm 3hrs-1', /CHAR
+  
+  ; Add global attributes to the file.
+  NCDF_AttPut, tid, 'creation_date', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
+  NCDF_AttPut, tid, 'conventions', 'COARDS', /GLOBAL, /CHAR
+  
+  if KEYWORD_SET(NOSHIFT) then tinfo = 'The value at each UTC step is the accumulated prcp over the three PREVIOUS hours (mm 3hrs-1).' $
+  else TINFO = 'The value at each UTC step is the accumulated prcp over the three SURROUNDING hours (mm 3hrs-1).'
+  NCDF_AttPut, tid, 'time_info', tinfo, /GLOBAL, /CHAR
+  NCDF_AttPut, tid, 'source', 'TRMM 3B42 three-hourly product.', /GLOBAL, /CHAR
+  NCDF_AttPut, tid, 'title', 'TRMM 3B42 agg file', /GLOBAL, /CHAR
+  NCDF_AttPut, tid, 'subset', 'subset = ['+ str_equiv(subset[0]) +', '+ str_equiv(subset[1]) +', '+ str_equiv(subset[2]) +', '+ str_equiv(subset[3]) +']', /GLOBAL, /CHAR
+  NCDF_CONTROL, tid, /ENDEF ; Switch to normal Fill mode
+  
+  printf, 1,  'Destination file defined.'
+  printf, 1, 'Now starting to fill... '
+    
+  hours = INDGEN(nt, /LONG) * 3L
+  NCDF_VARPUT, tid, Timeid, hours
+  NCDF_VARPUT, tid, Lonid, REFORM(lon[*,0])
+  NCDF_VARPUT, tid, Latid, REFORM(lat[0,*])
+  if ~KEYWORD_SET(NOSHIFT) then NCDF_VARPUT, tid, pcpid, FLTARR(nx,ny,nt)
+  
+  for i = 0, cfiles-1 do begin
+  
+    t_obj = OBJ_NEW('TRMM_nc', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+
+    pcp = (t_obj->get_prcp(t) > 0) * 3
+    
+    if KEYWORD_SET(NOSHIFT) then begin
+      idx = where(time eq t, cnt)
+      if cnt eq 1 then NCDF_VARPUT, tid, pcpid, pcp, OFFSET = [0,0,idx]
     endif else begin
-      if KEYWORD_SET(VERBOSE) then print, '3B42 files need a 1H30 shift. This is done here.'
-      fqms0 = iqms[1]
-      fqms1 = iqms[ni-1]
-      fqms = INDGEN(ni-1,/L64) * 3LL * H_QMS + fqms0
-      if fqms1 ne fqms[N_ELEMENTS(fqms)-1] then message, 'done something wrong'      
-      fpcp = (pcp[*,*,0:ni-2] + pcp[*,*,1:ni-1]) * 3. / 2.
-      if N_ELEMENTS(fpcp[0,0,*]) ne N_ELEMENTS(fqms) then message, 'done something wrong here too'
+      idx = where(time eq t, cnt)
+      if cnt eq 1 then begin
+        NCDF_VARGET, tid, pcpid, pcpold, OFFSET = [0,0,idx], count = [nx,ny,1]
+        NCDF_VARPUT, tid, pcpid, pcpold + pcp/2., OFFSET = [0,0,idx]
+      endif      
+      idx = where(time eq t + 3LL*H_QMS, cnt)
+      if cnt eq 1 then begin
+        NCDF_VARGET, tid, pcpid, pcpold, OFFSET = [0,0,idx], count = [nx,ny,1]
+        NCDF_VARPUT, tid, pcpid, pcpold + pcp/2., OFFSET = [0,0,idx]
+      endif      
     endelse
-
-    if KEYWORD_SET(VERBOSE) then print, 'Start time : ' + TIME_to_STR(fqms0)
-    if KEYWORD_SET(VERBOSE) then print, 'End time : ' + TIME_to_STR(fqms1)
+    OBJ_DESTROY, t_obj
+    printf, 1,  '  ' + fileLIST[i] + ' processed.'
     
-    nf = N_ELEMENTS(fqms)
-        
-    if N_ELEMENTS(fname) eq 0 then begin
-      if KEYWORD_SET(NOSHIFT) then fname = path + STRMID(type,0,4) + '_agg_noshift_' + STRMID(TIME_to_STR(fqms[0]),0,10) + '.nc' $
-       else  fname = path + STRMID(type,0,4) + '_agg_' + STRMID(TIME_to_STR(fqms[0]),0,10) + '.nc' 
-    endif
-    if KEYWORD_SET(VERBOSE) then print, 'Start to fill the file : ' + fname
-    tid = NCDF_CREATE(fname, /CLOBBER)
-    NCDF_CONTROL, tid, /FILL
-    
-    ;Define dimensions
-    dimTimeid  = NCDF_DIMDEF(tid, 'time', nf)
-    dimLonid  = NCDF_DIMDEF(tid, 'lon', N_ELEMENTS(lon[*,0]))
-    dimLatid  = NCDF_DIMDEF(tid, 'lat', N_ELEMENTS(lat[0,*]))
-    
-    ; Define tvariables
-    Timeid = NCDF_VarDef(tid, 'time', dimTimeid, /LONG)
-      ; Add attributes
-      NCDF_AttPut, tid, Timeid, 'zone', 'UTC', /CHAR
-      d = TIME_to_STR(fqms[0])
-      str = 'hours since ' + STRMID(d,6,4) + '-' + STRMID(d,3,2) + '-' + STRMID(d,0,2) + ' ' + STRMID(d,11,2)
-      NCDF_AttPut, tid, Timeid, 'units', str, /CHAR
-      
-    Lonid = NCDF_VarDef(tid, 'lon', dimLonid, /FLOAT)
-      NCDF_AttPut, tid, Lonid, 'units', 'degrees_east', /CHAR
-    Latid = NCDF_VarDef(tid, 'lat', dimLatid, /FLOAT)
-      NCDF_AttPut, tid, Latid, 'units', 'degrees_north', /CHAR
-    
-    pcpid = NCDF_VarDef(tid, 'precipitation', [dimLonid, dimLatid, dimTimeid], /FLOAT)
-      NCDF_AttPut, tid, pcpid, 'units', 'mm 3hrs-1', /CHAR
-    
-    ; Add global attributes to the file.
-    NCDF_AttPut, tid, 'creation_date', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
-    NCDF_AttPut, tid, 'conventions', 'COARDS', /GLOBAL, /CHAR
-    NCDF_AttPut, tid, 'time_info', 'The value at each UTC step is the accumulated prcp over the three PREVIOUS hours (mm 3hrs-1).', /GLOBAL, /CHAR
-    NCDF_AttPut, tid, 'source', 'TRMM 3B42 three-hourly product.', /GLOBAL, /CHAR
-    NCDF_AttPut, tid, 'title', 'TRMM 3B42 agg file', /GLOBAL, /CHAR
-    if ~ KEYWORD_SET(SUBSET) then subset = [0,0,0,0]
-    NCDF_AttPut, tid, 'subset', 'subset = ['+ str_equiv(subset[0]) +', '+ str_equiv(subset[1]) +', '+ str_equiv(subset[2]) +', '+ str_equiv(subset[3]) +']', /GLOBAL, /CHAR
-    
-    NCDF_CONTROL, tid, /ENDEF ; Switch to normal Fill mode
-    hours = INDGEN(nf, /LONG) * 3L    
-    NCDF_VARPUT, tid, Timeid, hours
-    NCDF_VARPUT, tid, Lonid, REFORM(lon[*,0])
-    NCDF_VARPUT, tid, Latid, REFORM(lat[0,*])
-    NCDF_VARPUT, tid, pcpid, fpcp
-    
-    if KEYWORD_SET(VERBOSE) then print, '... done.'
-
-    NCDF_CLOSE, tid
-    
-  endif else message, 'Currently only 3B42 product can be aggregated ... ' 
+  endfor
   
-  ;TODO: propose other features
+  printf, 1,  'DONE!'
+  CLOSE, 1
+  NCDF_CLOSE, tid
+  
+end
 
+;+
+; :Description:
+;    
+;    !!! Not implemented yet !!!
+;    see 'utils_TRMM_aggregate_3B42' 
+;    
+;-
+pro utils_TRMM_aggregate_3B43
+    
+
+  
 end
 
 
@@ -1100,5 +1178,220 @@ function utils_nc_LonLat, cdfid, lon_id, lat_id
   if lat_id lt 0 or lon_id lt 0 then return, FALSE
   
   return, TRUE
+
+end
+
+;+
+; :Description:
+;    This procedure is a low level WRF pre-processing tool to copy a WRF geo_em file
+;    and change the land_cat dimension to 33.
+;    The newly created file will be striclty identical exept for the land_cat dimension value,
+;    the LANDUSEF variable and the num_land_cat global attribute. 
+;
+; :Params:
+;    file: in, optional, type = string
+;          the file to copy. It will not be modified. If not present, a dialog window will open  
+; :Keywords:
+;    NEW_LUF: in, optional, type = float array
+;             The new lu fraction (dimensions: nx, ny, 33). If not set, the original fraction is kept
+;             and the classes 25 to 33 are all set to 0. 
+;             
+;             If set, the mew dominant Category (LU_INDEX) will be computed, as well as the new LANDMASK.
+;             TODO: Carefull: SOILCTOP, SOILCBOT, SCT_DOM, SCB_DOM are NOT actualized, but this should be ok...
+;             
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;       Written by FaM, 16 Dec 2010 
+;       Modified:   16-Dec-2010 FaM
+;                   First aparition
+;
+;-
+pro UTILS_usgs_24_to_33, file, NEW_LUF = new_luf
+
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+;  ON_ERROR, 2
+
+  if N_ELEMENTS(file) eq 0 then file = DIALOG_PICKFILE(TITLE='Please select the geo file to copy.')
+  outfile = file + '.33'
+  
+  ; Check new_luf
+  tochange = KEYWORD_SET(new_luf)
+  
+  if tochange then begin
+  
+    if ~arg_okay(NEW_LUF, /NUMERIC, N_DIM=3) then message, WAVE_Std_Message('new_luf',/ARG)
+    dims = SIZE(new_luf, /DIMENSIONS)
+    luf = FLOAT(NEW_LUF)
+    dummy = MAX(luf, pd, DIMENSION=3)
+    inds = ARRAY_INDICES(luf, pd)
+    inds = reform(inds[2, *], dims[0], dims[1])
+    dominant = inds + 1
+    
+    ; if 50-50,  then water
+    water = luf[*,*,15]
+    pwat = where(water ge 0.5, cnt)
+    if cnt ne 0 then dominant[pwat] = 16
+   
+    ; If water lt 49, then second max
+    pnowat = where(dominant eq 16 and water le 0.49, cnt)  
+    water[pnowat] = 0.
+    myluf = luf
+    myluf[*,*,15] = water  
+    dummy = MAX(myluf, pd, DIMENSION=3)
+    inds = ARRAY_INDICES(myluf, pd)
+    inds = reform(inds[2, *], dims[0], dims[1])
+    dominant[pnowat] = inds[pnowat] + 1
+    undefine, myluf
+    
+    ; calculate Landmask
+    lm = dominant * 0 + 1 
+    p = where(dominant eq 16, cnt)
+    if cnt ne 0 then lm[p] = 0
+    
+  end
+
+  sid = Ncdf_open(File, /NOWRITE)        
+  inq = NCDF_INQUIRE(sid)
+  tid = NCDF_CREATE(outfile, /CLOBBER)
+  NCDF_CONTROL, tid, /FILL
+    
+  for i =0, inq.ndims-1 do begin
+  
+    NCDF_DIMINQ, sid, i, sName, sSize  
+    if str_equiv(sName) eq 'LAND_CAT' then ssize = 33
+    
+    if str_equiv(sName) eq 'TIME' then dummy = NCDF_DIMDEF(tid, sName, /UNLIMITED) $
+    else dummy = NCDF_DIMDEF(tid, sName, ssize)
+
+  endfor ; Dimensions OK
+    
+  for i =0, inq.Ngatts-1 do begin  
+  
+    sName = NCDF_ATTNAME(sid, i , /GLOBAL)        
+    sAtt_info = NCDF_attINQ(sid, sName, /GLOBAL)
+    NCDF_ATTGET, sid, sName, sValue, /GLOBAL
+        
+    ; Set the appropriate netCDF data type keyword.
+    CASE StrUpCase(sAtt_info.DATATYPE) OF
+        'BYTE': tbyte = 1
+        'CHAR': tchar = 1
+        'DOUBLE': tdouble = 1
+        'FLOAT': tfloat = 1
+        'LONG': tlong = 1
+        'SHORT': tshort = 1      
+    ENDCASE
+    
+    if str_equiv(sName) eq str_equiv('num_land_cat') then sValue = 33
+
+    ; Add the attribute to the file.
+    NCDF_AttPut, tid, sName, svalue, /GLOBAL, $
+        BYTE=tbyte, $
+        CHAR=tchar, $
+        DOUBLE=tdouble, $
+        FLOAT=tfloat, $
+        LENGTH=tlength, $
+        LONG=tlong, $
+        SHORT=tshort
+    undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+    
+  endfor ; Att OK
+    
+  for svid =0, inq.NVARS-1 do begin
+  
+    s_var_info = NCDF_VARINQ(sid,svid)
+      
+    ; Check the data type to see that it conforms to netCDF protocol.
+    CASE StrUpCase(s_var_info.datatype) OF
+      'BYTE': tbyte = 1
+      'CHAR': tchar = 1
+      'DOUBLE': tdouble = 1
+      'FLOAT': tfloat = 1
+      'LONG': tlong = 1
+      'SHORT': tshort = 1
+    ENDCASE
+        
+    ; If the dimension names are present, use them to get the dimension IDs, which are needed to define the variable.
+    dimsIds = s_var_info.dim
+    ; Define the variable.
+    TvID = NCDF_VarDef(tid, s_var_info.name, dimsIds, $
+      BYTE=tbyte, $
+      CHAR=tchar, $
+      DOUBLE=tdouble, $
+      FLOAT=tfloat, $
+      LONG=tlong, $
+      SHORT=tshort)
+    undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+    
+    if s_var_info.natts eq 0 then continue ; no need to continue (just for time actually)
+    
+    ; Copy the variable attributes
+    for sattid = 0, s_var_info.NATTS - 1 do begin
+    
+      sName = NCDF_ATTNAME(sid, svid, sattid)
+      sAtt_info = NCDF_attINQ(sid, svid, sName)
+      NCDF_ATTGET, sid, svid, sName, sValue
+      
+      ; Set the appropriate netCDF data type keyword.
+      CASE StrUpCase(sAtt_info.DATATYPE) OF
+        'BYTE': tbyte = 1
+        'CHAR': tchar = 1
+        'DOUBLE': tdouble = 1
+        'FLOAT': tfloat = 1
+        'LONG': tlong = 1
+        'SHORT': tshort = 1
+      ENDCASE
+      
+      if StrUpCase(sAtt_info.DATATYPE) eq 'CHAR' then begin
+          isHere = STRPOS(str_equiv(sValue),str_equiv('24-category'))
+          if isHere ne -1 then GEN_str_subst, ret, STRING(sValue),'24','33', sValue
+          if isHere ne -1 and tochange then GEN_str_subst, ret, STRING(sValue),'USGS','user-defined', sValue          
+      endif
+      
+      ; Add the attribute to the file.
+      NCDF_AttPut, tid, TvID, sName, sValue,  $
+        BYTE=tbyte, $
+        CHAR=tchar, $
+        DOUBLE=tdouble, $
+        FLOAT=tfloat, $
+        LENGTH=tlength, $
+        LONG=tlong, $
+        SHORT=tshort     
+      undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+    endfor
+      
+  endfor
+  
+  NCDF_CONTROL, tid, /ENDEF ; Switch to normal Fill mode
+ 
+  for vid =0, inq.NVARS-1 do begin
+  
+    s_var_info = NCDF_VARINQ(sid,vid)
+    ndims = s_var_info.ndims
+   
+    NCDF_VARGET, sid, vid, var
+    
+    if str_equiv(s_var_info.name) eq str_equiv('LANDUSEF') then begin
+      if tochange then var = LUF $
+      else begin 
+        dim = SIZE(var, /DIMENSIONS)
+        var = [[[var]],[[FLTARR(dim[0],dim[1],9)]]]
+      endelse
+    endif
+        
+    if str_equiv(s_var_info.name) eq str_equiv('LANDMASK') and tochange then var = FLOAT(lm)
+    if str_equiv(s_var_info.name) eq str_equiv('LU_INDEX') and tochange then var = FLOAT(dominant)
+    
+    NCDF_VARPUT, tid, vid, var
+
+  endfor  
+  
+  NCDF_CLOSE, sid ; Close source file
+  NCDF_CLOSE, tid ; Close file
 
 end

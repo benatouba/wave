@@ -102,7 +102,7 @@ pro TEST_MAKE_ABS_DATE
   ;---------------------------
   ; Check if all tests passed?
   ;---------------------------   
-  if error ne 0 then message, 'TEST_MAKE_ABS_DATE NOT passed', /CONTINUE else print, 'TEST_MAKE_ABS_DATE passed'
+  if error ne 0 then message, '% TEST_MAKE_ABS_DATE NOT passed', /CONTINUE else print, 'TEST_MAKE_ABS_DATE passed'
   
 end
 
@@ -134,7 +134,7 @@ pro TEST_JULIAN_DAYS
   if MINUTE ne 59 then error +=1
   if floor(SECOND) ne 59 then error +=1
   
-  if error ne 0 then message, 'TEST_JULIAN_DAYS NOT passed', /CONTINUE else print, 'TEST_JULIAN_DAYS passed'
+  if error ne 0 then message, '% TEST_JULIAN_DAYS NOT passed', /CONTINUE else print, 'TEST_JULIAN_DAYS passed'
       
 end
 
@@ -205,7 +205,7 @@ pro TEST_QMS_TIME
   ;---------------------------
   ; Check if all tests passed?
   ;---------------------------   
-  if error ne 0 then message, 'TEST_QMS_TIME NOT passed', /CONTINUE else print, 'TEST_QMS_TIME passed'
+  if error ne 0 then message, '% TEST_QMS_TIME NOT passed', /CONTINUE else print, 'TEST_QMS_TIME passed'
   
 end
 
@@ -355,7 +355,7 @@ pro TEST_MAKE_REL_DATE
   if TIME_to_STR(totest[61]) ne '29.02.2008 00:00:01' then error+=1
   if TIME_to_STR(totest[180]) ne '29.02.2008 00:02:00' then error+=1
   
-  if error ne 0 then message, 'TEST_MAKE_REL_DATE NOT passed', /CONTINUE else print, 'TEST_MAKE_REL_DATE passed'
+  if error ne 0 then message, '% TEST_MAKE_REL_DATE NOT passed', /CONTINUE else print, 'TEST_MAKE_REL_DATE passed'
   
 end
 
@@ -392,7 +392,7 @@ pro TEST_MAKE_TIME_STEP
   if totest.second ne -57 then error+=1
   if totest.millisecond ne -999 then error+=1
   
-  if error ne 0 then message, 'TEST_MAKE_TIME_STEP NOT passed', /CONTINUE else print, 'TEST_MAKE_TIME_STEP passed'
+  if error ne 0 then message, '% TEST_MAKE_TIME_STEP NOT passed', /CONTINUE else print, 'TEST_MAKE_TIME_STEP passed'
   
 end
 
@@ -454,7 +454,7 @@ pro TEST_MAKE_TIME_SERIE
   if n_elements(totest) ne 73 then error+=1
   if TIME_to_STR(toTest[24]) ne '01.03.2005 00:00:00' then error+=1
   
-  if error ne 0 then message, 'TEST_MAKE_TIME_SERIE NOT passed', /CONTINUE else print, 'TEST_MAKE_TIME_SERIE passed'
+  if error ne 0 then message, '% TEST_MAKE_TIME_SERIE NOT passed', /CONTINUE else print, 'TEST_MAKE_TIME_SERIE passed'
   
 end
 
@@ -546,9 +546,7 @@ pro TEST_MAKE_ENDED_TIME_SERIE
   if TIME_to_STR(toTest[1]) ne '01.01.2005 00:00:00' then error+=1
   if TIME_to_STR(toTest[2]) ne '01.01.2006 00:00:00' then error+=1
   if TIME_to_STR(toTest[4]) ne '01.01.2008 00:00:00' then error+=1
-  
-  if error ne 0 then message, 'TEST_MAKE_ENDED_TIME_SERIE NOT passed', /CONTINUE else print, 'TEST_MAKE_ENDED_TIME_SERIE passed'
-  
+    
   startTime = make_abs_date(YEAR=2008, MONTH=01, DAY=01, HOUR=00, MINUTE=00, SECOND=00)
   endTime = make_abs_date(YEAR=2004,  MONTH=01, DAY=01, HOUR=00, MINUTE=00, SECOND=00)
   
@@ -559,7 +557,7 @@ pro TEST_MAKE_ENDED_TIME_SERIE
   if TIME_to_STR(toTest[2]) ne '01.01.2006 00:00:00' then error+=1
   if TIME_to_STR(toTest[4]) ne '01.01.2004 00:00:00' then error+=1
   
-  if error ne 0 then message, 'TEST_MAKE_ENDED_TIME_SERIE NOT passed', /CONTINUE else print, 'TEST_MAKE_ENDED_TIME_SERIE passed'
+  if error ne 0 then message, '% TEST_MAKE_ENDED_TIME_SERIE NOT passed', /CONTINUE else print, 'TEST_MAKE_ENDED_TIME_SERIE passed'
   
 end
 
@@ -590,7 +588,7 @@ pro TEST_check_TS
   if mis[0] ne 5 then error+=1
   if mis[1] ne 10 then error+=1  
   
-  if error ne 0 then message, 'TEST_check_TS NOT passed', /CONTINUE else print, 'TEST_check_TS passed'
+  if error ne 0 then message, '% TEST_check_TS NOT passed', /CONTINUE else print, 'TEST_check_TS passed'
   
 end
 
@@ -650,9 +648,28 @@ pro TEST_TRMM_3B42
     if lat[0,399] ne 49.875 then error += 1
     if lat[1439,399] ne 49.875 then error += 1
     
+    ;TEST ts
+    if trmm_3B42->get_TS('lon', 0, 0)  ne -179.875 then error += 1
+    if trmm_3B42->get_TS('lon', 0, 399) ne -179.875 then error += 1
+    if trmm_3B42->get_TS('lon', 1439,0) ne 179.875 then error += 1
+    if trmm_3B42->get_TS('lon', 1439,399) ne 179.875 then error += 1    
+    if trmm_3B42->get_TS('lat', 0, 0)  ne -49.875 then error += 1
+    if trmm_3B42->get_TS('lat', 1439,0) ne -49.875 then error += 1
+    if trmm_3B42->get_TS('lat', 0,399) ne 49.875 then error += 1
+    if trmm_3B42->get_TS('lat', 1439,399) ne 49.875 then error += 1
+    
     trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
     if total(abs(gislon-lon)) gt 1e-6 then  error += 1
     if total(abs(gislat-lat)) gt 1e-6 then  error += 1
+    
+    ; Test transforms
+    GIS_make_datum, ret, datum, NAME='WGS-84'
+    trmm_3B42->transform_LonLat, -179.870, -49.870, datum, i, j, /NEAREST
+    if i ne 0 then error += 1
+    if j ne 0 then error += 1
+    trmm_3B42->transform_LonLat, -179.600, -49.600, datum, i, j, /NEAREST
+    if i ne 1 then error += 1
+    if j ne 1 then error += 1
     
     varPcp = trmm_3B42->get_Var('precipitation', vtime, vnt)  
     if vnt ne nt then error += 1
@@ -669,6 +686,29 @@ pro TEST_TRMM_3B42
     if vtime ne time then error += 1
     if total(abs(varOrig-varPcp)) ne 0 then  error += 1
     
+    ts = trmm_3B42->get_Pcp_TS(1,1, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    if ts ne varPcp[1,1] then error += 1
+    if pi ne 1 then error += 1
+    if pj ne 1 then error += 1    
+    if plon ne -179.875+0.250 then error += 1
+    if plat ne -49.875+0.250  then error += 1
+    
+    GIS_make_datum, ret, datum, NAME='WGS-84'
+    ts = trmm_3B42->get_Pcp_TS(-179.870,-49.870, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    if ts ne varPcp[0,0] then error += 1
+    if pi ne 0 then error += 1
+    if pj ne 0 then error += 1    
+    if plon ne -179.875 then error += 1
+    if plat ne -49.875 then error += 1
+    
+    GIS_make_datum, ret, datum, NAME='WGS-84'
+    ts = trmm_3B42->get_Pcp_TS(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    if ts ne varPcp[pi,pj] then error += 1
+    if abs(plon - lon[pi,pj]) gt 1e-10 then error += 1
+    if abs(plat - lat[pi,pj]) gt 1e-10 then error += 1
+    if abs(plon - 94.875) gt 1e-10 then error += 1
+    if abs(plat - 19.875) gt 1e-10 then error += 1
+   
     ;-------------
     ; Test Subset
     ;-------------    
@@ -688,7 +728,7 @@ pro TEST_TRMM_3B42
     
     if lon[399,99] ne -179.875 + (399. + 4.) * 0.25 then  error += 1
     if lat[399,99] ne -49.875  + (99. + 4.) * 0.25 then  error += 1
-    
+        
     trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
     if total(abs(gislon-lon)) gt 1e-6 then  error += 1
     if total(abs(gislat-lat)) gt 1e-6 then  error += 1
@@ -722,7 +762,7 @@ pro TEST_TRMM_3B42
     trmm_3B42->QuickPlotPrcp
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
-    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny    
+    trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny  
     if lon[0,0] ne 70.125 then error += 1
     if lon[0,ny-1] ne 70.125 then error += 1
     if lon[nx-1,0] ne 120.125 then error += 1
@@ -732,15 +772,44 @@ pro TEST_TRMM_3B42
     if lat[0,ny-1] ne 45.125 then error += 1
     if lat[nx-1,ny-1] ne 45.125 then error += 1   
     
+        ;TEST ts
+    if trmm_3B42->get_TS('lon', 0, 0)  ne 70.125 then error += 1
+    if trmm_3B42->get_TS('lon', 0, ny-1) ne 70.125 then error += 1
+    if trmm_3B42->get_TS('lon', nx-1,0) ne 120.125 then error += 1
+    if trmm_3B42->get_TS('lon', nx-1,ny-1) ne 120.125 then error += 1    
+    if trmm_3B42->get_TS('lat', 0, 0)  ne 10.125 then error += 1
+    if trmm_3B42->get_TS('lat', nx-1,0) ne 10.125 then error += 1
+    if trmm_3B42->get_TS('lat', 0,ny-1) ne 45.125 then error += 1
+    if trmm_3B42->get_TS('lat', nx-1,ny-1) ne 45.125 then error += 1
+    
     trmm_3B42->Get_LonLat, gislon, gislat, gisnx, gisny
     if gisnx ne nx then  error += 1
     if gisny ne ny then  error += 1    
     if total(abs(gislon-lon)) gt 1e-6 then  error += 1
     if total(abs(gislat-lat)) gt 1e-6 then  error += 1
     
+    trmm_3B42->transform_LonLat, 120.01, 45.01, datum, i, j, /NEAREST
+    if i ne nx-1 then error += 1
+    if j ne ny-1 then error += 1
+    
+    trmm_3B42->transform, 120.01, 45.01, i, j, SRC = datum, LAT_DST=la, LON_DST=lo, /NEAREST
+    if i ne nx-1 then error += 1
+    if j ne ny-1 then error += 1
+    if lo ne 120.01 then error += 1
+    if la ne 45.01 then error += 1
+     
+    
     varPcp = trmm_3B42->get_prcp(vtime, vnt)
     varOrigCrop = varOrig[mysubs[0]:mysubs[0]+mysubs[1]-1,mysubs[2]:mysubs[2]+mysubs[3]-1]
     if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
+    
+    GIS_make_datum, ret, datum, NAME='WGS-84'
+    ts = trmm_3B42->get_Pcp_TS(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    if ts ne varPcp[pi,pj] then error += 1
+    if abs(plon - lon[pi,pj]) gt 1e-10 then error += 1
+    if abs(plat - lat[pi,pj]) gt 1e-10 then error += 1
+    if abs(plon - 94.875) gt 1e-10 then error += 1
+    if abs(plat - 19.875) gt 1e-10 then error += 1
     
     ; reset subset
     ok = trmm_3B42->define_subset()
@@ -765,7 +834,7 @@ pro TEST_TRMM_3B42
     if total(abs(gislat-lat)) gt 1e-6 then  error += 1
     
     OBJ_DESTROY, trmm_3B42     
-    if error ne 0 then message, 'TEST_TRMM_3B42 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42 passed'
+    if error ne 0 then message, '% TEST_TRMM_3B42 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42 passed'
   
 end
 
@@ -822,7 +891,7 @@ pro TEST_TRMM_3B42_daily
     if total(abs(varOrig[0:719,*]-varPcp[720:*,*])) ne 0 then  error += 1
     
     OBJ_DESTROY, TRMM_3B42_daily     
-    if error ne 0 then message, 'TEST_TRMM_3B42_daily NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42_daily passed'
+    if error ne 0 then message, '% TEST_TRMM_3B42_daily NOT passed', /CONTINUE else print, 'TEST_TRMM_3B42_daily passed'
   
 end
 
@@ -971,7 +1040,7 @@ pro TEST_TRMM_3B43
     if total(abs(gislat-lat)) gt 1e-6 then  error += 1
     
     OBJ_DESTROY, trmm_3B43     
-    if error ne 0 then message, 'TEST_TRMM_3B43 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B43 passed'
+    if error ne 0 then message, '% TEST_TRMM_3B43 NOT passed', /CONTINUE else print, 'TEST_TRMM_3B43 passed'
   
 end
 
@@ -981,21 +1050,163 @@ pro TEST_TRMM_AGG
     error = 0 
     
     ;-------------------------
-    ; Test 3Hourly product
+    ; TEST without Subset
+    ;-------------------------        
+    agg_file = fdir + '3B42_agg.2008_10_01.nc'
+    if FILE_TEST(agg_file) then FILE_DELETE, agg_file
+    log_file = fdir + 'trmm_agg_2008_10_01.log'
+    if FILE_TEST(log_file) then FILE_DELETE, log_file
+    
+    utils_TRMM_aggregate_3B42, fdir, /NOSHIFT
+    if ~FILE_TEST(agg_file) then error += 1
+    if ~FILE_TEST(log_file) then error += 1
+    
+    dailyF = fdir + '3B42_daily.2008.10.01.6.nc'
+    daily_trmm = OBJ_NEW('TRMM_nc', FILE=dailyF)
+    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
+    
+    dpcp = daily_trmm->get_prcp()
+    aggpcp = agg_trmm->get_prcp(time, nt)
+    if nt ne 8 then error += 1
+    if time[0] ne QMS_TIME(year = 2008, month = 10, day = 1) then error += 1
+    if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
+    
+    testF = fdir + '3B42.081001.12.6A.nc'
+    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 12)
+    if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_o->get_prcp()*3)) ne 0 then error += 1
+    OBJ_DESTROY, test_o    
+    if TOTAL(ABS(TOTAL(aggpcp,3) - dpcp)) ne 0 then error += 1    
+    OBJ_DESTROY, daily_trmm
+    OBJ_DESTROY, agg_trmm
+    
+    ;-----------------
+    ; TEST with Subset
+    ;-----------------        
+    agg_file = fdir + '3B42_agg.2008_10_01.nc'
+    if FILE_TEST(agg_file) then FILE_DELETE, agg_file
+    log_file = fdir + 'trmm_agg_2008_10_01.log'
+    if FILE_TEST(log_file) then FILE_DELETE, log_file
+    
+    utils_TRMM_aggregate_3B42, fdir, /NOSHIFT, SUBSET_LL=[120.,10.,150.,45.]
+    if ~FILE_TEST(agg_file) then error += 1
+    if ~FILE_TEST(log_file) then error += 1
+    
+    dailyF = fdir + '3B42_daily.2008.10.01.6.nc'
+    daily_trmm = OBJ_NEW('TRMM_nc', FILE=dailyF, SUBSET_LL=[120.,10.,150.,45.])
+    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
+    
+    dpcp = daily_trmm->get_prcp()
+    aggpcp = agg_trmm->get_prcp(time, nt)
+    if nt ne 8 then error += 1
+    if time[0] ne QMS_TIME(year = 2008, month = 10, day = 1) then error += 1
+    if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
+    
+    testF = fdir + '3B42.081001.12.6A.nc'
+    test_o =  OBJ_NEW('TRMM_nc', FILE=testF, SUBSET_LL=[120.,10.,150.,45.])
+    t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 12)
+    if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_o->get_prcp()*3)) ne 0 then error += 1
+    OBJ_DESTROY, test_o    
+    if TOTAL(ABS(TOTAL(aggpcp,3) - dpcp)) ne 0 then error += 1    
+    OBJ_DESTROY, daily_trmm
+    OBJ_DESTROY, agg_trmm
+    
     ;-------------------------
+    ; TEST with start and end time
+    ;-------------------------        
+    agg_file = fdir + '3B42_agg.2008_10_01.nc'
+    if FILE_TEST(agg_file) then FILE_DELETE, agg_file
+    log_file = fdir + 'trmm_agg_2008_10_01.log'
+    if FILE_TEST(log_file) then FILE_DELETE, log_file
+      
+    utils_TRMM_aggregate_3B42, fdir, /NOSHIFT, START_TIME= QMS_TIME(year = 2008, month = 10, day = 01, hour = 03), $
+                                               END_TIME= QMS_TIME(year = 2008, month = 10, day = 01, hour = 18)
+    if ~FILE_TEST(agg_file) then error += 1
+    if ~FILE_TEST(log_file) then error += 1
     
-    fname = fdir + '3B42.081001.0.6A.nc'
-;    utils_TRMM_aggregate, fname, /NOSHIFT
+    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
     
-    if error ne 0 then message, 'TEST_TRMM_AGG NOT passed', /CONTINUE else print, 'TEST_TRMM_AGG passed'
+    aggpcp = agg_trmm->get_prcp(time, nt)
+    if nt ne 6 then error += 1
+    if time[0] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 03) then error += 1
+    if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 18) then error += 1 
+    
+    testF = fdir + '3B42.081001.3.6A.nc'
+    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    if TOTAL(ABS(aggpcp[*,*,0] - test_o->get_prcp()*3)) ne 0 then error += 1
+    OBJ_DESTROY, test_o    
+    
+    testF = fdir + '3B42.081001.18.6A.nc'
+    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    if TOTAL(ABS(aggpcp[*,*,5] - test_o->get_prcp()*3)) ne 0 then error += 1
+    OBJ_DESTROY, test_o        
+    OBJ_DESTROY, agg_trmm
+    
+    ;-------------------------
+    ; TEST with SHIFT
+    ;-------------------------        
+    agg_file = fdir + '3B42_agg.2008_10_01.nc'
+    if FILE_TEST(agg_file) then FILE_DELETE, agg_file
+    log_file = fdir + 'trmm_agg_2008_10_01.log'
+    if FILE_TEST(log_file) then FILE_DELETE, log_file
+    
+    utils_TRMM_aggregate_3B42, fdir
+    if ~FILE_TEST(agg_file) then error += 1
+    if ~FILE_TEST(log_file) then error += 1
+
+    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)        
+    aggpcp = agg_trmm->get_prcp(time, nt)
+    if nt ne 7 then error += 1
+    if time[0] ne QMS_TIME(year = 2008, month = 10, day = 1, hour =3) then error += 1
+    if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
+    
+    testF = fdir + '3B42.081001.12.6A.nc'
+    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    testF = fdir + '3B42.081001.15.6A.nc'
+    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_pcp = test_o1->get_prcp()*1.5 + test_o2->get_prcp()*1.5    
+    t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 15)
+    if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_pcp)) ne 0 then error += 1
+    OBJ_DESTROY, test_o1
+    OBJ_DESTROY, test_o2
+    
+    testF = fdir + '3B42.081001.0.6A.nc'
+    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    testF = fdir + '3B42.081001.3.6A.nc'
+    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_pcp = test_o1->get_prcp()*1.5 + test_o2->get_prcp()*1.5
+    if TOTAL(ABS(aggpcp[*,*,0] - test_pcp)) ne 0 then error += 1
+    OBJ_DESTROY, test_o1
+    OBJ_DESTROY, test_o2
+    
+    testF = fdir + '3B42.081001.18.6A.nc'
+    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    testF = fdir + '3B42.081001.21.6A.nc'
+    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_pcp = (test_o1->get_prcp() > 0) * 1.5 + (test_o2->get_prcp() > 0) * 1.5
+    if TOTAL(ABS(aggpcp[*,*,6] - test_pcp)) ne 0 then error += 1
+    t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 21)
+    if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_pcp)) ne 0 then error += 1
+    
+    OBJ_DESTROY, test_o1
+    OBJ_DESTROY, test_o2
+    
+    OBJ_DESTROY, agg_trmm
+    
+    agg_file = fdir + '3B42_agg.2008_10_01.nc'
+    if FILE_TEST(agg_file) then FILE_DELETE, agg_file
+    log_file = fdir + 'trmm_agg_2008_10_01.log'
+    if FILE_TEST(log_file) then FILE_DELETE, log_file
+    
+    if error ne 0 then message, '% TEST_TRMM_AGG NOT passed', /CONTINUE else print, 'TEST_TRMM_AGG passed'
 
 end
 
 pro TEST_DATASETS
   TEST_TRMM_3B42
   TEST_TRMM_3B42_daily
-  TEST_TRMM_3B43
-  
+  TEST_TRMM_3B43  
+  TEST_TRMM_AGG
 end
 
 pro TEST_everything

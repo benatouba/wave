@@ -161,6 +161,8 @@ END
 ;    meta: in, optional, type = string
 ;         a string containing any kind of info
 ;
+; :Returns:
+;    1 if the NCDF object is updated successfully, 0 if not
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -321,6 +323,8 @@ END
 ;    meta: in, optional, type = string
 ;         a string containing any kind of info
 ;       
+; :Returns:
+;    1 if the NCDF object is updated successfully, 0 if not
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -674,12 +678,19 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
     mysrc = src
   endelse  
   
+  cas = 0
+  if (ARG_PRESENT(LAT_DST) or ARG_PRESENT(LON_DST)) and ~ARG_PRESENT(E_DST) and ~ARG_PRESENT(N_DST) then cas = 1
+  if (ARG_PRESENT(LAT_DST) or ARG_PRESENT(LON_DST)) and (ARG_PRESENT(E_DST) or ARG_PRESENT(N_DST)) then cas = 2
+  if ~ARG_PRESENT(LAT_DST) and ~ARG_PRESENT(LON_DST) and (ARG_PRESENT(E_DST) or ARG_PRESENT(N_DST)) then cas = 3
+  undefine, LAT_DST, LON_DST, E_DST, N_DST
+    
   ;***********************************************
   ; If the array is too big, subset the problem  *
   ;***********************************************
   finished = FALSE
   ind = 0L
   nxi = N_ELEMENTS(x)
+  undefine, i_dst, j_dst
   while not finished do begin
     p1 = ind
     p2 = ind + 4000000L ;2000*2000 is the limit
@@ -687,10 +698,37 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
       p2 = nxi-1
       finished = TRUE
     endif
-    GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
-    LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST = nearest     
+    
+    case (cas) of
+      0: begin
+          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, NEAREST = nearest
+      end
+      1: begin
+          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+               LON_DST=tlon_dst, LAT_DST=tlat_dst, NEAREST = nearest
+          if N_ELEMENTS(tlon_dst) ne 0 then if N_ELEMENTS(LON_DST) eq 0 then LON_DST = TEMPORARY(tlon_dst) else LON_DST = [LON_DST , TEMPORARY(tlon_dst)]
+          if N_ELEMENTS(tlat_dst) ne 0 then if N_ELEMENTS(LAT_DST) eq 0 then LAT_DST = TEMPORARY(tlat_dst) else LAT_DST = [LAT_DST , TEMPORARY(tlat_dst)]
+      end
+      2: begin
+          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+               LON_DST=tlon_dst, LAT_DST=tlat_dst, E_DST= te_dst, N_DST=tN_DST, NEAREST = nearest
+          if N_ELEMENTS(tlon_dst) ne 0 then if N_ELEMENTS(LON_DST) eq 0 then LON_DST = TEMPORARY(tlon_dst) else LON_DST = [LON_DST , TEMPORARY(tlon_dst)]
+          if N_ELEMENTS(tlat_dst) ne 0 then if N_ELEMENTS(LAT_DST) eq 0 then LAT_DST = TEMPORARY(tlat_dst) else LAT_DST = [LAT_DST , TEMPORARY(tlat_dst)]
+          if N_ELEMENTS(te_dst) ne 0 then if N_ELEMENTS(E_DST) eq 0 then E_DST = TEMPORARY(te_dst) else E_DST = [E_DST , TEMPORARY(te_dst)]
+          if N_ELEMENTS(tN_DST) ne 0 then if N_ELEMENTS(N_DST) eq 0 then N_DST = TEMPORARY(tN_DST) else N_DST = [N_DST , TEMPORARY(tN_DST)]
+      end
+      3: begin
+          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+               E_DST= te_dst, N_DST=tN_DST, NEAREST = nearest
+          if N_ELEMENTS(te_dst) ne 0 then if N_ELEMENTS(E_DST) eq 0 then E_DST = TEMPORARY(te_dst) else E_DST = [E_DST , TEMPORARY(te_dst)]
+          if N_ELEMENTS(tN_DST) ne 0 then if N_ELEMENTS(N_DST) eq 0 then N_DST = TEMPORARY(tN_DST) else N_DST = [N_DST , TEMPORARY(tN_DST)]
+      end
+      else: begin
+          Message, 'Should never come here.'
+      end
+    endcase
     if N_ELEMENTS(i_dst) eq 0 then i_dst = TEMPORARY(ti_dst) else i_dst = [i_dst , TEMPORARY(ti_dst)]
-    if N_ELEMENTS(j_dst) eq 0 then j_dst = TEMPORARY(tj_dst) else j_dst = [j_dst , TEMPORARY(tj_dst)]
+    if N_ELEMENTS(j_dst) eq 0 then j_dst = TEMPORARY(tj_dst) else j_dst = [j_dst , TEMPORARY(tj_dst)]   
     ind = p2 + 1
   endwhile
   undefine, ind, p1, p2
@@ -1032,9 +1070,9 @@ function Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR =
   if ~KEYWORD_SET(missing) then missing = 0
 
   src_grid->getProperty, tnt_c = src_c  
-  utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.nx, /LONG) + self.tnt_c.ny - 1, xi, yi
+  utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
   
-  if KEYWORD_SET(BILINEAR) then NEAREST = TRUE
+  if ~KEYWORD_SET(BILINEAR) then NEAREST = TRUE
   
   ;***********************************************
   ; If the array is too big, subset the problem  *
@@ -1055,7 +1093,7 @@ function Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR =
     ind = p2 + 1
   endwhile
   undefine, xi, yi, ind, p1, p2
-  j_dst = self.tnt_c.ny - j_dst - 1
+  j_dst = src_c.ny - j_dst - 1
   
   ;***********************************
   ; Get the data in the source grid  *
@@ -1070,7 +1108,7 @@ function Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR =
     if n eq 1 then begin
       tdata = BILINEAR(data, reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny))      
       if cnt ne 0 then tdata[p] = missing
-      tdata = reform(tdata, dst_c.nx, dst_c.ny) ;TODO: is this reform necessary ???
+      tdata = reform(tdata, self.tnt_c.nx, self.tnt_c.ny) 
     endif else begin
       for i = 0L, n-1 do begin
         tmp =  BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny))
@@ -1115,11 +1153,10 @@ end
 ;           the new Y dimension size (the original X/Y ratio is conserved) (if set, Xsize is ignored)
 ;    FACTOR: in, optional, type = float
 ;           a factor to multiply to nx and ny (if set, Xsize and Ysize are ignored)
-;    PLOT: in, optional
-;         to set if the resampled grid is used to plot pruposes (output grid containing the missing half of the border pixels)
 ;
 ; :Returns:
 ;     A new Grid2D, which is a resampled version of the object grid
+;     
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -1132,35 +1169,21 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor,  PLOT = plot
-     
+function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
+
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
   
-  if KEYWORD_SET(Xsize) then begin
-    nx = Xsize
-    ny = DOUBLE(self.tnt_c.ny) / DOUBLE(self.tnt_c.nx) * nx    
-  endif else if KEYWORD_SET(Ysize) then begin
-    ny = Ysize
-    nx = DOUBLE(self.tnt_c.nx) / DOUBLE(self.tnt_c.ny) * ny 
-  end else if KEYWORD_SET(FACTOR) then begin
-    nx = self.tnt_c.nx * FACTOR
-    ny = self.tnt_c.ny * FACTOR
-  end
-  
-  if KEYWORD_SET(plot) then begin
-    x0 = self.tnt_c.x0 - 0.5*self.tnt_c.dx
-    y0 = self.tnt_c.y0 + 0.5*self.tnt_c.dy
-    x1 = self.tnt_c.x1 + 0.5*self.tnt_c.dx
-    y1 = self.tnt_c.y1 - 0.5*self.tnt_c.dy
-  endif else begin
-    x0 = self.tnt_c.x0
-    y0 = self.tnt_c.y0
-    x1 = self.tnt_c.x1
-    y1 = self.tnt_c.y1
-  endelse
-  
-  return, OBJ_NEW('Grid2D', x0=x0, y0=y0, x1=x1, y1=y1, nx=nx, ny=ny, PROJ=self.tnt_c.proj, META=self.meta + ' (resampled)')
-              
+  if KEYWORD_SET(Xsize) then factor = double(Xsize) / self.tnt_c.nx $
+  else if KEYWORD_SET(Ysize) then factor = double(Ysize) / self.tnt_c.ny
+    
+  nx = self.tnt_c.nx * FACTOR
+  ny = self.tnt_c.ny * FACTOR
+  dx = self.tnt_c.dx / double(FACTOR)
+  dy = self.tnt_c.dy / double(FACTOR)
+  x0 = self.tnt_c.x0 - 0.5*self.tnt_c.dx + dx/2.
+  y0 = self.tnt_c.y0 + 0.5*self.tnt_c.dy - dy/2.
+  return, OBJ_NEW('Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
+    
 end

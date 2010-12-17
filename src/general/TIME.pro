@@ -1465,7 +1465,9 @@ end
 ; :Description:
 ;    
 ;    This function checks if a time serie is regular and returns TRUE if it is.
-;    The time step is computed and returned if desired.
+;    The time step is computed and returned if desired. If the time serie is
+;    regular but not sorted, the function also returns TRUE and sorts the array in
+;    FULL_TS
 ;    
 ;    If the time serie has gaps, FALSE is returned. A "probable" time step 
 ;    is computed (most occurences using histogramm). Be carefull: if the 
@@ -1566,20 +1568,10 @@ function check_TS, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
   if N_ELEMENTS(ts) lt 2 then Message, WAVE_Std_Message(/NARG)
   
   if ~check_WTIME(ts, OUT_QMS=mytime, WAS_ABSDATE=was_Str) then Message, WAVE_Std_Message('ts', /ARG)
-
+  
+  mytime = mytime[SORT(mytime)]
   n = N_ELEMENTS(mytime)
   steps = mytime[1:n-1] - mytime[0:n-2]
-  pnull = where(steps le 0, cnt)
-  ret = FALSE
-  if cnt ne 0 then begin
-    mytime = mytime[SORT(mytime)]
-    steps = mytime[1:n-1] - mytime[0:n-2]
-    h = HISTOGRAM(steps, omin = om, /L64)
-    m = MAX(h, p)
-    steps = steps - p - om
-    timestep = MAKE_TIME_STEP(DMS = p + om)
-    ret = FALSE
-  endif
   h = HISTOGRAM(steps, omin = om, /L64)
   m = MAX(h, p)
   steps = steps - p - om

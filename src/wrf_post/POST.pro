@@ -329,7 +329,7 @@ pro POST_crop_file, file, index, OUTFILE = outfile
   COMPILE_OPT IDL2
   ON_ERROR, 2
 
-  if ~FILE_TEST(file) then file = DIALOG_PICKFILE(TITLE='Please select the file to crop.')
+ if N_ELEMENTS(file) eq 0  then file = DIALOG_PICKFILE(TITLE='Please select the file to crop.')
   if ~KEYWORD_SET(outfile) then outfile = FILE_DIRNAME(file) + '/' + FILE_BASENAME(file) + '_crop'
 
   sid = Ncdf_open(File, /NOWRITE)    
@@ -463,7 +463,6 @@ pro POST_crop_file, file, index, OUTFILE = outfile
   endfor  
   
   NCDF_CLOSE, sid ; Close source file
-  close, 1 ; close log file  
   NCDF_CLOSE, tid ; Close file
 
 end
@@ -772,7 +771,7 @@ end
 ;                   Update to V0.1, added VarToKeep Files, and more
 ;
 ;-
-pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, SPINUP_INDEX = spinup_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
+pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
 
   ; Set Up environnement
   COMPILE_OPT idl2

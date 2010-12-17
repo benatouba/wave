@@ -683,30 +683,8 @@ PRO QuickPLot_Resize, event
   Widget_Control, event.top, Set_UValue=info, /No_Copy
   
 END
-;---------------------------------------------------------------------
 
 
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       QuickPLot
-;
-; PURPOSE:
-;
-; CATEGORY:
-; 
-; INPUT: 
-;    
-; KEYWORDS:
-;
-; OUTPUT:
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, Aug 2010
-;       Modified:   12-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;-
-;-----------------------------------------------------------------------
 pro QuickPLot, image, $ ; The image to plot (2D, 3D, or 4D)
                CbarTitle = CbarTitle, $ ; The title of the color bar
                CoordX=coordX, $ ; If available, the X coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
@@ -720,7 +698,7 @@ pro QuickPLot, image, $ ; The image to plot (2D, 3D, or 4D)
                dimnames = dimnames,  $ ; the dimensions names, if available (vector of strings of the same lenght as the number of dimensions of image)
                dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0]) 
                dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*]) 
-               Group_Leader=group
+               Group_Leader = group
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

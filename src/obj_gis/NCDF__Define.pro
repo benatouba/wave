@@ -1,87 +1,84 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  NCDF__Define.pro                                      *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  04-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
+; docformat = 'rst'
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GENERAL INFORMATION
 ;
-;       NCDF is the basis class for all kinds of NCDF files. It reads
-;       NCDF files and provides some tools for rapid visualisation and
-;       to analyse the content of a NCDF file.
+;  NCDF is the basis class for all kinds of NCDF files. It reads
+;  NCDF files and provides some tools for rapid visualisation and
+;  variable retrieval.
 ;       
-;       It should be the superclass from all NCDF related objects 
+;  It should be the superclass from all NCDF objects 
 ;              
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       none
-;       
-;       =================================================================
-;       Attributes:
-;       ----------------------
-;          path: complete path of the active NCDF file
-;          CDFid: id of the NCDF file as given by  NCDF_open 
-;          fname: name of the active NCDF file
-;          directory: directory of the active NCDF file
-;          Ndims: The number of dimensions defined for this NetCDF file. 
-;          Nvars: The number of variables defined for this NCDF file. 
-;          Ngatts: The number of global attributes defined for this NCDF file. 
-;          RecDim: The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
+; :Properties: 
 ;    
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the NCDF file. If not set, a dialog window will open
-;              
+;    FILE: in, optional, type = string
+;          the path to the NCDF file. If not set, a dialog window will open
+;    path: out, type = string
+;          complete path of the active NCDF file
+;    cdfid: out, type = long
+;          id of the ncdf file as given by NCDF_open
+;    fname: out, type = string
+;          name of the active NCDF file
+;    directory: out, type = string
+;               directory of the active NCDF file
+;    Ndims: out, type = long
+;           the number of dimensions
+;    Nvars: out, type = long
+;           The number of variables defined for this NCDF file. 
+;    Ngatts: out, type = long
+;            The number of global attributes defined for this NCDF file. 
+;    varNames: out, type = string array
+;              An array of (nVars) strings containing the variable names. 
+;    dimNames: out, type = string array
+;              An array of (nDims) strings containing the dimension names. 
+;    dimSizes: out, type = long array
+;              An array of (nDims) longs containing the dimension sizes. 
+;    RecDim :  out, type = long
+;              The ID of the unlimited dimension, if there is one, for this NetCDF file
+;                    
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-;       =================================================================
-;       Methods:
-;       ----------------------
-;       The following methods can be used directly. Non ducumented methods 
-;       are not for external use.
-;       
-;       obj->GetProperty: get access to some attributes
-;       obj->Get_Varlist: to obtain the list of available variables in the NCDF file
-;       obj->Get_Var()  : get a specific variable along with some information
-;       obj->quickPlotVar    : plots a "flat" image of a given variable 
-;                         (usefull for quick analysis purposes)
-;       obj->dump       : to write all infos contained in the NCDF file to an ASCII file.
-;                         (usefull to get to know what is in the file)
-;       
-;       =================================================================
-;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF__Define
+; :Description:
+;   Defines the attributes of the class Grid2D. Attributes::
+;    
+;    NCDF                     
+;            path : ''    
+;            cdfid : 0L  
+;            fname : ''    
+;            directory : ''    
+;            Ndims : 0L    
+;            Nvars : 0L    
+;            Ngatts : 0L    
+;            varNames : PTR_NEW()   
+;            dimNames : PTR_NEW()   
+;            dimSizes : PTR_NEW()    
+;            RecDim : 0L      
+;            
 ;
-; PURPOSE:
-;       Object structure definition
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO NCDF__Define
  
   ; SET UP ENVIRONNEMENT
@@ -104,29 +101,31 @@ PRO NCDF__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::Init
+; :Description:
+;    Build function. 
 ;
-; PURPOSE:
-;       Build function. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; KEYWORDS:
-;       FILE: the path to the NCDF file. If not set, a dialog window will open
-;
-; OUTPUT:
-;       1 if the NCDF object is updated successfully, 0 if not
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Keywords:
+;    FILE: in, optional, type = string
+;          the path to the NCDF file. If not set, a dialog window will open
+;          
+; :Returns:
+;    1 if the NCDF object is updated successfully, 0 if not
+;    
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 Function NCDF::Init, FILE = file
            
            
@@ -187,21 +186,24 @@ Function NCDF::Init, FILE = file
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::Cleanup
+; :Description:
+;    Destroy function. 
 ;
-; PURPOSE:
-;       Destroy function. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro NCDF::Cleanup
 
   ; SET UP ENVIRONNEMENT
@@ -215,37 +217,48 @@ pro NCDF::Cleanup
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::GetProperty
+; :Description:
+;    Get access to some params. 
 ;
-; PURPOSE:
-;       Get access to some params. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; KEYWORDS:
-;       Output:
-;       path : complete path of the active NCDF file
-;       HDFid : id of the HDF file as given by  NCDF 
-;       fname : name of the active NCDF file
-;       directory : directory of the active NCDF file
-;       Ndims : the number of dimensions
-;       Nvars : The number of variables defined for this NCDF file. 
-;       Ngatts : The number of global attributes defined for this NCDF file. 
-;       varNames:  An array of (nVars) strings containing the variable names. 
-;       dimNames:  An array of (nDims) strings containing the dimension names. 
-;       dimSizes:  An array of (nDims) longs containing the dimension sizes. 
-;       RecDim : The ID of the unlimited dimension, if there is one, for this NetCDF file.
+; :Keywords:
+;    path: out, type = string
+;          complete path of the active NCDF file
+;    cdfid: out, type = long
+;          id of the ncdf file as given by NCDF_open
+;    fname: out, type = string
+;          name of the active NCDF file
+;    directory: out, type = string
+;               directory of the active NCDF file
+;    Ndims: out, type = long
+;           the number of dimensions
+;    Nvars: out, type = long
+;           The number of variables defined for this NCDF file. 
+;    Ngatts: out, type = long
+;            The number of global attributes defined for this NCDF file. 
+;    varNames: out, type = string array
+;              An array of (nVars) strings containing the variable names. 
+;    dimNames: out, type = string array
+;              An array of (nDims) strings containing the dimension names. 
+;    dimSizes: out, type = long array
+;              An array of (nDims) longs containing the dimension sizes. 
+;    RecDim :  out, type = long
+;              The ID of the unlimited dimension, if there is one, for this NetCDF file
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO NCDF::GetProperty, $
     path = path, $
     cdfid = cdfid, $
@@ -284,37 +297,42 @@ PRO NCDF::GetProperty, $
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::get_Varlist
+; :Description:
+;    Get some informations on available variables in the NCDF file
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: out, type = long
+;           NCDF var indexes
+;    varnames: out, type = string
+;              variables name
+;    varndims: out, type = long
+;              variables number of dimensions
+;    varunits: out, type = string
+;              variables units
+;    vardescriptions: out, type = string
+;                     variables description (or long name)
+;    vartypes: out, type = string
+;              variables type 
 ;
-; PURPOSE:
-;       Get some informations on available variables in the NCDF file
+; :Keywords:
+;    PRINTVARS: in, optional
+;               to print the infos in the console
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none 
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       varid : NCDF var indexes
-;       varnames : variables name
-;       varndims : variables number of dimensions
-;       varunits : variables units
-;       vardescriptions : variables description (or long name)
-;       vartypes : variables type 
-;       
-; KEYWORDS:
-;       /PRINTVARS : to print the infos in the console
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
   ; SET UP ENVIRONNEMENT
@@ -385,35 +403,36 @@ pro NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, var
   
 end
 
-
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::get_dimList
+; :Description:
+;    Get some informations on the dimensions of the NCDF file.
 ;
-; PURPOSE:
-;       Get some informations on the dimensions of the NCDF file
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    dimIds: out, type = long
+;            NCDF var indexes
+;    dimNames: out, type = string array
+;              variables name
+;    dimSizes: out, type = long array 
+;              variables number of dimensions
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none 
+; :Keywords:
+;    PRINTDIMS: in, optional
+;               to print the infos in the console
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       dimIds : NCDF var indexes
-;       dimNames : variables name
-;       dimSizes : variables number of dimensions
-;       
-; KEYWORDS:
-;       /PRINTDIMS : to print the infos in the console
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   18-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
 
   ; SET UP ENVIRONNEMENT
@@ -440,40 +459,52 @@ pro NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::get_Var
+; :Description:
+;    Extracts the desired variable from the NCDF file.
 ;
-; PURPOSE:
-;       extracts the desired variable from the NCDF file
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: in, required, type = long
+;           the netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable
+;           (CASE INDEPENDENT)
+;       
+; :Keywords:
+;    COUNT: in, optional, type = integer vector
+;           An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
+;    OFFSET: in, optional, type = integer vector
+;            An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
+;    STRIDE: in, optional, type = integer vector
+;            An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
+;    varinfo: out, optional, type = struct
+;             structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) } 
+;    description: out, optional, type = string
+;                 If available, the description of the variable
+;    units: out, optional, type = string
+;           If available, the units of the variable
+;    varname: out, optional, type = string
+;             the name of the variable
+;    dims : in, optional, type = long
+;           out the variable dimensions
+;    dimnames : in, optional, type = string
+;               out the dimensions names
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; INPUT:
-;       varid : the netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-;       
-; OUTPUT:
-;       the variable
-;       
-; KEYWORDS:
-;        COUNT: An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
-;        OFFSET: An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
-;        STRIDE: An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-;        varinfo: (O) structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) } 
-;        description: (O) If available, the description of the variable
-;        units: (O) If available, the units of the variable
-;        varname: (O) the name of the variable
-;        dims : (O) the variable dimensions
-;        dimnames : (O) the dimensions names
+; :Returns:
+;    The variable
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                         COUNT=COUNT, $ ; An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
                         OFFSET=OFFSET, $ ; An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
@@ -488,15 +519,8 @@ function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previ
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, -1
-  ENDIF
-  
+  COMPILE_OPT IDL2  
+  ON_ERROR, 2  
   
   if ~self->get_Var_Info (Varid, $
                             out_id = vid, $
@@ -514,30 +538,32 @@ function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previ
   
 end
 
-
 ;+
 ; :Description:
 ;    This function checks if a variable ID is valid and returns 1 if it is. Additionally,
 ;    it tries to obtain a maximum of information about the desired variable.
 ;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
 ; :Params:
-;    Varid: in, required
+;    Varid: in, required, type = string/ integer
 ;           the variable ID (string or integer) to check
 ;
 ; :Keywords:
-;   out_id: out
+;   out_id: out, type = long
 ;           the netcdf variable ID (long)
-;   varinfo: out
-;            structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
-;   description: out
+;   varinfo: out, type = struct
+;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;   description: out, type = string
 ;               If available, the description of the variable
-;   units: out
+;   units: out, type = string
 ;          If available, the units of the variable
-;   varname: out
+;   varname: out, type = string
 ;            the name of the variable
-;   dims: out
+;   dims: out, type = long
 ;         the variable dimensions
-;   dimnames: out
+;   dimnames: out, type = string
 ;             the dimensions names
 ; 
 ; :Returns:
@@ -630,36 +656,48 @@ function NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a 
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::quickPlotVar
+; :Description:
+;    Plots a desired variable for quick visualisation purposes.
+;    Output: a plot
 ;
-; PURPOSE:
-;       flat plot of a desired variable for quick visualisation purposes
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    Varid : in, required, type = integer/ string
+;            variable index or name of the desired variable
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       varid : variable index or name of the desired variable
+; :Keywords:
+;    UPSIDEDOWN: in, optional
+;                to rotate the variable before plotting it
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       a plot
-;       
-; KEYWORDS:
-;        /UPSIDEDOWN: to rotate the variable before plotting it
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro NCDF::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if ~self->get_Var_Info() then MESSAGE, 'Variable not found'
+
   var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
-  if N_ELEMENTS(var) eq 1 and var[0] eq -1 then return
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
@@ -668,32 +706,28 @@ pro NCDF::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       NCDF::dump
+; :Description:
+;    Writes all infos contained in the ncdf file to an ASCII file.
 ;
-; PURPOSE:
-;       to write all infos contained in the HDF file to an ASCII file.
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none
+; :Keywords:
+;    FILE: in, optional, type = string
+;          An optional string containing the path to the output ASCII file. If not set, a dialog window will open
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       an ASCII file
-;       
-; KEYWORDS:
-;        FILE: (I) An optional string containing the path to the output ASCII file. If not set, a dialog window will open
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO NCDF::dump, FILE = file
 
   ; SET UP ENVIRONNEMENT
