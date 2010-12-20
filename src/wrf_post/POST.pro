@@ -574,6 +574,8 @@ end
 ; :Private:
 ; 
 ; :Params:
+;    unit: in, required
+;         the log file unit
 ;    tid: in, required
 ;         the netCDF target file ID
 ;    filelist: in, required
@@ -597,7 +599,7 @@ end
 ;          07-Dec-2010 FaM
 ;          Upgrade to WAVE 0.1
 ;-
-pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
+pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index ;TODO: add e_index
   
   ; Set Up environnement
   @WAVE.inc
@@ -612,18 +614,41 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
   for f=0, nfiles-1 do begin
   
     fid = NCDF_OPEN(filelist[f], /NOWRITE)
+    ginq = NCDF_INQUIRE(fid)
+    ;Go threw the dimensions. 
+    for i =0, ginq.ndims-1 do begin
+      NCDF_DIMINQ, fid, i, sName, sSize
+      if N_ELEMENTS(dimSizes) eq 0 then dimSizes = sSize else dimSizes=[dimSizes,sSize]
+    endfor ; Dimensions OK
+    
     NCDF_VARGET, fid, 'Times', stimes
     ntimes = N_ELEMENTS(stimes[0,*])
     stimes = STRING(stimes[*,0:ntimes-1])
     ;String format : '2008-10-26_12:00:00; length 19
     times = QMS_TIME(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
       HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
+      
+    if spin_index lt 0 or spin_index ge ntimes then message, WAVE_Std_Message('$SPINUP_INDEX', /RANGE)
+    if e_index lt spin_index or e_index ge ntimes then message, WAVE_Std_Message('$END_INDEX', /RANGE)
        
     ps = where(ts eq times[spin_index], cnt)
-    if cnt eq 0 then continue    
-    pe = where(ts eq times[ntimes-1], cnt)
-    if cnt eq 0 then continue    
-        
+    if cnt eq 0 then begin
+     if (times[spin_index] lt ts[0]) then begin
+       ps = 0
+       my_spin_index =  where(times eq ts[ps], cnt)  
+       if cnt eq 0 then continue  
+     endif else continue
+    endif else my_spin_index = spin_index
+       
+    pe = where(ts eq times[e_index], cnt)    
+    if cnt eq 0 then begin
+     if (times[ntimes-1] gt ts[nt-1]) then begin
+       pe = nt-1
+       my_e_index =  where(times eq ts[pe], cnt)  
+       if cnt eq 0 then continue  
+     endif else continue
+    endif else my_e_index = e_index
+    
     for v=0, nvars - 1 do begin
     
       vid = vartokeep.name[v]
@@ -631,15 +656,16 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
       
       s_var_info = NCDF_VARINQ(fid,vid)
       ndims = s_var_info.ndims
+      dims = s_var_info.dim
       
       if vartokeep.acc[v] then begin
-        if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(spin_index-1)] $
+        if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(my_spin_index-1)], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], my_e_index + 2 - my_spin_index] $
               else message, 'Impossible'
          var = utils_ACC_TO_STEP(var)
          vid += '_STEP'
          NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps]
       endif else if vartokeep.diff[v] then begin
-        if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(spin_index-1)] $
+        if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(my_spin_index-1)], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], my_e_index + 2 - my_spin_index] $
               else message, 'Impossible'         
          NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps] ; Normal variable
          var = utils_ACC_TO_STEP(var)
@@ -647,26 +673,26 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
          NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps] ; Diff variable
       endif else if vartokeep.static[v] then begin
           if f eq 0 then begin ; We need to do it just one time...
-          if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(ntimes-1)] $
+          if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], 1] $
             else message, 'Impossible'
           NCDF_VARPUT, tid, vid, var
-          printf, 1, '   Static field ' + vid + ' filled.'
-          flush, 1  
+          printf, unit, '   Static field ' + vid + ' filled.'
+          flush, unit  
           endif
       endif else if vartokeep.D3toD2[v] or vartokeep.Unstag[0] then begin
         ; do nothing (not supported)      
       endif else begin
         if ndims eq 1 then begin
-          NCDF_VARGET, fid, vid, var, OFFSET=[spin_index] 
+          NCDF_VARGET, fid, vid, var, OFFSET=[my_spin_index], COUNT=[my_e_index - my_spin_index + 1]
           NCDF_VARPUT, tid, vid, var, OFFSET=[ps]
         endif else if ndims eq 2 then begin
-          NCDF_VARGET, fid, vid, var, OFFSET=[0,spin_index]
+          NCDF_VARGET, fid, vid, var, OFFSET=[0,my_spin_index], COUNT=[dimSizes[dims[0]], my_e_index - my_spin_index + 1]
           NCDF_VARPUT, tid, vid, var, OFFSET=[0,ps]
         endif else if ndims eq 3 then begin
-          NCDF_VARGET, fid, vid, var, OFFSET=[0,0,spin_index]
+          NCDF_VARGET, fid, vid, var, OFFSET=[0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], my_e_index - my_spin_index + 1]
           NCDF_VARPUT, tid, vid, var, OFFSET=[0,0,ps]
         endif else if ndims eq 4 then begin
-          NCDF_VARGET, fid, vid, var, OFFSET=[0,0,0,spin_index]
+          NCDF_VARGET, fid, vid, var, OFFSET=[0,0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]],dimSizes[dims[2]], my_e_index - my_spin_index + 1]
           NCDF_VARPUT, tid, vid, var, OFFSET=[0,0,0,ps]
         endif else message, 'Impossible'        
       endelse  
@@ -674,8 +700,8 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
       
     endfor
     
-    printf, 1, FILE_BASENAME(filelist[f]) + ' processed.'
-    flush, 1
+    printf, unit, FILE_BASENAME(filelist[f]) + ' processed.'
+    flush, unit
     NCDF_CLOSE, fid
   endfor
   
@@ -684,15 +710,15 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
   if cnt ne 0 then begin
    
    message, 'The desired time serie is not complete: files are missing in the parsed directory.', /INFORMATIONAL
-   printf, 1, ''
-   printf, 1, '!!! Caution !!!'
-   printf, 1, 'Times missing in the Time Serie: '
-   for i=0, cnt-1 do printf, 1, '  ', TIME_to_STR(ts[pcert[i]])
-   printf, 1, ''
+   printf, unit, ''
+   printf, unit, '!!! Caution !!!'
+   printf, unit, 'Times missing in the Time Serie: '
+   for i=0, cnt-1 do printf, unit, '  ', TIME_to_STR(ts[pcert[i]])
+   printf, unit, ''
    
   endif
-  printf, 1, ''
-  printf, 1, 'Retrieve the accumulated variables... '
+  printf, unit, ''
+  printf, unit, 'Retrieve the accumulated variables... '
   
   ; Go threw the de-accumulated variables
   da = WHERE(vartokeep.acc, ca)
@@ -703,13 +729,13 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
     varsiz = SIZE(var, /DIMENSIONS)  
     var = TOTAL(var, 3, /CUMULATIVE) ; we have to deaccumulate
     NCDF_VARPUT, tid, vid, var
-    printf, 1, '  ' + vid + ' processed. '
-    flush, 1
+    printf, unit, '  ' + vid + ' processed. '
+    flush, unit
   endfor
 
-  printf, 1, ''
-  printf, 1, 'Full.'
-  printf, 1, ''
+  printf, unit, ''
+  printf, unit, 'Full.'
+  printf, unit, ''
 
 end
 
@@ -787,8 +813,15 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if N_ELEMENTS(unit) ne 0 then begin
+      printf, unit, ' '
+      printf, unit, ' '
+      printf, unit, '* ERROR : ' + !Error_State.Msg
+      printf, unit, ' '
+      printf, unit, ' '
+      close, unit
+    endif
     ok = WAVE_Error_Message(!Error_State.Msg)
-    close, 1
     RETURN
   ENDIF 
   
@@ -852,28 +885,31 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   ; Ok. Lets go
   ts = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=step, /QMSTIME)
   nt = N_ELEMENTS(ts)
-    
+  
+  ; For log purposes
+  syst = QMS_TIME()  
+  
   ; -------------------
   ; Create the log file
   ; -------------------
   str = TIME_to_STR(t0) ; 22.10.2008 03:00:00
   str = strmid(str,6,4) + '_' + strmid(str,3,2) + '_' + strmid(str,0,2) + '_d0' + str_equiv(domain)
-  OPENW, 1, OUTdirectory + '/wrf_cpy_'+ str + '.log'
+  OPENW, unit, OUTdirectory + '/wrf_cpy_'+ str + '.log', /GET_LUN
   
   text = 'WRF output aggregation'
-  printf, 1, text 
+  printf, unit, text 
   text = 'Start date : ' + TIME_to_STR(ts[0])
-  printf, 1, text
+  printf, unit, text
   text = 'End   date : ' + TIME_to_STR(ts[nt-1])  
-  printf, 1, text 
+  printf, unit, text 
   
   ; Open the file you just created and copy the information in it to another file.
   sourceFile = fileLIST[0]
   destFile = OUTdirectory + '/wrf_agg_' + str + '.nc'
   
-  printf, 1, ''
+  printf, unit, ''
   text = 'Destination file : ' + destFile 
-  printf, 1, text   
+  printf, unit, text   
   
   ; ---------------------------
   ; Create the Netcdf out file
@@ -884,11 +920,11 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   tid = NCDF_CREATE(destFile, /CLOBBER, /NET)
   NCDF_CONTROL, tid, /FILL ;We gonna define all this
   
-  printf, 1, ''
-  printf, 1, '---------------'
-  printf, 1, '* Dimensions * ' 
-  printf, 1, '---------------'
-  printf, 1, ' '  
+  printf, unit, ''
+  printf, unit, '---------------'
+  printf, unit, '* Dimensions * ' 
+  printf, unit, '---------------'
+  printf, unit, ' '  
 
   ;Go threw the dimensions.
   for i =0, inq.ndims-1 do begin  
@@ -898,7 +934,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
 ;    if N_ELEMENTS(s_dim_ids) eq 0 then s_dim_ids = i else s_dim_ids=[s_dim_ids,i]          
     p = where(str_equiv(dimtokeep) eq str_equiv(sName), cnt)    
     if cnt eq 0 then begin ;Nothing to be done
-      printf, 1, '  -:', sName, ': ', STR_equiv(sSize), ' (ignored)'
+      printf, unit, '  -:', sName, ': ', STR_equiv(sSize), ' (ignored)'
     endif else begin
       if str_equiv(sName) eq 'TIME' then ssize = nt ; No more "infinite dimension"
       if (str_equiv(sName) eq 'TIME') and i ne 0 then MESSAGE, 'Time HAS to be the dimension 0.'      
@@ -906,16 +942,16 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
 ;      if N_ELEMENTS(t_dim_names) eq 0 then t_dim_names = sName else t_dim_names=[t_dim_names,sName]
 ;      if N_ELEMENTS(t_dim_Sizes) eq 0 then t_dim_Sizes = sSize else t_dim_Sizes=[t_dim_Sizes,sSize] 
 ;      if N_ELEMENTS(t_dim_ids) eq 0 then t_dim_ids = tdimid else t_dim_ids=[t_dim_ids,tdimid]            
-      printf, 1, '  +:', sName, ': ', STR_equiv(sSize)
+      printf, unit, '  +:', sName, ': ', STR_equiv(sSize)
     endelse
   endfor ; Dimensions OK
   
-  printf, 1, ' '
-  printf, 1, ' '
-  printf, 1, '----------------------'
-  printf, 1, '* Global attributes * ' 
-  printf, 1, '----------------------'
-  printf, 1, ' '
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '----------------------'
+  printf, unit, '* Global attributes * ' 
+  printf, unit, '----------------------'
+  printf, unit, ' '
   
   ;Go threw the global Attribute. No need to change a lot but add some info  
   removAbleAtts = ['SIMULATION_START_DATE','JULYR','JULDAY', 'CREATION_DATE', 'ORIG_FILE', 'WAVE_COMENT', 'REMOVED_INDEXES']  
@@ -929,7 +965,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
     ; go threw the atts we want to remove
     isHere = WHERE(removAbleAtts eq str_equiv(sName), cnt)
     if cnt ne 0 then begin
-      printf, 1, '  -:' + StrlowCase(sName) + ': ' + str_equiv(sValue), ' (ignored)'
+      printf, unit, '  -:' + StrlowCase(sName) + ': ' + str_equiv(sValue), ' (ignored)'
       continue
     endif
     ; go threw the atts we want to change
@@ -955,24 +991,24 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         LONG=tlong, $
         SHORT=tshort
 
-    printf, 1, '  +:' + StrlowCase(sName) + ': ' + str_equiv(sValue)
+    printf, unit, '  +:' + StrlowCase(sName) + ': ' + str_equiv(sValue)
     undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
   endfor ; Att OK
     
   ; Add my own
   NCDF_AttPut, tid, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
-  printf, 1, '  +:' + 'CREATION_DATE' + ': ' + TIME_to_STR(QMS_TIME()) + ' (added)'
+  printf, unit, '  +:' + 'CREATION_DATE' + ': ' + TIME_to_STR(QMS_TIME()) + ' (added)'
   NCDF_AttPut, tid, 'WAVE_COMENT', 'File generated by aggregation of WRF single runs using the WAVE POST_aggregate_directory routine.', /GLOBAL, /CHAR
-  printf, 1, '  +:' + 'WAVE_COMENT' + ': ' + 'File generated by aggregation of WRF single runs using the WAVE POST_aggregate_directory routine.' + ' (added)'
+  printf, unit, '  +:' + 'WAVE_COMENT' + ': ' + 'File generated by aggregation of WRF single runs using the WAVE POST_aggregate_directory routine.' + ' (added)'
   NCDF_AttPut, tid, 'SPINUP_INDEX', spin_index, /GLOBAL, /LONG
-  printf, 1, '  +:' + 'SPINUP_INDEX' + ': ' + str_equiv(spin_index) + ' (added)'
+  printf, unit, '  +:' + 'SPINUP_INDEX' + ': ' + str_equiv(spin_index) + ' (added)'
   
-  printf, 1, ' '
-  printf, 1, ' '
-  printf, 1, '--------------'
-  printf, 1, '* Variables * ' 
-  printf, 1, '--------------'
-  printf, 1, ' '
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '--------------'
+  printf, unit, '* Variables * ' 
+  printf, unit, '--------------'
+  printf, unit, ' '
  
   for svid =0, inq.NVARS-1 do begin
   
@@ -987,7 +1023,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','
       endfor
       text += ')  ; (ignored)'
-      printf, 1, text
+      printf, unit, text
       continue ;Nothing to be done
     endif
     VARTOKEEP.found[p] = TRUE
@@ -1019,7 +1055,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','
       endfor
       text += ')  ; (ignored: D3TOD2 or UNSTAGGER parameters currently not supported.)'
-      printf, 1, text
+      printf, unit, text
       continue
     endif
         
@@ -1038,7 +1074,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','      
     endfor
     text += ') ' + addInfo + ' ; '
-    printf, 1, text
+    printf, unit, text
     undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
     
     if s_var_info.natts eq 0 then continue ; no need to continue (just for time actually)
@@ -1072,7 +1108,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         SHORT=tshort
         
       text = '      ' + sName + ': ' + STRLOWCASE(str_equiv(sValue))
-      printf, 1, text
+      printf, unit, text
       undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
     endfor
     
@@ -1106,7 +1142,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         if i ne N_ELEMENTS(s_var_info.dim) - 1 then  text += ','
       endfor
       text += ')  ' + addInfo + ' ; (added)'
-      printf, 1, text
+      printf, unit, text
       undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
       
       if s_var_info.natts eq 0 then continue ; no need to continue (just for time actually)
@@ -1145,7 +1181,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
           SHORT=tshort
           
         text = '    ' + sName + ': ' + STRLOWCASE(str_equiv(sValue))
-        printf, 1, text
+        printf, unit, text
         undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
         
         endfor
@@ -1182,7 +1218,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
         if i ne N_ELEMENTS(s_var_info.dim) - 1 then  text += ','
       endfor
       text += ')  ' + addInfo + ' ; (added)'
-      printf, 1, text
+      printf, unit, text
       undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
       
       if s_var_info.natts eq 0 then continue ; no need to continue (just for time actually)
@@ -1217,7 +1253,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
           SHORT=tshort
           
         text = '    ' + sName + ': ' + STRLOWCASE(str_equiv(sValue))
-        printf, 1, text
+        printf, unit, text
         undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
         
         endfor
@@ -1230,27 +1266,29 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   NCDF_CLOSE, sid ; Close source file
   
   ; Did we miss some Vars ?
-  printf, 1, ' '
+  printf, unit, ' '
   p = where(VARTOKEEP.found ne TRUE, cnt)
-  if cnt ne 0 then for i=0, cnt-1 do printf, 1, '  !:' + VARTOKEEP.name[p[i]] + ' was not found in the Netcdf file!' 
+  if cnt ne 0 then for i=0, cnt-1 do printf, unit, '  !:' + VARTOKEEP.name[p[i]] + ' was not found in the Netcdf file!' 
 
-  printf, 1, ' '
-  printf, 1, ' '
-  printf, 1, '-------------'
-  printf, 1, '* Fill now * ' 
-  printf, 1, '-------------'
-  printf, 1, ' '
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '-------------'
+  printf, unit, '* Fill now * ' 
+  printf, unit, '-------------'
+  printf, unit, ' '
   
-  POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index
+  POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
   
-  printf, 1, ' '
-  printf, 1, ' '
-  printf, 1, '------------'
-  printf, 1, '* SUCCESS * ' 
-  printf, 1, '------------'
-  printf, 1, ' '
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '------------'
+  printf, unit, '* SUCCESS * ' 
+  printf, unit, '------------'
+  printf, unit, ' '
+  tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
+  printf, unit, 'Total time: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
   
-  close, 1 ; close log file  
+  close, unit ; close log file  
   NCDF_CLOSE, tid ; Close file
   
 end
