@@ -67,7 +67,7 @@ function POST_list_files, domain, directory, CNT = cnt
   
   if ~arg_okay(domain, /NUMERIC) then message, 'Domain is not set'
     
-  fileList = FILE_SEARCH(directory, 'wrfout*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT)
+  fileList = FILE_SEARCH(directory, 'wrfout*', /EXPAND_ENVIRONMENT)
    
   isHere = STRPOS(filelist, 'd0' + str_equiv(domain))
   p = WHERE(isHere ne -1, cnt)
@@ -597,7 +597,7 @@ end
 ;          07-Dec-2010 FaM
 ;          Upgrade to WAVE 0.1
 ;-
-pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index
+pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
   
   ; Set Up environnement
   @WAVE.inc
@@ -757,6 +757,9 @@ end
 ;    SPINUP_INDEX: in, optional, integer
 ;                  The index where to start to get the data in each file to aggregate. Default is
 ;                  5 for the first domain, 13 for the other domains. 
+;    END_INDEX: in, optional, integer
+;               The index where to stop to get the data in each file to aggregate. Default is
+;               12 for the first domain, 36 for the other domains. 
 ;    TIMESTEP: in, optional, {TIME_STEP}
 ;              The output time serie timestep. Default is 3 hours for the first domain, 1 hour for the
 ;              others.
@@ -774,7 +777,7 @@ end
 ;                   Update to V0.1, added VarToKeep Files, and more
 ;
 ;-
-pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
+pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -827,8 +830,10 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   dummy = min(ds, pmin, SUBSCRIPT_MAX=pmax)
   
   myt0 = REL_TIME(ds[pmin], MILLISECOND = step.dms * spin_index)
-  if domain eq 1 then fac = 12 else fac = 36
-  myt1 = REL_TIME(ds[pmax], MILLISECOND = step.dms * fac)
+  if ~KEYWORD_SET(END_INDEX) then begin
+   if domain eq 1 then e_index = 12 else e_index = 36
+  endif else e_index = END_INDEX
+  myt1 = REL_TIME(ds[pmax], MILLISECOND = step.dms * e_index)
 
   if ~KEYWORD_SET(START_TIME) then t0 = myt0 else begin
     if ~check_WTIME(START_TIME, OUT_QMS=t0) then Message, WAVE_Std_Message('START_TIME', /ARG)
@@ -1248,4 +1253,82 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   
 end
 
+pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX = spinup_index, END_index = end_index, VARTOKEEP_FILE = vartokeep_file
 
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    if N_ELEMENTS(unit) ne 0 then begin
+      printf, unit, ' '
+      printf, unit, ' '
+      printf, unit, '* ERROR : ' + !Error_State.Msg
+      printf, unit, ' '
+      printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+      printf, unit, ' '
+      close, unit
+    endif
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  ; ---------------
+  ; Check the input
+  ; ---------------
+  if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select directory containing the directories to parse', /MULTIPLE_FILES)
+  directories = FILE_SEARCH(directory, '200*.*', /EXPAND_ENVIRONMENT) ;TODO: not perfect
+  ndirs = N_ELEMENTS(directories)
+  if ndirs eq 0 then return
+  if N_ELEMENTS(OUTdirectory) eq 0 then OUTdirectory = DIALOG_PICKFILE(TITLE='Please select directory to put the output', /DIRECTORY)  
+  if OUTdirectory eq '' then return
+  FILE_MKDIR, OUTdirectory
+  
+  OPENW, unit, OUTdirectory + '/wrf_agg_mass.log', /GET_LUN 
+    
+  printf, unit, '' 
+  printf, unit, 'WRF output mass aggregate.' 
+  printf, unit, ''
+  printf, unit, 'Start : ' + TIME_to_STR(QMS_TIME())
+  
+  printf, unit, ''
+  printf, unit, 'Number of directories to aggregate: ' + str_equiv(ndirs)
+  printf, unit, ''
+  printf, unit, 'Creating output directories: '   
+  outdirs = STRARR(Ndirs)
+  for i=0, Ndirs-1 do begin
+    if ~FILE_TEST(directories[i], /DIRECTORY) then  message, '$' + directories[i] + ' not good.'
+    dirspl = STRSPLIT(directories[i], PATH_SEP(), /EXTRACT, COUNT=cnt)
+    last = STRSPLIT(dirspl[cnt-1], '.', /EXTRACT, COUNT=cnt2)
+    if cnt2 ne 2 then message, '$' + directories[i] + ' not good.'
+    if not arg_okay(last, /NUMERIC) then message, '$' + directories[i] + ' not good.'
+    if long(last[0]) gt 2100 or long(last[0]) lt 1900 then message, '$' + directories[i] + ' not good.'
+    if long(last[1]) gt 12 or long(last[1]) lt 1 then message, '$' + directories[i] + ' not good.'
+    outdirs[i] = FILE_EXPAND_PATH(OUTdirectory + PATH_SEP() + dirspl[cnt-1])
+    FILE_MKDIR, outdirs[i] 
+    printf, unit, '  + ' + outdirs[i] 
+  endfor
+  
+  printf, unit, ''
+  printf, unit, 'OK. Now start to aggregate : '   
+  flush, unit
+  for i=0, Ndirs-1 do begin
+    printf, unit, '  Starting ' + directories[i] + ' ...'  
+    flush, unit
+;    POST_aggregate_directory, domain, directories[i], SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = outdirs[i], VARTOKEEP_FILE = vartokeep_file
+  endfor
+  
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '------------'
+  printf, unit, '* SUCCESS * ' 
+  printf, unit, '------------'
+  printf, unit, ' ' 
+
+  printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+  printf, unit, ' '
+ 
+  close, unit ; close log file  
+  
+end
