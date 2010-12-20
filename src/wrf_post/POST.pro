@@ -1316,7 +1316,7 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   for i=0, Ndirs-1 do begin
     printf, unit, '  Starting ' + directories[i] + ' ...'  
     flush, unit
-;    POST_aggregate_directory, domain, directories[i], SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = outdirs[i], VARTOKEEP_FILE = vartokeep_file
+    POST_aggregate_directory, domain, directories[i], SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = outdirs[i], VARTOKEEP_FILE = vartokeep_file
   endfor
   
   printf, unit, ' '
