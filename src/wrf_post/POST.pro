@@ -620,7 +620,9 @@ pro POST_fill_ncdf, tid, filelist, vartokeep, ts, spin_index ;TODO: add e_index
       HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
        
     ps = where(ts eq times[spin_index], cnt)
+    if cnt eq 0 then continue    
     pe = where(ts eq times[ntimes-1], cnt)
+    if cnt eq 0 then continue    
         
     for v=0, nvars - 1 do begin
     
