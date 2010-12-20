@@ -482,7 +482,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   fileList = FILE_SEARCH(input_dir, 'wrfout*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT)
   GEN_str_subst, ret, fileList, input_dir, '', arbo
   arbo = FILE_DIRNAME(arbo)
-  arboU = arbo[UNIQ(arbo, SORT(arbo))]
+  arboU = arbo[SORT(arbo)]
   
   
   OPENW, 1, output_dir + '/wrf_cpy_crop.log'
@@ -521,6 +521,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   printf, 1, ''
   printf, 1, 'Ok. Lets start copy-cropping stuff: '
   printf, 1, ''
+  flush, 1  
   
   indstart = 0
   inpb = 0
@@ -535,6 +536,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     tried += 1
     if tried gt 100 then begin
       printf, 1, '  Tried everything. Stop the massacre...'
+      flush, 1  
       return
     endif
   ENDIF
@@ -543,6 +545,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     inpb = i
     fname = FILE_BASENAME(fileList[i]) + '_crop'
     printf, 1, '  Start : ' + fileList[i] + ' ... '
+    flush, 1     
     POST_crop_file, fileList[i], OUTFILE = output_dir + '/' + arboU[i] + '/' +  fname
   endfor  
   
