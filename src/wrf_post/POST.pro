@@ -485,43 +485,43 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   arboU = arbo[SORT(arbo)]
   
   
-  OPENW, 1, output_dir + '/wrf_cpy_crop.log'
+  OPENW, unit, output_dir + '/wrf_cpy_crop.log', /GET_LUN
   
-  printf, 1, '' 
-  printf, 1, 'WRF output copy cropping' 
-  printf, 1, ''
-  printf, 1, 'Start : ' + TIME_to_STR(QMS_TIME())
+  printf, unit, '' 
+  printf, unit, 'WRF output copy cropping' 
+  printf, unit, ''
+  printf, unit, 'Start : ' + TIME_to_STR(QMS_TIME())
   
-  printf, 1, ''
-  printf, 1, 'Number of files to copy: ' + str_equiv(N_ELEMENTS(fileList))
+  printf, unit, ''
+  printf, unit, 'Number of files to copy: ' + str_equiv(N_ELEMENTS(fileList))
   
   if N_ELEMENTS(fileList) eq 0 then begin
-    printf, 1, ' '
-    printf, 1, 'Nothing to do.'
-    printf, 1, ' '
-    printf, 1, ' '
-    printf, 1, '------------'
-    printf, 1, '* SUCCESS * '
-    printf, 1, '------------'
-    printf, 1, ' '    
-    printf, 1, 'End   : ' + TIME_to_STR(QMS_TIME())
-    printf, 1, ' '    
-    close, 1 ; close log file
+    printf, unit, ' '
+    printf, unit, 'Nothing to do.'
+    printf, unit, ' '
+    printf, unit, ' '
+    printf, unit, '------------'
+    printf, unit, '* SUCCESS * '
+    printf, unit, '------------'
+    printf, unit, ' '    
+    printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+    printf, unit, ' '    
+    close, unit ; close log file
     return
   endif
   
-  printf, 1, ''
-  printf, 1, 'Make directories:'
+  printf, unit, ''
+  printf, unit, 'Make directories:'
   
   for i=0, N_ELEMENTS(arboU) - 1 do begin
     FILE_MKDIR, output_dir + arboU[i]
-    printf, 1, '  + ' + output_dir + arboU[i]
+    printf, unit, '  + ' + output_dir + arboU[i]
   endfor 
    
-  printf, 1, ''
-  printf, 1, 'Ok. Lets start copy-cropping stuff: '
-  printf, 1, ''
-  flush, 1  
+  printf, unit, ''
+  printf, unit, 'Ok. Lets start copy-cropping stuff: '
+  printf, unit, ''
+  flush, unit  
   
   indstart = 0
   inpb = 0
@@ -530,13 +530,13 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    printf, 1, '  Oups, error : ' + !ERROR_STATE.MSG + ' . Trying to restart here.'
+    printf, unit, '  Oups, error : ' + !ERROR_STATE.MSG + ' . Trying to restart here.'
     message, /RESET        
     indstart = inpb
     tried += 1
     if tried gt 100 then begin
-      printf, 1, '  Tried everything. Stop the massacre...'
-      flush, 1  
+      printf, unit, '  Tried everything. Stop the massacre...'
+      flush, unit  
       return
     endif
   ENDIF
@@ -544,22 +544,26 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   for i=indstart, N_ELEMENTS(fileList) - 1 do begin
     inpb = i
     fname = FILE_BASENAME(fileList[i]) + '_crop'
-    printf, 1, '  Start : ' + fileList[i] + ' ... '
-    flush, 1     
+    printf, unit, '  Start : ' + fileList[i] + ' ... '
+    flush, unit     
+    syst = QMS_TIME()
     POST_crop_file, fileList[i], OUTFILE = output_dir + '/' + arboU[i] + '/' +  fname
+    tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
+    printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
   endfor  
   
-  printf, 1, ' '
-  printf, 1, ' '
-  printf, 1, '------------'
-  printf, 1, '* SUCCESS * ' 
-  printf, 1, '------------'
-  printf, 1, ' ' 
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '------------'
+  printf, unit, '* SUCCESS * ' 
+  printf, unit, '------------'
+  printf, unit, ' ' 
 
-  printf, 1, 'End   : ' + TIME_to_STR(QMS_TIME())
-  printf, 1, ' '
+  printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+  printf, unit, ' '
  
-  close, 1 ; close log file  
+  close, unit ; close log file  
+  FREE_LUN, unit
   
 end
 
