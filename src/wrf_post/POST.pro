@@ -822,6 +822,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       printf, unit, ' '
       printf, unit, ' '
       close, unit
+      free_lun, Unit
     endif
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN
@@ -1293,6 +1294,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   printf, unit, 'Total time: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
   
   close, unit ; close log file  
+  free_lun, Unit
   NCDF_CLOSE, tid ; Close file
   
 end
@@ -1313,6 +1315,7 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
       printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
       printf, unit, ' '
       close, unit
+      free_lun, Unit
     endif
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN
@@ -1322,7 +1325,7 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   ; Check the input
   ; ---------------
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select directory containing the directories to parse', /MULTIPLE_FILES)
-  directories = FILE_SEARCH(directory, '200*.*', /EXPAND_ENVIRONMENT) ;TODO: not perfect
+  directories = FILE_SEARCH(directory, '[12][0123456789][0123456789][0123456789].[0123456789][0123456789]', /EXPAND_ENVIRONMENT) ;TODO: not perfect
   ndirs = N_ELEMENTS(directories)
   if ndirs eq 0 then return
   if N_ELEMENTS(OUTdirectory) eq 0 then OUTdirectory = DIALOG_PICKFILE(TITLE='Please select directory to put the output', /DIRECTORY)  
@@ -1374,5 +1377,6 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   printf, unit, ' '
  
   close, unit ; close log file  
+  free_lun, Unit
   
 end
