@@ -698,6 +698,7 @@ pro QuickPLot, image, $ ; The image to plot (2D, 3D, or 4D)
                dimnames = dimnames,  $ ; the dimensions names, if available (vector of strings of the same lenght as the number of dimensions of image)
                dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0]) 
                dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*]) 
+               INTERPOLATE = interpolate, $
                Group_Leader = group
     
   ; SET UP ENVIRONNEMENT
@@ -757,7 +758,7 @@ pro QuickPLot, image, $ ; The image to plot (2D, 3D, or 4D)
   ; Create the image object.
   imagePtr = Ptr_New(image[*,*,varinds[0],varinds[1]])
   processPtr = Ptr_New(image[*,*,varinds[0],varinds[1]])
-  thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr), Dimensions=[xsize,ysize], Palette=thisPalette)
+  thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr), Dimensions=[xsize,ysize], Palette=thisPalette, INTERPOLATE = interpolate)
     
   ; Create scaling parameters for the image. I get position coordinates for a normalized window from
   ; my QuickPLot_Aspect function. Then use my FSC_Normalize function to create scaling factors for the image.

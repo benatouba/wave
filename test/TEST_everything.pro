@@ -1202,15 +1202,807 @@ pro TEST_TRMM_AGG
 
 end
 
+pro TEST_WRF_OUT
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d01_2008-10-26')
+    
+    dom1->get_time, time, nt, t0, t1    
+    if nt ne 13 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 12) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 28, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time[1] ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 15) then error += 1
+
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 150 then error += 1
+    if ny ne 150 then error += 1
+    if c.nx ne 150 then error +=1
+    if c.ny ne 150 then error +=1
+    if jpar ne 1 then error +=1
+    if ipar ne 1 then error +=1
+    if rat ne 1 then error +=1
+    if dom ne 1 then error +=1
+    if hstep.hour ne 3 then error += 1
+    if bt ne 27 then error += 1
+    if typ ne 'WRF' then error += 1
+    if ver ne 'OUTPUT FROM WRF V3.1.1 MODEL' then error+=1 
+    
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    GIS_make_datum, ret, dat, NAME='WGS-84'
+    dom1->transform_LonLat, lon, lat, dat, i, j, /NEAREST
+    
+    utils_1d_to_2d, INDGEN(150), INDGEN(150), ti, tj
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_LonLat, lon+0.01, lat-0.01, dat, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_IJ, ti, tj, dom1, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    ;temoin    
+    id = NCDF_OPEN(fdir+'wrfout_d01_2008-10-26', /NOWRITE)
+    NCDF_VARGET, id, 'XLONG', olon
+    NCDF_VARGET, id, 'XLAT', olat
+    NCDF_VARGET, id, 'T2', ot2
+    NCDF_VARGET, id, 'P', op
+    NCDF_CLOSE, id
+    
+    olon = olon[*,*,0]
+    olat = olat[*,*,0]        
+    if max(abs(olat-lat)) ne 0 then  error += 1
+    if max(abs(olon-lon)) ne 0 then  error += 1   
+    
+    if max(abs(dom1->get_var('t2')-ot2)) ne 0 then  error += 1
+    if max(abs(dom1->get_var('p')-op)) ne 0 then  error += 1
+    
+    p = dom1->get_var('p', stime, snt, t0 = time[3], t1 = time[8])
+    if snt ne 6 then error +=1
+    if max(abs(p-op[*,*,*,3:8])) ne 0 then  error += 1
+    
+    dom1->quickPlotVar, 'T2', t0 = time[3], t1 = time[8]
+    ok = DIALOG_MESSAGE('Do you see a temperature plot?', /QUESTION)
+    if ok eq 'No' then error += 1
+     
+     ;----------------------------
+     ; CROP BORDER
+     ;----------------------------
+     ok = dom1->define_subset(CROPBORDER=5)
+     if ~ok then error+=1
+     
+    dom1->get_time, time, nt, t0, t1    
+    if nt ne 13 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 12) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 28, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time[1] ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 15) then error += 1
+
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 140 then error += 1
+    if ny ne 140 then error += 1
+    if c.nx ne 140 then error +=1
+    if c.ny ne 140 then error +=1
+    if crop ne 'BORDER' then error += 1
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    if max(abs(olon[5:144,5:144]-lon)) gt 1e-4 then  error += 1
+    if max(abs(olat[5:144,5:144]-lat)) gt 1e-4 then  error += 1
+    
+    
+    GIS_make_datum, ret, dat, NAME='WGS-84'
+    dom1->transform_LonLat, lon, lat, dat, i, j, /NEAREST
+    
+    utils_1d_to_2d, INDGEN(140), INDGEN(140), ti, tj
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_LonLat, lon+0.01, lat-0.01, dat, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_IJ, ti, tj, dom1, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+ 
+    if max(abs(dom1->get_var('t2',t0 = time[2],t1 = time[4])-ot2[5:144,5:144,2:4])) ne 0 then  error += 1
+ 
+     
+    ;----------------------------
+    ; RESET
+    ;----------------------------
+    ok = dom1->define_subset()
+    if ~ok then error+=1    
+
+    
+    dom1->get_time, time, nt, t0, t1    
+    if nt ne 13 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 12) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 28, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time[1] ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 15) then error += 1
+
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 150 then error += 1
+    if ny ne 150 then error += 1
+    if c.nx ne 150 then error +=1
+    if c.ny ne 150 then error +=1
+    if jpar ne 1 then error +=1
+    if ipar ne 1 then error +=1
+    if rat ne 1 then error +=1
+    if dom ne 1 then error +=1
+    if hstep.hour ne 3 then error += 1
+    if bt ne 27 then error += 1
+    if typ ne 'WRF' then error += 1
+    if ver ne 'OUTPUT FROM WRF V3.1.1 MODEL' then error+=1 
+    
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    GIS_make_datum, ret, dat, NAME='WGS-84'
+    dom1->transform_LonLat, lon, lat, dat, i, j, /NEAREST
+    
+    utils_1d_to_2d, INDGEN(150), INDGEN(150), ti, tj
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_LonLat, lon+0.01, lat-0.01, dat, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_IJ, ti, tj, dom1, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+
+     ;----------------------------
+     ; CROP CHILD
+     ;----------------------------
+     ok = dom1->define_subset(/CROPCHILD)
+     if ~ok then error+=1
+     
+    dom1->get_time, time, nt, t0, t1    
+    if nt ne 13 then error += 1    
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 12) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 28, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+    if time[1] ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 15) then error += 1
+
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+    if crop ne 'CROPCHILD' then error += 1 
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 50 then error += 1
+    if ny ne 50 then error += 1
+    if c.nx ne 50 then error +=1
+    if c.ny ne 50 then error +=1
+    
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    ;temoin    
+    id = NCDF_OPEN(fdir+'wrfout_d02_2008-10-26', /NOWRITE)
+    NCDF_VARGET, id, 'XLONG', lon2
+    NCDF_VARGET, id, 'XLAT', lat2
+    NCDF_CLOSE, id
+    
+    if max(abs(gislon[0,0]-lon2[1,1,0])) gt 1e-4 then  error += 1
+    if max(abs(gislat[0,0]-lat2[1,1,0])) gt 1e-4 then  error += 1
+    if max(abs(gislon[49,49]-lon2[148,148,0])) gt 1e-4 then  error += 1
+    if max(abs(gislat[49,49]-lat2[148,148,0])) gt 1e-4 then  error += 1
+    if max(abs(gislat[0,1]-lat2[1,4,0])) gt 1e-4 then  error += 1
+    
+    td2 = dom1->reGrid(factor=3)
+    td2->get_LONLAT, tdlon, tdlat, tdx, tdy
+    if max(abs(tdlon[0:20,0:20]-lon2[0:20,0:20,0])) gt 1e-4 then  error += 1 ;because dom2-3 test not good everywhere
+    if max(abs(tdlat[0:20,0:20]-lat2[0:20,0:20,0])) gt 1e-4 then  error += 1 
+    if tdx ne 150 then error+=1
+    if tdy ne 150 then error+=1
+    OBJ_DESTROY, td2
+    
+    ;----------------------------
+    ; CROP SUBSET
+    ;----------------------------
+    ok = dom1->define_subset(SUBSET_LL=[91.,31.,93.,33.], SUBSET_IJ=sij)
+    if ~ok then error+=1
+    dom1->get_LONLAT, tdlon, tdlat, tdx, tdy
+        
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     if crop ne 'SUBSET' then error += 1 
+    
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    if abs(GISLON[0,0]-91.) gt MEAN(GISLON[1:*,0]-GISLON[0:NX-2,0])/2. then error +=1
+    if abs(GISLON[NX-1,Ny-1]-93.) gt MEAN(GISLON[1:*,ny-1]-GISLON[0:NX-2,ny-1])/2. then error +=1
+    if abs(GISLAT[0,0]-31.) gt MEAN(GISLAT[0,1:*]-GISLAT[0,0:Ny-2])/2. then error +=1
+    if abs(GISLAT[NX-1,Ny-1]-33.) gt MEAN(GISLAT[nx-1,1:*]-GISLAT[nx-1,0:Ny-2])/2. then error +=1
+     
+    ;----------------------------
+    ; TEST TS 
+    ;----------------------------
+    ok = dom1->define_subset(/CROPBORDER)
+    if ~ok then error+=1
+    dom1->get_LONLAT, lon, lat, nx, ny
+    
+    plon = DOM1->get_TS('XLONG', 90.,29.,SRC=dat)
+    plat = DOM1->get_TS('XLAT', 90.,29.,SRC=dat)
+    
+    if abs(pLON[0]-90.) gt MEAN(LON[1:*,0]-LON[0:NX-2,0])/2. then error +=1
+    if abs(pLAT[0]-29.) gt MEAN(LAT[0,1:*]-LAT[0,0:Ny-2])/2. then error +=1
+    
+    dom1->plot_TS, 'T2', 90.1, 31.2, src = dat 
+    ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
+    if ok eq 'No' then error += 1
+        
+    OBJ_DESTROY, dom1     
+    if error ne 0 then message, '% TEST_WRF_OUT NOT passed', /CONTINUE else print, 'TEST_WRF_OUT passed'
+        
+end
+
+pro TEST_WRF_GEO
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'geo_em.d03.nc')
+    
+    dom1->get_time, time, nt, t0, t1    
+    if nt ne 1 then error += 1    
+    if t0 ne QMS_TIME(year = 2000, month = 01, day = 1, hour = 0) then error += 1
+    if N_ELEMENTS(time) ne nt then error += 1
+
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 140 then error += 1
+    if ny ne 100 then error += 1
+    if c.nx ne 140 then error +=1
+    if c.ny ne 100 then error +=1
+    if rat ne 5 then error +=1
+    if dom ne 3 then error +=1
+    if hstep.hour ne 0 then error += 1
+    if bt ne 1 then error += 1
+    if typ ne 'GEO' then error += 1
+    
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    GIS_make_datum, ret, dat, NAME='WGS-84'
+    dom1->transform_LonLat, lon, lat, dat, i, j, /NEAREST
+    
+    utils_1d_to_2d, INDGEN(140), INDGEN(100), ti, tj
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_LonLat, lon+0.0001, lat-0.0001, dat, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+    dom1->transform_IJ, ti, tj, dom1, i, j, /NEAREST
+    if max(abs(ti-i)) ne 0 then  error += 1
+    if max(abs(tj-j)) ne 0 then  error += 1    
+    
+     ;----------------------------
+     ; CROP BORDER
+     ;----------------------------
+     ok = dom1->define_subset(CROPBORDER=5)
+     if ~ok then error+=1
+     
+    dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
+     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
+      type = typ, version = ver
+     
+    dom1->get_ncdf_coordinates, lon, lat, nx, ny
+    
+    if nx ne 130 then error += 1
+    if ny ne 90 then error += 1
+    if c.nx ne 130 then error +=1
+    if c.ny ne 90 then error +=1
+    if crop ne 'BORDER' then error += 1
+    if max(abs(gislon-lon)) gt 1e-4 then  error += 1
+    if max(abs(gislat-lat)) gt 1e-4 then  error += 1
+    
+    OBJ_DESTROY, dom1     
+    if error ne 0 then message, '% TEST_WRF_GEO NOT passed', /CONTINUE else print, 'TEST_WRF_GEO passed'
+        
+end
+
+pro TEST_MODIS_SNOW
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=25)
+    modis = OBJ_NEW('MODIS_Grid', FILE=fdir+'MODIS/MOD10A1.A2008294.h26v06.005.2008299220621.hdf')
+    map = dom1->reGrid(FACTOR=10)
+    
+    
+;    MODIS->Get_LonLat, lon, lat, nx, ny
+;    if nx ne 2400 then error +=1
+;    if ny ne 2400 then error +=1
+    
+    s = modis->get_Var('Snow_Cover_Daily_Tile')
+    ts =map->map_gridded_data(s, modis)
+    
+    QuickPLot, ts, COLORTABLE=13
+    
+    OBJ_DESTROY, dom1     
+    OBJ_DESTROY, map     
+    OBJ_DESTROY, modis     
+    if error ne 0 then message, '% TEST_MODIS_SNOW NOT passed', /CONTINUE else print, 'TEST_MODIS_SNOW passed'
+    
+end
+
+pro TEST_POST_COPY_CROP, REDO = redo
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    @WAVE.inc
+    
+    ;----------------
+    ; TEST copy crop
+    ;----------------     
+    INPUT_DIR= fdir + '/WRF_POST/'
+    OUTPUT_DIR= fdir + '/WRF_CPY_CROP/'
+    
+    if ~ KEYWORD_SET(REDO) then redo = false    
+    if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
+    if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
+    
+    if redo then POST_cpy_crop_directory, INPUT_DIR=INPUT_DIR, OUTPUT_DIR=OUTPUT_DIR
+    
+    if ~FILE_TEST(OUTPUT_DIR) then error+=1
+    if ~FILE_TEST(OUTPUT_DIR+'/d1/') then error+=1
+    if ~FILE_TEST(OUTPUT_DIR+'/d2/') then error+=1
+    if ~FILE_TEST(OUTPUT_DIR+'/wrf_cpy_crop.log') then error+=1
+    
+    
+    ;----------------
+    ; D1 day one
+    ;----------------        
+    origf =  fdir + '/WRF_POST/d1/wrfout_d01_2009-09-12_12_00_00'
+    outf =  fdir + '/WRF_CPY_CROP/d1/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 9 then error += 1
+    if to1 ne ta1 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09) then error += 1
+    
+    orig->get_Varlist, oid, onames
+    out->get_Varlist, aid, anames
+    
+    if TOTAL(oid - aid) ne 0 then error += 1
+    for i = 0, N_ELEMENTS(onames) - 1 do if onames[i] ne anames[i] then error += 1 
+    
+    t2o = orig->get_Var('t2', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('t2')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = orig->get_Var('U', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('U')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ;----------------
+    ; D3 day one
+    ;----------------        
+    origf =  fdir + '/WRF_POST/d1/wrfout_d03_2009-09-12_12_00_00'
+    outf =  fdir + '/WRF_CPY_CROP/d1/wrfout_d03_2009-09-13_00_00_00_24h.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 25 then error += 1
+    if to1 ne ta1 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09) then error += 1
+    
+    orig->get_Varlist, oid, onames
+    out->get_Varlist, aid, anames
+    
+    if TOTAL(oid - aid) ne 0 then error += 1
+    for i = 0, N_ELEMENTS(onames) - 1 do if onames[i] ne anames[i] then error += 1 
+    
+    t2o = orig->get_Var('t2', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('t2')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = orig->get_Var('U', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('U')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ;----------------
+    ; D1 day two
+    ;----------------        
+    origf =  fdir + '/WRF_POST/d2/wrfout_d01_2009-09-13_12_00_00'
+    outf =  fdir + '/WRF_CPY_CROP/d2/wrfout_d01_2009-09-14_00_00_00_24h.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 9 then error += 1
+    if to1 ne ta1 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 14, month = 09) then error += 1
+    
+    orig->get_Varlist, oid, onames
+    out->get_Varlist, aid, anames
+    
+    if TOTAL(oid - aid) ne 0 then error += 1
+    for i = 0, N_ELEMENTS(onames) - 1 do if onames[i] ne anames[i] then error += 1 
+    
+    t2o = orig->get_Var('t2', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('t2')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = orig->get_Var('U', t0 = ta0 , t1 = ta1)
+    t2a = out->get_Var('U')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    if error ne 0 then message, '% TEST_POST_COPY_CROP NOT passed', /CONTINUE else print, 'TEST_POST_COPY_CROP passed'
+    
+end
+
+
+pro TEST_POST_AGG, REDO = redo
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    @WAVE.inc
+    
+    ;----------------
+    ; TEST copy crop
+    ;----------------     
+    INPUT_DIR= fdir + '/WRF_POST/'
+    OUTPUT_DIR= fdir + '/WRF_AGG/'
+    
+    if ~ KEYWORD_SET(REDO) then redo = false    
+    if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
+    if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
+      
+    if redo then POST_aggregate_directory, 1, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom1/'    
+    if redo then POST_aggregate_directory, 3, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom3/'    
+    if ~FILE_TEST(OUTPUT_DIR) then error+=1
+    
+    ; DOM 1 day one
+    if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
+    origf =  INPUT_DIR+ '/d1/wrfout_d01_2009-09-12_12_00_00'
+    outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+        
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 1 day two
+    if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
+    origf =  INPUT_DIR+ '/d2/wrfout_d01_2009-09-13_12_00_00'
+    outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 3 day two
+    if ~FILE_TEST(OUTPUT_DIR+'/dom3//wrf_cpy_2009_09_13_d03.log') then error+=1    
+    origf =  INPUT_DIR+ '/d2/wrfout_d03_2009-09-13_12_00_00'
+    outf =  OUTPUT_DIR + '/dom3/wrf_agg_2009_09_13_d03.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 48 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 1) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    if error ne 0 then message, '% TEST_POST_AGG NOT passed', /CONTINUE else print, 'TEST_POST_AGG passed'
+    
+end
+
+pro TEST_POST_AGG_CROPPED, REDO = redo
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    @WAVE.inc
+    
+    ;----------------
+    ; TEST copy crop
+    ;----------------     
+    INPUT_DIR= fdir + '/WRF_CPY_CROP/'
+    OUTPUT_DIR= fdir + '/WRF_AGG_CROPPED/'
+    
+    if ~FILE_TEST(INPUT_DIR) then TEST_POST_COPY_CROP
+    
+    if ~ KEYWORD_SET(REDO) then redo = false    
+    if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
+    if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
+      
+    if redo then POST_aggregate_directory, 1, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom1/', SPINUP_INDEX=1, END_INDEX=8 , START_TIME =   QMS_TIME(year = 2009, day = 13, month = 09, hour = 3), END_TIME=QMS_TIME(year = 2009, day = 15, month = 09, hour = 0)
+    if redo then POST_aggregate_directory, 3, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom3/', SPINUP_INDEX=1, END_INDEX=24, START_TIME =   QMS_TIME(year = 2009, day = 13, month = 09, hour = 1), END_TIME=QMS_TIME(year = 2009, day = 15, month = 09, hour = 0)
+    if ~FILE_TEST(OUTPUT_DIR) then error+=1
+    
+    ; DOM 1 day one
+    if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
+    origf =  INPUT_DIR+ '/d1/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+        
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = orig->get_Var('RAINNC', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 00))
+    t2o = t2o[*,*,8] - t2o[*,*,0]
+    t2a = out->get_Var('RAINNC', t0 = to1, t1 = to1)    
+    if total(ABS(t2o-t2a)) gt 1e-3 then error += 1
+    
+    t2o = orig->get_Var('RAINNC', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 00))
+    t2o = (utils_ACC_TO_STEP(t2o))[*,*,1:*]    
+    t2a = out->get_Var('RAINNC_STEP', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 03), t1 = t01)    
+    if total(ABS(t2o-t2a)) gt 1e-3 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 1 day two
+    if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
+    origf =  INPUT_DIR+ '/d2/wrfout_d01_2009-09-14_00_00_00_24h.nc'
+    outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+        
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 3 day two
+    if ~FILE_TEST(OUTPUT_DIR+'/dom3//wrf_cpy_2009_09_13_d03.log') then error+=1    
+    origf =  INPUT_DIR+ '/d2/wrfout_d03_2009-09-14_00_00_00_24h.nc'
+    outf =  OUTPUT_DIR + '/dom3/wrf_agg_2009_09_13_d03.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('WRF_nc', FILE=origf)
+    out = OBJ_NEW('WRF_nc', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 48 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 1) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    if error ne 0 then message, '% TEST_POST_AGG_CROPPED NOT passed', /CONTINUE else print, 'TEST_POST_AGG_CROPPED passed'
+    
+end
+
+pro TEST_WRF_AGG_MASSGRID
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d01_2008-10-26')
+    dom2 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
+    
+    d2pcp = (dom2->get_prcp())[*,*,36]
+    d1pcp = dom2->map_gridded_data((dom1->get_prcp())[*,*,12], dom1)
+    
+    d2pcp = UTILS_aggregate_Grid_data(d2pcp, 3)
+    d1pcp = UTILS_aggregate_Grid_data(d1pcp, 3)
+    
+    ok = DOM1->define_subset(/CROPCHILD)
+    orig = (DOM1->get_prcp())[*,*,12]
+    
+    if max(abs(d1pcp - d2pcp)) gt 0.2 then error +=1
+    if max(abs(d1pcp - orig[1:48,1:48])) gt 0.001 then error +=1
+    if max(abs(d2pcp - orig[1:48,1:48])) gt 0.2 then error +=1
+
+    OBJ_DESTROY, dom1     
+    OBJ_DESTROY, dom2     
+    
+    if error ne 0 then message, '% TEST_WRF_AGG_MASSGRID NOT passed', /CONTINUE else print, 'TEST_WRF_AGG_MASSGRID passed'
+        
+end
+
+pro TEST_NEIREST_NEIGHBOR
+  @WAVE.inc
+  error = 0
+  
+  fdir = TEST_file_directory() 
+  error = 0 
+
+  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d01_2008-10-26', CROPBORDER=45)
+  dom1->Get_LonLat, wrflon, wrflat, wx, wy
+  trmm = OBJ_NEW('TRMM_nc', FILE=fdir+'/TRMM/3B42.081001.3.6A.nc', SUBSET_LL = [min(wrflon)-2,min(wrflat)-2,max(wrflon)+2,max(wrflat)+2])
+  trmm->Get_LonLat, trmmlon, trmmlat, tx, ty
+  data = trmm->get_prcp()  
+  
+  syst = QMS_TIME()
+  p_c = utils_POS_NEAREST_NEIGHBORHOOD(trmmlon, trmmlat, wrflon, wrflat, /CLASSICAL, DISTANCES = dis_c)
+  dc = utils_COMPUTE_NEAREST_NEIGHBORHOOD(p_c, data)
+;  print, 'T1 : ' + str_equiv((QMS_TIME()-syst)/S_QMS)
+  
+  syst = QMS_TIME()
+  p_t = utils_POS_NEAREST_NEIGHBORHOOD(trmmlon, trmmlat, wrflon, wrflat, /TRIANGULATION, DISTANCES = dis_t)
+  dt = utils_COMPUTE_NEAREST_NEIGHBORHOOD(p_t, data)
+;  print, 'T2 : ' + str_equiv((QMS_TIME()-syst)/S_QMS)
+
+  if total(p_c-p_t) ne 0 then error += 1
+  if total(dis_t-dis_c) ne 0 then error += 1
+  if total(dc-dt) ne 0 then error += 1
+
+  syst = QMS_TIME()
+  dgis = DOM1->map_gridded_data(data, trmm)
+;  print, 'T3 : ' + str_equiv((QMS_TIME()-syst)/S_QMS)
+  
+  if total(dc-dgis) ne 0 then error += 1
+
+  OBJ_DESTROY, trmm
+  OBJ_DESTROY, dom1
+  
+  
+  
+  if error ne 0 then message, '% TEST_NEIREST_NEIGHBOR NOT passed', /CONTINUE else print, 'TEST_NEIREST_NEIGHBOR passed'
+  
+end
+
+
+
 pro TEST_DATASETS
   TEST_TRMM_3B42
   TEST_TRMM_3B42_daily
   TEST_TRMM_3B43  
   TEST_TRMM_AGG
+  TEST_WRF_OUT
+end
+
+pro TEST_UTILS
+  TEST_WRF_AGG_MASSGRID
+  TEST_NEIREST_NEIGHBOR
+end
+
+pro TEST_POST
+  TEST_POST_COPY_CROP
+  TEST_POST_AGG
+  TEST_POST_AGG_CROPPED
 end
 
 pro TEST_everything
   TEST_TIME
   TEST_DATASETS
+  TEST_UTILS
+  TEST_POST
 end
 

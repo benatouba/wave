@@ -1113,7 +1113,7 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
     
   tstep = {TIME_STEP}
   
-  if keyword_set(dms) then begin
+  if N_ELEMENTS(dms) ne 0 then begin
     
     if not arg_okay(dms, /NUMERIC) then Message, WAVE_Std_Message('dms', /NUMERIC)
     if not arg_okay(dms, /SCALAR) then Message, WAVE_Std_Message('dms', /SCALAR)

@@ -6,17 +6,16 @@ PRO WRF_nc__Define
   
   struct = { WRF_nc                   ,  $
             INHERITS Grid2D           ,  $
-            INHERITS NCDF             ,  $
-            subset:  [0l,0l,0l,0l]    ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL ncdf grid array where to subset
-            cropped:            ''    ,  $ ; 
+            INHERITS GEO_nc           ,  $
             type:               ''    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
             version:            ''    ,  $ ; WRF version
-            time0:      {ABS_DATE}    ,  $ ; first available time
-            time1:      {ABS_DATE}    ,  $ ; last available time
-            time:        PTR_NEW()    ,  $ ; available times
-            nt:                 0L    ,  $ ; n times
-            dt:                0LL    ,  $ ; time step in ms
+            hstep:         {TIME_STEP},  $ ; Time step of the file
             dom:                    0L,  $ ; id of the considered nested domain
+            west_east:              0L,  $ ; original X dimension (unstaggered)
+            south_north:            0L,  $ ; original Y dimension (unstaggered)
+            bottom_top:             0L,  $ ; original Z dimension (unstaggered)
+            dx:                     0D,  $ ; grid spacing in m
+            dy:                     0D,  $ ; grid spacing in m
             i_parent_start:         0L,  $ ; i index of the start point in parent domain
             j_parent_start:         0L,  $ ; j index of the start point in parent domain
             parent_grid_ratio:      0L   $ ; ratio to parent
@@ -24,9 +23,11 @@ PRO WRF_nc__Define
     
 END
 
-function WRF_nc::define_grid, SUBSET = subset   ,  $ ;[xo,yo,x1,y1]
-                              cropD2 = cropD2   ,  $
-                              cropB  = cropB  
+function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
+                                 SUBSET_IJ  = subset_ij,  $
+                                 LL_DATUM   = ll_datum ,  $
+                                 CROPCHILD  = cropchild   ,  $
+                                 CROPBORDER = cropborder 
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -35,8 +36,9 @@ function WRF_nc::define_grid, SUBSET = subset   ,  $ ;[xo,yo,x1,y1]
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    self.subset = 'ERROR'
     ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, 0
+    RETURN, self->define_subset()
   ENDIF
   
   ;*******************
@@ -44,134 +46,216 @@ function WRF_nc::define_grid, SUBSET = subset   ,  $ ;[xo,yo,x1,y1]
   ;*******************
   do_init = self.cropped eq '' ;first init
   firstcall = do_init
+   
   if ~ do_init then begin
-    if KEYWORD_SET(cropb) then do_init = self.cropped ne 'BORDER'  $ ; Is not cropped yet
-    else if KEYWORD_SET(cropD2) then do_init = self.cropped ne 'DOM2'   $ ; Is not cropped yet    
-    else if KEYWORD_SET(SUBSET) then do_init = self.cropped ne 'SUBSET'  $  ; Is not cropped yet    
+    if KEYWORD_SET(CROPBORDER) then do_init = self.cropped ne 'BORDER'  $ ; Is not cropped yet
+    else if KEYWORD_SET(CROPCHILD) then do_init = self.cropped ne 'CROPCHILD'   $ ; Is not cropped yet    
+    else if KEYWORD_SET(SUBSET_LL) then do_init = TRUE  $  ; Is not cropped yet    
+    else if KEYWORD_SET(SUBSET_IJ) then do_init = self.cropped ne 'SUBSET'  $  ; Is not cropped yet    
     else do_init = self.cropped ne 'FALSE'   ; Is cropped but we dont want to
   endif
   
-  if ~ do_init and KEYWORD_SET(SUBSET) then begin
-    do_init = self.subset[0] ne SUBSET[0]
-    if ~ do_init then do_init = self.subset[1] ne SUBSET[1]
-    if ~ do_init then do_init = self.subset[2] ne SUBSET[2]
-    if ~ do_init then do_init = self.subset[3] ne SUBSET[3]    
+  if ~ do_init and KEYWORD_SET(SUBSET_IJ) then begin
+    if ~ arg_okay(SUBSET_ij, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET_ij', /ARG)
+    do_init = self.subset[0] ne SUBSET_IJ[0]
+    if ~ do_init then do_init = self.subset[1] ne SUBSET_IJ[1]
+    if ~ do_init then do_init = self.subset[2] ne SUBSET_IJ[2]
+    if ~ do_init then do_init = self.subset[3] ne SUBSET_IJ[3]    
   endif
-    
+  
+  if ~ do_init and KEYWORD_SET(CROPBORDER) then begin
+    if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
+    do_init = self.subset[0] ne CROPBORDER
+    if ~ do_init then do_init = self.subset[1] ne self.west_east - 2 * CROPBORDER
+    if ~ do_init then do_init = self.subset[2] ne CROPBORDER
+    if ~ do_init then do_init = self.subset[3] ne self.south_north - 2 * CROPBORDER
+  endif
+      
   if ~ do_init then return, 1 ;nothing to do
   
-  if KEYWORD_SET(CROPB) then self.cropped = 'BORDER' $
-    else if KEYWORD_SET(CROPD2) then self.cropped = 'DOM2' $
-        else if KEYWORD_SET(Subset) then self.cropped = 'SUBSET' $
+  if KEYWORD_SET(CROPBORDER) then self.cropped = 'BORDER' $
+    else if KEYWORD_SET(CROPCHILD) then self.cropped = 'CROPCHILD' $
+      else if KEYWORD_SET(Subset_LL) then self.cropped = 'SUBSET_LL' $
+        else if KEYWORD_SET(Subset_IJ) then self.cropped = 'SUBSET_IJ' $
           else self.cropped = 'FALSE'  
         
   ;************
   ; GRID info *
   ;************      
-  NCDF_ATTGET, self.Cdfid , 'DX', dx, /GLOBAL
-  NCDF_ATTGET, self.Cdfid , 'DY', dy, /GLOBAL  
-  NCDF_ATTGET, self.Cdfid , 'WEST-EAST_GRID_DIMENSION', nx, /GLOBAL
-  NCDF_ATTGET, self.Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', ny, /GLOBAL
-  NCDF_ATTGET, self.Cdfid , 'CEN_LAT', center_lat, /GLOBAL
-  NCDF_ATTGET, self.Cdfid , 'CEN_LON', center_lon, /GLOBAL
-  
-  dx = DOUBLE(dx)
-  dy = DOUBLE(dy)
-  nx = LONG(nx) -1 
-  ny = LONG(ny) -1 
+  center_lat = self->get_Gatt('CEN_LAT')
+  center_lon = self->get_Gatt('CEN_LON')
   
   ; Get easting and northings from dom center
   GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj    
-  x0 =  - (nx-1) / 2. * dx + e ; UL corner
-  y0 =    (ny-1) / 2. * dy + n ; UL corner
-  
-  ; Indexes in the original var
-  isubs =[0l,0l,nx-1,ny-1]
-          
-  case self.cropped of
-    'BORDER': begin
-      cropSize = 5
-      if cropSize lt 0 or cropSize ge nx / 2 then message, 'Cropsize not ok'
-      isubs = [cropSize, cropSize, nx-1-cropSize,ny-1-cropSize]
-    end
-    'DOM2': begin
-      file1 = self.path
-      if self.dom eq 1 then GEN_str_subst, ret, file1,'d01','d02',file2 $
-        else if self.dom eq 2 then GEN_str_subst, ret, file1,'d02','d03',file2 $
-           else message, 'Dom is not 1 or 2, i cannot crop it'
-    
-      cdfid = NCDF_OPEN(file2, /NOWRITE)
-    
-      if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
-      NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
-      if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
-      NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
-      if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
-      NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
-      
-      NCDF_ATTGET, Cdfid , 'WEST-EAST_GRID_DIMENSION', ni, /GLOBAL
-      NCDF_ATTGET, Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', nj, /GLOBAL
-      NCDF_close, cdfid
-      neli = LONG(DOUBLE(ni)/DOUBLE(ratio)) - 1
-      nelj = LONG(DOUBLE(nj)/DOUBLE(ratio)) - 1
-      
-      isubs = [iPar-1,jPar-1,iPar-1+neli,jPar-1+nelj]    
-    end
-    'SUBSET': begin
-       isubs = subset
-    end
-    else: begin
-      ; nothing to do
-    end
-  endcase
-  
-  self.subset = isubs
-  if self.cropped ne 'FALSE' then begin
-    x0 = x0 + dx*isubs[0]
-    y0 = y0 - dy*(ny - isubs[3] - 1)  
-    nx = isubs[2] - isubs[0] + 1
-    ny = isubs[3] - isubs[1] + 1
-  endif
-  
+  nx = self.west_east
+  ny = self.south_north
+  x0 =  - (nx-1) / 2. * self.dx + e ; UL corner
+  y0 =    (ny-1) / 2. * self.dy + n ; UL corner
   if FIRSTCALL then begin
     IF NOT self->grid2D::Init(  nx = nx                , $
                                 ny = ny                , $
-                                dx = DX                , $
-                                dy = DY                , $
+                                dx = self.DX           , $
+                                dy = self.dy           , $
                                 x0 = x0                , $
                                 y0 = y0                , $
                                 proj = self.tnt_c.proj) THEN RETURN, 0  
   endif else begin
    IF NOT self->grid2D::ReInit(  nx = nx                , $
                                  ny = ny                , $
-                                 dx = DX                , $
-                                 dy = DY                , $
+                                 dx = self.DX           , $
+                                 dy = self.DY           , $
                                  x0 = x0                , $
                                  y0 = y0                , $
                                  proj = self.tnt_c.proj) THEN RETURN, 0  
   endelse
   
+  ; Indexes in the original ncdf file
+  isubs =[0l,0l,0l,0l]
+           
+  case self.cropped of
+    'BORDER': begin
+      if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
+      if cropborder lt 0 or cropborder ge nx / 2 then message, 'Cropsize not ok'
+      isubs = [cropborder, nx-2*cropborder, cropborder, ny-2*cropborder]
+    end
+    'CROPCHILD': begin
+      if self->get_Var_Info('NEST_POS') then begin
+        nest_pos = self->NCDF::get_Var('NEST_POS')
+        nest_pos = nest_pos[*,*,0]
+        npos = where(nest_pos ne 0, cnt)
+        if cnt eq 0 then Message, 'You sure the domain has a nest?'
+        inds = ARRAY_INDICES(NEST_POS, npos)
+        mx = min(inds[0,*]) - 1
+        my = min(inds[1,*]) - 1
+        isubs = [mx,max(inds[0,*])-mx+2,my,max(inds[1,*])-my+2]
+      endif else begin
+        ; we have to check if there is the child file here
+        file1 = self.path
+        GEN_str_subst, ret, file1,'d0'+str_equiv(self.dom),'d0'+str_equiv(self.dom+1),file2
+        if ~NCDF_IsValidFile(file2) then Message, 'could not find NEST_POS or the child domains file for cropping.'
+        cdfid = NCDF_OPEN(file2, /NOWRITE)
+        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
+        NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
+        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
+        NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
+        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
+        NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
+        NCDF_ATTGET, Cdfid , 'WEST-EAST_GRID_DIMENSION', ni, /GLOBAL
+        NCDF_ATTGET, Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', nj, /GLOBAL
+        NCDF_close, cdfid
+        neli = LONG(DOUBLE(ni)/DOUBLE(ratio))
+        nelj = LONG(DOUBLE(nj)/DOUBLE(ratio))
+        isubs = [iPar-1, neli,jPar-1,nelj]
+      endelse    
+    end
+    'SUBSET_IJ': begin
+       isubs = SUBSET_IJ 
+       self.cropped = 'SUBSET'
+    end
+    'SUBSET_LL': begin
+      if KEYWORD_SET(ll_datum) then begin
+        if not arg_okay(ll_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('ll_datum', STRUCT={TNT_DATUM})
+        dat = ll_datum
+      endif else GIS_make_datum, ret, dat, NAME='WGS-84'
+      
+      self->transform_LonLat, SUBSET_LL[0], SUBSET_LL[1], dat, idl, jdl, /NEAREST
+      self->transform_LonLat, SUBSET_LL[2], SUBSET_LL[3], dat, iur, jur, /NEAREST
+      
+      ;**********
+      ; Errors? *
+      ;**********
+      if idl lt 0 then begin
+        idl = 0
+        MESSAGE, 'Down left corner out of X range. Setting to 0.', /INFORMATIONAL
+      endif
+      if idl gt (self.tnt_c.nx - 1) then begin
+        idl = (self.tnt_c.nx - 1)
+        MESSAGE, 'Down left corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
+      endif
+      if jdl lt 0 then begin
+        jdl = 0
+        MESSAGE, 'Down left corner out of Y range. Setting to 0.', /INFORMATIONAL
+      endif
+      if jdl gt (self.tnt_c.ny - 1) then begin
+        jdl = (self.tnt_c.ny - 1)
+        MESSAGE, 'Down left corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
+      endif
+      if iur lt 0 then begin
+        iur = 0
+        MESSAGE, 'Upper right corner out of X range. Setting to 0.', /INFORMATIONAL
+      endif
+      if iur gt (self.tnt_c.nx - 1) then begin
+        iur = (self.tnt_c.nx - 1)
+        MESSAGE, 'Upper right corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
+      endif
+      if jur lt 0 then begin
+        jur = 0
+        MESSAGE, 'Upper right corner out of Y range. Setting to 0.', /INFORMATIONAL
+      endif
+      if jur gt (self.tnt_c.ny - 1) then begin
+        jur = (self.tnt_c.ny - 1)
+        MESSAGE, 'Upper right corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
+      endif
+      cx = iur - idl + 1
+      cy = jur - jdl + 1
+      if (cx lt 1) or (cy lt 1) then MESSAGE, 'Subset_LL corners are not compatible.'  ; Fatal error
+      isubs = [idl,cx,jdl,cy]
+      self.cropped = 'SUBSET'
+    end
+    else: begin
+      ; nothing to do
+    end
+  endcase
+  
+  before = self.cropped
+  if ~self->GEO_nc::define_subset(SUBSET=isubs) then return, 0 
+  self.cropped = before 
+  if self.cropped ne 'FALSE' then begin
+    x0 = x0 + self.dx*isubs[0]
+    y0 = y0 - self.dy*(self.south_north - (isubs[3]+isubs[2]))
+    nx = isubs[1]
+    ny = isubs[3]
+    IF NOT self->grid2D::ReInit( nx = nx                , $
+                                 ny = ny                , $
+                                 dx = self.Dx           , $
+                                 dy = self.dy           , $
+                                 x0 = x0                , $
+                                 y0 = y0                , $
+                                 proj = self.tnt_c.proj) THEN RETURN, 0  
+   
+  endif
+      
+  if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = self.subset  
+    
   return, 1
     
 end
 
 
-Function WRF_nc::Init        ,  $
-           FILE = file       ,  $
-           SUBSET = subset   ,  $
-           cropD2 = cropD2   ,  $
-           cropB  = cropB    
+Function WRF_nc::Init, FILE       = file     ,  $
+                        SUBSET_LL  = subset_ll,  $
+                        SUBSET_IJ  = subset_ij,  $
+                        LL_DATUM   = ll_datum ,  $
+                        CROPCHILD  = cropchild   ,  $
+                        CROPBORDER = cropborder
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-        
+      
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+    RETURN, 0
+  ENDIF 
+  
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF file to read' ,/MUST_EXIST)
-  IF NOT self->NCDF::Init(file = file) THEN RETURN, 0
-  
+  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF ncdf file to read', /MUST_EXIST)  
+  IF NOT self->GEO_nc::Init(file = file) THEN RETURN, 0    
+
   ;****************
   ; Read metadata *
   ;****************    
@@ -180,7 +264,7 @@ Function WRF_nc::Init        ,  $
   ;*****************************************
   ; Determine the type of WRF file we have *
   ;*****************************************
-  NCDF_ATTGET, Cdfid , 'TITLE', title, /GLOBAL
+  title = self->get_Gatt('TITLE')
   ftype = ''
   isHere = STRPOS(str_equiv(title), 'WRF')
   if isHere ne -1 then ftype = 'WRF'
@@ -192,56 +276,41 @@ Function WRF_nc::Init        ,  $
   if isHere ne -1 then ftype = 'REAL'
   isHere = STRPOS(str_equiv(self.fname), 'AGG')
   if isHere ne -1 then ftype = 'AGG'    
-  if ftype eq '' then message, WAVE_Std_Message('Init file not recognized as a known WRF product.') ;MET_EM and GEO files come later on....
+  if ftype eq '' then message, 'Input file not recognized as a known WRF product.'
   self.type = ftype
   self.version = str_equiv(title)
   meta = str_equiv(title)
   
-  ;*********
-  ;  TIMES *
-  ;********* 
-  if self.type eq 'GEO' then begin
-    ntimes = 1
-    times = MAKE_ABS_DATE(year = 2000, month = 01, day = 01)
-  endif else begin
-    NCDF_VARGET, cdfid, 'Times', stimes
-    ntimes = N_ELEMENTS(stimes[0,*])
-    stimes = STRING(stimes[*,0:ntimes-1])    
-    ;String format : '2008-10-26_12:00:00; length 19
-    times = MAKE_ABS_DATE(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
-      HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
-  endelse
-  
-  tstep = 0LL
-  if NTIMES gt 1 then tstep = times[1].qms - times[0].qms
-  self.nt = ntimes
-  self.dt = tstep
-  self.time0 = times[0]
-  self.time1 = times[ntimes-1]
-  self.time = PTR_NEW(times)
-  
+  ;*******
+  ; Time *
+  ;*******
+  ; Done by geo_nc
+  if self.nt gt 1 then begin
+   if ~check_TS(*self.time, hstep) then Message, 'Time serie in the file is not regular.'
+    self.hstep = hstep
+  endif else if self.nt eq 1 then begin
+    self.hstep = MAKE_TIME_STEP()
+  endif else MESSAGE, 'Problem by reading time.'
+   
   ; NESTING
-  if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
-  NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
-  if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
-  NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
-  if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
-  NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
-  if self.type eq 'GEO' or self.type eq 'MET' then attid = 'grid_id' else attid = 'GRID_ID'
-  NCDF_ATTGET, Cdfid , attid, dom, /GLOBAL
-  self.dom = dom
-  self.i_parent_start = ipar
-  self.j_parent_start = jpar
-  self.parent_grid_ratio = ratio
-  
+  self.i_parent_start = self->get_Gatt('i_parent_start')
+  self.j_parent_start = self->get_Gatt('j_parent_start')
+  self.parent_grid_ratio = self->get_Gatt('parent_grid_ratio')
+  self.dom = self->get_Gatt('grid_id')
+  self.dx = self->get_Gatt('DX')
+  self.dy = self->get_Gatt('DY')
+  self.west_east = self->get_Gatt('WEST-EAST_GRID_DIMENSION')-1 ;stag
+  self.south_north  = self->get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1 ;stag
+  self.bottom_top = (self->get_Gatt('bottom-top_grid_dimension')-1) > 1
+    
   ; Projection
-  NCDF_ATTGET, Cdfid , 'CEN_LAT', center_lat, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'CEN_LON', center_lon, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'MOAD_CEN_LAT', moad_cen_lat, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'STAND_LON', stand_lon, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'TRUELAT1', truelat1, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'TRUELAT2', truelat2, /GLOBAL
-  NCDF_ATTGET, Cdfid , 'MAP_PROJ', proj_id, /GLOBAL 
+  center_lat = self->get_Gatt('CEN_LAT')
+  center_lon = self->get_Gatt('CEN_LON')
+  moad_cen_lat = self->get_Gatt('MOAD_CEN_LAT')
+  stand_lon = self->get_Gatt('STAND_LON')
+  truelat1 = self->get_Gatt('TRUELAT1')
+  truelat2 = self->get_Gatt('TRUELAT2')
+  proj_id = self->get_Gatt('MAP_PROJ')
   
   GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
   switch proj_id of
@@ -250,10 +319,10 @@ Function WRF_nc::Init        ,  $
       ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
       envi_proj = 4
       proj_param = str_equiv(envi_proj) + ', ' + $                      ;proj_id
-                  STRING(ell.a, FORMAT='(F16.8)') + ', ' + $              ;a
+                  STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
                   STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
                   STRING(moad_cen_lat, FORMAT='(F16.8)') + ', ' + $     ;lat0
-                  STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $     ;lon0
+                  STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
                   '0.0' + ', ' + $                                      ;x0
                   '0.0' + ', ' + $                                      ;y0
                   STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;sp1
@@ -291,7 +360,11 @@ Function WRF_nc::Init        ,  $
   ; define *
   ;*********
   self.cropped = ''
-  if NOT self->define_grid(SUBSET = subset,  cropD2 = cropD2, cropB  = cropB) THEN RETURN, 0
+  if NOT self->define_subset(SUBSET_LL = subset_ll,  $
+                             SUBSET_IJ  = subset_ij,  $
+                             LL_DATUM   = ll_datum ,  $
+                             CROPCHILD  = cropchild   ,  $
+                             CROPBORDER = cropborder) THEN RETURN, 0
     
   RETURN, 1
   
@@ -303,24 +376,25 @@ pro WRF_nc::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2  
 
+  NCDF_CLOSE, self.cdfid
+  PTR_FREE, self.varNames
+  PTR_FREE, self.dimNames
+  PTR_FREE, self.dimSizes
+  PTR_FREE, self.gattNames
+
+  PTR_FREE, self.time
+  
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
-  Ptr_Free, self.time
-  NCDF_CLOSE, self.cdfid
-
   
 END
 
 PRO WRF_nc::GetProperty,  $
-    subset = subset ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL ncdf grid array where to subset
-    cropped = cropped    ,  $ ;
-    type = type      ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
-    version = version  ,  $ ; WRF version
-    time0 = time0  ,  $ ; first available time
-    time1 = time1   ,  $ ; last available time
-    time = time   ,  $ ; available times
-    nt = nt  ,  $ ; n times
-    dt = dt  ,  $ ; time step in ms
+    cropped = cropped         ,  $ ;
+    type=type    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
+    version=version    ,  $ ; WRF version
+    hstep=hstep,  $ ; Time step of the file
+    bottom_top = bottom_top,  $ ; original Z dimension (unstaggered)           
     dom = dom,  $ ; id of the considered nested domain
     i_parent_start = i_parent_start,  $ ; i index of the start point in parent domain
     j_parent_start = j_parent_start,  $ ; j index of the start point in parent domain
@@ -338,230 +412,72 @@ PRO WRF_nc::GetProperty,  $
     RETURN
   ENDIF
       
-  IF Arg_Present(subset) NE 0 THEN subset = self.subset
   IF Arg_Present(cropped) NE 0 THEN cropped = self.cropped
   IF Arg_Present(type) NE 0 THEN type = self.type
   IF Arg_Present(version) NE 0 THEN version = self.version
-  IF Arg_Present(time0) NE 0 THEN time0 = self.time0
-  IF Arg_Present(time1) NE 0 THEN time1 = self.time1
-  IF Arg_Present(time) NE 0 THEN time = *self.time
-  IF Arg_Present(nt) NE 0 THEN nt = self.nt
-  IF Arg_Present(dt) NE 0 THEN dt = self.dt
   IF Arg_Present(dom) NE 0 THEN dom = self.dom
   IF Arg_Present(i_parent_start) NE 0 THEN i_parent_start = self.i_parent_start
+  IF Arg_Present(hstep) NE 0 THEN hstep = self.hstep
+  IF Arg_Present(bottom_top) NE 0 THEN bottom_top = self.bottom_top
   IF Arg_Present(j_parent_start) NE 0 THEN j_parent_start = self.j_parent_start
-  IF Arg_Present(parent_grid_ratio) NE 0 THEN dom = self.parent_grid_ratio
+  IF Arg_Present(parent_grid_ratio) NE 0 THEN parent_grid_ratio = self.parent_grid_ratio
   
   self->GRID2D::GetProperty, _Extra=extra
-  self->NCDF::GetProperty, _Extra=extra
+  self->GEO_nc::GetProperty, _Extra=extra
   
 end
 
-pro WRF_nc::get_time, time, nt, t0, t1
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-    
-  time = *self.time
-  nt = self.nt
-  t0 = self.time0
-  t1 = self.time1
-  
-end
-
-function WRF_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-                          t0 = t0, $
-                          t1 = t1, $
-                          times = times, $
-                          nt = nt, $
-                          CONTI = conti, $
+function WRF_nc::get_TS, varid, x, y, $
+                              time, nt, $
+                              t0 = t0, t1 = t1, $
+                              src = src, $
+                              point_i = point_i, $
+                              point_j = point_j, $
+                              point_lon = point_lon, $
+                              point_lat = point_lat , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
                           dims = dims, $ ;
-                          dimnames = dimnames ;
-                        
-  
+                          dimnames = dimnames 
+    
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, -1
-  ENDIF
+  ON_ERROR, 2
   
-  mynames = true
-  mydims = true
-  var = self->NCDF::get_Var( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-                             varinfo = varinfo , $ ; 
-                             units = units, $
-                             description = description, $
-                             varname = varname , $ ; 
-                             dims = mydims, $ ;
-                             dimnames = mynames)
-                             
-  dimnames = mynames
-  dims = mydims
-  ndims = N_ELEMENTS(mynames)
-  p = where(str_equiv(mynames) eq str_equiv('time'), cnt)
+  if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
   
-  times = *self.time
-  n = self.nt
-  p1 = 0
-  p2 = self.nT - 1
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
   
-  if arg_okay(t0, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, t0.qms) < (n-1)
-     p1 = v[0]
-  endif 
-  if arg_okay(t1, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, t1.qms) < (n-1)
-     p2 = v[0] 
-  endif
-  
-  nt = p2 - p1 + 1 
-  times = times[p1:p2]
-  
-  s = self.subset
- 
-  ;TODO: support vertical level selection
-  case cnt of
-    0: begin
-      
-      case (NDIMS) of
-        2:  begin 
-          var = var[s[0]:s[2],s[1]:s[3]] 
-          mydims = [s[2]-s[0]+1,  s[3]-s[1]+1]
-        end
-        3:  begin
-          var = var[s[0]:s[2],s[1]:s[3],*]
-          mydims = [s[2]-s[0]+1, s[3]-s[1]+1,mydims[2]]
-        end
-        else: ; do nothing
-      endcase
-    end
-    1: begin
-      case (NDIMS) of
-        2:  begin
-          var = var[*,p1:p2]
-          mydims = [mydims[0], nt]     
-        end
-        3:  begin
-          var = var[s[0]:s[2],s[1]:s[3],p1:p2]
-          mydims = [s[2]-s[0]+1, s[3]-s[1]+1,nt]
-        end
-        4: begin
-          var = var[s[0]:s[2],s[1]:s[3],*,p1:p2]  
-          mydims = [s[2]-s[0]+1, s[3]-s[1]+1, mydims[2], nt]
-        end
-        else: ; do nothing
-      endcase
-    end
-    else: message, 'Did not understand the dimension of the variable';????
-  endcase
-    
-  if KEYWORD_SET(dims) then dims = mydims  
-  if KEYWORD_SET(CONTI) then return, var[*,*,0,0] else return, var
-    
-end
-
-
-function WRF_nc::get_ts, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-                         x, $
-                         y, $
-                         src, $
-                         t0 = t0, $
-                         t1 = t1, $
-                         times = times, $
-                         nt = nt, $
-                         wrf_ind_i = wrf_ind_i, $
-                         wrf_ind_j = wrf_ind_j, $
-                         wrf_lon = wrf_lon, $
-                         wrf_lat = wrf_lat, $
-                         wrf_x = wrf_x, $
-                         wrf_y = wrf_y, $
-                         CONTI = conti, $
-                         varinfo = varinfo , $ ; 
-                         units = units, $
-                         description = description, $
-                         varname = varname , $ ; 
-                         dims = dims, $ ;
-                         dimnames = dimnames ;
-                        
-  
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, -1
-  ENDIF
-  
-  var = self->get_Var( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-                          t0 = t0, $
-                          t1 = t1, $
-                          times = times, $
-                          nt = nt, $
-                          CONTI = conti, $
-                          varinfo = varinfo , $ ; 
-                          units = units, $
-                          description = description, $
-                          varname = varname , $ ; 
-                          dims = dims, $ ;
-                          dimnames = dimnames)
-                          
   ; no go threw the possibilites:
   if N_ELEMENTS(src) EQ 0 then mysrc = self else mysrc = src
   
-  if N_ELEMENTS(dims) gt 3 then begin
-   var = reform(var[*,*,0,*])
-   message, 'Var is a 4D variable, I will take the id 0.', /INFORMATIONAL
-  end
-  ; This is to obtain the indexes in WRF    
-  self->transform,  x, y, wrf_ind_i, wrf_ind_j, SRC = mysrc, /NEAREST 
+  ; This is to obtain the indexes in the grid
+  self->transform,  x, y, point_i, point_j, SRC = mysrc, /NEAREST
   
-  ; This is to obtain lat and lons of the WRF grid points
-  self->transform, wrf_ind_i, wrf_ind_j, dummy1, dummy2, src=self, $
-               LON_DST=wrf_lon, LAT_DST=wrf_lat, E_DST=wrf_x, N_DST=wrf_y
- 
-  ts = reform(var[wrf_ind_i,wrf_ind_j,*])
+  ; This is to obtain lat and lons of the selected grid point
+  self->transform, point_i, point_j, dummy1, dummy2, src=self, $
+    LON_DST=point_lon, LAT_DST=point_lat
   
-  return, ts
+  return, self->GEO_nc::get_TS(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames )
   
 end
 
-pro WRF_nc::plot_ts, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-                         x, $
-                         y, $
-                         src, $
-                         PNG = png, $
-                         t0 = t0, $
-                         t1 = t1, $
-                         times = times, $
-                         nt = nt, $
-                         wrf_ind_i = wrf_ind_i, $
-                         wrf_ind_j = wrf_ind_j, $
-                         wrf_lon = wrf_lon, $
-                         wrf_lat = wrf_lat, $
-                         wrf_x = wrf_x, $
-                         wrf_y = wrf_y, $
-                         CONTI = conti, $
-                         varinfo = varinfo , $ ; 
-                         units = units, $
-                         description = description, $
-                         varname = varname , $ ; 
-                         dims = dims, $ ;
-                         dimnames = dimnames
 
-; SET UP ENVIRONNEMENT
+pro WRF_nc::plot_TS, varid, x, y, $
+                              t0 = t0, t1 = t1, $
+                              src = src, PNG = png
+
+  ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
@@ -572,30 +488,30 @@ pro WRF_nc::plot_ts, Varid, $ ; The netCDF variable ID, returned from a previous
     RETURN
   ENDIF
   
+  if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
+  
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
+  
   var = self->get_ts( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                          x, $
                          y, $
-                         src, $
+                         times, nt, $
+                         src = src, $
                          t0 = t0, $
                          t1 = t1, $
-                         times = times, $
-                         nt = nt, $
-                         wrf_ind_i = wrf_ind_i, $
-                         wrf_ind_j = wrf_ind_j, $
-                         wrf_lon = wrf_lon, $
-                         wrf_lat = wrf_lat, $
-                         wrf_x = wrf_x, $
-                         wrf_y = wrf_y, $
-                         CONTI = conti, $
-                         varinfo = varinfo , $ ; 
-                         units = units, $
-                         description = description, $
-                         varname = varname , $ ; 
-                         dims = dims, $ ;
-                         dimnames = dimnames)
+                         point_i = wrf_ind_i, $
+                         point_j = wrf_ind_j, $
+                         point_lon = wrf_lon, $
+                         point_lat = wrf_lat, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames )
    
   
-  WTimeLine_plot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2, /PIXMAP
+  WTimeLine_plot, var, MAKE_ABS_DATE(QMS=times), varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2, /PIXMAP
   
   XYOUTS, 900, 500, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
           CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /DEVICE 
@@ -609,32 +525,7 @@ pro WRF_nc::plot_ts, Varid, $ ; The netCDF variable ID, returned from a previous
   
 end
 
-function WRF_nc::type
-  
-  return, self.type
-  
-end
-
-pro WRF_nc::quickPlotVar, Varid
-
-  var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
-  if N_ELEMENTS(var) eq 1 and var[0] eq -1 then return
-  
-  if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
-  
-  nd = N_ELEMENTS(dimnames)
-  
-  self->Get_LonLat, lon, lat
-  
-  if nd eq 3 then QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units, $
-                    COORDX=lon, COORDY=lat, dim3tags=TIME_to_STR(*self.time) $
-  else if nd eq 4 then QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units, $
-                    COORDX=lon, COORDY=lat, dim4tags=TIME_to_STR(*self.time) $
-  else message, 'Dim of var not supported'
-  
-end
-
-function WRF_nc::get_prcp, time0 = time0, time1 = time1, times, nt, units = units, STEP_WIZE = step_wize, NC = nc, C = C
+function WRF_nc::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -647,29 +538,9 @@ function WRF_nc::get_prcp, time0 = time0, time1 = time1, times, nt, units = unit
     RETURN, 0
   ENDIF 
   
-  rainnc = self->get_Var('RAINNC')
-  rainc = self->get_Var('RAINC')
-  
-  if KEYWORD_SET(C) then pcp = rainc else if KEYWORD_SET(NC) then pcp = rainnc else pcp = rainnc + rainc    
-  
-  times = *self.time
-  
-  n = self.nt
-  p1 = 0
-  p2 = n - 1
-  
-  if arg_okay(time0, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time0.qms) < (n-1)
-     p1 = v[0]
-  endif 
-  if arg_okay(time1, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time1.qms) < (n-1)
-     p2 = v[0] 
-  endif
-  
-  nt = p2 - p1 + 1 
-  times = times[p1:p2]
-  pcp = pcp[*,*,p1:p2]
+  if KEYWORD_SET(CONVECTIVE) then pcp = self->get_Var('RAINC', times, nt, t0 = t0, t1 = t1) $
+    else if KEYWORD_SET(NONCONVECTIVE) then pcp = self->get_Var('RAINNC',times, nt, t0 = t0, t1 = t1) $
+      else pcp = self->get_Var('RAINNC', times, nt, t0 = t0, t1 = t1) + self->get_Var('RAINC')    
   
   if KEYWORD_SET(STEP_WIZE) then pcp = utils_ACC_TO_STEP(pcp)
   
@@ -677,52 +548,52 @@ function WRF_nc::get_prcp, time0 = time0, time1 = time1, times, nt, units = unit
     
 end
 
-function WRF_nc::get_T, time0 = time0, time1 = time1, times, nt, units = units
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-    
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF 
-  
-  p = self->get_Var('P')
-  pb = self->get_Var('PB')
-  T = self->get_Var('T') + 300.
-  
-  P1000MB=100000D
-  R_D=287D
-  CP=7*R_D/2.
- 
-  PI = (P / P1000MB) ^ (R_D/CP)
-  TK = PI*T
-  
-  times = *self.time
-  
-  n = self.nt
-  p1 = 0
-  p2 = n - 1
-  
-  units = 'K'
-  
-  if arg_okay(time0, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time0.qms) < (n-1)
-     p1 = v[0]
-  endif 
-  if arg_okay(time1, STRUCT={ABS_DATE}) then begin 
-     v = 0 > VALUE_LOCATE(times.qms, time1.qms) < (n-1)
-     p2 = v[0] 
-  endif
-  
-  nt = p2 - p1 + 1 
-  times = times[p1:p2]
-  TK = TK[*,*,p1:p2]
-  
-  
-  return, tk
-    
-end
+;function WRF_nc::get_T, time0 = time0, time1 = time1, times, nt, units = units
+;
+;  ; SET UP ENVIRONNEMENT
+;  @WAVE.inc
+;  COMPILE_OPT IDL2
+;    
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    ok = WAVE_Error_Message()
+;    RETURN, 0
+;  ENDIF 
+;  
+;  p = self->get_Var('P')
+;  pb = self->get_Var('PB')
+;  T = self->get_Var('T') + 300.
+;  
+;  P1000MB=100000D
+;  R_D=287D
+;  CP=7*R_D/2.
+; 
+;  PI = (P / P1000MB) ^ (R_D/CP)
+;  TK = PI*T
+;  
+;  times = *self.time
+;  
+;  n = self.nt
+;  p1 = 0
+;  p2 = n - 1
+;  
+;  units = 'K'
+;  
+;  if arg_okay(time0, STRUCT={ABS_DATE}) then begin 
+;     v = 0 > VALUE_LOCATE(times.qms, time0.qms) < (n-1)
+;     p1 = v[0]
+;  endif 
+;  if arg_okay(time1, STRUCT={ABS_DATE}) then begin 
+;     v = 0 > VALUE_LOCATE(times.qms, time1.qms) < (n-1)
+;     p2 = v[0] 
+;  endif
+;  
+;  nt = p2 - p1 + 1 
+;  times = times[p1:p2]
+;  TK = TK[*,*,p1:p2]
+;  
+;  
+;  return, tk
+;    
+;end

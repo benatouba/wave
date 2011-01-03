@@ -291,6 +291,71 @@ function POST_absDAte_to_wrfstr, absDate
   
 end
 
+
+;+
+; :Description:
+;    Simple function to convert an absolute date in WRF filename string
+;
+; :Params:
+;    absDate:  in, required, type={ABS_DATE}/qms
+;              The date in qms or abs_date format
+;
+; :Categories:
+;    WRF/Post
+; 
+; :Private:
+;
+; :Returns:
+;     a string of the same format as standard WRF files (2003-09-01_12_00_00)
+; 
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;       Written by FaM, 2010.
+;       
+;       Modified::
+;          29-Nov-2010 FaM
+;          Doc for upgrade to WAVE 0.1
+;-
+function POST_absDAte_to_wrffname, absDate
+  
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
+  
+  ;2003-09-01_12_00_00
+  
+  n = N_ELEMENTS(absdate)    
+
+  if arg_okay(absDate, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = absDate)   $ 
+   else if arg_okay(absDate, STRUCT={ABS_DATE}) then mytime = absDate  $
+     else message, WAVE_Std_Message('ABSDATE', /ARG)
+    
+  for i = 0, n-1 do begin
+  
+   if N_ELEMENTS(sout) eq 0 then sout = '' else sout = [sout , '']
+    
+    str = STRTRIM(mytime[i].year,1) + '-'
+    if mytime[i].month lt 10 then str +=  '0' + STRTRIM(mytime[i].month,1) + '-' else str += STRTRIM(mytime[i].month,1)+ '-'
+    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) + '_' else str += STRTRIM(mytime[i].day,1)+ '_'  
+    
+  
+    if mytime[i].hour lt 10 then str =  str + '0' + STRTRIM(mytime[i].hour,1) + '_' else str = str + STRTRIM(mytime[i].hour,1)+ '_'
+    if mytime[i].minute lt 10 then str =  str + '0' + STRTRIM(mytime[i].minute,1) + '_' else str = str + STRTRIM(mytime[i].minute,1)+ '_'
+    if mytime[i].second lt 10 then str =  str + '0' + STRTRIM(mytime[i].second,1) else str = str + STRTRIM(mytime[i].second,1)
+  
+    sout[i] = str
+    
+  endfor
+  
+  return, sout
+  
+end
+
 ;+
 ; :Description:
 ;    This procedure is a low level WRF post-processing tool to copy a WRF output file
@@ -305,11 +370,14 @@ end
 ;    index: in, optional, type = integer
 ;          the first index (starting at 0) to keep in the output file.
 ;          default is 4 for wrf dommain 1 and 12 for other domains.
+;    step: in, optional, type = {TIME_STEP}
+;             The timestep. Default is 3 hours for the first domain, 1 hour for the
+;              others.
 ;          
 ; :Keywords:
-;    OUTFILE: in, optional, type = string
-;           the output file. If it already exists, it will be overwritten.
-;           default is to copy the file in the same directory, adding the suffix _crop to the file
+;    outdirectory: in, optional, type = string
+;           the output directory. If the file already exists, it will be overwritten.
+;           default is to ask the user where to put the file
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -322,7 +390,7 @@ end
 ;                   First aparition
 ;
 ;-
-pro POST_crop_file, file, index, OUTFILE = outfile
+pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
 
   ; Set Up environnement
   @WAVE.inc
@@ -330,13 +398,30 @@ pro POST_crop_file, file, index, OUTFILE = outfile
   ON_ERROR, 2
 
  if N_ELEMENTS(file) eq 0  then file = DIALOG_PICKFILE(TITLE='Please select the file to crop.')
-  if ~KEYWORD_SET(outfile) then outfile = FILE_DIRNAME(file) + '/' + FILE_BASENAME(file) + '_crop'
-
+ if N_ELEMENTS(OUTdirectory) eq 0 then OUTdirectory = DIALOG_PICKFILE(TITLE='Please select directory where to place the output', /DIRECTORY)
+ if OUTdirectory eq '' then return
+ if ~FILE_TEST(OUTdirectory, /DIRECTORY) then FILE_MKDIR, OUTdirectory
+  
   sid = Ncdf_open(File, /NOWRITE)    
-  if ~arg_okay(index, /NUMERIC) then begin
-      NCDF_ATTGET, sid , 'GRID_ID', dom, /GLOBAL
-      if dom eq 1 then index = 4 else index = 12
-  endif
+  
+  NCDF_ATTGET, sid , 'GRID_ID', dom, /GLOBAL
+  
+  if ~arg_okay(index, /NUMERIC) then if dom eq 1 then index = 4 else index = 12      
+  if ~arg_okay(step, STRUCT={TIME_STEP}) then if dom eq 1 then step = MAKE_TIME_STEP(hour=3) else step = MAKE_TIME_STEP(hour=1)
+  
+  ; ------------------
+  ; Rename the file
+  ; ------------------    
+  ;Parse names for available times wrfout_d01_2003-09-01_12_00_00
+  fname = FILE_BASENAME(File)
+  month = LONG(STRMID(fname,16,2))
+  year = LONG(STRMID(fname,11,4))
+  day = LONG(STRMID(fname,19,2))
+  hour = LONG(STRMID(fname,22,2))
+  ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)
+  t0 = POST_absDAte_to_wrffname(REL_TIME(ds, MILLISECOND = step.dms * index))
+        
+  outfile = OUTDIRECTORY + '/' + STRMID(fname,0,11) + t0 + '_24h.nc'
     
   inq = NCDF_INQUIRE(sid)
   if FILE_TEST(outfile) then FILE_DELETE, outfile
@@ -383,7 +468,7 @@ pro POST_crop_file, file, index, OUTFILE = outfile
   
   ; Add my own
   NCDF_AttPut, tid, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
-  NCDF_AttPut, tid, 'ORIG_FILE', FILE, /GLOBAL, /CHAR
+  NCDF_AttPut, tid, 'ORIGINAL_FILE', FILE, /GLOBAL, /CHAR
   NCDF_AttPut, tid, 'WAVE_COMENT', 'File generated with the WAVE POST_crop_file procedure to automatically remove spin-up.', /GLOBAL, /CHAR
   NCDF_AttPut, tid, 'REMOVED_INDEXES', str_equiv(index), /GLOBAL, /CHAR
   
@@ -477,7 +562,10 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   if N_ELEMENTS(output_dir) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output directory', /DIRECTORY)  
   
   if not FILE_TEST(input_dir, /DIRECTORY) then message, 'input_dir is not a directory'
-  if not FILE_TEST(output_dir, /DIRECTORY) then message, 'output_dir is not a directory'
+  if not FILE_TEST(output_dir, /DIRECTORY) then FILE_MKDIR, output_dir
+  
+  input_dir =  FILE_DIRNAME(input_dir, /MARK_DIRECTORY) +  FILE_BASENAME(input_dir)
+  output_dir =  FILE_DIRNAME(output_dir, /MARK_DIRECTORY) +  FILE_BASENAME(output_dir)
       
   fileList = FILE_SEARCH(input_dir, 'wrfout*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT)
   GEN_str_subst, ret, fileList, input_dir, '', arbo
@@ -547,7 +635,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     printf, unit, '  Start : ' + fileList[i] + ' ... '
     flush, unit     
     syst = QMS_TIME()
-    POST_crop_file, fileList[i], OUTFILE = output_dir + '/' + arboU[i] + '/' +  fname
+    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/'
     tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
     printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
   endfor  

@@ -250,11 +250,13 @@ pro GEO_nc::Cleanup
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-
+  
   NCDF_CLOSE, self.cdfid
   PTR_FREE, self.varNames
   PTR_FREE, self.dimNames
   PTR_FREE, self.dimSizes
+  PTR_FREE, self.gattNames
+
   PTR_FREE, self.time
   
 END
@@ -443,6 +445,7 @@ function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                           varname = varname , $ ; 
                           dims = dims, $ ;
                           dimnames = dimnames ;
+                          ;TODO: add Keywords ZDIMID, ZDIMINDS
                         
   
   ; SET UP ENVIRONNEMENT
@@ -822,7 +825,7 @@ pro GEO_nc::quickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info() then MESSAGE, 'Variable not found'  
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
   var = self->get_Var(Varid, time, t0 = t0, t1 = t1, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
 
 
@@ -908,10 +911,10 @@ function GEO_nc::define_subset, SUBSET = subset
     if ~ do_init then do_init = SUBSET[2] ne 0
     if ~ do_init then do_init = SUBSET[3] ne 0
     if do_init then begin    
-      if SUBSET[0] lt 0 or SUBSET[0] gt ((*self.dimSizes)[self.XID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[0]', /RANGE)
-      if SUBSET[1] lt 0 or SUBSET[1] gt ((*self.dimSizes)[self.XID] - 1 - SUBSET[0]) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
-      if SUBSET[2] lt 1 or SUBSET[2] gt ((*self.dimSizes)[self.YID] - 1) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
-      if SUBSET[3] lt 1 or SUBSET[3] gt ((*self.dimSizes)[self.YID] - 1 - SUBSET[2]) then MESSAGE, WAVE_Std_Message('SUBSET[3]', /RANGE)
+      if SUBSET[0] lt 0 or SUBSET[0] gt ((*self.dimSizes)[self.XID]) then MESSAGE, WAVE_Std_Message('SUBSET[0]', /RANGE)
+      if SUBSET[1] lt 0 or SUBSET[1] gt ((*self.dimSizes)[self.XID] - SUBSET[0]) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
+      if SUBSET[2] lt 1 or SUBSET[2] gt ((*self.dimSizes)[self.YID]) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
+      if SUBSET[3] lt 1 or SUBSET[3] gt ((*self.dimSizes)[self.YID] - SUBSET[2]) then MESSAGE, WAVE_Std_Message('SUBSET[3]', /RANGE)
       self.subset  = SUBSET
       self.cropped = 'TRUE'
     endif else begin

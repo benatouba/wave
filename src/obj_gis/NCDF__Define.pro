@@ -30,6 +30,8 @@
 ;              An array of (nVars) strings containing the variable names. 
 ;    dimNames: out, type = string array
 ;              An array of (nDims) strings containing the dimension names. 
+;    gattNames: out, type = string array
+;               An array of (nGatts) strings containing the global attribute names. 
 ;    dimSizes: out, type = long array
 ;              An array of (nDims) longs containing the dimension sizes. 
 ;    RecDim :  out, type = long
@@ -52,17 +54,18 @@
 ;   Defines the attributes of the class Grid2D. Attributes::
 ;    
 ;    NCDF                     
-;            path : ''    
-;            cdfid : 0L  
-;            fname : ''    
-;            directory : ''    
-;            Ndims : 0L    
-;            Nvars : 0L    
-;            Ngatts : 0L    
-;            varNames : PTR_NEW()   
-;            dimNames : PTR_NEW()   
-;            dimSizes : PTR_NEW()    
-;            RecDim : 0L      
+;            path:               ''    ,  $ ; complete path of the active ncdf file
+;            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
+;            fname:              ''    ,  $ ; name of the active ncdf file
+;            directory:          ''    ,  $ ; directory of the active ncdf file
+;            Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
+;            Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
+;            Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
+;            varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
+;            dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
+;            gattNames:  PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
+;            dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
+;            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
 ;            
 ;
 ; :Categories:
@@ -95,6 +98,7 @@ PRO NCDF__Define
             Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
             varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
             dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
+            gattNames:  PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
             dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
             RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
             }
@@ -178,6 +182,8 @@ Function NCDF::Init, FILE = file
   
   self->get_Varlist, varid, varnames
   self.varNames = PTR_NEW(varnames, /NO_COPY)
+  self->get_gattsList, gattsIds, gattNames
+  self.gattNames = PTR_NEW(gattNames, /NO_COPY)
   self->get_dimList, dimIds, dimNames, dimSizes
   self.dimNames = PTR_NEW(dimNames, /NO_COPY)
   self.dimSizes = PTR_NEW(dimSizes, /NO_COPY)
@@ -214,6 +220,7 @@ pro NCDF::Cleanup
   PTR_FREE, self.varNames
   PTR_FREE, self.dimNames
   PTR_FREE, self.dimSizes
+  PTR_FREE, self.gattNames
   
 END
 
@@ -243,6 +250,8 @@ END
 ;              An array of (nVars) strings containing the variable names. 
 ;    dimNames: out, type = string array
 ;              An array of (nDims) strings containing the dimension names. 
+;    gattNames: out, type = string array
+;                An array of (nGatts) strings containing the attributes names. 
 ;    dimSizes: out, type = long array
 ;              An array of (nDims) longs containing the dimension sizes. 
 ;    RecDim :  out, type = long
@@ -269,6 +278,7 @@ PRO NCDF::GetProperty, $
     Ngatts = Ngatts, $
     varNames = varNames, $
     dimNames = dimNames, $
+    gattNames = gattNames, $
     dimSizes = dimSizes, $
     RecDim = RecDim
     
@@ -291,6 +301,7 @@ PRO NCDF::GetProperty, $
   IF Arg_Present(Nvars) NE 0 THEN Nvars = self.Nvars
   IF Arg_Present(Ngatts) NE 0 THEN Ngatts = self.Ngatts
   IF Arg_Present(varNames) NE 0 THEN varNames = self.varNames
+  IF Arg_Present(gattNames) NE 0 THEN gattNames = self.gattNames
   IF Arg_Present(dimNames) NE 0 THEN dimNames = self.dimNames
   IF Arg_Present(dimSizes) NE 0 THEN dimSizes = self.dimSizes
   IF Arg_Present(RecDim) NE 0 THEN RecDim = self.RecDim
@@ -412,11 +423,11 @@ end
 ;         
 ; :Params:
 ;    dimIds: out, type = long
-;            NCDF var indexes
+;            NCDF dimensions indexes
 ;    dimNames: out, type = string array
-;              variables name
+;              dimensions name
 ;    dimSizes: out, type = long array 
-;              variables number of dimensions
+;              size of the dimensions
 ;
 ; :Keywords:
 ;    PRINTDIMS: in, optional
@@ -461,13 +472,67 @@ end
 
 ;+
 ; :Description:
+;    Get some informations on the global attributes of the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    gattsIds: out, type = long
+;              NCDF gatts indexes
+;    gattNames: out, type = string array
+;              attributes name
+;
+; :Keywords:
+;    PRINTGATTS: in, optional
+;               to print the infos in the console
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  20-Dec-2010 FaM
+;     Added 
+;-
+pro NCDF::get_gattsList, gattsIds, gattNames, PRINTGATTS = printgatts
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+    
+  ;Go threw the dimensions. 
+  for i =0, self.Ngatts-1 do begin
+    sName = NCDF_ATTNAME(self.cdfid, i , /GLOBAL)        
+    if N_ELEMENTS(gattNames) eq 0 then gattNames = sName else gattNames=[gattNames,sName]
+    if N_ELEMENTS(gattsIds) eq 0 then gattsIds = i else gattsIds=[gattsIds,i] 
+  endfor ; Dimensions OK
+  
+  if KEYWORD_SET(PRINTGATTS) then for i = 0, self.Ngatts-1 DO print, 'Id: ' + str_equiv(gattsIds[i]) + $
+       '. Name: ' + gattNames[i]
+  
+end
+
+;+
+; :Description:
 ;    Extracts the desired variable from the NCDF file.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS   
 ;         
 ; :Params:
-;    varid: in, required, type = long
+;    varid: in, required, type = long,/str
 ;           the netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable
 ;           (CASE INDEPENDENT)
 ;       
@@ -547,7 +612,7 @@ end
 ;         WAVE/OBJ_GIS   
 ;         
 ; :Params:
-;    Varid: in, required, type = string/ integer
+;    Varid: in, required, type = string/integer
 ;           the variable ID (string or integer) to check
 ;
 ; :Keywords:
@@ -652,6 +717,102 @@ function NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a 
     endfor
   endif
   
+  return, TRUE
+  
+end
+
+
+;+
+; :Description:
+;    Extracts the desired variable from the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    attid: in, required, type = long/str
+;           the netCDF attribute ID, or the name of the attribute
+;           (CASE INDEPENDENT)
+;       
+; :Keywords:
+;
+; :Returns:
+;    The global attribute
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
+;-
+function NCDF::get_Gatt, attid 
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  ON_ERROR, 2  
+  
+  if ~self->get_Gatt_Info(attid, OUT_id = outid) then Message, '$attid is not a correct attribute ID'
+
+  NCDF_ATTGET, self.Cdfid , outid, Value, /GLOBAL
+  
+  return, value
+  
+end
+
+;+
+; :Description:
+;    This function checks if an attribute ID is valid and returns 1 if it is.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    attid: in, required, type = string/ integer
+;           the attribute ID (string or integer) to check
+;
+; :Keywords:
+;   out_id: out, type = string
+;           the netcdf attribute ID (string)
+; :Returns:
+;         1 if the attribute id is valid, 0 if not
+; 
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          20-Dec-2010 FaM
+;          First apparition for upgrade to WAVE 0.1
+;
+;-
+function NCDF::get_Gatt_Info, attid, OUT_ID = out_id
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, FALSE
+  ENDIF
+  out_id = -1
+  if arg_okay(attid, TYPE=IDL_STRING, /SCALAR) then begin
+    p = WHERE(str_equiv(*self.gattNames) eq str_equiv(attid), cnt)
+    if cnt ne 0 then out_id = (*self.gattNames)[p[0]] else return, FALSE
+  endif else MESSAGE, WAVE_Std_Message('attid', /ARG)
+   
   return, TRUE
   
 end

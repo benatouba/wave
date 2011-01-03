@@ -213,13 +213,16 @@ pro TRMM_nc::Cleanup
   COMPILE_OPT IDL2  
 
   NCDF_CLOSE, self.cdfid
-  Ptr_Free, self.lon 
-  Ptr_Free, self.lat
   PTR_FREE, self.varNames
   PTR_FREE, self.dimNames
   PTR_FREE, self.dimSizes
+  PTR_FREE, self.gattNames
+
   PTR_FREE, self.time
   
+  Ptr_Free, self.lon 
+  Ptr_Free, self.lat
+    
 END
 
 ;+

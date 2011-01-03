@@ -1,21 +1,5 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  HDF_EOS__Define.pro                                   *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  04-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
-
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GENERAL INFORMATION
-;
+; 
 ;       HDF_EOS is the basis class for HDF_EOS files. It reads
 ;       HDF_EOS files and provides some tools for rapid visualisation and
 ;       to analyse the content of a HDF_EOS file.
@@ -28,38 +12,18 @@
 ;       Because no real need exists right now for specific EOS file handling,
 ;       this class is really reduced to the minimum. Still, EOS objects
 ;       like MODIS should implement it in case we need it in the future
-;      
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       HDF
 ;       
 ;       =================================================================
-;       Attributes:
-;       ----------------------
-;          +HDF attributes;             
-;          NUM_GRIDS       LONG                
-;          NUM_POINTS      LONG                
-;          NUM_SWATHS      LONG     
-;    
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the HDF_EOS file. If not set, a dialog window will open
-;              
-;       
-;       =================================================================
-;       Methods:
-;       ----------------------
-;       The following methods can be used directly. Non ducumented methods 
-;       are not for external use.
-;       
-;       
-;       =================================================================
+; :Properties:
+; todo: describe properties
+;                 
+;          NUM_GRIDS: in, type = long                
+;          NUM_POINTS: in, type = long                
+;          NUM_SWATHS: in, type = long      
+;          FILE: in, optional, type = string
+;                the path to the HDF_EOS file. If not set, a dialog window will open
 ;       
 ;-
-;-----------------------------------------------------------------------
 
 ;-----------------------------------------------------------------------
 ;+
@@ -78,6 +42,29 @@
 ;                   Written for upgrade to WAVE 0.1
 ;-
 ;-----------------------------------------------------------------------
+;+
+; :Description:
+;    Defines the attributes of the class Grid2D. Attributes::
+;    HDF_EOS                       
+;            INHERITS HDF                  
+;            NUM_GRIDS  : 0L                  
+;            NUM_POINTS : 0L                   
+;            NUM_SWATHS : 0L  
+;             
+; :Categories:
+;         WAVE/OBJ_GIS   
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
+;-
 PRO HDF_EOS__Define
  
   ; SET UP ENVIRONNEMENT
@@ -93,29 +80,27 @@ PRO HDF_EOS__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF_EOS::Init
+; :Description:
+;    Build function. Output: 1 if the HDF object is updated successfully, 0 if not.
 ;
-; PURPOSE:
-;       Build function. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; KEYWORDS:
-;       FILE: the path to the HDF_EOS file. If not set, a dialog window will open
-;
-; OUTPUT:
-;       1 if the HDF_EOS object is updated successfully, 0 if not
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Keywords:
+;    FILE: in, optional, type = string
+;          the path to the HDF_EOS file. If not set, a dialog window will open
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 Function HDF_EOS::Init, FILE = file
            
            
@@ -153,30 +138,34 @@ Function HDF_EOS::Init, FILE = file
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF_EOS::GetProperty
-;
-; PURPOSE:
-;       Get access to some params. 
-;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; KEYWORDS:
-;       Output:
-;       NUM_GRIDS                       
-;       NUM_POINTS                      
-;       NUM_SWATHS         
-;       _Ref_Extra : see #HDF:GetProperty#
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
+; :Description:
+;    Get access to some params. 
+;: FaM, 2010
 ;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+;                 
+; :Categories:
+;         WAVE/OBJ_GIS   
+;
+; :Keywords: 
+; todo: describe keywords
+;    NUM_GRIDS: out,                       
+;    NUM_POINTS: out,                      
+;    NUM_SWATHS: out,         
+;    _Ref_Extra: out,
+;                see #HDF:GetProperty#
+;                
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO HDF_EOS::GetProperty, $
                   NUM_GRIDS     =      NUM_GRIDS, $          
                   NUM_POINTS    =      NUM_POINTS, $   
@@ -202,34 +191,32 @@ PRO HDF_EOS::GetProperty, $
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF_EOS::dump
+; :Description:
+;    To write all infos contained in the HDF EOS file to an ASCII file.
 ;
-; PURPOSE:
-;       to write all infos contained in the HDF EOS file to an ASCII file.
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none
+; :Keywords:
+;    FILE: in, optional, type = string
+;          An optional string containing the path to the output ASCII file. If not set, a dialog window will open
+;    NO_GATTS: in, optional, type = string
+;              Global attributes wont be written in the ASCII file 
+;    NO_VARIABLES: in, optional, type = string
+;                  variable wont be written in the ASCII file 
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       a plot
-;       
-; KEYWORDS:
-;        FILE: (I) An optional string containing the path to the output ASCII file. If not set, a dialog window will open
-;        /NO_GATTS: Global attributes wont be written in the ASCII file
-;        /NO_VARIABLES: variable wont be written in the ASCII file
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO HDF_EOS::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables
 
   ; SET UP ENVIRONNEMENT

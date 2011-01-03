@@ -320,11 +320,9 @@ end
 ;
 ; :Keywords:
 ;    DISTANCES: in, optional, type=string, default=none
-;    NOREDIM: in, optional, type=string, default=none
 ;    CLASSICAL: in, optional, type=string, default=none
 ;    TRIANGULATION: in, optional, type=string, default=none
 ;    FOURPOINTS: in, optional, type=string, default=none
-;    DELINPUT: in, optional, type=string, default=none
 ;    
 ;    
 ; :Examples:
@@ -341,8 +339,8 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = distances, NOREDIM = NOREDIM, $
-                  CLASSICAL = classical, TRIANGULATION = triangulation, FOURPOINTS = fourpoints, DELINPUT = delinput
+function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = distances, $
+                  CLASSICAL = classical, TRIANGULATION = triangulation, FOURPOINTS = fourpoints
 
   ; Set Up environnement
   @WAVE.inc
@@ -357,48 +355,31 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
   if not arg_okay(flon, /NUMERIC) or not arg_okay(flat, /NUMERIC) or not arg_okay(ilon, /NUMERIC) or not arg_okay(ilat, /NUMERIC) then $
     MESSAGE,'lat and/or lons not in numerical format'
   
-  if SIZE(flon, /N_DIMENSIONS) gt 2 or SIZE(flat, /N_DIMENSIONS) gt 2 or SIZE(ilon, /N_DIMENSIONS) gt 2 or SIZE(ilat, /N_DIMENSIONS) gt 2 $
-     or SIZE(flon, /N_DIMENSIONS) ne SIZE(flat, /N_DIMENSIONS) or SIZE(ilon, /N_DIMENSIONS) ne SIZE(ilat, /N_DIMENSIONS) then $
-       MESSAGE,'lat and/or lons not in the right dimension, or dimensions not agree'
-
+  if ~array_processing(ilon, ilat) then MESSAGE, WAVE_Std_Message('ilon ilat',/ARG)
+  if ~array_processing(flon, flat) then MESSAGE, WAVE_Std_Message('flon flat',/ARG)
   
-  ;****************************************
-  ; Make input and output Matrix same dim *
-  ;****************************************
-  
-  if KEYWORD_SET(DELINPUT) then begin
-    tilat = TEMPORARY(ilat)
-    tilon = TEMPORARY(ilon)
-  endif else begin
-    if SIZE(ilon, /N_DIMENSIONS) eq 1 and ~KEYWORD_SET(NOREDIM) then begin
-      inx = n_elements(ilon)
-      iny = n_elements(ilat)
-      tilat = MATRIX_MULTIPLY(dblarr(inx) +1d, DOUBLE(ilat)) ; "the georef-eq" 2-dimensional array
-      tilon = MATRIX_MULTIPLY(DOUBLE(ilon), dblarr(iny)+1d) ; "the georef-eq" 2-dimensional array
-    endif else if SIZE(ilon, /N_DIMENSIONS) eq 2 or KEYWORD_SET(NOREDIM) then begin
-      tilat = ilat & tilon = ilon
-    endif else MESSAGE,'Input lat and lons not of supported dimension'
-  endelse
-  
-  if KEYWORD_SET(DELINPUT) then begin
-    tflat = TEMPORARY(flat)
-    tflon = TEMPORARY(flon)
-  endif else begin
-      tflat = flat &  tflon = flon
-  endelse
+  doDist = ARG_PRESENT(DISTANCES)
   
   ;********************
   ; Define output dim *
   ;********************  
-  n = N_ELEMENTS(tflon)
+  n = N_ELEMENTS(flon)
   IF KEYWORD_SET(FOURPOINTS) then begin
     if n eq 1 then begin
-      out = LONARR(4) & distances = DBLARR(4)
-    endif else out = lonarr(4,n) &  DISTANCES=DBLARR(4,n)
+      out = LONARR(4) 
+      if doDist then distances = MAKE_ARRAY(4, /NOZERO, TYPE=SIZE(flon, /TYPE))
+    endif else begin
+     out = lonarr(4,n) 
+     if doDist then distances = MAKE_ARRAY(4, n, /NOZERO, TYPE=SIZE(flon, /TYPE))
+    endelse  
   endif else begin
     if n eq 1 then begin
-      out = 0L & distances = 0D
-    endif else out = lonarr(n) &  DISTANCES=DBLARR(n)
+      out = 0L 
+      if doDist then distances =  0D
+    endif else begin
+     out = lonarr(n)
+     if doDist then distances = MAKE_ARRAY(n, /NOZERO, TYPE=SIZE(flon, /TYPE))
+     endelse
   endelse 
 
   ;********************
@@ -407,29 +388,24 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
   algo = ''
   if KEYWORD_SET(CLASSICAL) then algo = 'CLASSICAL' $
     else if KEYWORD_SET(TRIANGULATION) then algo = 'TRIANGLE' $
-      else begin
-        if n eq 1 then algo = 'CLASSICAL' else algo = 'TRIANGLE'        
-      endelse
+      else if n eq 1 then algo = 'CLASSICAL' else algo = 'TRIANGLE'        
+
   
-  if KEYWORD_SET(FOURPOINTS) then algo += '_F'
+  if KEYWORD_SET(FOURPOINTS) then algo = 'CLASSICAL_F'
   
   ;**********
   ; Lets go *
   ;**********
-    tilon = double(tilon) & tilat = double(tilat)
-    tflon = double(tflon) & tflat = double(tflat)
-
   
   CASE algo OF
   
     'CLASSICAL': begin
     
       for i = 0l, n - 1 do begin      
-        quad = (tflon[i] - tilon)^2 + (tflat[i]- tilat)^2
-        minquad = min(quad, p)
-        if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....       
-        out[i] = p 
-        DISTANCES[i] = minquad        
+        quad = (flon[i] - ilon)^2 + (flat[i]- ilat)^2
+        minquad = min(quad, p)    
+        out[i] = p[0]
+         if doDist then DISTANCES[i] = minquad        
       endfor
       
     end
@@ -437,24 +413,24 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
     'CLASSICAL_F': begin
     
       for i = 0l, n - 1 do begin
-        quad = (tflon[i] - tilon)^2 + (tflat[i]- tilat)^2
+        quad = (flon[i] - ilon)^2 + (flat[i]- ilat)^2
         s = sort(quad)
         out[*,i] = s[0:3]
-        DISTANCES[*,i] = quad[s[0:3]]
+        if doDist then distances[*,i] = quad[s[0:3]]
       endfor
       
     end
     
     'TRIANGLE': begin
     
-      n1 = n_elements(tilon)
-      x1 = tilon[*] & y1 = tilat[*]
-      x2 = tflon[*] & y2 = tflat[*]    
+      n1 = n_elements(ilon)
+      x1 = ilon[*] & y1 = ilat[*]
+      x2 = flon[*] & y2 = flat[*]    
       
       triangulate, x1, y1, c ; Compute Delaunay triangulation     
        
       out = GRIDDATA(x1,y1,LINDGEN(n1), XOUT=x2, YOUT=y2, /NEAREST_N, TRIANGLES =c)
-      if arg_present(DISTANCES) then distances = (tilon[out] - x2)^2 + (tilat[out] - y2)^2         
+      if doDist then distances = (ilon[out] - x2)^2 + (ilat[out] - y2)^2         
       
     end
     
@@ -540,9 +516,10 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
     ;********
     ;* DONE *
     ;********
-    if arg_present(DISTANCES) then DISTANCES=sqrt(DISTANCES)
+    if doDist then DISTANCES=sqrt(DISTANCES)
+    if doDist then DISTANCES=reform(DISTANCES, N_ELEMENTS(flon[*,0]), N_ELEMENTS(flon[0,*]))
     
-    return, out
+    return, reform(LONG(out), N_ELEMENTS(flon[*,0]), N_ELEMENTS(flon[0,*]))
   
 end
 
@@ -560,10 +537,6 @@ end
 ;         The positions obtained with a previous call of `utils_POS_NEAREST_NEIGHBORHOOD`.
 ;    data: in, type= ,default=none
 ;          The 1 or 2 dimensional array of the data to fit.
-;    output_size: out, type= ,default=none
-;          The data fitted with nearest neighborhood.
-;    
-; TODO: Define types etc.!
 ;    
 ; :Examples:
 ;        Calling Sequence::
@@ -580,23 +553,16 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_COMPUTE_NEAREST_NEIGHBORHOOD, pos, data, output_size
+function utils_COMPUTE_NEAREST_NEIGHBORHOOD, pos, data
 
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT idl2
   
-  if n_params() lt 2 then message, WAVE_Std_Message(/NARG)
-  
+  if n_params() lt 2 then message, WAVE_Std_Message(/NARG)  
   if not arg_okay(pos, /NUMERIC) then  message, 'pos not in num format'
   
-  if SIZE(pos, /N_DIMENSIONS) gt 1 then  message, 'pos not a one dimensional array'
-  
-  if N_ELEMENTS(output_size) eq 0 then output_size = N_ELEMENTS(pos)
-  
-  if N_ELEMENTS(output_size) eq 2 then out = dblarr(output_size[0],output_size[1]) else out = dblarr(output_size[0])
-  if N_ELEMENTS(pos) ne N_ELEMENTS(out) then message, 'pos and output_size do not match?'
-  
+  out = MAKE_ARRAY(N_ELEMENTS(pos[*,0]), N_ELEMENTS(pos[0,*]), /NOZERO, TYPE=SIZE(data, /TYPE))  
     
   out[*] = data[pos]
     
@@ -858,10 +824,6 @@ end
 ;    objstring: in, type= , default=none
 ;    n_char: in, type= , default=none
 ;
-; :Examples:
-;        
-;     
-; TODO: complete description
 ; 
 ; :Author:
 ;       Fabien Maussion::
@@ -1239,7 +1201,7 @@ pro UTILS_usgs_24_to_33, file, NEW_LUF = new_luf
     if cnt ne 0 then dominant[pwat] = 16
    
     ; If water lt 49, then second max
-    pnowat = where(dominant eq 16 and water le 0.49, cnt)  
+    pnowat = where(dominant eq 16 and water le 0.5, cnt)  
     water[pnowat] = 0.
     myluf = luf
     myluf[*,*,15] = water  
@@ -1393,5 +1355,236 @@ pro UTILS_usgs_24_to_33, file, NEW_LUF = new_luf
   
   NCDF_CLOSE, sid ; Close source file
   NCDF_CLOSE, tid ; Close file
+
+end
+
+
+;+
+; :Description:
+;    This function makes a simple mean aggregation of a 2d array to a small array
+;    uisung a given ratio.
+;
+; :Params:
+;    array: in, required, type = float
+;           the 2d array to aggregate
+;    ratio: in required, type = long
+;           the ratio (it must be a divider of both X and Y dimensions)
+; 
+; :Examples:
+;   A very easy usage:: 
+;     IDL> array = [[0,0,1,1],[2,2,1,1],[2,2,2,2],[3,3,3,3]]
+;     IDL> print, array
+;            0       0       1       1
+;            2       2       1       1
+;            2       2       2       2
+;            3       3       3       3
+;     IDL> print, UTILS_aggregate_Grid_data(array, 2)
+;            1.0000000       1.0000000
+;            2.5000000       2.5000000
+; 
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          22-Dec-2010 FaM
+;          First apparition
+;
+;-
+function UTILS_aggregate_Grid_data, array, ratio ; TODO: add grid update
+
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT idl2
+  
+  if ~arg_okay(array, /NUMERIC, /ARRAY, N_DIM=2) then message, WAVE_Std_Message('array',/ARG)
+  if ~arg_okay(ratio, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('ratio',/ARG)
+     
+  siz = SIZE(array, /DIMENSIONS)
+  nxin = siz[0]
+  nyin = siz[1]
+  
+  if nxin / DOUBLE(ratio) ne (nxin / ratio) or nyin / DOUBLE(ratio) ne (nyin / ratio) then message, 'Ratio is not a divider of array.'
+
+  nxout = nxin / ratio
+  nyout = nyin / ratio
+  
+  agg = DBLARR(nxout,nyout)
+  tempx = DBLARR(nxout,nyin)
+    
+  for i = 0, nxin-1 do tempx[i/ratio,*] += array[i,*]            
+  for j = 0, nyin-1 do agg[*,j/ratio] += tempx[*,j]      
+
+  return, agg / DOUBLE(ratio*ratio)
+  
+end
+
+function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, cmax = cmax, r = r, g = g, b = b
+
+  if N_ELEMENTS(cmin) eq 0 then cmin = 0
+  if N_ELEMENTS(cmax) eq 0 then cmax = 255
+  
+  ; Check parameters and keywords.
+  IF N_Elements(colors) EQ 0 THEN BEGIN ; NO colors given
+    IF N_Elements(ncolors) EQ 0 THEN begin
+     _colors = 'white' 
+      NCOLORS = 1
+    endif else if NCOLORS gt 1 then _colors = Scale_Vector(Indgen(ncolors), cmin, cmax) else _COLORS = cmin
+    
+  ENDIF ELSE begin ; COLORS given
+    if arg_okay(colors, N_DIM=2) then begin
+      dims = SIZE(colors, /DIMENSIONS)
+      if dims[0] ne 3 then message, WAVE_Std_Message('colors', /ARG)
+      _colors = COLOR24(colors)
+    endif else _colors = colors
+  endelse
+  
+  ncolors = N_Elements(_colors)
+  
+  ; I would prefer to draw in 24-bit color if I can, since this way I can
+  ; avoid loading colors into the color table. I'll have to see where I am to
+  ; see if I can do this in 24-bit color.
+  CASE !D.Name OF
+    'X': BEGIN
+      Device, Get_Visual_Depth=theDepth
+      IF theDepth GE 24 THEN supportsTrueColor = 1 ELSE supportsTrueColor = 0
+      Device, GET_DECOMPOSED=theState, DECOMPOSED=supportsTrueColor
+    END
+    'WIN': BEGIN
+      Device, Get_Visual_Depth=theDepth
+      IF theDepth GE 24 THEN supportsTrueColor = 1 ELSE supportsTrueColor = 0
+      Device, GET_DECOMPOSED=theState, DECOMPOSED=supportsTrueColor
+    END
+    'Z': BEGIN
+      Device, Get_Pixel_Depth=theDepth
+      IF theDepth GE 24 THEN supportsTrueColor = 1 ELSE supportsTrueColor = 0
+      Device, GET_DECOMPOSED=theState, DECOMPOSED=supportsTrueColor
+    END
+    'PS': BEGIN
+      IF Float(!Version.Release) GE 7.1 THEN supportsTrueColor = 1 ELSE supportsTrueColor = 0
+      IF supportsTrueColor THEN BEGIN
+        Device, DECOMPOSED=1
+        theState = 1
+      ENDIF
+    END
+    ELSE: BEGIN
+      supportsTrueColor = 0
+    END
+  ENDCASE
+  
+  ; Set up the colors for drawing. All 24-bit if it supports true color.
+  ; Otherwise load colors for 8-bit support.
+  IF supportsTrueColor THEN BEGIN
+    CASE Size(_colors, /TNAME) OF
+      'STRING': BEGIN
+        _colors = FSC_Color(_colors, DECOMPOSED=1, FILE=file)
+      END
+      'INT': BEGIN
+        TVLCT, r, g, b, /GET
+        temp = LonArr(ncolors)
+        FOR j=0,ncolors-1 DO BEGIN
+          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+        ENDFOR
+        _colors = Temporary(temp)
+      END
+      'ULONG':
+      'LONG': BEGIN
+      
+        ; If the state is NOT using decomposed color, these are probably
+        ; color index numbers, rather than long integers to be decomposed.
+        IF theState EQ 0 THEN BEGIN
+          TVLCT, r, g, b, /GET
+          temp = LonArr(ncolors)
+          FOR j=0,ncolors-1 DO BEGIN
+            temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+          ENDFOR
+          _colors = Temporary(temp)
+        ENDIF
+        
+        ; If the maximum value of these long integers in not over 255, then
+        ; we can be pretty sure these are color index numbers. At least I'm
+        ; going to treat them that way for now and see what kind of trouble I
+        ; get in.
+        IF Max(_colors) LE 255 THEN BEGIN
+          TVLCT, r, g, b, /GET
+          temp = LonArr(ncolors)
+          FOR j=0,ncolors-1 DO BEGIN
+            temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+          ENDFOR
+          _colors = Temporary(temp)
+        ENDIF
+      END
+      'BYTE': BEGIN
+        TVLCT, r, g, b, /GET
+        temp = LonArr(ncolors)
+        FOR j=0,ncolors-1 DO BEGIN
+          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+        ENDFOR
+        _colors = Temporary(temp)
+      END
+      ELSE: BEGIN
+        TVLCT, r, g, b, /GET
+        temp = LonArr(ncolors)
+        FOR j=0,ncolors-1 DO BEGIN
+          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+        ENDFOR
+        _colors = Temporary(temp)
+      END
+    ENDCASE
+  ENDIF ELSE BEGIN
+  
+   ; I'd rather not go here
+    MESSAGE, 'NO True color?'
+  
+;    CASE Size(_colors, /TNAME) OF
+;      'STRING': BEGIN
+;        _colors = FSC_Color(_colors, DECOMPOSED=0, FILE=file)
+;      END
+;      'LONG': BEGIN
+;      
+;        ; If the maximum value of these long integers in not over 255, then
+;        ; we can be pretty sure these are color index numbers. At least I'm
+;        ; going to treat them that way for now and see what kind of trouble I
+;        ; get into.
+;        IF Max(_colors) GT 255 THEN BEGIN
+;          r = _colors AND '0000FF'xL
+;          g = ISHFT(_colors AND '00FF00'xL, -8)
+;          b = ISHFT(_colors AND 'FF0000'xL, -16)
+;          TVLCT, r, g, b, cmin
+;          _colors = Indgen(ncolors) + cmin
+;        ENDIF
+;      END
+;      ELSE:
+;    ENDCASE
+;    
+  ENDELSE
+  
+  utils_color_rgb, _colors, r, g, b  
+  return, _colors  
+  
+end
+
+pro utils_color_rgb, color, r, g, b
+  
+  UNDEFINE, r, g, b
+  for i = 0, N_ELEMENTS(color)-1 do begin
+  
+    bi = ROTATE(BitGet(LONG(color)), 2)
+  
+    tr = 0L
+    tg = 0L
+    tb = 0L
+    for j = 0, 7 do tr += bi[j] * 2 ^ j
+    for j = 8, 15 do tg += bi[j] * 2 ^ (j-8)
+    for j = 16, 23 do tb += bi[j] * 2 ^ (j-16)
+     
+    if N_ELEMENTS(r) eq 0 then r =  tr else r = [r, tr]
+    if N_ELEMENTS(g) eq 0 then g =  tg else g = [g, tg]
+    if N_ELEMENTS(b) eq 0 then b =  tb else b = [b, tb]
+    
+  endfor
 
 end

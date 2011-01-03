@@ -666,7 +666,7 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
   ;*****************************************
   ; If src is a grid, y has to be rotated  *
   ;*****************************************
-  if arg_okay(STRUCT={TNT_COORD}) then begin
+  if arg_okay(src, STRUCT={TNT_COORD}) then begin
     Message, 'Src is a {TNT_COORD} structure. We only accept GRID2D objects, please make one.' 
   endif else if (OBJ_VALID(src)) then begin
     if OBJ_ISA(src, 'Grid2D') then begin
@@ -903,8 +903,7 @@ PRO Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
   
   if not OBJ_ISA(grid, 'Grid2D')  then Message, WAVE_Std_Message('proj', OBJ='Grid2D')
   
-  grid->GetProperty, tnt_c = c  
-  self->transform, i_src, j_src, i, j, SRC = c, NEAREST=nearest
+  self->transform, i_src, j_src, i, j, SRC = grid, NEAREST=nearest
   
 end
 
@@ -1175,6 +1174,10 @@ function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   @WAVE.inc
   COMPILE_OPT IDL2
   
+  ON_ERROR, 2
+  
+  if ~ arg_okay(FACTOR, /NUMERIC) then factor = 1
+  
   if KEYWORD_SET(Xsize) then factor = double(Xsize) / self.tnt_c.nx $
   else if KEYWORD_SET(Ysize) then factor = double(Ysize) / self.tnt_c.ny
     
@@ -1182,8 +1185,10 @@ function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   ny = self.tnt_c.ny * FACTOR
   dx = self.tnt_c.dx / double(FACTOR)
   dy = self.tnt_c.dy / double(FACTOR)
+  
   x0 = self.tnt_c.x0 - 0.5*self.tnt_c.dx + dx/2.
   y0 = self.tnt_c.y0 + 0.5*self.tnt_c.dy - dy/2.
+  
   return, OBJ_NEW('Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
     
 end

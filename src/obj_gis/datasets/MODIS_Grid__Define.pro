@@ -221,8 +221,8 @@ END
 ;-
 ;-----------------------------------------------------------------------
 PRO MODIS_Grid::GetProperty, $  
-                  t0 =  t0
-                  t1 =  t1    
+                   t0 =  t0, $
+                   t1 =  t1, $    
                   _Ref_Extra=extra
     
   ; SET UP ENVIRONNEMENT
@@ -427,7 +427,9 @@ function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij
   ; Get info from the HDF-EOS file
   eosgdfid = EOS_GD_OPEN(self.path, /READ)
   if self.NUM_GRIDS ne 1 then message, 'The EOS file has not the expected number of grids (only one is espected)'
-  gridID = EOS_GD_ATTACH(eosgdfid, self.GRIDName)  
+  dummy = EOS_Query(self.path, info)
+  gridID = EOS_GD_ATTACH(eosgdfid, info.GRID_NAMES)
+  
   res = EOS_GD_PROJINFO(gridID, projcode, zonecode, spherecode, projparm)
   if res eq -1 then message, WAVE_Std_Message(/FILE)  
   if PROJCODE ne 16 then message, 'EOS Projection code currently not supported. (' + str_equiv(PROJCODE) + ')

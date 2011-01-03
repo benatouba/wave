@@ -1,21 +1,6 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  HDF__Define.pro                                       *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  04-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
-
-;-----------------------------------------------------------------------
+; docformat = 'rst'
 ;+
-; NAME:
-;       GENERAL INFORMATION
-;
+; 
 ;       HDF is the basis class for all kinds of HDF files. It reads
 ;       HDF files and provides some tools for rapid visualisation and
 ;       to analyse the content of a HDF file.
@@ -23,65 +8,61 @@
 ;       It should be the superclass from all HDF related objects.
 ;       
 ;        TODO: add the same functionalities as Ncdf.
+;       
+; :Properties: 
+;      todo: complete optional/required info
+;          path: in, type = string
+;                complete path of the active HDF file
+;          HDFid: in, type = long
+;                 id of the HDF file as given by HDF_start 
+;          fname: in, type = string
+;                 name of the active HDF file
+;          directory: in, type=string 
+;                     directory of the active HDF file
+;          Nvars: in, type = long
+;                 The number of variables defined for this HDF file. 
+;          Ngatts:  in, type = long 
+;                   The number of global attributes defined for this HDF file. 
+;          FILE: in, optional, type = string
+;                The path to the HDF file. If not set, a dialog window will open
 ;              
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       none
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-;       =================================================================
-;       Attributes:
-;       ----------------------
-;          path: complete path of the active HDF file
-;          HDFid: id of the HDF file as given by  HDF_start 
-;          fname: name of the active HDF file
-;          directory: directory of the active HDF file
-;          Nvars: The number of variables defined for this HDF file. 
-;          Ngatts: The number of global attributes defined for this HDF file. 
-;    
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the HDF file. If not set, a dialog window will open
-;              
-;       
-;       =================================================================
-;       Methods:
-;       ----------------------
-;       The following methods can be used directly. Non ducumented methods 
-;       are not for external use.
-;       
-;       obj->GetProperty: get access to some attributes
-;       obj->Get_Varlist: to obtain the list of available variables in the HDF file
-;       obj->Get_Var()  : get a specific variable along with some information
-;       obj->quickPlotVar    : plots a "flat" image of a given variable 
-;                         (usefull for quick analysis purposes)
-;       obj->dump       : to write all infos contained in the HDF file to an ASCII file.
-;                         (usefull to get to know what is in the file)
-;       
-;       =================================================================
-;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF__Define
+; :Description:
+;    Defines the attributes of the class Grid2D. Attributes::
+;    HDF
+;            path:               ''   
+;            HDFid:              0L    
+;            fname:              ''   
+;            directory:          ''    
+;            Nvars:              0L    
+;            Ngatts:             0L    
 ;
-; PURPOSE:
-;       Object structure definition
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO HDF__Define
  
   ; SET UP ENVIRONNEMENT
@@ -99,29 +80,28 @@ PRO HDF__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::Init
+; :Description:
+;    Build function. Output: 1 if the HDF object is updated successfully, 0 if not.
 ;
-; PURPOSE:
-;       Build function. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; KEYWORDS:
-;       FILE: the path to the HDF file. If not set, a dialog window will open
-;
-; OUTPUT:
-;       1 if the HDF object is updated successfully, 0 if not
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Keywords:
+;     FILE: in, optional, type = string
+;           the path to the HDF file. If not set, a dialog window will open
+;          
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 Function HDF::Init, FILE = file
            
            
@@ -172,21 +152,24 @@ Function HDF::Init, FILE = file
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::Cleanup
+; :Description:
+;    Destroy function. 
 ;
-; PURPOSE:
-;       Destroy. 
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro HDF::Cleanup
 
   ; SET UP ENVIRONNEMENT
@@ -197,32 +180,38 @@ pro HDF::Cleanup
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::GetProperty
+; :Description:
+;    Get access to some params.
 ;
-; PURPOSE:
-;       Get access to some params. 
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Keywords:
+;    path: out, type = string
+;          complete path of the active HDF file
+;    HDFid: out, type = long
+;          id of the HDF file as given by HDF_start 
+;    fname: out, type = string
+;          name of the active HDF file
+;    directory: out, type = string
+;               directory of the active HDF file
+;    Nvars: out, type = long
+;           The number of variables defined for this HDF file. 
+;    Ngatts: out, type = long
+;            The number of global attributes defined for this HDF file.
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; KEYWORDS:
-;       Output:
-;       path : complete path of the active HDF file
-;       HDFid : id of the HDF file as given by  HDF_start 
-;       fname : name of the active HDF file
-;       directory : directory of the active HDF file
-;       Nvars : The number of variables defined for this HDF file. 
-;       Ngatts : The number of global attributes defined for this HDF file. 
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO HDF::GetProperty, $
             path = path, $  ; complete path of the active HDF file
             HDFid = HDFid,  $ ; id of the HDF file as given by  HDF_start 
@@ -251,37 +240,42 @@ PRO HDF::GetProperty, $
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::get_Varlist
+; :Description:
+;    Get some informations on available variables in the HDF file
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: out, type = long
+;           HDF SD indexes
+;    varnames: out, type = string
+;              variables name
+;    varndims: out, type = long
+;              variables number of dimensions
+;    varunits: out, type = string
+;              variables units
+;    vardescriptions: out, type = string
+;                     variables description (or long name)
+;    vartypes: out, type = string
+;              variables type 
 ;
-; PURPOSE:
-;       Get some informations on available variables in the HDF file
-;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none 
+; :Keywords:
+;    PRINTVARS: in, optional
+;               to print the infos in the console
+;               
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       varid : HDF SD indexes
-;       varnames : variables name
-;       varndims : variables number of dimensions
-;       varunits : variables units
-;       vardescriptions : variables description (or long name)
-;       vartypes : variables type 
-;       
-; KEYWORDS:
-;       /PRINTVARS : to print the infos in the console
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
   ; SET UP ENVIRONNEMENT
@@ -393,6 +387,50 @@ end
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
 ;-----------------------------------------------------------------------
+;+
+; :Description:
+;    Extracts the desired variable from the HDF file
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    Varid: in, required, type = integer/ string
+;           HDF SD index (int) or name (string) of the desired variable
+;         todo: check keywords  
+; :Keywords:
+;        COUNT: in, optional, type = integer vector
+;               An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+;        NOREVERSE: in, optional, type = integer vector
+;                   An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+;        START: in, optional, type = integer vector 
+;               An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+;        STRIDE: in, optional, type = integer vector
+;                An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+;        description: out, optional, type = string 
+;                     If available, the description of the variable
+;        units: out, optional, type = string 
+;               If available, the units of the variable
+;        varname: out, optional, type = string
+;                 the name of the variable
+;        dims : out, optional, type = long
+;               the variable dimensions
+;        NO_CALIB: in, optional, type = string
+;                  the default behaviour id to check if calibration data is contained 
+;                  in the HDF variable attributes and apply it to the variable. Set this
+;                  keyword to avoid making an automatic calibration
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  09-Dec-2010 FaM
+;-
 function HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable. 
                        COUNT=count, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
                        NOREVERSE = noreverse, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
@@ -416,7 +454,7 @@ function HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previo
     RETURN, -1
   ENDIF
   
-  if var_info(varid,/TYPE) eq IDL_STRING then  iVarid = HDF_SD_NAMETOINDEX(SDinterface_id, SDS_Name) else ivarid = Varid
+  if var_info(varid,/TYPE) eq IDL_STRING then  iVarid = HDF_SD_NAMETOINDEX(self.HDFid, Varid) else ivarid = Varid
   
   sdID = HDF_SD_Select(self.HDFid, iVarid)
   ; This routine throws all kinds of scary messages
@@ -456,35 +494,37 @@ function HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previo
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::quickPlotVar
+; :Description:
+;    Flat plot of a desired variable for quick visualisation purposes.
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;  todo: control params
+;    Varid: in, required, type = integer/ string
+;           HDF SD index or name of the desired variable
 ;
-; PURPOSE:
-;       flat plot of a desired variable for quick visualisation purposes
+; :Keywords:
+;    NO_CALIB: in, optional, type = string
+;              the default behaviour id to check if calibration data is contained 
+;              in the HDF variable attributes and apply it to the variable. Set this
+;              keyword to avoid making an automatic calibration
+;    UPSIDEDOWN: in, optional
+;                to rotate the variable before plotting it
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       varid : HDF SD index or name of the desired variable
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       a plot
-;       
-; KEYWORDS:
-;        /NO_CALIB: the default behaviour id to check if calibration data is contained 
-;                   in the HDF variable attributes and apply it to the variable. Set this
-;                   keyword to avoid making an automatic calibration
-;        /UPSIDEDOWN: to rotate the variable before plotting it
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 pro HDF::quickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
@@ -496,35 +536,35 @@ pro HDF::quickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
 
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       HDF::dump
+; :Description:
+;    To write all infos contained in the HDF file to an ASCII file.
+;    Output: an ascii file
 ;
-; PURPOSE:
-;       to write all infos contained in the HDF file to an ASCII file.
+; :Categories:
+;         WAVE/OBJ_GIS   
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       none
+; :Keywords:
+;    FILE: in, optional, type = string
+;          An optional string containing the path to the output ASCII file. If not set, a dialog window will open
+;    NO_GATTS: in, optional, type = string
+;              Global attributes wont be written in the ASCII file 
+;    NO_VARIABLES: in, optional, type = string
+;                  variable wont be written in the ASCII file 
+;    LUN: in, optional, type = string
+;         If given, the dum routine will write into the given lun (/GET_LUN)
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
 ;       
-; OUTPUT:
-;       an ASCII file
-;       
-; KEYWORDS:
-;        FILE: (I) An optional string containing the path to the output ASCII file. If not set, a dialog window will open
-;        LUN : (I) if given, the dum routine will write into the given lun (/GET_LUN)
-;        /NO_GATTS: Global attributes wont be written in the ASCII file
-;        /NO_VARIABLES: variable wont be written in the ASCII file
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+; :History:
+;     Last modification:  09-Dec-2010 FaM
 ;-
-;-----------------------------------------------------------------------
 PRO HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN = lun
 
   ; SET UP ENVIRONNEMENT
@@ -590,7 +630,7 @@ PRO HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LU
         RANGE=range, TYPE=datatype, CALDATA=calData
       !QUIET = 0
       
-      text = '       HDF_SD Ind: ' + str_equiv(j) + '. Type: ' + STRLOWCASE(DATATYPE) + '. ' + str_equiv(name) + '. Dim: ('
+      text = '       HDF_SD Ind: ' + str_equiv(j) + '. Type: ' + STRLOWCASE(DATATYPE) + '. ' + STRING(name) + '. Dim: ('
       for i =0, ndims - 1 do begin
         text += STRLOWCASE(str_equiv(dims[i]))
         if i ne ndims - 1 then  text += ','
