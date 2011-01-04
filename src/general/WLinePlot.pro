@@ -366,7 +366,7 @@ pro WDiurnal_plot, toplot, time, tag, color1 = color1, style1 = style1, COMENT1 
   ; prepare the plot 
   device, DECOMPOSED=0, TRUE_COLOR=24, RETAIN=2  
   window, 1, XSIZE=950, YSIZE=600, Title='Plots', PIXMAP=pixmap
-  !order = 0
+  ;!order = 0
  
    IF KEYWORD_SET(zoom) then begin
     p1 = VALUE_LOCATE(time,zoom[0])
@@ -531,7 +531,7 @@ pro WHisto_plot, h, loc, tag, color1 = color1, COMENT1 = coment1, THICKNESS = th
 
   ; prepare the plot  
   window, 1, XSIZE=900, YSIZE=600, Title='Plots', PIXMAP=pixmap
-  !order = 0
+  ;!order = 0
   
   xtinter = 1
   
@@ -605,7 +605,7 @@ pro WScatter_plot, x, y, xtitle, ytitle, PNG = png, title= title, PIXMAP = pixma
   ; prepare the plot  
   device, DECOMPOSED=0, TRUE_COLOR=24, RETAIN=2  
   window, 1, XSIZE=600, YSIZE=600, Title='Plots', PIXMAP=pixmap
-  !order = 0
+  ;!order = 0
   
   if ~KEYWORD_SET(range) then range = [min([x,y]),max([x,y])]
     
@@ -648,7 +648,7 @@ pro Wcloud_plot, x, y, xtitle, ytitle, PNG = png, title= title, PIXMAP = pixmap,
   ; prepare the plot
   device, DECOMPOSED=0, TRUE_COLOR=24, RETAIN=2
   window, 1, XSIZE=900, YSIZE=600, Title='Plots', PIXMAP=pixmap
-  !order = 0
+  ;!order = 0
   
   loadct, 5
   plot, x, y, title = title,  COLOR=0, BACKGROUND=255, CHARSIZE=1.8, /DEVICE, PSYM=1, XTICK_GET=xs, $
@@ -689,7 +689,7 @@ pro WwindMatrix, windspeed, winddir, time
   ; prepare the plot
   device, DECOMPOSED=0, TRUE_COLOR=24, RETAIN=2
   window, 1, XSIZE=1150, YSIZE=750, Title='Plots', PIXMAP=pixmap
-  !order = 0
+  ;!order = 0
   dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
   XTICKFORMAT = ['LABEL_DATE']
   xtunits = 'Days'

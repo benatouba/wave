@@ -1422,7 +1422,7 @@ function UTILS_aggregate_Grid_data, array, ratio ; TODO: add grid update
   
 end
 
-function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, cmax = cmax, r = r, g = g, b = b
+function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, cmax = cmax, r = r, g = g, b = b, INVERTCOLORS = INVERTCOLORS
 
   if N_ELEMENTS(cmin) eq 0 then cmin = 0
   if N_ELEMENTS(cmax) eq 0 then cmax = 255
@@ -1561,7 +1561,7 @@ function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, c
 ;    ENDCASE
 ;    
   ENDELSE
-  
+  if KEYWORD_SET(INVERTCOLORS) then _colors  = ROTATE(_colors,2)
   utils_color_rgb, _colors, r, g, b  
   return, _colors  
   
@@ -1572,7 +1572,7 @@ pro utils_color_rgb, color, r, g, b
   UNDEFINE, r, g, b
   for i = 0, N_ELEMENTS(color)-1 do begin
   
-    bi = ROTATE(BitGet(LONG(color)), 2)
+    bi = ROTATE(BitGet(LONG(color[i])), 2)
   
     tr = 0L
     tg = 0L

@@ -670,13 +670,14 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
     Message, 'Src is a {TNT_COORD} structure. We only accept GRID2D objects, please make one.' 
   endif else if (OBJ_VALID(src)) then begin
     if OBJ_ISA(src, 'Grid2D') then begin
-      myy = self.tnt_c.ny - y  - 1
+      _y = self.tnt_c.ny - y  - 1
       src->getProperty, TNT_C = mysrc
     endif else MESSAGE, 'SRC is an object but not a grid??'
   endif else begin
-    myy = y
+    _y = y
     mysrc = src
   endelse  
+  _x = x
   
   cas = 0
   if (ARG_PRESENT(LAT_DST) or ARG_PRESENT(LON_DST)) and ~ARG_PRESENT(E_DST) and ~ARG_PRESENT(N_DST) then cas = 1
@@ -689,7 +690,7 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
   ;***********************************************
   finished = FALSE
   ind = 0L
-  nxi = N_ELEMENTS(x)
+  nxi = N_ELEMENTS(_x)
   undefine, i_dst, j_dst
   while not finished do begin
     p1 = ind
@@ -701,16 +702,16 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
     
     case (cas) of
       0: begin
-          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, NEAREST = nearest
+          GIS_coord_trafo, ret, _x[p1:p2], _y[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, NEAREST = nearest
       end
       1: begin
-          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+          GIS_coord_trafo, ret, _x[p1:p2], _y[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
                LON_DST=tlon_dst, LAT_DST=tlat_dst, NEAREST = nearest
           if N_ELEMENTS(tlon_dst) ne 0 then if N_ELEMENTS(LON_DST) eq 0 then LON_DST = TEMPORARY(tlon_dst) else LON_DST = [LON_DST , TEMPORARY(tlon_dst)]
           if N_ELEMENTS(tlat_dst) ne 0 then if N_ELEMENTS(LAT_DST) eq 0 then LAT_DST = TEMPORARY(tlat_dst) else LAT_DST = [LAT_DST , TEMPORARY(tlat_dst)]
       end
       2: begin
-          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+          GIS_coord_trafo, ret, _x[p1:p2], _y[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
                LON_DST=tlon_dst, LAT_DST=tlat_dst, E_DST= te_dst, N_DST=tN_DST, NEAREST = nearest
           if N_ELEMENTS(tlon_dst) ne 0 then if N_ELEMENTS(LON_DST) eq 0 then LON_DST = TEMPORARY(tlon_dst) else LON_DST = [LON_DST , TEMPORARY(tlon_dst)]
           if N_ELEMENTS(tlat_dst) ne 0 then if N_ELEMENTS(LAT_DST) eq 0 then LAT_DST = TEMPORARY(tlat_dst) else LAT_DST = [LAT_DST , TEMPORARY(tlat_dst)]
@@ -718,7 +719,7 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
           if N_ELEMENTS(tN_DST) ne 0 then if N_ELEMENTS(N_DST) eq 0 then N_DST = TEMPORARY(tN_DST) else N_DST = [N_DST , TEMPORARY(tN_DST)]
       end
       3: begin
-          GIS_coord_trafo, ret, x[p1:p2], myy[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
+          GIS_coord_trafo, ret, _x[p1:p2], _y[p1:p2], ti_dst, tj_dst, SRC=mysrc, DST=self.tnt_c, $
                E_DST= te_dst, N_DST=tN_DST, NEAREST = nearest
           if N_ELEMENTS(te_dst) ne 0 then if N_ELEMENTS(E_DST) eq 0 then E_DST = TEMPORARY(te_dst) else E_DST = [E_DST , TEMPORARY(te_dst)]
           if N_ELEMENTS(tN_DST) ne 0 then if N_ELEMENTS(N_DST) eq 0 then N_DST = TEMPORARY(tN_DST) else N_DST = [N_DST , TEMPORARY(tN_DST)]

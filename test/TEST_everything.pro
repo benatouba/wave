@@ -1978,6 +1978,97 @@ pro TEST_NEIREST_NEIGHBOR
   
 end
 
+pro TEST_PLOT_MAP
+  
+  @WAVE.inc
+  
+  fdir = TEST_file_directory() 
+  error = 0 
+
+  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
+  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
+  
+  d = map->set_topography(GRDFILE=fdir+'/MAPPING/TiP.grd')  
+  d = map->set_shading_params(RELIEF_FACTOR=2.)
+  
+  CTLOAD, 1
+  d = map->set_Colors(NCOLORS=110, /INVERTCOLORS)
+  
+  pcp = (dom1->get_prcp())[*,*,12]
+    map->getProperty, XSIZE = xsize, YSIZE = ysize   
+  pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
+  d = map->set_img(pcp)  
+  d = map->set_shape_file(/COUNTRIES)
+  GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
+  d = map->set_shape_file(SHPFILE=fdir+'/MAPPING/namco_shore.shp', SHP_SRC=utm)
+    
+  map->show_img
+  OBJ_DESTROY, dom1  
+  OBJ_DESTROY, map  
+  
+  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
+  
+end
+
+pro TEST_PLOT_CASA
+  
+  @WAVE.inc
+  
+  fdir = TEST_file_directory() 
+  error = 0 
+
+  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/geo_em.d03.nc', CROPBORDER=5)
+  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
+  
+;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/KiN.grd')  
+  d = map->set_shading_params(RELIEF_FACTOR=2.)
+  d = map->set_map_params(C_INTERVAL=1)
+  
+  CTLOAD, 13
+  d = map->set_Colors(NCOLORS=256, /INVERTCOLORS)
+  
+  pcp = dom1->get_Var('LU_INDEX')
+  map->getProperty, XSIZE = xsize, YSIZE = ysize   
+  pcp = CONGRID(pcp, xsize, ysize, /CENTER)
+  d = map->set_img(pcp)  
+  d = map->set_shape_file(/COUNTRIES)
+    
+  map->show_img
+  OBJ_DESTROY, dom1  
+  OBJ_DESTROY, map  
+  
+  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
+  
+end
+
+pro TEST_PLOT_MAP_TRMM
+  
+  @WAVE.inc
+  
+  fdir = TEST_file_directory() 
+  error = 0 
+
+  dom1 = OBJ_NEW('TRMM_nc', FILE=fdir+'TRMM/3B43.000801.6.nc')
+  map = OBJ_NEW('PLOT_MAP', dom1, Xsize = 1200)  
+
+  d = map->set_shading_params(RELIEF_FACTOR=2.)
+  
+  CTLOAD, 1
+  d = map->set_Colors(NCOLORS=256, /INVERTCOLORS)
+  map->getProperty, XSIZE = xsize, YSIZE = ysize   
+  
+  pcp = (dom1->get_prcp())
+  pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
+  d = map->set_img(pcp)  
+  d = map->set_shape_file(/COUNTRIES)
+    
+  map->show_img
+  OBJ_DESTROY, dom1  
+  OBJ_DESTROY, map  
+  
+  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
+  
+end
 
 
 pro TEST_DATASETS

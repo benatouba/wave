@@ -50,6 +50,8 @@ pushd, root
 .run AMSR_E__Define.pro
 .run WDTM__Define.pro
 
+.run PLOT_MAP__Define.pro
+
 resolve_all, /QUIET
 
 ; Initialize WAVE
