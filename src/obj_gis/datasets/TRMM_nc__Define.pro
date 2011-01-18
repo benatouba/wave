@@ -179,6 +179,7 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
     
   self.t0 = time0
   self.t1 = time1
+  ptr_free, self.time
   self.time = PTR_NEW(time, /NO_COPY)
   self.nt = nt
     

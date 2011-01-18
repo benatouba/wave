@@ -234,7 +234,7 @@ FOR i=0l,nvecs-1l DO BEGIN  ; Loop over particles.
     plots,[px[i],x1[i],x1[i]-(vx[i]*rcos+vy[i]*rsin)/vel[i], $
            x1[i],x1[i]-(vx[i]*rcos-vy[i]*rsin)/vel[i]], $
           [py[i],y1[i],y1[i]-(vy[i]*rcos-vx[i]*rsin)/vel[i], $
-           y1[i],y1[i]-(vy[i]*rcos+vx[i]*rsin)/vel[i]],COLOR=vecColors[i], /DEVICE
+           y1[i],y1[i]-(vy[i]*rcos+vx[i]*rsin)/vel[i]],COLOR=vecColors[i], THICK = thick,  /DEVICE
 ENDFOR
 
 END  ; End of procedure PARTVELVEC.

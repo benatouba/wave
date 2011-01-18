@@ -51,6 +51,8 @@ pushd, root
 .run WDTM__Define.pro
 
 .run PLOT_MAP__Define.pro
+.run WAVE_colorbar.pro
+.run MAKE_PLOTS.pro
 
 resolve_all, /QUIET
 

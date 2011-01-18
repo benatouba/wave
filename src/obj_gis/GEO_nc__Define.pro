@@ -202,19 +202,17 @@ Function GEO_nc::Init, FILE = file, SUBSET = subset
   
   self.t0 = -1LL
   self.t1 = -1LL 
-  self.time = PTR_NEW(-1LL, /NO_COPY) 
+  time = -1LL
   if foundT ge 0 then begin
     if utils_nc_COARDS_time(self.cdfid, time, time0, time1, nt) then begin
       self.t0 = time0
       self.t1 = time1
-      self.time = PTR_NEW(time, /NO_COPY)    
     endif else if utils_wrf_time(self.cdfid, time, time0, time1, nt) then begin
       self.t0 = time0
       self.t1 = time1
-      self.time = PTR_NEW(time, /NO_COPY)   
     endif ; else Message, 'Time dimension found but time could not be parsed.', /INFORMATIONAL
   endif  
-  
+  self.time = PTR_NEW(time, /NO_COPY) 
   self.nT = N_ELEMENTS(*self.time)
   
   ;***********************
@@ -670,7 +668,7 @@ function GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a prev
     
   value = self->NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
   
-  return, value
+  return, reform(value)
   
 end
 

@@ -98,7 +98,7 @@ PRO NCDF__Define
             Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
             varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
             dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
-            gattNames:  PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
+            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
             dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
             RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
             }

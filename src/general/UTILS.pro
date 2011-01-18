@@ -1570,6 +1570,9 @@ end
 pro utils_color_rgb, color, r, g, b
   
   UNDEFINE, r, g, b
+  r = BYTE(color) * 0B
+  g = r
+  b = r
   for i = 0, N_ELEMENTS(color)-1 do begin
   
     bi = ROTATE(BitGet(LONG(color[i])), 2)
@@ -1581,10 +1584,10 @@ pro utils_color_rgb, color, r, g, b
     for j = 8, 15 do tg += bi[j] * 2 ^ (j-8)
     for j = 16, 23 do tb += bi[j] * 2 ^ (j-16)
      
-    if N_ELEMENTS(r) eq 0 then r =  tr else r = [r, tr]
-    if N_ELEMENTS(g) eq 0 then g =  tg else g = [g, tg]
-    if N_ELEMENTS(b) eq 0 then b =  tb else b = [b, tb]
-    
+    r[i] = tr
+    g[i] = tg
+    b[i] = tb
+     
   endfor
 
 end

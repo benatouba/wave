@@ -72,7 +72,7 @@ pro WTimeLine_plot, toplot,$  ; array to plot
     p2 = VALUE_LOCATE(time.qms,zoom[1].qms)
   endif else begin
     p1 = 0
-    p2 = N_ELEMENTS(time.qms) - 1
+    p2 = N_ELEMENTS(time) - 1
   endelse
   
   if KEYWORD_SET(hours) then begin
@@ -101,8 +101,13 @@ pro WTimeLine_plot, toplot,$  ; array to plot
     xtunits = 'Days'
     xtinter = days 
   endif else begin
-    s = MAKE_TIME_STEP(DMS=time[p2].qms - time[p1].qms)
-    if s.day gt 90 then begin
+    s = MAKE_TIME_STEP(DMS=time[p2] - time[p1])
+    if s.day gt 150 then begin
+    dummy = LABEL_DATE(DATE_FORMAT=['%M'])
+    XTICKFORMAT = ['LABEL_DATE']
+    xtunits = 'Months'
+    xtinter = 1
+    endif else if s.day gt 90 then begin
       dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
       XTICKFORMAT = ['LABEL_DATE']
       xtunits = 'Days'
@@ -163,7 +168,7 @@ pro WTimeLine_plot, toplot,$  ; array to plot
     CHARTHICK = 1.2, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [100,80,870,650], XTICK_GET=xs, YTICK_GET=ys, $
      /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym
         
-  if KEYWORD_SET(HORILINE) then plots, [min(xs),max(xs)], [HORILINE,HORILINE], color = 0, LINESTYLE=5
+  if KEYWORD_SET(HORILINE) then plots, [min(jd),max(jd)], [HORILINE,HORILINE], color = 0, LINESTYLE=5
   if KEYWORD_SET(VERTILINE) then $
     for i =0, N_ELEMENTS(VERTILINE)-1 do plots, [TIME_to_JD(VERTILINE[i]),TIME_to_JD(VERTILINE[i])], range, color = FSC_Color('black'), LINESTYLE=5
     
@@ -617,7 +622,7 @@ pro WScatter_plot, x, y, xtitle, ytitle, PNG = png, title= title, PIXMAP = pixma
   
   if not KEYWORD_SET(NOFIT) then begin
   
-    l = LINFIT(x, y)
+    l = LINFIT(x, y  , /DOUBLE)
     
     plots, xs, (l[0] + l[1]*xs), color = 0, NOCLIP = 0
     

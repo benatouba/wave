@@ -1985,23 +1985,63 @@ pro TEST_PLOT_MAP
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
+  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d03_2008-10-26')
+  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 600)  
+  
+;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/TiP.grd')  
+  d = map->set_topography(GRDFILE='/home/fab/disk/Data/TOPO/Namco_SRTM/Namco.grd', ROTATE_SLOPE=3)  
+  d = map->set_shading_params(RELIEF_FACTOR=2.)
+  d = map->set_map_params(INTERVAL=1.)
+  
+  d = map->set_shape_file(/COUNTRIES, /COLOR)
+  GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
+  d = map->set_shape_file(SHPFILE=fdir+'/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)
+  
+  CTLOAD, 13
+  pcp = (dom1->get_Var('T2'))[*,*,12] - 273.15
+  d = map->set_data(pcp, /BILINEAR)    
+  d = map->set_Plot_Params(N_LEVELS=12)
+  
+  ud = (dom1->get_Var('U10'))[*,*,12] ;* 0 + 0.1 
+  vd = (dom1->get_Var('V10'))[*,*,12] ;* 0 ; + 1 
+  
+;  map->show_img
+;  map->draw_wind, dom1, ud, vd, 3, LENGTH=length, LEGEND = legend
+  
+  MAKE_WPLOT, map, TITLE = 'Temperature', BAR_TITLE = 'Celsius', PNG = png, PIXMAP = pixmap
+;  MAKE_WPLOT_WIND, map, dom1, ud, vd, 3, TITLE = 'Temperature and wind', BAR_TITLE = 'Celsius', PNG = png, PIXMAP = pixmap
+  
+  OBJ_DESTROY, dom1  
+  OBJ_DESTROY, map  
+  
+  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
+  
+end
+
+pro TEST_PLOT_MAP_KIN
+  
+  @WAVE.inc
+  
+  fdir = TEST_file_directory() 
+  error = 0 
+
+  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfinput_d03', CROPBORDER=5)
   map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
   
-  d = map->set_topography(GRDFILE=fdir+'/MAPPING/TiP.grd')  
-  d = map->set_shading_params(RELIEF_FACTOR=2.)
+  d = map->set_topography(GRDFILE='/home/fab/disk/Data/TOPO/KINNVI/KiN.grd', rotate = 0)  
+  d = map->set_shading_params(RELIEF_FACTOR=5.)  
+  d = map->set_map_params(C_INTERVAL=5.)
   
-  CTLOAD, 1
-  d = map->set_Colors(NCOLORS=110, /INVERTCOLORS)
-  
-  pcp = (dom1->get_prcp())[*,*,12]
+  CTLOAD, 13
+  d = map->set_Colors(NCOLORS=127)  
+  pcp = (dom1->get_var('TSK'))
     map->getProperty, XSIZE = xsize, YSIZE = ysize   
   pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
   d = map->set_img(pcp)  
-  d = map->set_shape_file(/COUNTRIES)
-  GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
-  d = map->set_shape_file(SHPFILE=fdir+'/MAPPING/namco_shore.shp', SHP_SRC=utm)
-    
+  d = map->set_shape_file(/COUNTRIES, thick = 2)
+  d = map->set_shape_file(SHPFILE='/home/fab/Downloads/SJM_adm/SJM_adm1.shp', COLOR = 'dark red', thick = 2)
+  d = map->set_shape_file(SHPFILE='/home/fab/Downloads/world_adm0/world_adm0.shp', COLOR = 'dark green', thick = 2)
+  
   map->show_img
   OBJ_DESTROY, dom1  
   OBJ_DESTROY, map  
@@ -2061,6 +2101,7 @@ pro TEST_PLOT_MAP_TRMM
   pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
   d = map->set_img(pcp)  
   d = map->set_shape_file(/COUNTRIES)
+  
     
   map->show_img
   OBJ_DESTROY, dom1  
