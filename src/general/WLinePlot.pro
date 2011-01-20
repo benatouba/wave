@@ -1,3 +1,9 @@
+
+;TODO: temporary wrapper
+pro PLO_show_img, PIXMAP=pixmap, WINDOW = w, PNG = png
+
+end
+
 ;-----------------------------------------------------------------------
 ;+
 ; NAME:
