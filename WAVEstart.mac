@@ -33,9 +33,7 @@ pushd, root
 .run POST.pro
 .run WQuickPlot.pro
 .run WLinePlot.pro
-
-.run PLO.pro
-.run NICE_PLOTS.pro
+.run WAVE_colorbar.pro
 
 ; Compile objects
 .run Grid2D__Define.pro
@@ -44,14 +42,15 @@ pushd, root
 .run NCDF__Define.pro
 .run GEO_nc__Define.pro
 
+; Datasets
 .run TRMM_nc__Define.pro
 .run WRF_nc__Define.pro
 .run MODIS_Grid__Define.pro
 .run AMSR_E__Define.pro
 .run WDTM__Define.pro
 
+; Plots
 .run PLOT_MAP__Define.pro
-.run WAVE_colorbar.pro
 .run MAKE_PLOTS.pro
 
 resolve_all, /QUIET
