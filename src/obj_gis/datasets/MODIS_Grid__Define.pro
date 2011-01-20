@@ -1,61 +1,17 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  MODIS_Grid__Define.pro                                *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  2010                                                  *
-; Last Update :  05-Nov-2010 FaM                                       *
-;                                                                      *
-; IDL class file for the WAVE library.                                 *
-;                                                                      *
-;***********************************************************************
+; docformat = 'rst'
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       GENERAL INFORMATION
-;
+;      
 ;       MODIS_Grid is the basis class for MODIS level 2 & 3 files. It reads
 ;       the geolocalisation from the HDF-EOS file and provides subseting 
 ;       tools to the user, as well as all the #GRID2d# transformation tools.
 ;       
-;       Tested products so far:
+;       Tested products so far::
 ;       MOD10A1
 ;       MOD11A1
 ;       MOD13A1       
 ;       But there should be no limitiations in using it for other L2 L3 products.
-;              
-;      
-;       =================================================================
-;       Superclass:
-;       ----------------------
-;       HDF_EOS
-;       Grid2D
 ;       
-;       =================================================================
-;       Attributes:
-;       ----------------------
-;          +HDF_EOS attributes  
-;          +Grid2D attributes  
-;          t0:              {ABS_DATE}      first available time
-;          t1  :            {ABS_DATE}      last available time
-;          subset:          [0l,0l,0l,0l]   if not equal to 0, it holds the indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). It should not be set manually but using the #define_subset# method.
-;          cropped:         ''              Set to "TRUE" or "FALSE" at the first initialisation and updated with #define_subset#
-;          
-;       =================================================================
-;       Object initialisation:
-;       ----------------------
-;       KEYWORDS:
-;         FILE: the path to the MODIS file. If not set, a dialog window will open
-;         SUBSET_LL : Subset corners in Lat Lons
-;         SUBSET_IJ : subset indexes in the HDF file (to define using SUBSET_LL)
-;         LL_DATUM  : datum in which the Lat and Lons are defined. Default: WGS-84
-;              
-;       
-;       =================================================================
-;       Methods:
-;       ----------------------
 ;       The following methods can be used directly. Non ducumented methods 
 ;       are not for external use.
 ;       + HDF-EOS methods
@@ -65,29 +21,74 @@
 ;       obj->quickPlotVar    : plots a "flat" image of a given variable, coherent with the grid geoloc and adding geoloc infos to th image
 ;       New methods:
 ;       obj->define_subset() : to subset MODIS data to a rgion of interest accordingly to its intern geoloc.
-;       
-;       =================================================================
-;       
-;-
-;-----------------------------------------------------------------------
+;               
+;      :Properties:
+; 
+;          +HDF_EOS attributes  
+;          +Grid2D attributes  
+;          t0: in, type = {ABS_DATE}      
+;              first available time
+;          t1: in, type = {ABS_DATE}      
+;                last available time
+;          subset: in, type = [0l,0l,0l,0l]   
+;                 if not equal to 0, it holds the indexes in the ORIGINAL hdf grid array
+;                 in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). It should not be set 
+;                 manually but using the #define_subset# method.
+;          cropped:         ''              
+;                  Set to "TRUE" or "FALSE" at the first initialisation and updated with #define_subset#
+;          
+;          FILE: in, optional, type = string
+;                the path to the MODIS file. If not set, a dialog window will open
+;         SUBSET_LL: in, optional, type = float vector 
+;                    Subset corners in Lat Lons
+;         SUBSET_IJ: in, type = long vector
+;                    Subset indexes in the HDF file (to define using SUBSET_LL)
+;         LL_DATUM: in, type = {TNT_DATUM}, default = WGS-84 
+;                   datum in which the Lat and Lons are defined. Default: WGS-84
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid__Define
+; :Description:
+;    Object structure definition. Attributes::
+;   
+;     MODIS_Grid                      
+;            INHERITS HDF_EOS                   
+;            INHERITS Grid2D                   
+;            t0 : {ABS_DATE}        
+;            t1 : {ABS_DATE}        
+;            subset : [0l,0l,0l,0l]    
+;            cropped : ''                  
 ;
-; PURPOSE:
-;       Object structure definition
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+;
+;
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 PRO MODIS_Grid__Define
  
   ; SET UP ENVIRONNEMENT
@@ -105,37 +106,45 @@ PRO MODIS_Grid__Define
     
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid::Init
+; :Description:
+;    Build function. I proposes subsetting tools, but subsetting is also
+;    possible once the object is created using the #define_subset# method.
+;    
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; PURPOSE:
-;       Build function. I proposes subsetting tools, but subsetting is also
-;       possible once the object is created using the #define_subset# method.
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Keywords:
+;       FILE: in, optional, type = string 
+;             the path to the MODIS file. If not set, a dialog window will open
+;       SUBSET_LL: in, optional, type = float vector 
+;                  set it to the desired subset corners to automatically subset the data.
+;                  Format : [ul_lon, ul_lat, dr_lon, dr_lat]. (it is assumed that
+;                  lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
+;       SUBSET_IJ: in, type = long vector
+;                  indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). 
+;                  Unless you know what you do, it should not be set manually but 
+;                  retrieved using the #define_subset# method.
+;       LL_DATUM: in, type = {TNT_DATUM}, default = WGS-84
+;                 datum in which the Lat and Lons are defined. Default: WGS-84
+;                 
+;   :Returns:
+;                 1 if the object is created successfully.        
 ;
-; KEYWORDS:
-;       FILE      : the path to the MODIS file. If not set, a dialog window will open
-;       SUBSET_LL : set it to the desired subset corners to automatically subset the data.
-;                   Format : [ul_lon, ul_lat, dr_lon, dr_lat]. (it is assumed that
-;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). 
-;                   Unless you know what you do, it should not be set manually but 
-;                   retrieved using the #define_subset# method.
-;       LL_DATUM  : datum in which the Lat and Lons are defined. Default: WGS-84
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
 ;
-; OUTPUT:
-;       1 if the MODIS_Grid object is created successfully, 0 if not
+; :History:
+;     Written by FaM, 2010.
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 Function MODIS_Grid::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
 
@@ -197,29 +206,34 @@ Function MODIS_Grid::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSE
   
 END
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid::GetProperty
+; :Description:
+;    Get access to some params. 
 ;
-; PURPOSE:
-;       Get access to some params. 
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; KEYWORDS:
-;       Output:
-;       t0 
-;       t1     
-;       _Ref_Extra : see #HDF_EOS:GetProperty# and #Grid2D::GetProperty#
+; :Keywords:
+;    t0: out, type = {ABS_DATE}      
+;        first available time
+;    t1: out, type = {ABS_DATE}      
+;        last available time
+;    _Ref_Extra: 
+;         see #HDF_EOS:GetProperty# and #Grid2D::GetProperty#
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 PRO MODIS_Grid::GetProperty, $  
                    t0 =  t0, $
                    t1 =  t1, $    
@@ -243,42 +257,53 @@ PRO MODIS_Grid::GetProperty, $
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid::get_Var
-;
-; PURPOSE:
-;       Overriding the #HDF::get_VAR# method.
+; :Description:
+;    Overriding the #HDF::get_VAR# method.
 ;       
 ;       Extracts the desired variable from the HDF file. The data obtained from this method
 ;       is consistent with the grid geolocalisation and should not be modified externally
 ;       without using the suitable methods (see #Grid2D#).
+;       
+;       
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Params:
+;    Varid: in, required, type = string/integer
+;           HDF SD index (int) or name (string) of the desired variable
 ;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; INPUT:
-;       varid : HDF SD index (int) or name (string) of the desired variable
-;       
-; OUTPUT:
-;       the variable
-;       
-; KEYWORDS:
-;        description: (O) If available, the description of the variable
-;        units: (O) If available, the units of the variable
-;        varname: (O)the name of the variable
-;        dims : (O)the variable dimensions
-;        /NO_CALIB: the default behaviour id to check if calibration data is contained 
-;                   in the HDF variable attributes and apply it to the variable. Set this
-;                   keyword to avoid making this automatic calibration
+; :Keywords:
+; todo: check keywords
+;    description: out, optional, type = string 
+;                 If available, the description of the variable
+;    units: out, optional, type = string 
+;           If available, the units of the variable
+;    varname: out, optional, type = string 
+;             the name of the variable
+;    dims : out, optional, type = integer
+;           the variable dimensions
+;    NO_CALIB: optional
+;              the default behaviour id to check if calibration data is contained 
+;              in the HDF variable attributes and apply it to the variable. Set this
+;              keyword to avoid making this automatic calibration
+;  
+;  :Result:
+;           the variable
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 function MODIS_Grid::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable.                       
                        description = description , $ ; If available, the description of the variable
                        units = units, $ ; If available, the units of the variable
@@ -312,34 +337,38 @@ function MODIS_Grid::get_Var, Varid, $ ; The netCDF variable ID, returned from a
   
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid::quickPlotVar
+; :Description:
+;    Flat plot of a desired variable for quick visualisation purposes
+;    
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Params:
+;    Varid: in, required, type = string/integer
+;           HDF SD index (int) or name (string) of the desired variable
 ;
-; PURPOSE:
-;       flat plot of a desired variable for quick visualisation purposes
+; :Keywords:
+;    NO_CALIB:
+;             the default behaviour id to check if calibration data is contained 
+;             in the HDF variable attributes and apply it to the variable. Set this
+;             keyword to avoid making an automatic calibration
+;    LON_LAT:
 ;
-; CATEGORY:
-;       WAVE grid objects
-; 
-; INPUT:
-;       varid : HDF SD index or name of the desired variable
-;       
-; OUTPUT:
-;       a plot
-;       
-; KEYWORDS:
-;        /NO_CALIB: the default behaviour id to check if calibration data is contained 
-;                   in the HDF variable attributes and apply it to the variable. Set this
-;                   keyword to avoid making an automatic calibration
+; todo: describe lon_lat
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 pro MODIS_Grid::quickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
@@ -357,39 +386,42 @@ pro MODIS_Grid::quickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
 
 end
 
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       MODIS_Grid::define_subset
-;
-; PURPOSE:
-;       It is called during the object instancing but can be called also once the object is created.
+; :Description:
+;    It is called during the object instancing but can be called also once the object is created.
 ;       It subsets the original data to a region of interest and actualises Geolocalisation accordingly.
 ;       Future calls to #MODIS_Grid::get_var# will return the subseted data. 
 ;       
 ;       To reset to the original geoloc just call this method without arguments.
 ;
-; CATEGORY:
-;       WAVE grid objects
+; :Categories:
+;         WAVE/OBJ_GIS 
 ;
-; KEYWORDS:
-;       SUBSET_LL : (I)   set it to the desired subset corners to automatically subset the data.
-;                         Format : [ul_lon, ul_lat, dr_lon, dr_lat]. (it is assumed that
-;                         lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : (I/O) indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). 
-;                         Unless you know what you do, it should not be set manually.
-;                         One can retrive it from this method by setting it to a named variable                         
-;       LL_DATUM  : (I)   datum in which the Lat and Lons are defined. Default: WGS-84
+; :Keywords:
+;    SUBSET_LL : in, type = float vector
+;                set it to the desired subset corners to automatically subset the data. Form = [ul_lon, ul_lat, dr_lon, dr_lat]
+;                (it is assumed that lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
+;       SUBSET_IJ : in, out, type = long vector  
+;                   indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny](y=0 is at the top). 
+;                   Unless you know what you do, it should not be set manually.
+;                   One can retrive it from this method by setting it to a named variable                         
+;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84 
+;                   datum in which the Lat and Lons are defined. Default: WGS-84
 ;
-; OUTPUT:
-;       1 if the MODIS_Grid object is updated successfully, 0 if not
 ;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   05-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
+;              
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
 ;-
-;-----------------------------------------------------------------------
 function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
   ; SET UP ENVIRONNEMENT

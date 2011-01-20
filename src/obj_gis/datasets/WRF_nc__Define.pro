@@ -1,3 +1,77 @@
+; docformat = 'rst'
+
+;+
+;
+;  WRF_nc is the basis class for WRF datasets.
+;  todo: describe the file
+;  
+;  
+; :Properties:
+;      
+;      
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
+
+
+
+;+
+; :Description:
+;    Object structure definition. Attributes::
+;       WRF_nc                   
+;            INHERITS Grid2D           
+;            INHERITS GEO_nc           
+;            type              : ''   
+;                                type of active file: AGG, WRF, GEO, MET or INP
+;            version           : ''  
+;                                WRF version
+;            hstep             : {TIME_STEP} 
+;                                Time step of the file
+;            dom               : 0L 
+;                                id of the considered nested domain
+;            west_east         : 0L 
+;                                original X dimension (unstaggered)
+;            south_north       : 0L 
+;                                original Y dimension (unstaggered)
+;            bottom_top        : 0L 
+;                                original Z dimension (unstaggered)
+;            dx                : 0D 
+;                                grid spacing in m
+;            dy                : 0D 
+;                                grid spacing in m
+;            i_parent_start    : 0L 
+;                                i index of the start point in parent domain
+;            j_parent_start    : 0L 
+;                                j index of the start point in parent domain
+;            parent_grid_ratio : 0L 
+;                                ratio to parent
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 PRO WRF_nc__Define
  
   ; SET UP ENVIRONNEMENT
@@ -23,6 +97,32 @@ PRO WRF_nc__Define
     
 END
 
+;+
+; :Description:
+;    Describe the procedure.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+;    SUBSET_LL
+;    SUBSET_IJ
+;    LL_DATUM
+;    CROPCHILD
+;    CROPBORDER
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
                                  SUBSET_IJ  = subset_ij,  $
                                  LL_DATUM   = ll_datum ,  $
@@ -231,7 +331,76 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
     
 end
 
-
+;+
+; :Description:
+;    Build function.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+;    FILE
+;    SUBSET_LL
+;    SUBSET_IJ
+;    LL_DATUM
+;    CROPCHILD
+;    CROPBORDER
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
+;+
+; :Description:
+;    Describe the procedure.
+;
+;
+;
+; :Keywords:
+;       FILE      : in, optional, type = string
+;                   the path to the TRMM file. If not set, a dialog window will open
+;       SUBSET_LL : in, optional, type = float vector 
+;                   set it to the desired subset corners to automatically subset the data.
+;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
+;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
+;       SUBSET_IJ : in, type = long vector
+;                   Four elements array::              
+;                   first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
+;                   second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
+;                   third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
+;                   fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
+;                   Unless you know what you do, it should not be set manually but 
+;                   retrieved using the 'define_subset' method.
+;                   
+;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
+;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
+;       CROPCHILD:
+;       CROPBORDER:
+;todo: finish keyword description
+;
+; :Returns:
+;    1 if the object is created successfully. 
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-
 Function WRF_nc::Init, FILE       = file     ,  $
                         SUBSET_LL  = subset_ll,  $
                         SUBSET_IJ  = subset_ij,  $
@@ -370,6 +539,27 @@ Function WRF_nc::Init, FILE       = file     ,  $
   
 END
 
+;+
+; :Description:
+;    Destroy function. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 pro WRF_nc::Cleanup
 
   ; SET UP ENVIRONNEMENT
@@ -389,6 +579,52 @@ pro WRF_nc::Cleanup
   
 END
 
+;+
+; :Description:
+;    Get access to some params. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+; todo: complete keyword description
+;    cropped:
+;    
+;    type: out, type = string
+;          type of active file: AGG, WRF, GEO, MET or INP
+;    version: out, type = string
+;             WRF version
+;    hstep: out, type = {TIME_STEP} 
+;           Time step of the file
+;    bottom_top: out, type = long
+;                original Z dimension (unstaggered)
+;    dom: out, type = long
+;         id of the considered nested domain
+;    i_parent_start: out, type = long
+;                    i index of the start point in parent domain
+;    j_parent_start: out, type = long
+;                    j index of the start point in parent domain
+;    parent_grid_ratio: out, type = long
+;                       ratio to parent
+;    
+;    _Ref_Extra:
+
+
+;                                
+;            
+;                                
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 PRO WRF_nc::GetProperty,  $
     cropped = cropped         ,  $ ;
     type=type    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
@@ -427,6 +663,62 @@ PRO WRF_nc::GetProperty,  $
   
 end
 
+;+
+; :Description:
+;    This function reads a variable from the file but only
+;    at a specific location.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Params:
+;    varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;    x: in, required, type = long
+;       the X index (within the subset) where to get the variable
+;    y: in, required, type = long
+;       the Y index (within the subset) where to get the variable
+;    time:  out, type = qms
+;           the variable times
+;    nt: out, type = long
+;        the variable number of times
+;
+; :Keywords:
+;    t0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    t1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+;    todo: complete keyword description
+;    src
+;    point_i
+;    point_j
+;    point_lon
+;    point_lat
+;    varinfo: out, type = struct
+;             structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;    units: out, type = string
+;           If available, the units of the variable
+;    description: out, type = string
+;                 If available, the description of the variable
+;    varname: out, type = string
+;             the name of the variable
+;    dims: out, type = long
+;          the variable dimensions
+;    dimnames: out, type = string
+;              the dimensions names
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 function WRF_nc::get_TS, varid, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
@@ -473,6 +765,39 @@ function WRF_nc::get_TS, varid, x, y, $
 end
 
 
+;+
+; :Description:
+;    Describe the procedure.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Params:
+;    varid : in, required, type = integer/ string
+;            The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+;    x
+;    y
+; todo: describe missing params/ keywords
+; :Keywords:
+;    t0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    t1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+;    src
+;    PNG
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 pro WRF_nc::plot_TS, varid, x, y, $
                               t0 = t0, t1 = t1, $
                               src = src, PNG = png
@@ -525,6 +850,41 @@ pro WRF_nc::plot_TS, varid, x, y, $
   
 end
 
+;+
+; :Description:
+;    Retrieve PRCP info.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Params:
+;    time:  out, type = qms
+;           the variable times
+;    nt: out, type = long
+;        the variable number of times
+;
+; :Keywords:
+;    t0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    t1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+;    STEP_WIZE
+;    NONCONVECTIVE
+;    CONVECTIVE
+;todo: complete keyword description
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-      
 function WRF_nc::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
 
   ; SET UP ENVIRONNEMENT

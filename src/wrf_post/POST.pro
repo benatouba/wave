@@ -356,7 +356,65 @@ function POST_absDAte_to_wrffname, absDate
   
 end
 
-;+
+;+;+
+; :Description:
+;    Simple function to convert an absolute date in WRF directory name string
+;
+; :Params:
+;    absDate:  in, required, type={ABS_DATE}/qms
+;              The date in qms or abs_date format
+;
+; :Categories:
+;    WRF/Post
+; 
+; :Private:
+;
+; :Returns:
+;     a string of the format for WRF cropped directories (2003.09.01)
+; 
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;
+; :History:
+;       Written by FaM, 201.
+;       
+;       Modified::
+;          01-Jan-2011 FaM
+;          First appearance
+;-
+function POST_absDAte_to_wrfdir, absDate
+  
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
+  
+  ;2003.09.01
+  
+  n = N_ELEMENTS(absdate)    
+
+  if arg_okay(absDate, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = absDate)   $ 
+   else if arg_okay(absDate, STRUCT={ABS_DATE}) then mytime = absDate  $
+     else message, WAVE_Std_Message('ABSDATE', /ARG)
+    
+  for i = 0, n-1 do begin
+  
+   if N_ELEMENTS(sout) eq 0 then sout = '' else sout = [sout , '']
+    
+    str = STRTRIM(mytime[i].year,1) + '.'
+    if mytime[i].month lt 10 then str +=  '0' + STRTRIM(mytime[i].month,1) + '.' else str += STRTRIM(mytime[i].month,1)+ '.'
+    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) + '.' else str += STRTRIM(mytime[i].day,1)
+  
+    sout[i] = str
+    
+  endfor
+  
+  return, sout
+  
+end
+
 ; :Description:
 ;    This procedure is a low level WRF post-processing tool to copy a WRF output file
 ;    and remove the useless spin-up steps.
@@ -390,7 +448,7 @@ end
 ;                   First aparition
 ;
 ;-
-pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
+pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory, RENAME_DIR = RENAME_DIR
 
   ; Set Up environnement
   @WAVE.inc
@@ -549,10 +607,16 @@ pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
   
   NCDF_CLOSE, sid ; Close source file
   NCDF_CLOSE, tid ; Close file
-
+  
+  if KEYWORD_SET(RENAME_DIR) then begin
+   t0 = POST_absDAte_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
+   newdir = FILE_DIRNAME(OUTDIRECTORY) + '/' + t0
+   FILE_MOVE, OUTDIRECTORY, newdir,/ALLOW_SAME
+  endif
+  
 end
 
-pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
+pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir, RENAME_DIR = rename_dir
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -635,7 +699,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     printf, unit, '  Start : ' + fileList[i] + ' ... '
     flush, unit     
     syst = QMS_TIME()
-    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/'
+    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/', RENAME_DIR = rename_dir
     tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
     printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
   endfor  

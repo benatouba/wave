@@ -1,3 +1,52 @@
+; docformat = 'rst'
+;
+;+
+;
+;  
+;  todo: describe the file
+;  
+;  
+; :Properties:
+;      
+;      
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-     
+ 
+;+
+; :Description:
+;    Defines the attributes of the class. Attributes::
+;         PLOT_PARAMS : for the colors and data-levels 
+;         MAP_SHAPE   : for the shape files drawing  
+;         MAP_PARAMS  : for the Lon-Lat/UTM contours drawing
+;         PLOT_MAP    :   
+;todo: describe plot_map
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 PRO PLOT_MAP__Define
  
   ; SET UP ENVIRONNEMENT
@@ -58,6 +107,35 @@ PRO PLOT_MAP__Define
     
 END
 
+;+
+; :Description:
+;    Build function.
+;    
+; :Categories:
+;         WAVE/OBJ_GIS 
+;      todo: describe params/keywords   
+; :Params:
+;    grid: in,
+;
+; :Keywords:
+;    Xsize: in,
+;    
+;    Ysize: in,
+;    
+;    FACTOR: in, optional
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 Function PLOT_MAP::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
      
   ; SET UP ENVIRONNEMENT
@@ -91,6 +169,27 @@ Function PLOT_MAP::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   
 END
 
+;+
+; :Description:
+;    todo: Describe the procedure.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 pro PLOT_MAP::DestroyPlotParams
 
     ; SET UP ENVIRONNEMENT
@@ -118,6 +217,26 @@ pro PLOT_MAP::DestroyMapParams
   
 end
 
+;+
+; :Description:
+;    todo: Describe the procedure.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 pro PLOT_MAP::DestroyShapes
 
     ; SET UP ENVIRONNEMENT
@@ -137,6 +256,27 @@ pro PLOT_MAP::DestroyShapes
   
 end
 
+;+
+; :Description:
+;    Destroy function. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 pro PLOT_MAP::Cleanup
 
   ; SET UP ENVIRONNEMENT
@@ -154,6 +294,34 @@ pro PLOT_MAP::Cleanup
   
 END
 
+;+
+; :Description:
+;    Get access to some params. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+; todo: describe keywords
+; :Keywords:
+;    XSIZE: out,
+;    
+;    YSIZE: out,
+;    
+;    LEVELS: out,
+;    
+;    COLORS: out,
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 PRO PLOT_MAP::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors
     
   ; SET UP ENVIRONNEMENT
@@ -174,6 +342,43 @@ PRO PLOT_MAP::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS
      
 end
 
+;+
+; :Description:
+;    Sets plotting params
+;    
+;    todo: describe function etc.
+;
+;
+;
+; :Keywords:
+;    LEVELS: in, type = integer
+;    
+;    N_LEVELS: in, type = long
+;    
+;    VAL_MIN: in, type = double 
+;    
+;    VAL_MAX: in, type = double
+;    
+;    COLORS: in, type = PTR_NEW()
+;    
+;    CMIN:
+;    
+;    CMAX:
+;    
+;    INVERTCOLORS:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
                                     COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors
          
@@ -247,6 +452,36 @@ function PLOT_MAP::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MI
 end
 
 
+;+
+; :Description:
+;    Sets map params
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;todo: describe everything :)
+; :Keywords:
+;    TYPE: in, type = string
+;    
+;    INTERVAL: in, type = double
+;    
+;    THICK: in, type = double
+;    
+;    STYLE: in, type = double
+;    
+;    COLOR: in, type = string
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
   
   ; SET UP ENVIRONNEMENT
@@ -319,6 +554,28 @@ function PLOT_MAP::set_map_params, TYPE = type, INTERVAL = interval, THICK = thi
 
 end
 
+;+
+; :Description:
+;    Set shading params.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+;    RELIEF_FACTOR:
+;todo: keyword
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_shading_params, RELIEF_FACTOR = relief_factor
   
   ; SET UP ENVIRONNEMENT
@@ -341,6 +598,22 @@ function PLOT_MAP::set_shading_params, RELIEF_FACTOR = relief_factor
 
 end
 
+;+
+; :Description:
+;    Set image.
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_img
   
   ; SET UP ENVIRONNEMENT
@@ -371,6 +644,40 @@ function PLOT_MAP::set_img
 
 end
 
+;+
+; :Description:
+;    Set data. 
+;    todo: describe + params/keywords
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Params:
+;    data:
+;    
+;    grid:
+;
+; :Keywords:
+;    BILINEAR:
+;    
+;    MISSING:
+;    
+;    VAL_MIN:
+;    
+;    VAL_MAX:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
                              
   
@@ -524,6 +831,42 @@ function PLOT_MAP::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slop
 
 end
 
+;+
+; :Description:
+;    set shape file
+;todo: describe
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+;    SHPFILE:
+;    
+;    SHP_SRC:
+;    
+;    COUNTRIES:
+;    
+;    COLOR:
+;    
+;    THICK:
+;    
+;    STYLE:
+;    
+;    REMOVE_ENTITITES:
+;    
+;    KEEP_ENTITITES:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
                                     COLOR = color, THICK = thick, STYLE = style, $
                                     REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
@@ -669,6 +1012,27 @@ function PLOT_MAP::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRI
   
 end
 
+;+
+; :Description:
+;    Change image to rgb.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::img_to_rgb
 
     utils_color_rgb, *self.plot_params.colors, s_r, s_g, s_b
@@ -684,6 +1048,25 @@ function PLOT_MAP::img_to_rgb
     
 end    
     
+;+
+; :Description:
+;    Shading function.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::shading
 
   if self.relief_factor eq 0 then return, self->img_to_rgb()
@@ -740,6 +1123,25 @@ function PLOT_MAP::shading
   
 end
 
+;+
+; :Description:
+;    Mapping
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 function PLOT_MAP::mapping
 
   if self.map_params.type eq 'LONLAT' then begin
@@ -785,6 +1187,41 @@ function PLOT_MAP::shaping
   
 end
 
+;+
+; :Description:
+;    To display the wind.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;todo: describe params/keywords
+; :Params:
+;    grid:
+;    
+;    ud:
+;    
+;    vd:
+;    
+;    density:
+;
+; :Keywords:
+;    LENGTH:
+;    
+;    LEGEND:
+;    
+;    THICK:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-    
 pro PLOT_MAP::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, THICK=thick
 
   ;--------------------------
@@ -820,6 +1257,31 @@ pro PLOT_MAP::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, 
   
 end
 
+;+
+; :Description:
+;    Show the image.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;todo: describe..
+; :Params:
+;    win:
+;
+; :Keywords:
+;    PIXMAP:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-   
 pro PLOT_MAP::show_img, win, PIXMAP = pixmap
 
   @WAVE.inc
@@ -855,6 +1317,35 @@ pro PLOT_MAP::show_img, win, PIXMAP = pixmap
   
 end
 
+;+
+; :Description:
+;    To show a color bar. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;todo: describe everything
+; :Params:
+;    win:
+;
+; :Keywords:
+;    PIXMAP:
+;    
+;    TITLE:
+;    
+;    BAR_TAGS:
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          Documentation for upgrade to WAVE 0.1
+;
+;-   
 pro PLOT_MAP::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tags
 
   @WAVE.inc
