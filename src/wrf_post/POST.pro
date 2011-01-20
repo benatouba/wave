@@ -405,7 +405,7 @@ function POST_absDAte_to_wrfdir, absDate
     
     str = STRTRIM(mytime[i].year,1) + '.'
     if mytime[i].month lt 10 then str +=  '0' + STRTRIM(mytime[i].month,1) + '.' else str += STRTRIM(mytime[i].month,1)+ '.'
-    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) + '.' else str += STRTRIM(mytime[i].day,1)
+    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) else str += STRTRIM(mytime[i].day,1)
   
     sout[i] = str
     
@@ -448,7 +448,7 @@ end
 ;                   First aparition
 ;
 ;-
-pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory, RENAME_DIR = RENAME_DIR
+pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
 
   ; Set Up environnement
   @WAVE.inc
@@ -608,15 +608,9 @@ pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory, RENAME_DIR =
   NCDF_CLOSE, sid ; Close source file
   NCDF_CLOSE, tid ; Close file
   
-  if KEYWORD_SET(RENAME_DIR) then begin
-   t0 = POST_absDAte_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
-   newdir = FILE_DIRNAME(OUTDIRECTORY) + '/' + t0
-   FILE_MOVE, OUTDIRECTORY, newdir,/ALLOW_SAME
-  endif
-  
 end
 
-pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir, RENAME_DIR = rename_dir
+pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -666,8 +660,21 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir, REN
   printf, unit, 'Make directories:'
   
   for i=0, N_ELEMENTS(arboU) - 1 do begin
-    FILE_MKDIR, output_dir + arboU[i]
-    printf, unit, '  + ' + output_dir + arboU[i]
+    sid = Ncdf_open(fileList[i], /NOWRITE)      
+    NCDF_ATTGET, sid , 'GRID_ID', dom, /GLOBAL  
+    if dom eq 1 then index = 4 else index = 12      
+    if dom eq 1 then step = MAKE_TIME_STEP(hour=3) else step = MAKE_TIME_STEP(hour=1)
+    NCDF_CLOSE, sid
+    fname = FILE_BASENAME(fileList[i])
+    month = LONG(STRMID(fname,16,2))
+    year = LONG(STRMID(fname,11,4))
+    day = LONG(STRMID(fname,19,2))
+    hour = LONG(STRMID(fname,22,2))
+    ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)    
+    new_dir = FILE_DIRNAME(arboU[i]) + '/' + POST_absDAte_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
+    FILE_MKDIR, output_dir + '/' + new_dir
+    printf, unit, '  + ' + output_dir + '/' + new_dir
+    arboU[i] = new_dir
   endfor 
    
   printf, unit, ''
@@ -695,14 +702,13 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir, REN
     
   for i=indstart, N_ELEMENTS(fileList) - 1 do begin
     inpb = i
-    fname = FILE_BASENAME(fileList[i]) + '_crop'
     printf, unit, '  Start : ' + fileList[i] + ' ... '
-    flush, unit     
+    flush, unit
     syst = QMS_TIME()
-    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/', RENAME_DIR = rename_dir
+    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/'
     tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
-    printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
-  endfor  
+    printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.'
+  endfor
   
   printf, unit, ' '
   printf, unit, ' '
