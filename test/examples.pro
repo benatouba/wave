@@ -45,3 +45,18 @@ pro examples_Wtimeline_plot
   
 
 end
+
+pro examples_WScatter_plot
+  
+  x = LOADDATA(17)
+  n = N_ELEMENTS(x)
+  y = x * 2. + 1.
+    
+  WScatter_plot, x, y, XTITLE='X title', YTITLE='Y title', TITLE= 'Test plot'
+  
+  seed = 1
+  noise = RandomU(seed, n)*10. - 5.
+  y = x + noise + 20.
+  
+  WScatter_plot, x, y, XTITLE='X title', YTITLE='Y title', TITLE= 'Test plot 2', /LEGEND_UL, COLOR='red', PSYM=6
+end
