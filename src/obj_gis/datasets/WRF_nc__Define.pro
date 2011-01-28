@@ -836,12 +836,12 @@ pro WRF_nc::plot_TS, varid, x, y, $
   
   WTimeLine_plot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
-  FSC_Window, 'FSC_text', 0.75, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
+  FSC_Window, 'FSC_text', 0.70, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
           CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1
   
-  FSC_Window, 'FSC_text', 0.78, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
+  FSC_Window, 'FSC_text', 0.74, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
           CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1   
-  FSC_Window, 'FSC_text', 0.78, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
+  FSC_Window, 'FSC_text', 0.74, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
           CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1  
     
 end

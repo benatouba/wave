@@ -214,7 +214,7 @@ pro WTimeLine_plot, data,$  ; array to plot
   @WAVE.inc            
          
    ; prepare the plot  
-   device, DECOMPOSED=0, TRUE_COLOR=24, RETAIN=2  
+   device, DECOMPOSED=0, RETAIN=2  
    pp = !ORDER ;To restore later
    !ORDER = 0
    
