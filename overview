@@ -1,0 +1,68 @@
+; docformat = 'rst'
+
+This is the documentation for the WAVE project 
+source code. 
+
+
+:Author:
+  FG Klimatologie - TU Berlin
+
+:History:
+  WAVE 0.1 was completely re-written from scratch and released on XX.xx.2011
+  
+
+:Copyright:
+   WAVE is for FG Klima use only.
+
+   Copyright (c) 2011
+
+   All rights reserved.
+
+:Dirs:
+
+   ./ 
+      main-level programs such as `WAVEstart.mac` which initialises the library, 
+      `WAVE.pro` which defines the error handler, and some informative 
+      text files.
+
+   dev
+      routines in development
+      
+   doc
+      the documentation
+      
+   res 
+      the resource files
+
+   res/files 
+      ascii files
+      
+   res/ncdc
+      templates for ncdc routines
+
+   res/ncdc
+      shape files for mapping
+
+   src
+      the source files
+      
+   src/general
+      general routines
+      
+   src/obj_gis
+      general objects (only objects) related the GIS package in WAVE and the 
+      common data format reading objects
+      
+   src/obj_gis/datasets
+      specific objects for the datasets already implemented in WAVE
+      
+   src/obj_plot
+      gis plot objects
+      
+   src/wrf_post
+      the routines related to WRF post-processing tools
+      
+   test 
+      the testing routines
+
+      

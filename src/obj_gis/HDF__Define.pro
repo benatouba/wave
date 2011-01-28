@@ -10,7 +10,6 @@
 ;        TODO: add the same functionalities as Ncdf.
 ;       
 ; :Properties: 
-;      todo: complete optional/required info
 ;          path: in, type = string
 ;                complete path of the active HDF file
 ;          HDFid: in, type = long
@@ -502,7 +501,6 @@ end
 ;         WAVE/OBJ_GIS   
 ;         
 ; :Params:
-;  todo: control params
 ;    Varid: in, required, type = integer/ string
 ;           HDF SD index or name of the desired variable
 ;

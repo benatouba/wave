@@ -582,12 +582,12 @@ END
 ;+
 ; :Description:
 ;    Get access to some params. 
-;
+; todo: complete keyword description
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-; todo: complete keyword description
+;
 ;    cropped:
 ;    
 ;    type: out, type = string
@@ -608,10 +608,7 @@ END
 ;                       ratio to parent
 ;    
 ;    _Ref_Extra:
-
-
-;                                
-;            
+;                                      
 ;                                
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -667,6 +664,8 @@ end
 ; :Description:
 ;    This function reads a variable from the file but only
 ;    at a specific location.
+;    
+;    todo: complete keyword description
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -688,7 +687,6 @@ end
 ;        if set, it defines the first time of the variable timeserie
 ;    t1: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the last time of the variable timeserie
-;    todo: complete keyword description
 ;    src
 ;    point_i
 ;    point_j
@@ -799,8 +797,8 @@ end
 ;
 ;-      
 pro WRF_nc::plot_TS, varid, x, y, $
-                              t0 = t0, t1 = t1, $
-                              src = src, PNG = png
+                            t0 = t0, t1 = t1, $
+                            src = src
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -836,30 +834,29 @@ pro WRF_nc::plot_TS, varid, x, y, $
                           dimnames = dimnames )
    
   
-  WTimeLine_plot, var, MAKE_ABS_DATE(QMS=times), varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2, /PIXMAP
+  WTimeLine_plot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
-  XYOUTS, 900, 500, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /DEVICE 
+  FSC_Window, 'FSC_text', 0.75, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1
   
-  XYOUTS, 900, 460, 'WRF lon: ' + str_equiv(wrf_lon), $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /DEVICE 
-  XYOUTS, 900, 435, 'WRF lat: ' + str_equiv(wrf_lat), $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /DEVICE          
-  
-  PLO_show_img, PIXMAP=pixmap, WINDOW = window, PNG = png
-  
+  FSC_Window, 'FSC_text', 0.78, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1   
+  FSC_Window, 'FSC_text', 0.78, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD, FONT = -1  
+    
 end
 
 ;+
 ; :Description:
 ;    Retrieve PRCP info.
-;
+;    todo: complete keyword description
+;    
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
 ; :Params:
-;    time:  out, type = qms
-;           the variable times
+;    times:  out, type = qms
+;            the variable time
 ;    nt: out, type = long
 ;        the variable number of times
 ;
@@ -871,7 +868,6 @@ end
 ;    STEP_WIZE
 ;    NONCONVECTIVE
 ;    CONVECTIVE
-;todo: complete keyword description
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie

@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-
 ;+
 ;      
 ;       MODIS_Grid is the basis class for MODIS level 2 & 3 files. It reads
@@ -274,7 +273,6 @@ end
 ;           HDF SD index (int) or name (string) of the desired variable
 ;
 ; :Keywords:
-; todo: check keywords
 ;    description: out, optional, type = string 
 ;                 If available, the description of the variable
 ;    units: out, optional, type = string 
@@ -288,7 +286,7 @@ end
 ;              in the HDF variable attributes and apply it to the variable. Set this
 ;              keyword to avoid making this automatic calibration
 ;  
-;  :Result:
+; :Returns:
 ;           the variable
 ;
 ;              

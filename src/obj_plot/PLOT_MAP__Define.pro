@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-;
 ;+
 ;
 ;  
@@ -1350,7 +1349,7 @@ pro PLOT_MAP::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_
 
   @WAVE.inc
   
-   pp = !ORDER ;To restore later
+  pp = !ORDER ;To restore later
   !ORDER = 0
 
   if TNT_OS eq 'WINDOWS' then set_plot, 'WIN' else set_plot, 'X'

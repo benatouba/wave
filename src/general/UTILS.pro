@@ -1367,7 +1367,7 @@ end
 ; :Params:
 ;    array: in, required, type = float
 ;           the 2d array to aggregate
-;    ratio: in required, type = long
+;    ratio: in, required, type = long
 ;           the ratio (it must be a divider of both X and Y dimensions)
 ; 
 ; :Examples:

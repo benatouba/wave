@@ -56,7 +56,7 @@ pro MAKE_WPLOT, plot_map, WINDOW = window, TITLE = title, BAR_TITLE = BAR_TITLE,
   if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE)  
   if not ARG_PRESENT(WINDOW) and KEYWORD_SET(PIXMAP) then WDELETE, pwin
   
-  !ORDER = 0
+  !ORDER = pp
   
 end
 
@@ -120,6 +120,6 @@ pro MAKE_WPLOT_WIND, plot_map, grid, ud, vd, density, LENGTH=length, LEGEND = le
   if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE)  
   if not ARG_PRESENT(WINDOW) and KEYWORD_SET(PIXMAP) then WDELETE, pwin
   
-  !ORDER = 0
+  !ORDER = pp
   
 end

@@ -148,11 +148,10 @@ END
 ;         WAVE/OBJ_GIS   
 ;
 ; :Keywords: 
-; todo: describe keywords
-;    NUM_GRIDS: out,                       
-;    NUM_POINTS: out,                      
-;    NUM_SWATHS: out,         
-;    _Ref_Extra: out,
+;    NUM_GRIDS: out, optional                     
+;    NUM_POINTS: out, optional                    
+;    NUM_SWATHS: out, optional           
+;    _Ref_Extra: out, optional   
 ;                see #HDF:GetProperty#
 ;                
 ; :Author:

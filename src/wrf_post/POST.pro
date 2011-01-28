@@ -35,13 +35,13 @@
 ; :Private:
 ;
 ; :Params:
-;    domain: in, required, integer
+;    domain: in, required, type = integer
 ;            the domain id to look for 
-;    directory: in, optional, string
+;    directory: in, optional, type = string
 ;            the path to the directory to parse (if omitted, a dialog window opens).
 ;
 ; :Keywords:
-;    CNT: out, optional, numeric
+;    CNT: out, optional, type =  numeric
 ;         the number of files found.
 ;
 ; :Author:
@@ -929,33 +929,33 @@ end
 ;   
 ;    
 ; :Params:
-;    domain: in, required, integer
+;    domain: in, required, type = integer
 ;            The domain id. No default.
-;    directory: in, required, string
+;    directory: in, required, type = string
 ;               The directory to parse recursively. If omitted, a dialog window is opened.
 ; :Keywords:
-;    OUTDIRECTORY: in, required, string
+;    OUTDIRECTORY: in, required, type = string
 ;              The output directory where to put the aggregated file. See the descripition for 
 ;              the output file format.
-;    START_TIME: in, optional, {ABS_DATE}
+;    START_TIME: in, optional, type = {ABS_DATE}
 ;                The output start time. The default is to check the first alphabetical file name,
 ;                and add the spin index multiplied by the timestep (e.g: wrfout_d01_2009-05-31_12_00_00 
 ;                would lead to start_time = 01.06.2010 03:00:00. wrfout_d02_2009-05-31_12_00_00 to a 
 ;                start_time = 01.06.2010 01:00:00)
-;    END_TIME: in, optional, {ABS_DATE}
+;    END_TIME: in, optional, type = {ABS_DATE}
 ;                The output end time. The default is to check the last alphabetical file name,
 ;                and add 36H (e.g: wrfout_d01_2009-06-29_12_00_00 would lead to 
 ;                end_time = 01.07.2010 00:00:00.)
-;    SPINUP_INDEX: in, optional, integer
+;    SPINUP_INDEX: in, optional, type = integer
 ;                  The index where to start to get the data in each file to aggregate. Default is
 ;                  5 for the first domain, 13 for the other domains. 
-;    END_INDEX: in, optional, integer
+;    END_INDEX: in, optional, type = integer
 ;               The index where to stop to get the data in each file to aggregate. Default is
 ;               12 for the first domain, 36 for the other domains. 
-;    TIMESTEP: in, optional, {TIME_STEP}
+;    TIMESTEP: in, optional, type = {TIME_STEP}
 ;              The output time serie timestep. Default is 3 hours for the first domain, 1 hour for the
 ;              others.
-;    VARTOKEEP_FILE: in, optional, string
+;    VARTOKEEP_FILE: in, optional, type = string
 ;              The path to the variable file to parse (see 'POST_parse_Vartokeep').
 ;
 ; :Author:

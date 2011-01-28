@@ -67,7 +67,7 @@
 ; 
 ;   Defines the attributes of the class. Attributes::
 ;   
-;     GEO_nc                      
+;        GEO_nc                      
 ;            INHERITS NCDF               
 ;            XID : 0L                    
 ;            YID : 0L                    
@@ -82,7 +82,8 @@
 ;            
 ; :Categories:
 ;         WAVE/OBJ_GIS   
-;
+;         
+;    
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
 ;            TU Berlin
@@ -285,7 +286,7 @@ END
 ;             'FALSE' or 'TRUE' or more ...
 ;    subset: out, optional, type = integer array 
 ;            Four elements array: see file description 
-;    Ref_Extra: 
+;    _Ref_Extra: 
 ;        see 'NCDF:GetProperty' 
 ;
 ; :Author:

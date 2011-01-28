@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-
 ;+
 ;
 ;  NCDF is the basis class for all kinds of NCDF files. It reads
@@ -532,7 +531,7 @@ end
 ;         WAVE/OBJ_GIS   
 ;         
 ; :Params:
-;    varid: in, required, type = long,/str
+;    varid: in, required, type = long/str
 ;           the netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable
 ;           (CASE INDEPENDENT)
 ;       

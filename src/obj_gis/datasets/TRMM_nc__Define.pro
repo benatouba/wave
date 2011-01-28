@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-
 ;+
 ;
 ;  TRMM_nc is the basis class for TRMM datasets in NetCDF format.
@@ -35,7 +34,7 @@
 ; :Description:
 ;    Defines the attributes of the class Grid2D. Attributes::
 ;
-;    TRMM_nc
+;       TRMM_nc
 ;            INHERITS Grid2D           
 ;            INHERITS GEO_nc         
 ;            type : ''
@@ -510,44 +509,6 @@ end
 
 ;+
 ; :Description:
-;    It is called during the object instancing but can be called also once the object is created.
-;    It subsets the original data to a region of interest and actualises Geolocalisation accordingly.
-;    Future calls to #TRMM_nc::get_var# will return the subseted data. 
-;       
-;    To reset to the original geoloc just call this method without arguments.
-;    Output: 1 if the MODIS_Grid object is updated successfully, 0 if not.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-; :Keywords:
-; todo: complete keyword description
-;       SUBSET_LL : in, optional, type = string
-;                   set it to the desired subset corners to automatically subset the data.
-;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
-;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : in, type =
-;                   indexes in the ORIGINAL ncdf grid array in the form [x_dl,nx,y_dl,ny]. 
-;                   Unless you know what you do, it should not be set manually.
-;                   One can retrive it from this method by setting SUBSET_IJ to a named variable.
-;       LL_DATUM  : in, type =
-;                   datum in which the Lat and Lons are defined. Default: WGS-84
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
-; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
-;-
-
-;+
-; :Description:
 ; 
 ;    This function defines a new automatic subset for the TRMM file. It encapsulates
 ;    the 'GEO_nc::define_dubset' method by replacing the SUBSET keyword with 'SUBSET_IJ'
@@ -571,7 +532,7 @@ end
 ;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.);                   
 ;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
 ;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
-;       SUBSET_IJ:  in/out, optional, type = integer array 
+;       SUBSET_IJ:  in, out, optional, type = integer array 
 ;                   Four elements array::              
 ;                     first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
 ;                     second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
