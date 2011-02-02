@@ -199,7 +199,7 @@ pro WTimeLine_plot, data,$  ; array to plot
                     YTITLE = Ytitle,$ ; title of the y axis
                     RANGE = range, $ ; Y data range
                     NEWAXIS = newaxis, NEWRANGE = newrange, NEWTITLE = newtitle, $ ; if a second axis is to be drawn
-                    THICKNESS = thickness, $ ; line thickness
+                    THICKNESS = thickness, PIXMAP = pixmap, $ ; line thickness
                     HORILINE = HORILINE, VERTILINE = VERTILINE, $ ; if horizontal or vertical lines have to be drawn
                     data2, time2, color2, tag2, COMENT2 = coment2, style2 = style2, psym2 = psym2, $ 
                     data3, time3, color3, tag3, COMENT3 = coment3, style3 = style3, psym3 = psym3, $ 
@@ -273,7 +273,22 @@ pro WTimeLine_plot, data,$  ; array to plot
     xtinter = days 
   endif else begin ;TODO: meliorate the automatic time AXIS definition
     s = MAKE_TIME_STEP(DMS=tqms[p2] - tqms[p1])
-    if s.day gt 150 then begin
+    if s.day gt 900 then begin
+    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
+    XTICKFORMAT = ['LABEL_DATE']
+    xtunits = 'Months'
+    xtinter = 6
+    endif else if s.day gt 600 then begin
+    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
+    XTICKFORMAT = ['LABEL_DATE']
+    xtunits = 'Months'
+    xtinter = 4
+    endif else if s.day gt 300 then begin
+    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
+    XTICKFORMAT = ['LABEL_DATE']
+    xtunits = 'Months'
+    xtinter = 3
+    endif else if s.day gt 150 then begin
     dummy = LABEL_DATE(DATE_FORMAT=['%M'])
     XTICKFORMAT = ['LABEL_DATE']
     xtunits = 'Months'
@@ -324,8 +339,8 @@ pro WTimeLine_plot, data,$  ; array to plot
   ; Legend    
   x = [0.74, 0.785]
   y = [0.85, 0.85]  
-  dx1 = 0.005
-  dx2 = 0.012
+  dx1 = 0.012
+  dx2 = 0.018
   dy1 = 0.008
   dy2 = 0.04
   tsiz = 2.
@@ -340,7 +355,7 @@ pro WTimeLine_plot, data,$  ; array to plot
   FSC_Window, 'FSC_plot', jd, data[p1:p2], title = title,  COLOR=FSC_Color('Black'), BACKGROUND=FSC_Color('WHITE'), CHARSIZE=plo_siz, /NORMAL, $
     CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [0.1,0.09,0.65,0.92], XTICK_GET=xs, YTICK_GET=ys, $
      /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym, $
-       WXSize = 800, WYSize = 500, WTITLE = 'WTimeLine_plot resizable window'
+       WXSize = 1200, WYSize = 600, WTITLE = 'WTimeLine_plot resizable window'
         
   if N_ELEMENTS(HORILINE) eq 1 then FSC_Window, 'FSC_plots', [min(jd),max(jd)], [HORILINE,HORILINE], color = FSC_Color('Black'), LINESTYLE=5, /AddCmd
   if N_ELEMENTS(VERTILINE) eq 1 then $
@@ -369,7 +384,7 @@ pro WTimeLine_plot, data,$  ; array to plot
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 2 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data2), MAX(data2)]
-      FSC_Window, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      FSC_Window, 'FSC_Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style2) eq 1 then style = style2 
@@ -378,7 +393,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time2), data2, COLOR = FSC_Color(color2), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color2), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time2)], data2, COLOR = FSC_Color(color2), PSYM=psym2, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time2)], data2, COLOR = FSC_Color(color2), PSYM=psym2, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM2 eq 10 then psym2 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color2), THICK=thickness, /NORMAL, PSYM=psym2, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -399,7 +414,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time3), data3, COLOR = FSC_Color(color3), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color3), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time3)], data3, COLOR = FSC_Color(color3), PSYM=psym3, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time3)], data3, COLOR = FSC_Color(color3), PSYM=psym3, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM3 eq 10 then psym3 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color3), THICK=thickness, /NORMAL, PSYM=psym3, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -420,7 +435,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time4), data4, COLOR = FSC_Color(color4), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color4), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time4)], data4, COLOR = FSC_Color(color4), PSYM=psym4, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time4)], data4, COLOR = FSC_Color(color4), PSYM=psym4, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM4 eq 10 then psym4 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color4), THICK=thickness, /NORMAL, PSYM=psym4, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -441,7 +456,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time5), data5, COLOR = FSC_Color(color5), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color5), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time5)], data5, COLOR = FSC_Color(color5), PSYM=psym5, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time5)], data5, COLOR = FSC_Color(color5), PSYM=psym5, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM5 eq 10 then psym5 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color5), THICK=thickness, /NORMAL, PSYM=psym5, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -462,7 +477,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time6), data6, COLOR = FSC_Color(color6), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color6), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time6)], data6, COLOR = FSC_Color(color6), PSYM=psym6, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time6)], data6, COLOR = FSC_Color(color6), PSYM=psym6, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM6 eq 10 then psym6 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color6), THICK=thickness, /NORMAL, PSYM=psym6, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -483,7 +498,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time7), data7, COLOR = FSC_Color(color7), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color7), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time7)], data7, COLOR = FSC_Color(color7), PSYM=psym7, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time7)], data7, COLOR = FSC_Color(color7), PSYM=psym7, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM7 eq 10 then psym7 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color7), THICK=thickness, /NORMAL, PSYM=psym7, SYMSIZE=thickness, /ADDCMD
     endelse   
@@ -504,7 +519,7 @@ pro WTimeLine_plot, data,$  ; array to plot
       FSC_Window, 'FSC_plot', TIME_to_JD(time8), data8, COLOR = FSC_Color(color8), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color8), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      FSC_Window, 'FSC_plot', [TIME_to_JD(time8)], data8, COLOR = FSC_Color(color8), PSYM=psym8, SYMSIZE=thickness, /ADDCMD
+      FSC_Window, 'FSC_plot', [TIME_to_JD(time8)], data8, COLOR = FSC_Color(color8), PSYM=psym8, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM8 eq 10 then psym8 = 0
       FSC_Window, 'FSC_plots', x, y,  COLOR = FSC_Color(color8), THICK=thickness, /NORMAL, PSYM=psym8, SYMSIZE=thickness, /ADDCMD
     endelse   

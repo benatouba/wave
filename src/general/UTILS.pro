@@ -864,7 +864,11 @@ end
 ;           the last time in the time serie (if found)
 ;    nt: out, optional, type = long
 ;        the number of elements in the time serie
-;        
+
+; :Keywords:
+;     VarName: in, optional, type = String
+;              if you know the name of a variable which is coards
+;         
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
 ;
@@ -880,7 +884,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-function utils_nc_COARDS_time, cdfid, time, time0, time1, nt
+function UTILS_NC_COARDS_TIME, cdfid, time, time0, time1, nt, VARNAME = varname
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -898,22 +902,35 @@ function utils_nc_COARDS_time, cdfid, time, time0, time1, nt
   
   inq = NCDF_INQUIRE(Cdfid)
   vok = -1
-  for varid = 0, inq.NVARS - 1 do begin
-    vinf = NCDF_VARINQ(Cdfid, varid)
+  
+  if KEYWORD_SET(VarName) then begin    
+      
+    vinf = NCDF_VARINQ(Cdfid, VarName)
     vname = vinf.name
     vtype = vinf.DATATYPE
-    p = where(str_equiv(s_list) eq str_equiv(vname), cnt)
-    if cnt ne 0 then begin
-     test = 1 
-    endif
+    vok = NCDF_VARID(Cdfid, VarName) 
     
-    if cnt ne 0 and vtype ne 'CHAR' and  vtype ne 'BYTE' then begin
-       vok = varid
-       break
-    endif
-  endfor
+  endif else begin
+  
+    for varid = 0, inq.NVARS - 1 do begin
+      vinf = NCDF_VARINQ(Cdfid, varid)
+      vname = vinf.name
+      vtype = vinf.DATATYPE
+      p = where(str_equiv(s_list) eq str_equiv(vname), cnt)
+      if cnt ne 0 then begin
+        test = 1
+      endif
       
+      if cnt ne 0 and vtype ne 'CHAR' and  vtype ne 'BYTE' then begin
+        vok = varid
+        break
+      endif
+    endfor
+    
+  endelse
+        
   if vok lt 0 then return, FALSE
+  
   
   ; Read time0 from att
   NCDF_ATTGET, Cdfid, vok , 'units', ts
@@ -948,7 +965,7 @@ function utils_nc_COARDS_time, cdfid, time, time0, time1, nt
    h = LONG(t[0])
    mi = LONG(t[1])
    s = LONG(t[2])
-   milli = LONG64((DOUBLE(t[2]) - FLOOR(t[2])) * 1000D)
+   milli = LONG64( (DOUBLE(t[2]) - FLOOR(double(t[2]))) * 1000D )
   endif else return, FALSE  
       
   time0 = (MAKE_ABS_DATE(YEAR=y, MONTH=mo, DAY=d, HOUR = h, MINUTE=mi, SECOND=s, MILLISECOND=milli)).qms

@@ -701,16 +701,18 @@ function NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a 
   endif  
   
   if ARG_PRESENT(dims) then begin
-    dims = LONARR(varinfo.Ndims)
-    for i = 0, varinfo.Ndims - 1 do begin
+    if varinfo.Ndims lt 1 then ndims = N_ELEMENTS(varinfo.dim) else ndims =varinfo.Ndims
+    dims = LONARR(Ndims)
+    for i = 0, Ndims - 1 do begin
       NCDF_DIMINQ, self.Cdfid, varinfo.Dim[i], dimName, dimSize
       dims[i] = dimSize
     endfor
   endif
   
   if ARG_PRESENT(dimnames) then begin
-    dimnames = STRARR(varinfo.Ndims)
-    for i = 0, varinfo.Ndims - 1 do begin
+    if varinfo.Ndims lt 1 then ndims = N_ELEMENTS(varinfo.dim) else ndims =varinfo.Ndims
+    dimnames = STRARR(Ndims)
+    for i = 0, Ndims - 1 do begin
       NCDF_DIMINQ, self.Cdfid, varinfo.Dim[i], dimName, dimSize
       dimnames[i] = dimName
     endfor

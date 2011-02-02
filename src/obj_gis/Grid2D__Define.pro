@@ -978,9 +978,11 @@ function Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = m
   if not arg_okay(src_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('src_datum', STRUCT={TNT_DATUM})
   if ~KEYWORD_SET(missing) then missing = 0
   
-  nx = N_ELEMENTS(data[*,0,0])
-  ny = N_ELEMENTS(data[0,*,0])
-  nt = N_ELEMENTS(data[0,0,*])
+  siz = SIZE(data)
+  
+  if siz[0] eq 1 then nt = 1
+  if siz[0] eq 2 then if siz[1] eq N_ELEMENTS(src_lon) then nt = siz[2] else nt = 1
+  if siz[0] eq 3 then nt = siz[3]
   
   if KEYWORD_SET(BACKWARDS) then begin
    ;TODO: implement this (idea is already here)
@@ -988,9 +990,9 @@ function Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = m
   
     ntot =  N_ELEMENTS(data[*,*,0])
     tot = INDGEN(ntot, /LONG)
-    self->transform_LonLat, lon[tot], lat[tot], src_datum, i, j, /NEAREST
+    self->transform_LonLat, src_lon[tot], src_lat[tot], src_datum, i, j, /NEAREST
     
-    data_grid = DBLARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    data_grid = DBLARR(self.tnt_c.nx, self.tnt_c.ny, nt)
     data_grid[*] = missing
     
     pok = WHERE(i ge 0 and j ge 0 and i lt self.tnt_c.nx and j lt self.tnt_c.ny, cnt)
@@ -1001,14 +1003,14 @@ function Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = m
     endif
     
     if nt eq 1 then begin
-      data_grid[i, j] = d[tot]
+      data_grid[i, j] = data[tot]
     endif else begin
       tmp = DBLARR(self.tnt_c.nx, self.tnt_c.ny)
       for i = 0L, nt-1 do begin
         tmp *= 0
         tmp[*] =  missing
-        tmp[i, j] = (reform(d[*,*,i]))[tot]
-        if N_ELEMENTS(data_grid) eq 0 then data_grid = tmp else data_grid =[[[data_grid]],[[tmp]]]
+        if siz[0] eq 2 then tmp[i, j] = (reform(data[*,i]))[tot] else tmp[i, j] = (reform(data[*,*,i]))[tot]
+        data_grid[*,*,i] = tmp
       endfor
     endelse
   endelse

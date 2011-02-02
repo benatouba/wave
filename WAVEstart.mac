@@ -50,7 +50,6 @@ pushd, root
 
 ; Plots
 .run PLOT_MAP__Define.pro
-.run MAKE_PLOTS.pro
 
 resolve_all, /QUIET
 

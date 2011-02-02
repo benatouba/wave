@@ -689,6 +689,13 @@ end
 ;    ny: out, type = LL64
 ;        number of elements in y dimension
 ;
+; :Keywords:
+;    
+;    NO_REFORM: in, optional
+;               defaut behaviour is to return a 2D array of lats and lons. If they are one dimensional
+;               in the original file, they will be transformed to the 2d equivalent arrays (see 'utils_1d_to_2d').
+;               Set this keyword to prevent this action.
+; 
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -701,7 +708,7 @@ end
 ;          15-Dec-2010 FaM
 ;          Written for upgrade to WAVE 0.1
 ;-
-pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny
+pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -724,13 +731,9 @@ pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny
   
   ok = FALSE
   if nlondims eq 1 and nlatdims eq 1 then begin
-    utils_1d_to_2d, lon, lat, lon, lat
+    if ~KEYWORD_SET(NO_REFORM) then utils_1d_to_2d, lon, lat, lon, lat
     ok = TRUE
-  endif
-  
-  if nlondims eq 2 and nlatdims eq 2 then begin
-    ok = TRUE
-  endif
+  endif 
   
   if nlondims eq 3 and nlatdims eq 3 then begin
     if self.TID ge 0 then begin ; We found the time dimension in the file  

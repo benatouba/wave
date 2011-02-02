@@ -1,4 +1,4 @@
-pro MAKE_WPLOT, plot_map, WINDOW = window, TITLE = title, BAR_TITLE = BAR_TITLE, BAR_TAGS = bar_tags, STR_FORMAT = str_format, PNG = png, PIXMAP = pixmap
+pro standard_2d_plot, plot_map, WINDOW = window, TITLE = title, BAR_TITLE = BAR_TITLE, BAR_TAGS = bar_tags, STR_FORMAT = str_format, PNG = png, PIXMAP = pixmap
    
   @WAVE.inc
    
