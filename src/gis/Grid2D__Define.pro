@@ -28,7 +28,7 @@
 ; anymore, but to define GRID2d objects using your {TNT_COORD} structures
 ; as parameter. Probably, your data will be uspide down with respect to 
 ; the WAVE conventions. One good method to test your gridded data is
-; to use `Quickplot`. If your image is upside down,the array have to be 
+; to use `wQuickPlot`. If your image is upside down,the array have to be 
 ; rotated like this: array = rotate(array, 7) 
 ;        
 ; Here is a non-exhaustive list of dataset conventions::       

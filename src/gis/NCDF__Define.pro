@@ -146,10 +146,8 @@ Function NCDF::Init, FILE = file
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(file) then begin
-    file = DIALOG_PICKFILE(TITLE='Please select NCDF file to read', /MUST_EXIST)
-    IF file EQ "" THEN MESSAGE, WAVE_Std_Message(/FILE)
-  endif
+  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select NCDF file to read', /MUST_EXIST)
+  IF file EQ '' THEN MESSAGE, WAVE_Std_Message(/FILE)
   
   ;*****************
   ; Check validity *
@@ -845,7 +843,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
+pro NCDF::wQuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -864,7 +862,7 @@ pro NCDF::quickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
+  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
 
 end
 

@@ -17,7 +17,7 @@
 ;       + GRID2D methods
 ;       Overrided methods:
 ;       obj->Get_Var()  : get a specific variable along with some information, coherent with the grid geoloc
-;       obj->quickPlotVar    : plots a "flat" image of a given variable, coherent with the grid geoloc and adding geoloc infos to th image
+;       obj->wQuickPlotVar    : plots a "flat" image of a given variable, coherent with the grid geoloc and adding geoloc infos to th image
 ;       New methods:
 ;       obj->define_subset() : to subset MODIS data to a rgion of interest accordingly to its intern geoloc.
 ;               
@@ -367,7 +367,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-pro MODIS_Grid::quickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
+pro MODIS_Grid::wQuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
@@ -377,10 +377,10 @@ pro MODIS_Grid::quickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
   
     self->Get_LonLat, lon, lat
     if N_ELEMENTS(lon) ne N_ELEMENTS(var) then message, '???'
-    QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, DIMNAMES=['lon','lat'] ,CBARTITLE=units, $
+    wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, DIMNAMES=['lon','lat'] ,CBARTITLE=units, $
       COORDX=lon, COORDY=lat
       
-  endif else  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, CBARTITLE=units
+  endif else  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, CBARTITLE=units
 
 end
 

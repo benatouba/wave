@@ -759,7 +759,7 @@ pro TEST_TRMM_3B42
     ok = trmm_3B42->define_subset(SUBSET_LL=[70.01,10.02,120.01,45.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B42->QuickPlotPrcp
+    trmm_3B42->wQuickPlotPrcp
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
     trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny  
@@ -994,7 +994,7 @@ pro TEST_TRMM_3B43
     ok = trmm_3B43->define_subset(SUBSET_LL=[-70.01,-10.02,-29.76,25.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B43->QuickPlotPrcp
+    trmm_3B43->wQuickPlotPrcp
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
     trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny    
@@ -1277,7 +1277,7 @@ pro TEST_WRF_OUT
     if snt ne 6 then error +=1
     if max(abs(p-op[*,*,*,3:8])) ne 0 then  error += 1
     
-    dom1->quickPlotVar, 'T2', t0 = time[3], t1 = time[8]
+    dom1->wQuickPlotVar, 'T2', t0 = time[3], t1 = time[8]
     ok = DIALOG_MESSAGE('Do you see a temperature plot?', /QUESTION)
     if ok eq 'No' then error += 1
      
@@ -1568,7 +1568,7 @@ pro TEST_MODIS_SNOW
     s = modis->get_Var('Snow_Cover_Daily_Tile')
     ts =map->map_gridded_data(s, modis)
     
-    QuickPLot, ts, COLORTABLE=13
+    wQuickPlot, ts, COLORTABLE=13
     
     OBJ_DESTROY, dom1     
     OBJ_DESTROY, map     
@@ -1597,8 +1597,8 @@ pro TEST_POST_COPY_CROP, REDO = redo
     if redo then POST_cpy_crop_directory, INPUT_DIR=INPUT_DIR, OUTPUT_DIR=OUTPUT_DIR
     
     if ~FILE_TEST(OUTPUT_DIR) then error+=1
-    if ~FILE_TEST(OUTPUT_DIR+'/d1/') then error+=1
-    if ~FILE_TEST(OUTPUT_DIR+'/d2/') then error+=1
+    if ~FILE_TEST(OUTPUT_DIR+'/2009.09.13/') then error+=1
+    if ~FILE_TEST(OUTPUT_DIR+'/2009.09.14/') then error+=1
     if ~FILE_TEST(OUTPUT_DIR+'/wrf_cpy_crop.log') then error+=1
     
     
@@ -1606,7 +1606,7 @@ pro TEST_POST_COPY_CROP, REDO = redo
     ; D1 day one
     ;----------------        
     origf =  fdir + '/WRF_POST/d1/wrfout_d01_2009-09-12_12_00_00'
-    outf =  fdir + '/WRF_CPY_CROP/d1/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    outf =  fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
@@ -1639,7 +1639,7 @@ pro TEST_POST_COPY_CROP, REDO = redo
     ; D3 day one
     ;----------------        
     origf =  fdir + '/WRF_POST/d1/wrfout_d03_2009-09-12_12_00_00'
-    outf =  fdir + '/WRF_CPY_CROP/d1/wrfout_d03_2009-09-13_00_00_00_24h.nc'
+    outf =  fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d03_2009-09-13_00_00_00_24h.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
@@ -1672,7 +1672,7 @@ pro TEST_POST_COPY_CROP, REDO = redo
     ; D1 day two
     ;----------------        
     origf =  fdir + '/WRF_POST/d2/wrfout_d01_2009-09-13_12_00_00'
-    outf =  fdir + '/WRF_CPY_CROP/d2/wrfout_d01_2009-09-14_00_00_00_24h.nc'
+    outf =  fdir + '/WRF_CPY_CROP/2009.09.14/wrfout_d01_2009-09-14_00_00_00_24h.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
@@ -1824,7 +1824,7 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     
     ; DOM 1 day one
     if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
-    origf =  INPUT_DIR+ '/d1/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    origf =  INPUT_DIR+ '/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc'
     outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
@@ -1856,7 +1856,7 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     
     ; DOM 1 day two
     if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
-    origf =  INPUT_DIR+ '/d2/wrfout_d01_2009-09-14_00_00_00_24h.nc'
+    origf =  INPUT_DIR+ '/2009.09.14/wrfout_d01_2009-09-14_00_00_00_24h.nc'
     outf =  OUTPUT_DIR + '/dom1/wrf_agg_2009_09_13_d01.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
@@ -1879,7 +1879,7 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     
     ; DOM 3 day two
     if ~FILE_TEST(OUTPUT_DIR+'/dom3//wrf_cpy_2009_09_13_d03.log') then error+=1    
-    origf =  INPUT_DIR+ '/d2/wrfout_d03_2009-09-14_00_00_00_24h.nc'
+    origf =  INPUT_DIR+ '/2009.09.14/wrfout_d03_2009-09-14_00_00_00_24h.nc'
     outf =  OUTPUT_DIR + '/dom3/wrf_agg_2009_09_13_d03.nc'
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
@@ -1950,13 +1950,13 @@ pro TEST_NEIREST_NEIGHBOR
   data = trmm->get_prcp()  
   
   syst = QMS_TIME()
-  p_c = utils_POS_NEAREST_NEIGHBORHOOD(trmmlon, trmmlat, wrflon, wrflat, /CLASSICAL, DISTANCES = dis_c)
-  dc = utils_COMPUTE_NEAREST_NEIGHBORHOOD(p_c, data)
+  p_c = utils_nearest_neighbor(trmmlon, trmmlat, wrflon, wrflat, /CLASSICAL, DISTANCES = dis_c)
+  dc = utils_compute_nearest_neighbor(p_c, data)
 ;  print, 'T1 : ' + str_equiv((QMS_TIME()-syst)/S_QMS)
   
   syst = QMS_TIME()
-  p_t = utils_POS_NEAREST_NEIGHBORHOOD(trmmlon, trmmlat, wrflon, wrflat, /TRIANGULATION, DISTANCES = dis_t)
-  dt = utils_COMPUTE_NEAREST_NEIGHBORHOOD(p_t, data)
+  p_t = utils_nearest_neighbor(trmmlon, trmmlat, wrflon, wrflat, /TRIANGULATION, DISTANCES = dis_t)
+  dt = utils_compute_nearest_neighbor(p_t, data)
 ;  print, 'T2 : ' + str_equiv((QMS_TIME()-syst)/S_QMS)
 
   if total(p_c-p_t) ne 0 then error += 1
@@ -2125,10 +2125,10 @@ pro TEST_UTILS
   TEST_NEIREST_NEIGHBOR
 end
 
-pro TEST_POST
-  TEST_POST_COPY_CROP
-  TEST_POST_AGG
-  TEST_POST_AGG_CROPPED
+pro TEST_POST, REDO = redo
+  TEST_POST_COPY_CROP, REDO = redo
+  TEST_POST_AGG, REDO = redo
+  TEST_POST_AGG_CROPPED, REDO = redo
 end
 
 pro TEST_everything

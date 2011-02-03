@@ -421,7 +421,8 @@ Function WRF_nc::Init, FILE       = file     ,  $
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF ncdf file to read', /MUST_EXIST)  
+  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF ncdf file to read', /MUST_EXIST)
+  if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
   IF NOT self->GEO_nc::Init(file = file) THEN RETURN, 0    
 
   ;****************
@@ -835,13 +836,13 @@ pro WRF_nc::plot_TS, varid, x, y, $
   
   WTimeLine_plot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
-  FSC_Window, 'FSC_text', 0.70, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD
+  cgtext, 0.70, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /WINDOW
   
-  FSC_Window, 'FSC_text', 0.74, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD  
-  FSC_Window, 'FSC_text', 0.74, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
-          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /ADDCMD  
+  cgtext, 0.74, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /WINDOW  
+  cgtext, 0.74, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
+          CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /WINDOW  
     
 end
 

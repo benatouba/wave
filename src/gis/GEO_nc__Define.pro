@@ -12,7 +12,7 @@
 ; TODO: currently this list is hard coded, it would be better using configuration files
 ; 
 ; The X, Y and time coordinates are then available through the 'get_ncdf_coordinates'
-; and 'get_time' methods. Also, the 'quickPlotVar' method is extended to include 
+; and 'get_time' methods. Also, the 'wQuickPlotVar' method is extended to include 
 ; the geolocaliation info.
 ; 
 ; The major feature of this class is to encapsulate the 
@@ -166,7 +166,8 @@ Function GEO_nc::Init, FILE = file, SUBSET = subset
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select NCDF file to read', /MUST_EXIST)  
+  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select GEO NCDF file to read', /MUST_EXIST)  
+  if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
   IF NOT self->NCDF::Init(file = file) THEN RETURN, 0    
   
   ;*****************************
@@ -815,7 +816,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro GEO_nc::quickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
+pro GEO_nc::wQuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -841,7 +842,7 @@ pro GEO_nc::quickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
     if cnt ne 0 then tsrt = TIME_to_STR(time)
   endif   
   
-  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
+  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
         dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt
 
 end

@@ -257,7 +257,7 @@ end
 ;          29-Nov-2010 FaM
 ;          Doc for upgrade to WAVE 0.1
 ;-
-function POST_absDAte_to_wrfstr, absDate
+function POST_absDate_to_wrfstr, absDate
   
   ; Set Up environnement
   @WAVE.inc
@@ -320,7 +320,7 @@ end
 ;          29-Nov-2010 FaM
 ;          Doc for upgrade to WAVE 0.1
 ;-
-function POST_absDAte_to_wrffname, absDate
+function POST_absDate_to_wrffname, absDate
   
   ; Set Up environnement
   @WAVE.inc
@@ -384,7 +384,7 @@ end
 ;          01-Jan-2011 FaM
 ;          First appearance
 ;-
-function POST_absDAte_to_wrfdir, absDate
+function POST_absDate_to_wrfdir, absDate
   
   ; Set Up environnement
   @WAVE.inc

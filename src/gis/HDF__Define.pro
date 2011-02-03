@@ -523,14 +523,14 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro HDF::quickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
+pro HDF::wQuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  QuickPLot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='HDF view: ' + self.fname, CBARTITLE=units
+  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='HDF view: ' + self.fname, CBARTITLE=units
 
 end
 

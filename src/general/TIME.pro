@@ -1685,3 +1685,47 @@ function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_AB
   return, FALSE
 
 end
+
+;+
+; :Description:
+;    Simple function to search occurences in a time serie (like where())
+;    but a bit more flexible
+;
+; :Params:
+;    ts: in, required, type = {ABS_DATE}/qms vector
+;        time serie to look into
+;    time: in, required, type = {ABS_DATE}/qms scalar
+;        time to find in the serie
+;
+; :Keywords:
+;    pos: out
+;         the index(es) where the time has been found (-1 if not found)
+;    cnt: out
+;         the number of index(es) found
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function search_Wtime, ts, time, pos = pos, cnt = cnt
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ; Standard error handling.
+  ON_ERROR, 2
+  
+  if ~check_WTIME(ts, OUT_QMS=myts) then Message, WAVE_Std_Message('ts', /ARG)
+  if ~check_WTIME(time, OUT_QMS=mytime) then Message, WAVE_Std_Message('time', /ARG)
+  if N_ELEMENTS(mytime) ne 1 then Message, WAVE_Std_Message('time', NELEMENTS = 1)
+  
+  pos = where(myts eq mytime, cnt)
+  
+  if cnt ge 1 then return, TRUE else return, FALSE
+  
+end

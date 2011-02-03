@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-
 ;+
 ;
 ;This bundle of procedures is a tool set available to the WAVE user.
@@ -89,58 +88,6 @@ pro utils_1d_to_2d, ax, ay, x, y
 end
 
 
-
-;+
-; :Description:
-;    TODO: Describe procedure.
-;
-; :Categories:
-;    WAVE/UTILS
-;
-; :Params:
-;    data: in, required, type= , default=none
-;    levels:  type= , default=none
-;    clevels:  type= , default=none
-;
-; :Keywords:
-;    NLEVS: in, optional, type= , default=none
-;    RANGE: in, optional, type= , default=none
-;    MODIF_DATA: in, optional, type= , default=none
-;    COLOR_RANGE: in, optional, type= , default=none
-;
-; :Examples:
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
-; :History:
-;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;-
-pro utils_data_levels, data, levels, clevels, NLEVS = nlevs, RANGE = range, MODIF_DATA = modif_DATA, COLOR_RANGE = color_range
-
-  if ~ KEYWORD_SET(RANGE) then range = [FLOOR(min(data)), FLOOR(max(data))]  
-  if ~ KEYWORD_SET(COLOR_RANGE) then COLOR_RANGE = [1, 254]  
-  if ~ KEYWORD_SET(nlevs) then nlevs = 10
-  
-  newdata = data
-  if range[0] gt min(data) then begin
-    p = where(data lt range[0])    
-    newdata[p] = range[0]
-  endif   
-
-  levels = indgen(nlevs) * (range[1] - range[0])/double(nlevs-1) + range[0]
-  clevels = indgen(nlevs) * (COLOR_RANGE[1] - COLOR_RANGE[0])/double(nlevs-1) + COLOR_RANGE[0]
-  
-  modif_DATA = range[0] > data < range[1] 
-
-end
-
-
-
 ;+
 ; :Description:
 ;    This function simply deaccumulates a field (like RAINNC).
@@ -164,17 +111,12 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_ACC_TO_STEP, accumulated
+function utils_acc_to_step, accumulated
 
   ; Set Up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, 0
-  ENDIF
+  COMPILE_OPT IDL2  
+  ON_ERROR, 2
     
   siz = SIZE(accumulated, /DIMENSIONS)
   
@@ -195,116 +137,13 @@ function utils_ACC_TO_STEP, accumulated
   
 end
 
-
 ;+
 ; :Description:
-;    Reads a shp-file and returns a polygon model of all valid vertices. 
-;    TODO: Descriptions for params/keywords
+;    This procedure retrieves the georeferenced equivalent positions from a lat-lon array,
+;    using the nearest neighbor algorithm. 
 ;    
-; :Categories:
-;    WAVE/UTILS
-;
-; :Params:
-;    latlons: in, required, type=  , default=none                              
-;    conn: in, required, type=  , default=none  
-;
-; :Keywords:
-;    SHPFILE: in, optional, type=  , default=DIALOG_PICKFILE()  
-;    SAVFILE: in, optional, type=  , default=none
-;    
-; :Examples:
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
-; :History:
-;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;-
-pro utils_read_shp, latlons, conn, SHPFILE = shpfile, SAVFILE = savfile
-
-  ; Set Up environnement
-  compile_opt idl2
-  @WAVE.inc
-
-  undefine, latlons, conn
-
-  if not KEYWORD_SET(shpfile) then begin
-    shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
-    if shpfile eq '' then return
-  endif
-
-  ; read shp file and create polygon object from entities
-  shpmodel=OBJ_NEW('IDLffShape',shpfile)
-
-  ;Get the number of entities so we can parse through them
-  shpModel->GetProperty, N_ENTITIES=N_ent
-  
-  n_latlons = 0L
-
-  for i=0L, N_ent-1 do begin
-
-    ent = shpmodel->GetEntity(i, /ATTRIBUTES)
-    
-    if not ptr_valid(ent.vertices) then continue
-    if n_elements((*ent.vertices)[0,*]) lt 3 then continue
-;    if n_elements((*ent.vertices)[0,*]) lt 50 then continue
-;    if ABS((*ent.attributes).ATTRIBUTE_1 -950582848.989) gt 1 then continue
-;    if (*ent.attributes).ATTRIBUTE_0 ne 53 then continue ;that was for namco shore
-;    if (*ent.attributes).ATTRIBUTE_4 ne 'Berlin' then continue
-
-;    print, ' Entity nb ' + STRING(i, FORMAT='(I2)') + '. att 0: ' + STRING((*ent.attributes).ATTRIBUTE_0, FORMAT='(I2)')+ '. att 1: ' + STRING((*ent.attributes).ATTRIBUTE_1, FORMAT='(I2)') + '. N elements :' + STRING(ent.n_vertices, FORMAT='(I5)')
-
-    if n_elements(latlons) eq 0 then latlons = *ent.vertices else latlons = [[latlons],[*ent.vertices]]
-
-    parts = *ent.parts
-;    if ent.n_parts gt 1 then begin  
-;      print, 'yes' 
-;    end
-    for k=0L, ent.n_parts-1 do begin
-
-      if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
-
-      polyconn = (lindgen(n_vert)) + n_latlons
-
-      if n_elements(conn) eq 0 then begin
-        conn = n_vert
-        conn = [conn,polyconn]
-      endif else begin
-        conn = [conn,n_vert]
-        conn = [conn,polyconn]
-      endelse    
-     
-      n_latlons += n_vert
-      
-    endfor
-    
-    
-    
-  endfor
-
-  ; clean unused objects
-  obj_destroy, shpModel
-
-;  this was for the basin
-;  map = MAP_PROJ_INIT(101, CENTER_LONGITUDE = 93.0, CENTER_LATITUDE = 0 , ZONE =46)
-;  latlons = MAP_PROJ_INVERSE(latlons[0,*], latlons[1,*], map_structure=map)
-
-;  if KEYWORD_SET(SAVFILE) then save, latlons, conn, FILE=SAVFILE
-  
-end
-
-
-;+
-; :Description:
-;    This procedure retrieves the georeferenced equivalent positions from a lat-lon array, using the nearest neighborhood algorithm. 
 ;    Therefore the output is an one dimensional array of size N_ELEMENTS(flon) or [4,N_ELEMENTS(flon)]. 
 ;    
-;      TODO: Descriptions for Params/Keywords
-;
 ; :Categories:
 ;    WAVE/UTILS
 ;    
@@ -314,20 +153,25 @@ end
 ;    ilat: in, required, type=float/array, default=none
 ;          The 1 or 2 dimensional array of the latitudes corresponding to the original array.
 ;    flon: in, required, type=float/array, default=none
-;          The 1 or 2 dimensional array of the longitudes corresponding to desired fitted data.
+;          The 1 or 2 dimensional array of the longitudes corresponding to desired grid.
 ;    flat: in, required, type=float/array, default=none
-;          The 1 or 2 dimensional array of the latitudes corresponding to desired fitted data.
+;          The 1 or 2 dimensional array of the latitudes corresponding to desired grid.
 ;
 ; :Keywords:
-;    DISTANCES: in, optional, type=string, default=none
-;    CLASSICAL: in, optional, type=string, default=none
-;    TRIANGULATION: in, optional, type=string, default=none
-;    FOURPOINTS: in, optional, type=string, default=none
-;    
-;    
-; :Examples:
-;     Calling Sequence::
-;              Result = GEO_POS_NEAREST_NEIGHBORHOOD(ilon, ilat, flon, flat)
+;    DISTANCES: out, optional
+;               set this keyword to a named variable to obtain the distances between 
+;               each neirest neighbor (same dim as output)
+;    CLASSICAL: in, optional
+;               set this keyword to force using the naive approach of the algorithm
+;    TRIANGULATION: in, optional
+;                   set this keyword to force using the delaunay approach of the algorithm (default)
+;    FOURPOINTS: in, optional
+;                set this keyword to get the 4-neirest points (currently using the naive approach, very slow)
+;                
+; :Returns:
+;    an array of the same dimensions as flon containing the indexes in of the clothest 
+;    point in the input grid. 
+;     
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -339,7 +183,7 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = distances, $
+function utils_nearest_neighbor, ilon, ilat, flon, flat, DISTANCES = distances, $
                   CLASSICAL = classical, TRIANGULATION = triangulation, FOURPOINTS = fourpoints
 
   ; Set Up environnement
@@ -433,83 +277,6 @@ function utils_POS_NEAREST_NEIGHBORHOOD, ilon, ilat, flon, flat, DISTANCES = dis
       if doDist then distances = (ilon[out] - x2)^2 + (ilat[out] - y2)^2         
       
     end
-    
-;    'ROW': begin
-;    
-;      n1 = n_elements(tilon)
-;      x1 = tilon[*] & y1 = tilat[*]
-;      x2 = tflon[*] & y2 = tflat[*]
-;      
-;      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
-;        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
-;        
-;      m = MIN(d, DIMENSION=2, s)
-;      out[*] = s[*]/n & distances[*] = d[s]
-;      
-;    end
-;    
-;    'ROW_F': begin
-;    
-;      n1 = n_elements(tilon)
-;      x1 = tilon[*] & y1 = tilat[*]
-;      x2 = tflon[*] & y2 = tflat[*]
-;      
-;      d=(rebin(transpose(x1),n,n1,/SAMPLE)-rebin(x2,n,n1,/SAMPLE))^2 + $
-;        (rebin(transpose(y1),n,n1,/SAMPLE)-rebin(y2,n,n1,/SAMPLE))^2
-;        
-;      for j=0L, 3 do begin
-;        m = MIN(d, DIMENSION=2, s)
-;        out[j,*] = s[*]/n & distances[j,*] = d[s]
-;        d[s] = max(d) * 2. ;dummy large distance
-;      endfor
-;      
-;    end
-;    
-;    'TRIANGLE_F': begin
-;    
-;      n1 = n_elements(tilon)
-;;      x1 = tilon[*] & y1 = tilat[*]
-;      x2 = TEMPORARY(tflon[*]) 
-;      y2 = TEMPORARY(tflat[*])     
-;      
-;      triangulate, tilon[*], tilat[*], c ; Compute Delaunay triangulation     
-;      subsets = LINDGEN(SIZE(tilon, /DIMENSIONS))
-;      tout = GRIDDATA(tilon[*],tilat[*], subsets[*], XOUT=x2, YOUT=y2, /NEAREST_N, TRIANGLES =c)
-;      
-;      inds = ARRAY_INDICES(tilon, tout)
-;      subindX = [[REFORM(inds[0,*]) - 3],[REFORM(inds[0,*]) + 3]]
-;      subindY = [[REFORM(inds[1,*]) - 3],[REFORM(inds[1,*]) + 3]]
-;      
-;      indmax = N_ELEMENTS(tilon[*,0])-1
-;      p = where(subindX gt indmax, cnt)
-;      if cnt ne 0 then subindX[p] = indmax
-;      p = where(subindX lt 0, cnt)
-;      if cnt ne 0 then subindX[p] = 0  
-;      
-;      indmax = N_ELEMENTS(tilon[0,*]) -1
-;      p = where(subindY gt indmax, cnt)
-;      if cnt ne 0 then subindY[p] = indmax            
-;      p = where(subindY lt 0, cnt)
-;      if cnt ne 0 then subindY[p] = 0      
-;      
-;      for i = 0l, n - 1 do begin
-;                     
-;        sublons = tilon[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-;        sublats = tilat[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-;        subsub = subsets[subindX[i,0]:subindX[i,1],subindY[i,0]:subindY[i,1]]
-;        
-;        quad = (tflon[i] - sublons)^2 + (tflat[i]- sublats)^2
-;        
-;        for j=0L, 3 do begin
-;          minquad = min(quad, p)
-;          if N_ELEMENTS(p) gt 1 then p = p[0] ; it happens.....          
-;          out[j,i] = subsub[p] & DISTANCES[j,i] = minquad
-;          quad[p] = max(quad) * 2. ;dummy large distance
-;        endfor
-;        
-;      endfor
-;     
-;    end
         
   ENDCASE
           
@@ -527,21 +294,20 @@ end
 
 ;+
 ; :Description:
-;    This procedure follows the use of `utils_POS_NEAREST_NEIGHBORHOOD` to get the data.
+; 
+;    This procedure follows the use of `utils_nearest_neighbor`.
 ;    
 ; :Categories:
 ;    WAVE/UTILS
 ;
 ; :Params:
-;    pos: in, required, type= ,default=none
-;         The positions obtained with a previous call of `utils_POS_NEAREST_NEIGHBORHOOD`.
-;    data: in, type= ,default=none
+;    pos: in, required
+;         The positions obtained with a previous call of `utils_nearest_neighbor`.
+;    data: in, required
 ;          The 1 or 2 dimensional array of the data to fit.
 ;    
-; :Examples:
-;        Calling Sequence::
-;                 Result = utils_COMPUTE_NEAREST_NEIGHBORHOOD(pos, data)
-;     
+; :Returns:
+;     the fitted data   
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -553,7 +319,7 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_COMPUTE_NEAREST_NEIGHBORHOOD, pos, data
+function utils_compute_nearest_neighbor, pos, data
 
   ; Set Up environnement
   @WAVE.inc
@@ -576,6 +342,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;    This procedure reads all TRMM 3B42 netcdf files from a directory, 
 ;    sorts them by date and aggregates the precipitation field to a 
 ;    single NCDF file.
@@ -621,7 +388,7 @@ end
 ;       Modified:   15-Dec-2010 FaM
 ;                   Written for upgrade to WAVE 0.1
 ;-
-pro utils_TRMM_aggregate_3B42, directory, START_TIME = start_time, END_TIME = end_time, OUTFILE = outfile, $
+pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = end_time, OUTFILE = outfile, $
     NOSHIFT = noshift, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
     
   ; Set Up environnement
@@ -805,7 +572,7 @@ end
 ;    see 'utils_TRMM_aggregate_3B42' 
 ;    
 ;-
-pro utils_TRMM_aggregate_3B43
+pro utils_trmm_aggregate_3B43
     
 
   
@@ -835,7 +602,7 @@ end
 ;       Modified:   22-Nov-2010 FaM
 ;                   Documentation for upgrade to WAVE 0.1
 ;-
-function utils_EOD_get_metadata, pvlstring, objstring, n_char
+function utils_eod_get_metadata, pvlstring, objstring, n_char
 
   ; Extract a beginning date object
   objstring = strupcase(objstring)
@@ -850,6 +617,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;    This procedure reads a time from a ncdf file that uses the COARDS convention.    
 ;    Returns TRUE if time is found, FALSE in all other cases
 ;
@@ -867,7 +635,7 @@ end
 
 ; :Keywords:
 ;     VarName: in, optional, type = String
-;              if you know the name of a variable which is coards
+;              to specify the name of the variable which is coards compliant
 ;         
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
@@ -884,7 +652,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-function UTILS_NC_COARDS_TIME, cdfid, time, time0, time1, nt, VARNAME = varname
+function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1071,31 +839,7 @@ function utils_wrf_time, cdfid, time, time0, time1, nt
   return, TRUE
 
 end
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       utils_ncdf_LonLat
-;
-; PURPOSE:
-;       
-;       
-; CATEGORY:
-;       WAVE utils
-;
-; CALLING SEQUENCE:
-;       result = utils_ncdf_LonLat(cdfid, lon, lat)
-;
-; INPUT:
-;       cdfid: the active file cdfid
-;
-; OUTPUT:
-;       lon 
-;       lat  
-;
-; MODIFICATION HISTORY:
-;       Written by: FM, 2010
-;-
-;-----------------------------------------------------------------------
+ 
 ;+
 ; :Description:
 ;   This procedure reads lons and lats from a ncdf file, trying several known variable names. 
@@ -1162,6 +906,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;    This procedure is a low level WRF pre-processing tool to copy a WRF geo_em file
 ;    and change the land_cat dimension to 33.
 ;    The newly created file will be striclty identical exept for the land_cat dimension value,
@@ -1189,7 +934,7 @@ end
 ;                   First aparition
 ;
 ;-
-pro UTILS_usgs_24_to_33, file, NEW_LUF = new_luf
+pro utils_usgs_24_to_33, file, NEW_LUF = new_luf
 
   ; Set Up environnement
   @WAVE.inc
@@ -1379,7 +1124,7 @@ end
 ;+
 ; :Description:
 ;    This function makes a simple mean aggregation of a 2d array to a small array
-;    uisung a given ratio.
+;    using a given ratio.
 ;
 ; :Params:
 ;    array: in, required, type = float
@@ -1395,7 +1140,7 @@ end
 ;            2       2       1       1
 ;            2       2       2       2
 ;            3       3       3       3
-;     IDL> print, UTILS_aggregate_Grid_data(array, 2)
+;     IDL> print, utils_aggregate_Grid_data(array, 2)
 ;            1.0000000       1.0000000
 ;            2.5000000       2.5000000
 ; 
@@ -1411,7 +1156,7 @@ end
 ;          First apparition
 ;
 ;-
-function UTILS_aggregate_Grid_data, array, ratio ; TODO: add grid update
+function utils_aggregate_Grid_data, array, ratio ; TODO: add grid update
 
   ; Set Up environnement
   @WAVE.inc
@@ -1439,7 +1184,54 @@ function UTILS_aggregate_Grid_data, array, ratio ; TODO: add grid update
   
 end
 
-function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, cmax = cmax, r = r, g = g, b = b, INVERTCOLORS = INVERTCOLORS
+;+
+; :Description:
+;    This function converts any colors vector (rgb, strings, indexes in a 
+;    color table...) to 24-bit long integers.
+;    It is strongly inspired from the Coyote Graphics routines.
+;    
+; :Returns:
+;    A vector of 24-bit long integers.
+;
+; :Keywords:
+;    COLORS: in, optional
+;            if it is a 1-dimensional vector, the colors to convert (strings ins FSC_colors, 
+;            indexes in the current color table, etc.)
+;            if it is a two dimensional vector, it must be 3xN dimensional whereas the three 
+;            first columns are the RGB values. 
+;            it not set, the colors will be deduced from the other keywords
+;    NCOLORS: in, optional
+;             the number of colors in the output vector (only if COLORS is not set)
+;    CMIN: in, optional
+;          The lowest color index of the colors to be loaded in
+;          the color vector (only if COLORS is not set)
+;    CMAX: in, optional
+;          The highest color index of the colors to be loaded in
+;          the color vector (only if COLORS is not set)
+;    INVERTCOLORS: in, optional 
+;                  Setting this keyword inverts the colors in the color vector (only if COLORS is not set)
+;    R: out, optional
+;       the equivalent Rgb triplet
+;    G: out, optional
+;       the equivalent rGb triplet
+;    B: out, optional
+;       the equivalent rgB triplet
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;       Modified::
+;
+;-
+function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, CMAX = cmax, INVERTCOLORS = INVERTCOLORS, R = r, G = g, B = b
+
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT idl2
 
   if N_ELEMENTS(cmin) eq 0 then cmin = 0
   if N_ELEMENTS(cmax) eq 0 then cmax = 255
@@ -1461,9 +1253,7 @@ function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, c
   
   ncolors = N_Elements(_colors)
   
-  ; I would prefer to draw in 24-bit color if I can, since this way I can
-  ; avoid loading colors into the color table. I'll have to see where I am to
-  ; see if I can do this in 24-bit color.
+  ; I would prefer to draw in 24-bit color
   CASE !D.Name OF
     'X': BEGIN
       Device, Get_Visual_Depth=theDepth
@@ -1493,7 +1283,6 @@ function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, c
   ENDCASE
   
   ; Set up the colors for drawing. All 24-bit if it supports true color.
-  ; Otherwise load colors for 8-bit support.
   IF supportsTrueColor THEN BEGIN
     CASE Size(_colors, /TNAME) OF
       'STRING': BEGIN
@@ -1551,60 +1340,63 @@ function UTILS_COLOR_CONVERT, colors = colors, ncolors = ncolors, cmin = cmin, c
         _colors = Temporary(temp)
       END
     ENDCASE
-  ENDIF ELSE BEGIN
-  
+  ENDIF ELSE BEGIN  
    ; I'd rather not go here
-    MESSAGE, 'NO True color?'
-  
-;    CASE Size(_colors, /TNAME) OF
-;      'STRING': BEGIN
-;        _colors = FSC_Color(_colors, DECOMPOSED=0, FILE=file)
-;      END
-;      'LONG': BEGIN
-;      
-;        ; If the maximum value of these long integers in not over 255, then
-;        ; we can be pretty sure these are color index numbers. At least I'm
-;        ; going to treat them that way for now and see what kind of trouble I
-;        ; get into.
-;        IF Max(_colors) GT 255 THEN BEGIN
-;          r = _colors AND '0000FF'xL
-;          g = ISHFT(_colors AND '00FF00'xL, -8)
-;          b = ISHFT(_colors AND 'FF0000'xL, -16)
-;          TVLCT, r, g, b, cmin
-;          _colors = Indgen(ncolors) + cmin
-;        ENDIF
-;      END
-;      ELSE:
-;    ENDCASE
-;    
+    MESSAGE, 'NO True color?'  
   ENDELSE
-  if KEYWORD_SET(INVERTCOLORS) then _colors  = ROTATE(_colors,2)
+  
+  if KEYWORD_SET(INVERTCOLORS) then _colors  = ROTATE(_colors, 2)
+  
   utils_color_rgb, _colors, r, g, b  
   return, _colors  
   
 end
 
+;+
+; :Description:
+;    Converts a 24 bit color vector into a rgb triple.
+;
+; :Params:
+;    color: in, required, type = LONG
+;           the colors to converts
+;    r: out
+;    g: out
+;    b: out
+;
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
 pro utils_color_rgb, color, r, g, b
-  
+   
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT idl2
+   
+  if ~ arg_okay(color, TYPE=IDL_LONG) then message, WAVE_Std_Message('color', /ARG)
+    
   UNDEFINE, r, g, b
   r = BYTE(color) * 0B
   g = r
   b = r
-  for i = 0, N_ELEMENTS(color)-1 do begin
   
-    bi = ROTATE(BitGet(LONG(color[i])), 2)
-  
+  for i = 0, N_ELEMENTS(color)-1 do begin  
+    bi = ROTATE(BitGet(LONG(color[i])), 2)  
     tr = 0L
     tg = 0L
     tb = 0L
     for j = 0, 7 do tr += bi[j] * 2 ^ j
     for j = 8, 15 do tg += bi[j] * 2 ^ (j-8)
-    for j = 16, 23 do tb += bi[j] * 2 ^ (j-16)
-     
+    for j = 16, 23 do tb += bi[j] * 2 ^ (j-16)     
     r[i] = tr
     g[i] = tg
-    b[i] = tb
-     
+    b[i] = tb     
   endfor
 
 end
