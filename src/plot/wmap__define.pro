@@ -27,8 +27,8 @@
 ;         PLOT_PARAMS : for the colors and data-levels 
 ;         MAP_SHAPE   : for the shape files drawing  
 ;         MAP_PARAMS  : for the Lon-Lat/UTM contours drawing
-;         PLOT_MAP    :   
-;todo: describe plot_map
+;         wMap    :   
+;todo: describe wMap
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
@@ -46,7 +46,7 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-PRO PLOT_MAP__Define
+PRO wMap__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -87,7 +87,7 @@ PRO PLOT_MAP__Define
             style          : 0D              $
             }
      
-  struct = { PLOT_MAP                      , $
+  struct = { wMap                      , $
              grid          : OBJ_NEW()     , $
              Xsize         : 0L            , $
              Ysize         : 0L            , $
@@ -135,7 +135,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-Function PLOT_MAP::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
+Function wMap::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -152,6 +152,7 @@ Function PLOT_MAP::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   ; Check arguments *
   ;******************
   if not OBJ_ISA(grid, 'Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='Grid2D')
+  if ~KEYWORD_SET(Xsize) and ~KEYWORD_SET(Ysize) and ~KEYWORD_SET(FACTOR) then Ysize = 400
   
   self.grid = grid->reGrid(Xsize = Xsize,  Ysize = Ysize, FACTOR = factor) 
   self.grid->getProperty, tnt_C = c
@@ -189,7 +190,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-pro PLOT_MAP::DestroyPlotParams
+pro wMap::DestroyPlotParams
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -201,7 +202,7 @@ pro PLOT_MAP::DestroyPlotParams
   
 end
 
-pro PLOT_MAP::DestroyMapParams
+pro wMap::DestroyMapParams
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -236,7 +237,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-pro PLOT_MAP::DestroyShapes
+pro wMap::DestroyShapes
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -276,7 +277,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-pro PLOT_MAP::Cleanup
+pro wMap::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -321,7 +322,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-PRO PLOT_MAP::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors
+PRO wMap::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -378,7 +379,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
+function wMap::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
                                     COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors
          
   ; SET UP ENVIRONNEMENT
@@ -481,7 +482,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
+function wMap::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -575,7 +576,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_shading_params, RELIEF_FACTOR = relief_factor
+function wMap::set_shading_params, RELIEF_FACTOR = relief_factor
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -613,7 +614,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_img
+function wMap::set_img
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -677,7 +678,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
+function wMap::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
                              
   
   ; SET UP ENVIRONNEMENT
@@ -727,7 +728,7 @@ function PLOT_MAP::set_data, data, grid, BILINEAR = bilinear, MISSING = missing,
 
 end
 
-function PLOT_MAP::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
+function wMap::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -866,7 +867,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
+function wMap::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
                                     COLOR = color, THICK = thick, STYLE = style, $
                                     REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
 
@@ -1032,7 +1033,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::img_to_rgb
+function wMap::img_to_rgb
 
     utils_color_rgb, *self.plot_params.colors, s_r, s_g, s_b
     r = byte(0 > s_r[*self.img] < 255)
@@ -1066,7 +1067,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::shading
+function wMap::shading
 
   if self.relief_factor eq 0 then return, self->img_to_rgb()
   nlevels = self.plot_params.nlevels
@@ -1141,7 +1142,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function PLOT_MAP::mapping
+function wMap::mapping
 
   if self.map_params.type eq 'LONLAT' then begin
   
@@ -1161,7 +1162,7 @@ function PLOT_MAP::mapping
   
 end
 
-function PLOT_MAP::shaping
+function wMap::shaping
   
   shapes = *(self.shapes)
   
@@ -1221,7 +1222,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-pro PLOT_MAP::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, THICK=thick
+pro wMap::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, THICK=thick
 
   ;--------------------------
   ; Set up environment
@@ -1281,7 +1282,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-   
-pro PLOT_MAP::show_img, win, PIXMAP = pixmap
+pro wMap::show_img, win, PIXMAP = pixmap
 
   @WAVE.inc
   
@@ -1345,7 +1346,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-   
-pro PLOT_MAP::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tags
+pro wMap::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tags
 
   @WAVE.inc
   

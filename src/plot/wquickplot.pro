@@ -279,6 +279,11 @@ PRO wQuickPlot_DimChange, event
   range = [min(data), max(data)]
   if range[0] eq range[1] then range[1] += 1
   info.cbar->SetProperty, Range = range
+  typ = SIZE(range, /TYPE)
+  if typ eq 1 then range = LONG(range)
+  if typ eq 5 then range = FLOAT(range)
+  info.minvalueObj->set_value, range[0]
+  info.maxvalueObj->set_value, range[1]
   
   ; Redisplay the view.  
   info.thisWindow->Draw, info.plotView
@@ -854,11 +859,14 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   ; Create image range widgets.    
   typ = SIZE(brange, /TYPE)
   if typ eq 1 then brange = LONG(brange)
+  if typ eq 5 then brange = FLOAT(brange)
   medBase = Widget_Base(tlb, Colum=1, /Base_Align_Center)
   medlabelBase = Widget_Base(medBase, Row=1)
   rangeBase = Widget_Base(medBase, Row=1)
-  minvalueID = FSC_Field(rangeBase, Title='Range min:', Value=brange[0], XSize=6, OBJECT=minvalueObj, EVENT_PRO='wQuickPlot_Change_Range')
-  maxvalueID = FSC_Field(rangeBase, Title='Range max:', Value=brange[1],  XSize=6, OBJECT=maxvalueObj, EVENT_PRO='wQuickPlot_Change_Range')
+  minvalueID = FSC_Field(rangeBase, Title='Range min:', Value=brange[0], DECIMAL = 2,  $
+      XSize=8, OBJECT=minvalueObj, /CR_ONLY, EVENT_PRO='wQuickPlot_Change_Range')
+  maxvalueID = FSC_Field(rangeBase, Title='Range max:', Value=brange[1], DECIMAL = 2,  $
+      XSize=8, OBJECT=maxvalueObj, /CR_ONLY, EVENT_PRO='wQuickPlot_Change_Range')
     
   ; Create image value and location widgets.    
   bottomBase = Widget_Base(tlb, Colum=1, /Base_Align_Center)

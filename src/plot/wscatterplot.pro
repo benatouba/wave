@@ -38,7 +38,7 @@
 ;       Modified::
 ;
 ;-
-pro WScatter_plot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
+pro WScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
                    RANGE = range, NOFIT = nofit, NOCORRELATION = nocorrelation, COLOR = color, PSYM=psym, $
                    LEGEND_UL = LEGEND_UL
 
@@ -58,17 +58,17 @@ pro WScatter_plot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   if ~KEYWORD_SET(color) then color = 'black'
   if ~KEYWORD_SET(psym) then psym = 1
   
-  cgWindow, 'cgPlot', x, y, title = title, CHARSIZE=1.8, /NORMAL, $
+  FSC_Window, 'FSC_Plot', x, y, title = title, CHARSIZE=1.8, /NORMAL, $
     CHARTHICK = 1.3, THICK=2., XTITLE = xtitle, Ytitle = Ytitle,  POSITION = [0.14,0.12,0.94,0.92], /NODATA, YSTYLE = 1, xstyle = 1, $
        WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window', XRANGE=range, YRANGE= range, PSYM=psym
  
-  cgplots, [range[0],range[1]], [range[0],range[1]], color = FSC_Color('grey'), LINESTYLE=5, /WINDOW
+  FSC_plots, [range[0],range[1]], [range[0],range[1]], color = FSC_Color('grey'), LINESTYLE=5, /WINDOW
   
-  cgplot, x, y,  COLOR=FSC_Color(color), PSYM=psym, /OVERPLOT, /WINDOW
+  FSC_plot, x, y,  COLOR=FSC_Color(color), PSYM=psym, /OVERPLOT, /WINDOW
   
   if ~KEYWORD_SET(NOFIT) then begin  
     l = LINFIT(x, y, /DOUBLE)    
-    cgPlots, range, l[0] + l[1] * range, color = FSC_Color('dark grey'), NOCLIP = 0, /WINDOW    
+    FSC_Plots, range, l[0] + l[1] * range, color = FSC_Color('dark grey'), NOCLIP = 0, /WINDOW    
     
     if l[0] lt 0 then sign = '- ' else sign = '+ ' 
     sq_sign = String(108B)
@@ -77,7 +77,7 @@ pro WScatter_plot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.85] $
     else  pos = [0.5, 0.22]
     
-    cgText, pos[0], pos[1], text, CHARSIZE= 2., COLOR=FSC_Color('black'), CHARTHICK=1., /NORMAL, /WINDOW 
+    FSC_Text, pos[0], pos[1], text, CHARSIZE= 2., COLOR=FSC_Color('black'), CHARTHICK=1., /NORMAL, /WINDOW 
         
   endif
   
@@ -88,7 +88,7 @@ pro WScatter_plot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
     
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.80] $
     else  pos = [0.5, 0.17]
-    cgtext, pos[0], pos[1], text, CHARSIZE= 2., COLOR=FSC_Color('black'), CHARTHICK=1., /NORMAL, /ADDCMD
+    FSC_text, pos[0], pos[1], text, CHARSIZE= 2., COLOR=FSC_Color('black'), CHARTHICK=1., /NORMAL, /ADDCMD
   endif
 
   !ORDER = pp

@@ -48,7 +48,11 @@ pushd, root
 .run WDTM__Define.pro
 
 ; Plots
-.run PLOT_MAP__Define.pro
+.run wmap__define.pro
+.run wquickplot.pro
+.run wtimelineplot.pro
+.run wscatterplot.pro
+
 
 resolve_all, /QUIET
 
