@@ -19,7 +19,7 @@
 ;    time2: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data2)
 ;    color2: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag2: in, optional, type = string
 ;          the tag related to data2 for the legend
 ;
@@ -28,7 +28,7 @@
 ;    time3: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data3)
 ;    color3: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag3: in, optional, type = string
 ;          the tag related to data3 for the legend
 ;
@@ -37,7 +37,7 @@
 ;    time4: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data4)
 ;    color4: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag4: in, optional, type = string
 ;          the tag related to data4 for the legend
 ;
@@ -46,7 +46,7 @@
 ;    time5: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data5)
 ;    color5: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag5: in, optional, type = string
 ;          the tag related to data5 for the legend
 ;
@@ -55,7 +55,7 @@
 ;    time6: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data6)
 ;    color6: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag6: in, optional, type = string
 ;          the tag related to data6 for the legend
 ;
@@ -64,7 +64,7 @@
 ;    time7: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data7)
 ;    color7: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag7: in, optional, type = string
 ;          the tag related to data7 for the legend
 ;
@@ -73,14 +73,14 @@
 ;    time8: in, optional, type = qms/{ABS_DATE}
 ;          the time (same size as data8)
 ;    color8: in, optional, type = string
-;          the color for the overplot (string accepted by cgCOLOR)
+;          the color for the overplot (string accepted by FSC_Color)
 ;    tag8: in, optional, type = string
 ;          the tag related to data8 for the legend
 ;
 ; :Keywords:
 ; 
 ;    color1: in, optional, type = string, default = 'black'
-;           the color for the first plot (string accepted by cgCOLOR)
+;           the color for the first plot (string accepted by FSC_Color)
 ;    style1: in, optional, type = numeric, default = 0
 ;            the style for the first plot
 ;    psym1: in, optional, type = numeric, default = 0
@@ -352,30 +352,30 @@ pro WTimeLine_plot, data,$  ; array to plot
   plo_thi = 1.2
 
   jd = TIME_to_JD(time[p1:p2])  
-  cgWindow, 'cgplot', jd, data[p1:p2], title = title,  COLOR=cgColor('Black'), BACKGROUND=cgColor('WHITE'), CHARSIZE=plo_siz, /NORMAL, $
+  cgWindow, 'cgplot', jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
     CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [0.1,0.09,0.65,0.92], XTICK_GET=xs, YTICK_GET=ys, $
      /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym, $
        WXSize = 1200, WYSize = 600, WTITLE = 'WTimeLine_plot resizable window'
         
-  if N_ELEMENTS(HORILINE) eq 1 then cgWindow, 'cgplots', [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('Black'), LINESTYLE=5, /AddCmd
+  if N_ELEMENTS(HORILINE) eq 1 then cgWindow, 'cgplots', [min(jd),max(jd)], [HORILINE,HORILINE], color = FSC_Color('Black'), LINESTYLE=5, /AddCmd
   if N_ELEMENTS(VERTILINE) eq 1 then $
     for i =0, N_ELEMENTS(VERTILINE)-1 do cgWindow, 'cgplots', [TIME_to_JD(VERTILINE[i]),TIME_to_JD(VERTILINE[i])], $
-           range, color = cgColor('black'), LINESTYLE=5, /AddCmd
+           range, color = FSC_Color('black'), LINESTYLE=5, /AddCmd
   ; real plot
   if ~KEYWORD_SET(psym1) then begin
-    cgWindow, 'cgplot', jd, data[p1:p2], COLOR = cgColor(color1), THI = thickness, LINESTYLE=style, PSYM=psym, /OVERPLOT, /AddCmd
+    cgWindow, 'cgplot', jd, data[p1:p2], COLOR = FSC_Color(color1), THI = thickness, LINESTYLE=style, PSYM=psym, /OVERPLOT, /AddCmd
   endif else begin
-    cgWindow, 'cgplot', jd, data[p1:p2], COLOR = cgColor(color1), PSYM=psym, SYMSIZE=thickness, /OVERPLOT, /AddCmd
+    cgWindow, 'cgplot', jd, data[p1:p2], COLOR = FSC_Color(color1), PSYM=psym, SYMSIZE=thickness, /OVERPLOT, /AddCmd
   endelse
 
   if ~KEYWORD_SET(psym1) then begin
-    cgWindow, 'cgplots', x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, LINESTYLE=style, /AddCmd
+    cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color1), /NORMAL , THICK=thickness, LINESTYLE=style, /AddCmd
   endif else begin
-    cgWindow, 'cgplots', x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, PSYM=psym, SYMSIZE=thickness, /AddCmd
+    cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color1), /NORMAL , THICK=thickness, PSYM=psym, SYMSIZE=thickness, /AddCmd
   endelse
 
-  cgWindow, 'cgtext', x[1]+ dx1 ,  y[0]-dy1, tag, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color1), /NORMAL , /AddCmd
-  if KEYWORD_SET(coment1) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment1, CHARSIZE=csiz, CHARTHICK = cthi, COLOR = cgColor(color1), /NORMAL, /AddCmd
+  cgWindow, 'cgtext', x[1]+ dx1 ,  y[0]-dy1, tag, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color1), /NORMAL , /AddCmd
+  if KEYWORD_SET(coment1) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment1, CHARSIZE=csiz, CHARTHICK = cthi, COLOR = FSC_Color(color1), /NORMAL, /AddCmd
   
   news = 2
   
@@ -384,147 +384,147 @@ pro WTimeLine_plot, data,$  ; array to plot
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 2 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data2), MAX(data2)]
-      cgWindow, 'cgAxis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'cgAxis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style2) eq 1 then style = style2 
     y = y - 0.1
     if ~KEYWORD_SET(psym2) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time2), data2, COLOR = cgColor(color2), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color2), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time2), data2, COLOR = FSC_Color(color2), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color2), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time2)], data2, COLOR = cgColor(color2), PSYM=psym2, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time2)], data2, COLOR = FSC_Color(color2), PSYM=psym2, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM2 eq 10 then psym2 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color2), THICK=thickness, /NORMAL, PSYM=psym2, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color2), THICK=thickness, /NORMAL, PSYM=psym2, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag2, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color2), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment2) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment2, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color2), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag2, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color2), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment2) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment2, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color2), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data3) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 3 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data3), MAX(data3)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style3) eq 1  then style = style3 
     y = y - 0.1
     if ~KEYWORD_SET(psym3) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time3), data3, COLOR = cgColor(color3), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color3), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time3), data3, COLOR = FSC_Color(color3), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color3), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time3)], data3, COLOR = cgColor(color3), PSYM=psym3, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time3)], data3, COLOR = FSC_Color(color3), PSYM=psym3, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM3 eq 10 then psym3 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color3), THICK=thickness, /NORMAL, PSYM=psym3, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color3), THICK=thickness, /NORMAL, PSYM=psym3, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag3, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color3), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment3) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment3, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color3), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag3, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color3), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment3) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment3, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color3), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data4) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 4 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data4), MAX(data4)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style4) eq 1  then style = style4 
     y = y - 0.1
     if ~KEYWORD_SET(psym4) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time4), data4, COLOR = cgColor(color4), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color4), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time4), data4, COLOR = FSC_Color(color4), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color4), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time4)], data4, COLOR = cgColor(color4), PSYM=psym4, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time4)], data4, COLOR = FSC_Color(color4), PSYM=psym4, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM4 eq 10 then psym4 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color4), THICK=thickness, /NORMAL, PSYM=psym4, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color4), THICK=thickness, /NORMAL, PSYM=psym4, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag4, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color4), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment4) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment4, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color4), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag4, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color4), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment4) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment4, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color4), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data5) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 5 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data5), MAX(data5)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style5) eq 1  then style = style5 
     y = y - 0.1
     if ~KEYWORD_SET(psym5) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time5), data5, COLOR = cgColor(color5), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color5), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time5), data5, COLOR = FSC_Color(color5), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color5), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time5)], data5, COLOR = cgColor(color5), PSYM=psym5, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time5)], data5, COLOR = FSC_Color(color5), PSYM=psym5, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM5 eq 10 then psym5 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color5), THICK=thickness, /NORMAL, PSYM=psym5, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color5), THICK=thickness, /NORMAL, PSYM=psym5, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag5, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color5), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment5) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment5, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color5), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag5, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color5), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment5) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment5, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color5), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data6) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 6 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data6), MAX(data6)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style6) eq 1  then style = style6 
     y = y - 0.1
     if ~KEYWORD_SET(psym6) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time6), data6, COLOR = cgColor(color6), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color6), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time6), data6, COLOR = FSC_Color(color6), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color6), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time6)], data6, COLOR = cgColor(color6), PSYM=psym6, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time6)], data6, COLOR = FSC_Color(color6), PSYM=psym6, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM6 eq 10 then psym6 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color6), THICK=thickness, /NORMAL, PSYM=psym6, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color6), THICK=thickness, /NORMAL, PSYM=psym6, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag6, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color6), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment6) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment6, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color6), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag6, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color6), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment6) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment6, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color6), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data7) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 7 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data7), MAX(data7)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style7) eq 1  then style = style7 
     y = y - 0.1
     if ~KEYWORD_SET(psym7) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time7), data7, COLOR = cgColor(color7), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color7), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time7), data7, COLOR = FSC_Color(color7), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color7), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time7)], data7, COLOR = cgColor(color7), PSYM=psym7, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time7)], data7, COLOR = FSC_Color(color7), PSYM=psym7, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM7 eq 10 then psym7 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color7), THICK=thickness, /NORMAL, PSYM=psym7, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color7), THICK=thickness, /NORMAL, PSYM=psym7, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag7, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color7), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment7) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment7, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color7), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag7, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color7), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment7) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment7, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color7), /NORMAL, /ADDCMD
   endif  
   
   if N_ELEMENTS(data8) ne 0 then begin    
     ; Are the next plots on a new axis ?
     if NEWAXIS eq 8 then begin
       if ~KEYWORD_SET(newrange) then newrange = [MIN(data8), MAX(data8)]
-      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
+      cgWindow, 'Axis', YAxis=1, YTitle=NEWTITLE, /save, COLOR=FSC_Color('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, /ADDCMD
       style = news
     endif
     if N_ELEMENTS(style8) eq 1  then style = style8 
     y = y - 0.1
     if ~KEYWORD_SET(psym8) then begin
-      cgWindow, 'cgplot', TIME_to_JD(time8), data8, COLOR = cgColor(color8), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color8), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
+      cgWindow, 'cgplot', TIME_to_JD(time8), data8, COLOR = FSC_Color(color8), THI =  thickness, LINESTYLE=style, /OVERPLOT, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color8), THICK=thickness, /NORMAL, LINESTYLE=style, /ADDCMD
     endif else begin
-      cgWindow, 'cgplot', [TIME_to_JD(time8)], data8, COLOR = cgColor(color8), PSYM=psym8, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
+      cgWindow, 'cgplot', [TIME_to_JD(time8)], data8, COLOR = FSC_Color(color8), PSYM=psym8, SYMSIZE=thickness, /ADDCMD, /OVERPLOT
       if PSYM8 eq 10 then psym8 = 0
-      cgWindow, 'cgplots', x, y,  COLOR = cgColor(color8), THICK=thickness, /NORMAL, PSYM=psym8, SYMSIZE=thickness, /ADDCMD
+      cgWindow, 'cgplots', x, y,  COLOR = FSC_Color(color8), THICK=thickness, /NORMAL, PSYM=psym8, SYMSIZE=thickness, /ADDCMD
     endelse   
-    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag8, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, /ADDCMD
-    if KEYWORD_SET(coment8) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment8, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, /ADDCMD
+    cgWindow, 'cgtext', x[1]+dx1 ,  y[0]-dy1, tag8, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = FSC_Color(color8), /NORMAL, /ADDCMD
+    if KEYWORD_SET(coment8) then cgWindow, 'cgtext', x[1]+dx2 ,  y[0]-dy2, coment8, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = FSC_Color(color8), /NORMAL, /ADDCMD
   endif  
   
   !ORDER = pp

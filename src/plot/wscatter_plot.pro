@@ -58,8 +58,7 @@ pro WScatter_plot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   if ~KEYWORD_SET(color) then color = 'black'
   if ~KEYWORD_SET(psym) then psym = 1
   
-  
-  cgWindow, 'cgPlot', x, y, title = title,  COLOR=FSC_Color('black'), BACKGROUND=FSC_Color('WHITE'), CHARSIZE=1.8, /NORMAL, $
+  cgWindow, 'cgPlot', x, y, title = title, CHARSIZE=1.8, /NORMAL, $
     CHARTHICK = 1.3, THICK=2., XTITLE = xtitle, Ytitle = Ytitle,  POSITION = [0.14,0.12,0.94,0.92], /NODATA, YSTYLE = 1, xstyle = 1, $
        WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window', XRANGE=range, YRANGE= range, PSYM=psym
  
