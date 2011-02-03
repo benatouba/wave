@@ -12,7 +12,7 @@
 ; TODO: currently this list is hard coded, it would be better using configuration files
 ; 
 ; The X, Y and time coordinates are then available through the 'get_ncdf_coordinates'
-; and 'get_time' methods. Also, the 'wQuickPlotVar' method is extended to include 
+; and 'get_time' methods. Also, the 'QuickPlotVar' method is extended to include 
 ; the geolocaliation info.
 ; 
 ; The major feature of this class is to encapsulate the 
@@ -816,7 +816,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro GEO_nc::wQuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
+pro GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -842,7 +842,7 @@ pro GEO_nc::wQuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
     if cnt ne 0 then tsrt = TIME_to_STR(time)
   endif   
   
-  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
+  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
         dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt
 
 end

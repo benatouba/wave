@@ -181,7 +181,7 @@
 ;       Modified::
 ;
 ;-
-pro WTimeLinePlot, data,$  ; array to plot
+pro w_TimeLinePlot, data,$  ; array to plot
                     time, $   ; time (same size as data)
                     tag,  $   ; legend (str)
                     color1 = color1,$ ; All FSC colors strings accepted. default: black
@@ -355,7 +355,7 @@ pro WTimeLinePlot, data,$  ; array to plot
   fsc_Window, 'fsc_plot', jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
     CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [0.1,0.09,0.65,0.92], XTICK_GET=xs, YTICK_GET=ys, $
      /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym, $
-       WXSize = 1200, WYSize = 600, WTITLE = 'WTimeLinePlot resizable window'
+       WXSize = 1200, WYSize = 600, WTITLE = 'w_TimeLinePlot resizable window'
         
   if N_ELEMENTS(HORILINE) eq 1 then fsc_Window, 'fsc_plots', [min(jd),max(jd)], [HORILINE,HORILINE], color = FSC_Color('Black'), LINESTYLE=5, /AddCmd
   if N_ELEMENTS(VERTILINE) eq 1 then $

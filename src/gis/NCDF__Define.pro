@@ -843,7 +843,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::wQuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
+pro NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -862,7 +862,7 @@ pro NCDF::wQuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  wQuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
+  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
 
 end
 

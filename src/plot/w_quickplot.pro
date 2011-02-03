@@ -1,158 +1,4 @@
-;***********************************************************************
-;                                                                      *
-; Author(s)   :  F. Maussion                                           *
-; Name        :  TIME.pro                                              *
-; Version     :  WAVE 0.1                                              *
-; Language    :  IDL 7.0 and higher                                    *
-; Date        :  Aug-2010                                              *
-; Last Update :  12-nov-2010 FaM                                       *
-;                                                                      *
-; IDL program file for WAVE main program.                              *
-;                                                                      *
-;***********************************************************************
- 
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       GENERAL INFORMATION
-;
-;        
-;        Examples:
-;        
-;
-;
-;  TODO: clean, doc and features...
-;
-;-
-;-----------------------------------------------------------------------
-
-;+
-; NAME:
-;       XIMAGE
-;
-; PURPOSE:
-;
-;       The purpose of this program is to demonstrate how to
-;       create a image plot with axes,a title, and the ability
-;       to select a location and image value using object graphics.
-;
-; AUTHOR:
-;
-;       FANNING SOFTWARE CONSULTING
-;       David Fanning, Ph.D.
-;       1645 Sheely Drive
-;       Fort Collins, CO 80526 USA
-;       Phone: 970-221-0438
-;       E-mail: davidf@dfanning.com
-;       Coyote's Guide to IDL Programming: http://www.dfanning.com
-;
-; CATEGORY:
-;
-;       Widgets, Object Graphics.
-;
-; CALLING SEQUENCE:
-;
-;       XImage, image
-;
-; REQUIRED INPUTS:
-;
-;       None. The image "worldelv.dat" from the examples/data directory
-;       is used if no data is supplied in call.
-;
-; OPTIONAL INPUTS
-;
-;       image: An 8-bit or 24-bit image.
-;
-; OPTIONAL KEYWORD PARAMETERS:
-;
-;       COLORTABLE: The number of a color table to use as the image palette.
-;       Color table 0 (grayscale) is used as a default. (Keyword ignored if
-;       a 24-bit image is used.
-;
-;       GROUP_LEADER: The group leader for this program. When the group leader
-;       is destroyed, this program will be destroyed.
-;
-;       KEEP_ASPECT_RATIO: Set this keyword if you wish the aspect ratio
-;       of the image to be preserved as the graphics display window is resized.
-;
-;       TITLE: A string used as the title of the plot.
-;
-;       XRANGE: A two-element array specifying the X axis range.
-;
-;       XSIZE: The initial X window size. Default is 400 pixels.
-;
-;       XTITLE: A string used as the X title of the plot.
-;
-;       YRANGE: A two-element array specifying the Y axis range.
-;
-;       YSIZE: The initial Y window size. Default is 400 pixels.
-;
-;       YTITLE: A string used as the Y title of the plot.
-;
-; COMMON BLOCKS:
-;
-;       None.
-;
-; SIDE EFFECTS:
-;
-;       None.
-;
-; RESTRICTIONS:
-;
-;       Requires the XColors and Normalize programs from the Coyote library.
-;
-;          http://www.dfanning.com/programs/xcolors.pro
-;          http://www.dfanning.com/programs/normalize.pro
-;
-; EXAMPLE:
-;
-;       To use this program with your 8-bit or 24-bit image data, type:
-;
-;        IDL> XImage, image
-;
-; MODIFICATION HISTORY:
-;
-;       Written by David Fanning, 13 June 97.
-;       Added Keep_Apect_Ratio keyword and Zoom buttons. DWF 15 JUNE 97.
-;       Improved font handling and color support. DWF 4 OCT 97.
-;       Fixed memory leakage from improper object cleanup. 12 FEB 98. DWF
-;       Changed IDLgrContainer to IDL_Container to fix 5.1 problems. 20 May 98. DWF.
-;       Modified program to show how image values can be selected. 8 May 2000. DWF.
-;       Made several modifications to resize event handler. Much improved. 2 June 2000. DWF.
-;       Completely updated program to reflect current (IDL 5.5) capabilities. 12 Nov 2001. DWF.
-;       Removed NORMALIZE from the source code. 29 November 2005. DWF.
-;       Renamed NORMALIZE to FSC_NORMALIZE to avoid numerous naming conflicts. 17 October 2008. DWF.
-;-
-;******************************************************************************************;
-;  Copyright (c) 2008, by Fanning Software Consulting, Inc.                                ;
-;  All rights reserved.                                                                    ;
-;                                                                                          ;
-;  Redistribution and use in source and binary forms, with or without                      ;
-;  modification, are permitted provided that the following conditions are met:             ;
-;                                                                                          ;
-;      * Redistributions of source code must retain the above copyright                    ;
-;        notice, this list of conditions and the following disclaimer.                     ;
-;      * Redistributions in binary form must reproduce the above copyright                 ;
-;        notice, this list of conditions and the following disclaimer in the               ;
-;        documentation and/or other materials provided with the distribution.              ;
-;      * Neither the name of Fanning Software Consulting, Inc. nor the names of its        ;
-;        contributors may be used to endorse or promote products derived from this         ;
-;        software without specific prior written permission.                               ;
-;                                                                                          ;
-;  THIS SOFTWARE IS PROVIDED BY FANNING SOFTWARE CONSULTING, INC. ''AS IS'' AND ANY        ;
-;  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES    ;
-;  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT     ;
-;  SHALL FANNING SOFTWARE CONSULTING, INC. BE LIABLE FOR ANY DIRECT, INDIRECT,             ;
-;  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED    ;
-;  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;         ;
-;  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND             ;
-;  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT              ;
-;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS           ;
-;  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                            ;
-;******************************************************************************************;
-
-
-FUNCTION wQuickPlot_Aspect, aspectRatio, MARGIN=margin, WindowAspect=wAspectRatio
+FUNCTION w_QuickPlot_Aspect, aspectRatio, MARGIN=margin, WindowAspect=wAspectRatio
 
   ; This function calculates the correct aspect ratios for printing.
   ON_ERROR, 2
@@ -200,7 +46,7 @@ END
 
 ;-------------------------------------------------------------------------
 
-PRO wQuickPlot_Zoom_Button_Event, event
+PRO w_QuickPlot_Zoom_Button_Event, event
 
   ; Event handler to perform window zooming.
 
@@ -240,7 +86,7 @@ END
 
 ;-------------------------------------------------------------------
 
-PRO wQuickPlot_DimChange, event
+PRO w_QuickPlot_DimChange, event
 
   ; Event handler to perform image processing options
   Widget_Control, event.top, Get_UValue=info, /No_Copy
@@ -294,7 +140,7 @@ END
 
 ;-------------------------------------------------------------------
 
-PRO wQuickPlot_Output, event
+PRO w_QuickPlot_Output, event
 
    ; This event handler creates output files.
 
@@ -317,7 +163,7 @@ CASE whichFileType OF
          ; appropriate color tables for the GIF file.
 
       image2D = Color_Quan(snapshot, 1, r, g, b)
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.gif')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.gif')
       IF filename NE '' THEN Write_GIF, filename, image2d, r, g, b
       END
 
@@ -328,7 +174,7 @@ CASE whichFileType OF
          ; appropriate color tables for the GIF file.
 
       image2D = Color_Quan(snapshot, 1, r, g, b)
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.bmp')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.bmp')
       IF filename NE '' THEN Write_BMP, filename, image2d, r, g, b
       END
 
@@ -339,7 +185,7 @@ CASE whichFileType OF
          ; appropriate color tables for the GIF file.
 
       image2D = Color_Quan(snapshot, 1, r, g, b)
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.png')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.png')
       IF filename NE '' THEN Write_PNG, filename, image2d, r, g, b
       END
 
@@ -350,20 +196,20 @@ CASE whichFileType OF
          ; appropriate color tables for the GIF file.
 
       image2D = Color_Quan(snapshot, 1, r, g, b)
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.pict')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.pict')
       IF filename NE '' THEN Write_PICT, filename, image2d, r, g, b
       END
 
    'JPEG': BEGIN
 
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.jpg')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.jpg')
       IF filename NE '' THEN Write_JPEG, filename, snapshot, True=1
       END
 
 
    'TIFF': BEGIN
 
-      filename = Dialog_Pickfile(/Write, File='wQuickPlot.tif')
+      filename = Dialog_Pickfile(/Write, File='w_QuickPlot.tif')
       IF filename NE '' THEN BEGIN
 
          ; TIFF files should have their Y direction reversed for
@@ -383,10 +229,10 @@ END
 
 
 
-PRO wQuickPlot_Exit, event
+PRO w_QuickPlot_Exit, event
 
    ; Exit the program via the EXIT button.
-   ; The wQuickPlot_CLEANUP procedure will be called automatically.
+   ; The w_QuickPlot_CLEANUP procedure will be called automatically.
 
 Widget_Control, event.top, /Destroy
 END
@@ -394,7 +240,7 @@ END
 
 
 
-PRO wQuickPlot_Printing, event
+PRO w_QuickPlot_Printing, event
 
    ; PostScript printing and printer setup handled here.
 
@@ -416,7 +262,7 @@ CASE buttonValue OF
          info.thisPrinter->GetProperty, Dimensions=pdims
          plotAspect = Float(wdims[1]) / wdims[0]
          windowAspect = Float(pdims[1]) / pdims[0]
-         position = wQuickPlot_Aspect(plotAspect, WindowAspect=windowAspect, Margin=0.075)
+         position = w_QuickPlot_Aspect(plotAspect, WindowAspect=windowAspect, Margin=0.075)
          info.plotView->SetProperty, Dimensions=[position[2]-position[0], position[3]-position[1]], $
             Location=[position[0], position[1]], Units=3
 
@@ -445,7 +291,7 @@ CASE buttonValue OF
          info.thisPrinter->GetProperty, Dimensions=pdims
          plotAspect = Float(wdims[1]) / wdims[0]
          windowAspect = Float(pdims[1]) / pdims[0]
-         position = wQuickPlot_Aspect(plotAspect, WindowAspect=windowAspect, Margin=0.075)
+         position = w_QuickPlot_Aspect(plotAspect, WindowAspect=windowAspect, Margin=0.075)
          info.plotView->SetProperty, Dimensions=[position[2]-position[0], position[3]-position[1]], $
             Location=[position[0], position[1]], Units=3
 
@@ -474,7 +320,7 @@ END
 
 
 
-PRO wQuickPlot_Image_Colors, event
+PRO w_QuickPlot_Image_Colors, event
 
   ; This event handler changes color tables.
 
@@ -507,7 +353,7 @@ PRO wQuickPlot_Image_Colors, event
 END ;------------------------------------------------------------------------------
 
 
-PRO wQuickPlot_Change_Range, event
+PRO w_QuickPlot_Change_Range, event
 
   ; This event handler changes color tables.
 
@@ -550,7 +396,7 @@ END ;---------------------------------------------------------------------------
 
 
 
-PRO wQuickPlot_CLEANUP, id
+PRO w_QuickPlot_CLEANUP, id
 
     ; Come here when the widget dies. Free all the program
     ; objects, pointers, pixmaps, etc. and release memory.
@@ -566,7 +412,7 @@ END
 
 
 
-PRO wQuickPlot_DrawWidget_Event, event
+PRO w_QuickPlot_DrawWidget_Event, event
 
     ; This event handler handles draw widget events, including
     ; image value selection events.
@@ -619,7 +465,7 @@ END
 
 
 
-PRO wQuickPlot_Resize, event
+PRO w_QuickPlot_Resize, event
 
   ; This is main event handler for the TLB. It handles resize events.
   Widget_Control, event.top, Get_UValue=info, /No_Copy
@@ -659,21 +505,21 @@ PRO wQuickPlot_Resize, event
 END
 
 
-pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
-               CbarTitle = CbarTitle, $ ; The title of the color bar
-               CoordX=coordX, $ ; If available, the X coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
-               CoordY=coordY, $ ; If available, the Y coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
-               winYSize=wysize, $ ; the size of the window in Y pixels. (default: 500)
-               Colortable=colortable,  $ ; the colorbar to use (default: BW)
-               XTitle=xtitle,  $ ; X axis title
-               YTitle=ytitle, $ ; Y axis title
-               Title=Title,  $ ; Plot title
-               Window_Title = Window_Title, $ ; Window title          
-               dimnames = dimnames,  $ ; the dimensions names, if available (vector of strings of the same lenght as the number of dimensions of image)
-               dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0]) 
-               dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*]) 
-               INTERPOLATE = interpolate, $
-               Group_Leader = group
+pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
+                CbarTitle = CbarTitle, $ ; The title of the color bar
+                CoordX=coordX, $ ; If available, the X coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
+                CoordY=coordY, $ ; If available, the Y coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
+                winYSize = wysize, $ ; the size of the window in Y pixels. (default: 500)
+                Colortable=colortable,  $ ; the colorbar to use (default: BW)
+                XTitle=xtitle,  $ ; X axis title
+                YTitle=ytitle, $ ; Y axis title
+                Title=Title,  $ ; Plot title
+                Window_Title = Window_Title, $ ; Window title          
+                dimnames = dimnames,  $ ; the dimensions names, if available (vector of strings of the same lenght as the number of dimensions of image)
+                dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0]) 
+                dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*]) 
+                INTERPOLATE = interpolate, $ ; bilinear interoplation of the image
+                Group_Leader = group
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -703,7 +549,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   if N_Elements(ytitle) eq 0 then ytitle = ''
   if N_Elements(Title) eq 0 then Title=''
   if N_Elements(colortable) eq 0 then colortable = 0
-  if N_Elements(Window_Title) eq 0 then Window_Title = 'wQuickPlot quick view interface'
+  if N_Elements(Window_Title) eq 0 then Window_Title = 'w_QuickPlot quick view interface'
   if N_ELEMENTS(CoordX) ne 0 then begin
     addCoord = TRUE
   endif else begin
@@ -735,7 +581,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr), Dimensions=[xsize,ysize], Palette=thisPalette, INTERPOLATE = interpolate)
     
   ; Create scaling parameters for the image. I get position coordinates for a normalized window from
-  ; my wQuickPlot_Aspect function. Then use my FSC_Normalize function to create scaling factors for the image.
+  ; my w_QuickPlot_Aspect function. Then use my FSC_Normalize function to create scaling factors for the image.
   ; Compute optimal x and y margins
   
   relBar = 20D / wxsize
@@ -744,7 +590,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   relImy = DOUBLE(ysize) / wysize
   
   barImAspect = relImy / (relBar+relmarg+relImx)  
-  pos = wQuickPlot_Aspect(ImageAspect, WindowAspect=windowAspect, Margin=0.14)      
+  pos = w_QuickPlot_Aspect(ImageAspect, WindowAspect=windowAspect, Margin=0.14)      
   largY = (pos[2]-pos[0]) * wxsize * imageAspect /  wysize    
   top = 0.5 + largY / 2
   bot = 0.5 - largY / 2
@@ -854,7 +700,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   ; Create the draw widget. RETAIN=0 is necessary to generate EXPOSE events.    
   drawID = Widget_Draw(tlb, XSize=wxsize, YSize=wysize, $
     Graphics_Level=2, Expose_Events=1, Retain=0, $
-    Event_Pro='wQuickPlot_DrawWidget_Event', Button_Events=1)
+    Event_Pro='w_QuickPlot_DrawWidget_Event', Button_Events=1)
     
   ; Create image range widgets.    
   typ = SIZE(brange, /TYPE)
@@ -864,9 +710,9 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   medlabelBase = Widget_Base(medBase, Row=1)
   rangeBase = Widget_Base(medBase, Row=1)
   minvalueID = FSC_Field(rangeBase, Title='Range min:', Value=brange[0], DECIMAL = 2,  $
-      XSize=8, OBJECT=minvalueObj, /CR_ONLY, EVENT_PRO='wQuickPlot_Change_Range')
+      XSize=8, OBJECT=minvalueObj, /CR_ONLY, EVENT_PRO='w_QuickPlot_Change_Range')
   maxvalueID = FSC_Field(rangeBase, Title='Range max:', Value=brange[1], DECIMAL = 2,  $
-      XSize=8, OBJECT=maxvalueObj, /CR_ONLY, EVENT_PRO='wQuickPlot_Change_Range')
+      XSize=8, OBJECT=maxvalueObj, /CR_ONLY, EVENT_PRO='w_QuickPlot_Change_Range')
     
   ; Create image value and location widgets.    
   bottomBase = Widget_Base(tlb, Colum=1, /Base_Align_Center)
@@ -901,29 +747,29 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   if thisVersion lt 5.4 then haveGif = 1 ELSE haveGif = 0
   
   if havegif then b = Widget_Button(output, Value='Gif File', $
-    UValue='Gif', Event_Pro='wQuickPlot_Output')
+    UValue='Gif', Event_Pro='w_QuickPlot_Output')
   button = Widget_Button(output, Value='JPEG File', $
-    UValue='JPEG', Event_Pro='wQuickPlot_Output')
+    UValue='JPEG', Event_Pro='w_QuickPlot_Output')
   button = Widget_Button(output, Value='TifF File', $
-    UValue='TifF', Event_Pro='wQuickPlot_Output')
+    UValue='TifF', Event_Pro='w_QuickPlot_Output')
   button = Widget_Button(output, Value='PNG File', $
-    UValue='PNG', Event_Pro='wQuickPlot_Output')
+    UValue='PNG', Event_Pro='w_QuickPlot_Output')
   button = Widget_Button(output, Value='PICT File', $
-    UValue='PICT', Event_Pro='wQuickPlot_Output')
+    UValue='PICT', Event_Pro='w_QuickPlot_Output')
   button = Widget_Button(output, Value='BMP File', $
-    UValue='BMP', Event_Pro='wQuickPlot_Output')
+    UValue='BMP', Event_Pro='w_QuickPlot_Output')
     
   dummy = Widget_Button(filer, Value='Print', $
-    Event_Pro='wQuickPlot_Printing', UValue='PRINT')
+    Event_Pro='w_QuickPlot_Printing', UValue='PRINT')
   dummy = Widget_Button(filer, Value='Print Setup', $
-    Event_Pro='wQuickPlot_Printing', UValue='SETUP')
+    Event_Pro='w_QuickPlot_Printing', UValue='SETUP')
   dummy = Widget_Button(filer, /Separator, Value='Quit', $
-    Event_Pro='wQuickPlot_Exit')
+    Event_Pro='w_QuickPlot_Exit')
  
   ; Create COLORS menu buttons for changing colors.
   colorID = Widget_Button(menubase, Value='Colors', /Menu)
   ; Image Colors
-  imagecolors = Widget_Button(colorID, Value='Image Colors...', Event_Pro='wQuickPlot_Image_Colors')
+  imagecolors = Widget_Button(colorID, Value='Image Colors...', Event_Pro='w_QuickPlot_Image_Colors')
     
    ; Create other dims menu buttons.
    if ndim gt 2 then begin
@@ -936,7 +782,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
      tentags = STRING(INDGEN(nten), FORMAT = '(I3)')
      for e = 0, nten-1 do begin
        ten = Widget_Button(d3, Value=tentags[e], /Menu)
-       for t = e*10, ((e+1)*10 < nd-1) do dummy = Widget_Button(ten, Value=dim3tags[t], UValue='3_'+STRING(t, FORMAT = '(I3)'), Event_Pro='wQuickPlot_DimChange')
+       for t = e*10, ((e+1)*10 < nd-1) do dummy = Widget_Button(ten, Value=dim3tags[t], UValue='3_'+STRING(t, FORMAT = '(I3)'), Event_Pro='w_QuickPlot_DimChange')
      endfor
      if ndim eq 4 then begin
        ; dim 4
@@ -948,7 +794,7 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
        tentags = STRING(INDGEN(nten), FORMAT = '(I3)')
        for e = 0, nten-1 do begin
          ten = Widget_Button(d4, Value=tentags[e], /Menu)
-         for t = e*10, ((e+1)*10 < nd-1) do dummy = Widget_Button(ten, Value=dim4tags[t], UValue='4_'+STRING(t, FORMAT = '(I3)'), Event_Pro='wQuickPlot_DimChange')
+         for t = e*10, ((e+1)*10 < nd-1) do dummy = Widget_Button(ten, Value=dim4tags[t], UValue='4_'+STRING(t, FORMAT = '(I3)'), Event_Pro='w_QuickPlot_DimChange')
        endfor
      endif
    end
@@ -1050,6 +896,6 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
     
   Widget_Control, tlb, Set_UValue=info, /No_Copy
   
-  XManager, 'wQuickPlot', tlb, Cleanup='wQuickPlot_Cleanup', Group_Leader=group, /No_Block, Event_Handler='wQuickPlot_Resize'
+  XManager, 'w_QuickPlot', tlb, Cleanup='w_QuickPlot_Cleanup', Group_Leader=group, /No_Block, Event_Handler='w_QuickPlot_Resize'
   
 END

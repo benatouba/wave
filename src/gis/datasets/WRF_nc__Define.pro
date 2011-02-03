@@ -834,7 +834,7 @@ pro WRF_nc::plot_TS, varid, x, y, $
                           dimnames = dimnames )
    
   
-  WTimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
+  w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
   fsc_text, 0.70, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
           CHARSIZE=2, CHARTHICK = 1.3, COLOR = FSC_Color('BLUE'), /NORMAL, /WINDOW

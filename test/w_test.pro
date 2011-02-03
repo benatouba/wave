@@ -759,7 +759,7 @@ pro TEST_TRMM_3B42
     ok = trmm_3B42->define_subset(SUBSET_LL=[70.01,10.02,120.01,45.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B42->wQuickPlotPrcp
+    trmm_3B42->w_QuickPlotPrcp
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
     trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny  
@@ -994,7 +994,7 @@ pro TEST_TRMM_3B43
     ok = trmm_3B43->define_subset(SUBSET_LL=[-70.01,-10.02,-29.76,25.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B43->wQuickPlotPrcp
+    trmm_3B43->w_QuickPlotPrcp
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
     trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny    
@@ -1277,7 +1277,7 @@ pro TEST_WRF_OUT
     if snt ne 6 then error +=1
     if max(abs(p-op[*,*,*,3:8])) ne 0 then  error += 1
     
-    dom1->wQuickPlotVar, 'T2', t0 = time[3], t1 = time[8]
+    dom1->QuickPlotVar, 'T2', t0 = time[3], t1 = time[8]
     ok = DIALOG_MESSAGE('Do you see a temperature plot?', /QUESTION)
     if ok eq 'No' then error += 1
      
@@ -1568,7 +1568,7 @@ pro TEST_MODIS_SNOW
     s = modis->get_Var('Snow_Cover_Daily_Tile')
     ts =map->map_gridded_data(s, modis)
     
-    wQuickPlot, ts, COLORTABLE=13
+    w_QuickPlot, ts, COLORTABLE=13
     
     OBJ_DESTROY, dom1     
     OBJ_DESTROY, map     
@@ -2131,7 +2131,7 @@ pro TEST_POST, REDO = redo
   TEST_POST_AGG_CROPPED, REDO = redo
 end
 
-pro TEST_everything
+pro w_TEST
   TEST_TIME
   TEST_DATASETS
   TEST_UTILS

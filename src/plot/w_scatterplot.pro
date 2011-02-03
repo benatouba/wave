@@ -38,7 +38,7 @@
 ;       Modified::
 ;
 ;-
-pro WScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
+pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
                    RANGE = range, NOFIT = nofit, NOCORRELATION = nocorrelation, COLOR = color, PSYM=psym, $
                    LEGEND_UL = LEGEND_UL
 

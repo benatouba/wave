@@ -145,12 +145,12 @@ function WDTM::get_Z
     
 end
 
-pro WDTM::wQuickPlotZ
+pro WDTM::w_QuickPlotZ
 
   z = self->get_z()
   self->Get_LonLat, lon, lat
     
-  wQuickPlot, z, COLORTABLE=13, TITLE= 'Height (m)', WINDOW_TITLE='view: ' + self.file, dimnames = 'Z', CBARTITLE='meters', $
+  w_QuickPlot, z, COLORTABLE=13, TITLE= 'Height (m)', WINDOW_TITLE='view: ' + self.file, dimnames = 'Z', CBARTITLE='meters', $
               COORDX=lon, COORDY=lat
 
 end
