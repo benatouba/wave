@@ -31,7 +31,6 @@ pushd, root
 .run TIME.pro
 .run UTILS.pro
 .run POST.pro
-.run WQuickPlot.pro
 .run WAVE_colorbar.pro
 
 ; Compile objects

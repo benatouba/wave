@@ -1147,11 +1147,11 @@ function PLOT_MAP::mapping
   
     self.grid->get_Lonlat, lon, lat
     
-    cgContour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
+    FSC_Contour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick
       
-    cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
+    FSC_Contour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick
       
@@ -1303,7 +1303,7 @@ pro PLOT_MAP::show_img, win, PIXMAP = pixmap
   if self.is_Mapped then begin
    d = bytarr(self.Xsize, self.Ysize)
    d[1] = 1
-   cgContour,  d , POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /NODATA
+   FSC_Contour,  d , POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /NODATA
   endif
   
 

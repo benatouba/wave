@@ -501,42 +501,6 @@ PRO wQuickPlot_Image_Colors, event
   Widget_Control, event.top, Set_UValue=info, /No_Copy
 END ;------------------------------------------------------------------------------
 
-PRO wQuickPlot_range_from_file, mini, maxi
-
-  WAVE_root, root
-  file = root+'/res/files/wwQuickPlotrange.txt'
-  OPENR, fid, file, /GET_LUN
-  
-  line = ''
-  ; While there is text left, read
-  WHILE ~ EOF(fid) DO BEGIN
-    READF, fid, line
-    spl = STRSPLIT(line , ':',/PRESERVE_NULL, /EXTRACT)
-    if str_equiv(spl[0]) eq str_equiv('min') then mini = spl[1]
-    if str_equiv(spl[0]) eq str_equiv('max') then maxi = spl[1]              
-  ENDWHILE
-  
-  CLOSE, fid
-  
-  
-end
-
-PRO wQuickPlot_range_to_file, mini, maxi
-  
-  @WAVE.inc 
-   
-  WAVE_root, root
-  file = WAVE_RESOURCE_DIR+'/files/wwQuickPlotrange.txt'
-  if FILE_TEST(File) then FILE_DELETE, File
-  OPENW, fid, file, /GET_LUN
-  
-  line = 'min: ' + str_equiv(mini)
-  printf, fid, line
-  line = 'max: ' + str_equiv(maxi)
-  printf, fid, line
-  
-  CLOSE, fid
-end
 
 PRO wQuickPlot_Change_Range, event
 
@@ -548,22 +512,27 @@ PRO wQuickPlot_Change_Range, event
   thisEvent = Tag_Names(event, /Structure_Name)
   CASE thisEvent OF
   
-    "WIDGET_BUTTON": BEGIN
-       WAVE_root, root
-       XDISPLAYFILE, root+'/res/files/wwQuickPlotrange.txt', /BLOCK, $
-                     DONE_BUTTON='Done', /EDITABLE, HEIGHT = 2, WIDTH = 15, WTEXT=w, TITLE = 'Choose range', RETURN_ID= ret
-                     
-      wQuickPlot_range_from_file, mini, maxi
-      info.thisImage->SetProperty, DATA=BYTSCL(*info.processPtr, max = maxi, min = mini)
-      info.cbar->SetProperty,  Range=[mini, maxi]                   
-    ENDCASE
+    "FSC_FIELD_EVENT": BEGIN
     
-    "XCOLORS_LOAD": BEGIN
-;      info.r = event.r
-;      info.g = event.g
-;      info.b = event.b
-;      IF Obj_Valid(info.thisPalette) THEN info.thisPalette->SetProperty, $
-;        Red=event.r, Green=event.g, Blue=event.b
+      minR = info.minvalueObj->Get_Value()
+      maxR = info.maxvalueObj->Get_Value()
+      
+      if Finite(minR) and Finite(maxR) then begin    
+      
+        if ~ arg_okay(minR, /NUMERIC) then mini = info.brange[0] else mini = info.brange[0] > minR < info.brange[1]
+        if ~ arg_okay(maxR, /NUMERIC) then maxi = info.brange[1] else maxi = info.brange[0] > maxR < info.brange[1]
+        
+        if maxi le mini then maxi = info.brange[1]
+        if mini ge maxi then mini = info.brange[0]
+        
+        info.thisImage->SetProperty, DATA=BYTSCL(*info.processPtr, max = maxi, min = mini)
+        info.cbar->SetProperty,  Range=[mini, maxi]
+        
+        info.minvalueObj->Set_Value, mini
+        info.maxvalueObj->Set_Value, maxi
+        
+      endif
+      
     ENDCASE
     
   ENDCASE
@@ -850,7 +819,6 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   ; Create colorbar 
   brange = [min(*imagePtr), max(*imagePtr)]
   if brange[0] eq brange[1] then brange[1] += 1
-  wQuickPlot_range_to_file, brange[0], brange[1]
   cbar =  Obj_New('VColorBar', Palette=THISPALETTE, Range=brange, $
    Position=posbar, color = axisColor, Title=CbarTitle)
 
@@ -883,10 +851,19 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
     Graphics_Level=2, Expose_Events=1, Retain=0, $
     Event_Pro='wQuickPlot_DrawWidget_Event', Button_Events=1)
     
+  ; Create image range widgets.    
+  typ = SIZE(brange, /TYPE)
+  if typ eq 1 then brange = LONG(brange)
+  medBase = Widget_Base(tlb, Colum=1, /Base_Align_Center)
+  medlabelBase = Widget_Base(medBase, Row=1)
+  rangeBase = Widget_Base(medBase, Row=1)
+  minvalueID = FSC_Field(rangeBase, Title='Range min:', Value=brange[0], XSize=6, OBJECT=minvalueObj, EVENT_PRO='wQuickPlot_Change_Range')
+  maxvalueID = FSC_Field(rangeBase, Title='Range max:', Value=brange[1],  XSize=6, OBJECT=maxvalueObj, EVENT_PRO='wQuickPlot_Change_Range')
+    
   ; Create image value and location widgets.    
   bottomBase = Widget_Base(tlb, Colum=1, /Base_Align_Center)
   labelBase = Widget_Base(bottomBase, Row=1)
-  dummy = Widget_Label(labelBase, Value='Click (and drag) inside image for Image Value')
+;  dummy = Widget_Label(labelBase, Value='Click (and drag) inside image for Image Value')
   if addCoord then begin
     valueBase = Widget_Base(bottomBase, Row=2)
     xvalueID = CW_Field(valueBase, Title='X Location:', Value=-999, /Integer, XSize=6, ROW=1)
@@ -902,6 +879,8 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
     ycoordID = -1
     valueID =  CW_Field(valueBase, Title='  Image Value:', Value='-9999.0', XSize=12, /Float)
   endelse
+  
+ 
   
   ; Create FILE menu buttons for printing and exiting.  
   filer = Widget_Button(menubase, Value='File', /Menu)
@@ -937,7 +916,6 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   colorID = Widget_Button(menubase, Value='Colors', /Menu)
   ; Image Colors
   imagecolors = Widget_Button(colorID, Value='Image Colors...', Event_Pro='wQuickPlot_Image_Colors')
-  imagecolors = Widget_Button(colorID, Value='Change range', Event_Pro='wQuickPlot_Change_Range')
     
    ; Create other dims menu buttons.
    if ndim gt 2 then begin
@@ -1009,6 +987,8 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   thisContainer->Add, plotTitle
   thisContainer->Add, underTitle
   thisContainer->Add, cbar
+  thisContainer->Add, minvalueObj
+  thisContainer->Add, maxvalueObj
   
   s = Size(*imagePtr, /Dimensions)
   
@@ -1040,6 +1020,11 @@ pro wQuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
     truecolor:truecolor, $          ; A flag indicating a 24-bit image.
     xvalueID:xvalueID, $            ; X location widget ID.
     yvalueID:yvalueID, $            ; Y location widget ID.
+    brange:brange, $                ; data range (orig)
+    minvalueID:minvalueID, $        ; minval location widget ID.
+    maxvalueID:maxvalueID, $        ; maxval location widget ID.
+    minvalueObj:minvalueObj, $      ; minval object.
+    maxvalueObj:maxvalueObj, $      ; maxval object.
     valueID:valueID, $              ; Image value widget ID.
     basesize:basesize, $            ; The height of the label base.
     keepAspect:keepAspect, $        ; The image keep aspect flag.
