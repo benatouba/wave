@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ; 
-;       HDF is the basis class for all kinds of HDF files. It reads
+;       w_HDF is the basis class for all kinds of HDF files. It reads
 ;       HDF files and provides some tools for rapid visualisation and
 ;       to analyse the content of a HDF file.
 ;       
@@ -39,8 +39,8 @@
 
 ;+
 ; :Description:
-;    Defines the attributes of the class Grid2D. Attributes::
-;    HDF
+;    Defines the attributes of the class w_Grid2D. Attributes::
+;    w_HDF
 ;            path:               ''   
 ;            HDFid:              0L    
 ;            fname:              ''   
@@ -62,13 +62,13 @@
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF__Define
+PRO w_HDF__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {HDF                       ,  $
+  struct = {w_HDF                       ,  $
             path:               ''    ,  $ ; complete path of the active HDF file
             HDFid:              0L    ,  $ ; id of the HDF file as given by  HDF_start 
             fname:              ''    ,  $ ; name of the active HDF file
@@ -101,7 +101,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-Function HDF::Init, FILE = file
+Function w_HDF::Init, FILE = file
            
            
   ; SET UP ENVIRONNEMENT
@@ -169,7 +169,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro HDF::Cleanup
+pro w_HDF::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -211,7 +211,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF::GetProperty, $
+PRO w_HDF::GetProperty, $
             path = path, $  ; complete path of the active HDF file
             HDFid = HDFid,  $ ; id of the HDF file as given by  HDF_start 
             fname = fname,  $ ; name of the active HDF file
@@ -275,7 +275,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
+pro w_HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -353,7 +353,7 @@ end
 ;-----------------------------------------------------------------------
 ;+
 ; NAME:
-;       HDF::get_Var
+;       w_HDF::get_Var
 ;
 ; PURPOSE:
 ;       extracts the desired variable from the HDF file
@@ -430,7 +430,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-function HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable. 
+function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable. 
                        COUNT=count, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
                        NOREVERSE = noreverse, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
                        START=start, $  ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
@@ -523,7 +523,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro HDF::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
+pro w_HDF::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
@@ -563,7 +563,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN = lun
+PRO w_HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN = lun
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

@@ -1,6 +1,6 @@
 ;+
 ; 
-;       HDF_EOS is the basis class for HDF_EOS files. It reads
+;       w_HDF_EOSis the basis class for HDF_EOS files. It reads
 ;       HDF_EOS files and provides some tools for rapid visualisation and
 ;       to analyse the content of a HDF_EOS file.
 ;       
@@ -44,8 +44,8 @@
 ;-----------------------------------------------------------------------
 ;+
 ; :Description:
-;    Defines the attributes of the class Grid2D. Attributes::
-;    HDF_EOS                       
+;    Defines the attributes of the class w_Grid2D. Attributes::
+;    w_HDF_EOS                      
 ;            INHERITS HDF                  
 ;            NUM_GRIDS  : 0L                  
 ;            NUM_POINTS : 0L                   
@@ -65,13 +65,13 @@
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF_EOS__Define
+PRO w_HDF_EOS__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {HDF_EOS                       ,  $
+  struct = {w_HDF_EOS                      ,  $
             INHERITS HDF                  ,  $
             NUM_GRIDS  : 0L               ,  $        
             NUM_POINTS : 0L               ,  $          

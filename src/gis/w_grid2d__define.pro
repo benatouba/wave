@@ -2,13 +2,13 @@
 
 ;+
 ; 
-; Grid2D is a central class in the WAVE library. All geolocalised
-; gridded dataset inherit Grid2D and can use the Grid2D methods. 
+; w_Grid2D is a central class in the WAVE library. All geolocalised
+; gridded dataset inherit w_Grid2D and can use the w_Grid2D methods. 
 ; These are mainly transformation tools from Grid to Grid or 
 ; Lon-Lat to grid, etc.       
 ;       
 ; The transformation computations are internally made by the TNT GIS library:
-; the Grid2D class simply provides an object oriented encapsulation of
+; the w_Grid2D class simply provides an object oriented encapsulation of
 ; the GIS routines, as well as several improvements, such as remapping,
 ; interpolation, LonLat to grid transformations, etc.
 ;       
@@ -18,14 +18,14 @@
 ; Careful!
 ; --------
 ;  
-; Althought Grid2D is defined using UL and DR corners to be consistent
+; Althought w_Grid2D is defined using UL and DR corners to be consistent
 ; with the GIS library, the convention used in the WAVE is based on the 
 ; WRF convention, that means: the (i,j) = (0,0) index refers to the 
 ; DL corner and the (i,j) = (nx-1,ny-1) index refers to the UR corner.
 ; One has to be carefull when defining new gridded datasets.
 ; 
 ; It is not recommended to work directly with {TNT_COORD} structures 
-; anymore, but to define GRID2d objects using your {TNT_COORD} structures
+; anymore, but to define w_Grid2D objects using your {TNT_COORD} structures
 ; as parameter. Probably, your data will be uspide down with respect to 
 ; the WAVE conventions. One good method to test your gridded data is
 ; to use `w_QuickPlot`. If your image is upside down,the array have to be 
@@ -85,7 +85,7 @@
 ;+
 ; :Description:
 ; 
-;   Defines the attributes of the class Grid2D. Attributes::
+;   Defines the attributes of the class w_Grid2D. Attributes::
 ;   
 ;       lon   : PTR_NEW()   
 ;               2D array containing the longitudes of the grid
@@ -111,13 +111,13 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO Grid2D__Define
+PRO w_Grid2D__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { Grid2D      ,  $
+  struct = { w_Grid2D      ,  $
     lon   : PTR_NEW()    ,  $ ; 2D array containing the longitudes of the grid
     lat   : PTR_NEW()    ,  $ ; 2D array containing the latitudes of the grid
     tnt_c : {TNT_COORD}  ,  $ ; intern {TNT_COORD} structure 
@@ -130,7 +130,7 @@ END
 ; :Description:
 ;       This function is used to renitialize the grid object entirely. It is called e.g. by the init routine, 
 ;       and should be called possibly by inherited objects but not externally. 
-;       Output: 1 if the GRID2D object is updated successfully, 0 if not
+;       Output: 1 if the w_Grid2D object is updated successfully, 0 if not
 ;       
 ; :Private: 
 ;            
@@ -176,7 +176,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-Function Grid2D::ReInit ,  $
+Function w_Grid2D::ReInit ,  $
     nx = nx           ,  $
     ny = ny           ,  $
     x0 = x0           ,  $
@@ -338,7 +338,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-Function Grid2D::Init ,  $
+Function w_Grid2D::Init ,  $
     nx = nx           ,  $
     ny = ny           ,  $
     x0 = x0           ,  $
@@ -399,7 +399,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro Grid2D::Cleanup
+pro w_Grid2D::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -445,7 +445,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longitudes of the grid 
+pro w_Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longitudes of the grid 
                             lat   =  lat   ,  $ ; 2D array containing the latitudes of the grid 
                             tnt_c =  tnt_c ,  $ ; {TNT_COORD} structure 
                             meta  =  meta       ; a string containg infos about the grid.
@@ -505,7 +505,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro Grid2D::Get_LonLat, lon, lat, nx, ny, datum
+pro w_Grid2D::Get_LonLat, lon, lat, nx, ny, datum
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -588,7 +588,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro Grid2D::Get_XY, x, y, nx, ny, proj
+pro w_Grid2D::Get_XY, x, y, nx, ny, proj
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -626,7 +626,7 @@ END
 ;
 ; :Keywords:
 ;    SRC: in, required
-;         src the initial coordinate system (Grid2d or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
+;         src the initial coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
 ;    LON_DST: out, type = float/double 
 ;             the longitudes of (x,y) in the object grid 
 ;    LAT_DST: out, type = float/double  
@@ -650,7 +650,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST=nearest
+PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST=nearest
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -667,9 +667,9 @@ PRO Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=l
   ; If src is a grid, y has to be rotated  *
   ;*****************************************
   if arg_okay(src, STRUCT={TNT_COORD}) then begin
-    Message, 'Src is a {TNT_COORD} structure. We only accept GRID2D objects, please make one.' 
+    Message, 'Src is a {TNT_COORD} structure. We only accept w_Grid2D objects, please make one.' 
   endif else if (OBJ_VALID(src)) then begin
-    if OBJ_ISA(src, 'Grid2D') then begin
+    if OBJ_ISA(src, 'w_Grid2D') then begin
       _y = self.tnt_c.ny - y  - 1
       src->getProperty, TNT_C = mysrc
     endif else MESSAGE, 'SRC is an object but not a grid??'
@@ -779,7 +779,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-PRO Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST = nearest
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -834,7 +834,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-PRO Grid2D::transform_XY, x, y, proj, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_XY, x, y, proj, i, j, NEAREST = nearest
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -866,8 +866,8 @@ end
 ;           i indexes into the grid (be carefull with orientation! (0,0) is down left!)
 ;    j_src: in, required, type = integer
 ;           j indexes into the grid (be carefull with orientation! (0,0) is down left!)
-;    grid: in, required, type = Grid2D
-;          the grid system (instance of Grid2D)
+;    grid: in, required, type = w_Grid2D
+;          the grid system (instance of w_Grid2D)
 ;    i: out, type = double
 ;       the i coordinates of (lon,lat) in the object grid 
 ;    j: out, type = double
@@ -889,7 +889,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-PRO Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -902,7 +902,7 @@ PRO Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
     RETURN
   ENDIF
   
-  if not OBJ_ISA(grid, 'Grid2D')  then Message, WAVE_Std_Message('proj', OBJ='Grid2D')
+  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('proj', OBJ='w_Grid2D')
   
   self->transform, i_src, j_src, i, j, SRC = grid, NEAREST=nearest
   
@@ -962,7 +962,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = missing, BACKWARDS = backwards
+function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = missing, BACKWARDS = backwards
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1030,8 +1030,8 @@ end
 ; :Params:
 ;    data: in, required, type = float array
 ;          the data to map on the grid itself. The two first dimenstions are X and Y, the third is handled as time
-;    src_grid: in,  type = Grid2d
-;              the data grid (Grid2d Object)
+;    src_grid: in,  type = w_Grid2D
+;              the data grid (w_Grid2D Object)
 ;
 ; :Keywords:
 ;    MISSING: in, optional
@@ -1054,7 +1054,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear
+function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1067,7 +1067,7 @@ function Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR =
     RETURN, -1
   ENDIF
   
-  if not OBJ_ISA(src_grid, 'Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='Grid2D')
+  if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   
   if ~KEYWORD_SET(missing) then missing = 0
 
@@ -1157,7 +1157,7 @@ end
 ;           a factor to multiply to nx and ny (if set, Xsize and Ysize are ignored)
 ;
 ; :Returns:
-;     A new Grid2D, which is a resampled version of the object grid
+;     A new w_Grid2D, which is a resampled version of the object grid
 ;     
 ; :Author:
 ;       Fabien Maussion::
@@ -1171,7 +1171,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
+function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1192,6 +1192,6 @@ function Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   x0 = self.tnt_c.x0 - 0.5*self.tnt_c.dx + dx/2.
   y0 = self.tnt_c.y0 + 0.5*self.tnt_c.dy - dy/2.
   
-  return, OBJ_NEW('Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
+  return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
     
 end

@@ -357,8 +357,8 @@ END
 ;     IDL> print, WAVE_Std_Message('temp', /RANGE)
 ;     Argument not correct : $TEMP is out of range.
 ; 
-;     IDL> print, WAVE_Std_Message('Grid', OBJ = 'Grid2D')
-;     Argument not correct : $GRID. An instance of GRID2D is expected.
+;     IDL> print, WAVE_Std_Message('Grid', OBJ = 'w_Grid2D')
+;     Argument not correct : $GRID. An instance of w_Grid2D is expected.
 ; 
 ;     IDL> print, WAVE_Std_Message('time', STRUCT={ABS_DATE})
 ;     Argument type not correct : $TIME. A structure of type {ABS_DATE} is expected.

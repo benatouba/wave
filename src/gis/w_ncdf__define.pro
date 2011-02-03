@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ;
-;  NCDF is the basis class for all kinds of NCDF files. It reads
+;  w_NCDF is the basis class for all kinds of NCDF files. It reads
 ;  NCDF files and provides some tools for rapid visualisation and
 ;  variable retrieval.
 ;       
@@ -50,7 +50,7 @@
 
 ;+
 ; :Description:
-;   Defines the attributes of the class Grid2D. Attributes::
+;   Defines the attributes of the class w_Grid2D. Attributes::
 ;    
 ;    NCDF                     
 ;            path:               ''    ,  $ ; complete path of the active ncdf file
@@ -81,13 +81,13 @@
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO NCDF__Define
+PRO w_NCDF__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {NCDF                      ,  $
+  struct = {w_NCDF                      ,  $
             path:               ''    ,  $ ; complete path of the active ncdf file
             cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
             fname:              ''    ,  $ ; name of the active ncdf file
@@ -129,7 +129,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-Function NCDF::Init, FILE = file
+Function w_NCDF::Init, FILE = file
            
            
   ; SET UP ENVIRONNEMENT
@@ -207,7 +207,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::Cleanup
+pro w_NCDF::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -265,7 +265,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO NCDF::GetProperty, $
+PRO w_NCDF::GetProperty, $
     path = path, $
     cdfid = cdfid, $
     fname = fname, $
@@ -341,7 +341,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
+pro w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -441,7 +441,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
+pro w_NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -496,7 +496,7 @@ end
 ;     Last modification:  20-Dec-2010 FaM
 ;     Added 
 ;-
-pro NCDF::get_gattsList, gattsIds, gattNames, PRINTGATTS = printgatts
+pro w_NCDF::get_gattsList, gattsIds, gattNames, PRINTGATTS = printgatts
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -567,7 +567,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-function NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                         COUNT=COUNT, $ ; An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
                         OFFSET=OFFSET, $ ; An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
                         STRIDE=STRIDE, $ ; An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
@@ -643,7 +643,7 @@ end
 ;          First apparition for upgrade to WAVE 0.1
 ;
 ;-
-function NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                             out_id = out_id, $
                             varinfo = varinfo , $ ; 
                             units = units, $
@@ -749,7 +749,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-function NCDF::get_Gatt, attid 
+function w_NCDF::get_Gatt, attid 
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -793,7 +793,7 @@ end
 ;          First apparition for upgrade to WAVE 0.1
 ;
 ;-
-function NCDF::get_Gatt_Info, attid, OUT_ID = out_id
+function w_NCDF::get_Gatt_Info, attid, OUT_ID = out_id
                         
   
   ; SET UP ENVIRONNEMENT
@@ -843,7 +843,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
+pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -888,7 +888,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO NCDF::dump, FILE = file
+PRO w_NCDF::dump, FILE = file
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

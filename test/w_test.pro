@@ -627,7 +627,7 @@ pro TEST_TRMM_3B42
     ; Test 3Hourly product
     ;-------------------------
     
-    trmm_3B42 = OBJ_NEW('TRMM_nc', FILE=fdir+'3B42.081001.3.6A.nc')
+    trmm_3B42 = OBJ_NEW('w_TRMM', FILE=fdir+'3B42.081001.3.6A.nc')
     
     trmm_3B42->get_time, time, nt, t0, t1    
     if nt ne 1 then error += 1    
@@ -847,7 +847,7 @@ pro TEST_TRMM_3B42_daily
     ; Test 3Hourly product
     ;-------------------------
     
-    TRMM_3B42_daily = OBJ_NEW('TRMM_nc', FILE=fdir+'3B42_daily.2008.10.01.6.nc')
+    TRMM_3B42_daily = OBJ_NEW('w_TRMM', FILE=fdir+'3B42_daily.2008.10.01.6.nc')
     
     TRMM_3B42_daily->get_time, time, nt, t0, t1    
     if nt ne 1 then error += 1    
@@ -904,7 +904,7 @@ pro TEST_TRMM_3B43
     ; Test 3Hourly product
     ;-------------------------
     
-    trmm_3B43 = OBJ_NEW('TRMM_nc', FILE=fdir+'3B43.000801.6.nc')
+    trmm_3B43 = OBJ_NEW('w_TRMM', FILE=fdir+'3B43.000801.6.nc')
     
     trmm_3B43->get_time, time, nt, t0, t1    
     if nt ne 1 then error += 1    
@@ -1062,8 +1062,8 @@ pro TEST_TRMM_AGG
     if ~FILE_TEST(log_file) then error += 1
     
     dailyF = fdir + '3B42_daily.2008.10.01.6.nc'
-    daily_trmm = OBJ_NEW('TRMM_nc', FILE=dailyF)
-    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
+    daily_trmm = OBJ_NEW('w_TRMM', FILE=dailyF)
+    agg_trmm = OBJ_NEW('w_TRMM', FILE=agg_file)    
     
     dpcp = daily_trmm->get_prcp()
     aggpcp = agg_trmm->get_prcp(time, nt)
@@ -1072,7 +1072,7 @@ pro TEST_TRMM_AGG
     if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
     
     testF = fdir + '3B42.081001.12.6A.nc'
-    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o =  OBJ_NEW('w_TRMM', FILE=testF)
     t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 12)
     if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_o->get_prcp()*3)) ne 0 then error += 1
     OBJ_DESTROY, test_o    
@@ -1093,8 +1093,8 @@ pro TEST_TRMM_AGG
     if ~FILE_TEST(log_file) then error += 1
     
     dailyF = fdir + '3B42_daily.2008.10.01.6.nc'
-    daily_trmm = OBJ_NEW('TRMM_nc', FILE=dailyF, SUBSET_LL=[120.,10.,150.,45.])
-    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
+    daily_trmm = OBJ_NEW('w_TRMM', FILE=dailyF, SUBSET_LL=[120.,10.,150.,45.])
+    agg_trmm = OBJ_NEW('w_TRMM', FILE=agg_file)    
     
     dpcp = daily_trmm->get_prcp()
     aggpcp = agg_trmm->get_prcp(time, nt)
@@ -1103,7 +1103,7 @@ pro TEST_TRMM_AGG
     if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
     
     testF = fdir + '3B42.081001.12.6A.nc'
-    test_o =  OBJ_NEW('TRMM_nc', FILE=testF, SUBSET_LL=[120.,10.,150.,45.])
+    test_o =  OBJ_NEW('w_TRMM', FILE=testF, SUBSET_LL=[120.,10.,150.,45.])
     t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 12)
     if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_o->get_prcp()*3)) ne 0 then error += 1
     OBJ_DESTROY, test_o    
@@ -1124,7 +1124,7 @@ pro TEST_TRMM_AGG
     if ~FILE_TEST(agg_file) then error += 1
     if ~FILE_TEST(log_file) then error += 1
     
-    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)    
+    agg_trmm = OBJ_NEW('w_TRMM', FILE=agg_file)    
     
     aggpcp = agg_trmm->get_prcp(time, nt)
     if nt ne 6 then error += 1
@@ -1132,12 +1132,12 @@ pro TEST_TRMM_AGG
     if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 18) then error += 1 
     
     testF = fdir + '3B42.081001.3.6A.nc'
-    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o =  OBJ_NEW('w_TRMM', FILE=testF)
     if TOTAL(ABS(aggpcp[*,*,0] - test_o->get_prcp()*3)) ne 0 then error += 1
     OBJ_DESTROY, test_o    
     
     testF = fdir + '3B42.081001.18.6A.nc'
-    test_o =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o =  OBJ_NEW('w_TRMM', FILE=testF)
     if TOTAL(ABS(aggpcp[*,*,5] - test_o->get_prcp()*3)) ne 0 then error += 1
     OBJ_DESTROY, test_o        
     OBJ_DESTROY, agg_trmm
@@ -1154,16 +1154,16 @@ pro TEST_TRMM_AGG
     if ~FILE_TEST(agg_file) then error += 1
     if ~FILE_TEST(log_file) then error += 1
 
-    agg_trmm = OBJ_NEW('TRMM_nc', FILE=agg_file)        
+    agg_trmm = OBJ_NEW('w_TRMM', FILE=agg_file)        
     aggpcp = agg_trmm->get_prcp(time, nt)
     if nt ne 7 then error += 1
     if time[0] ne QMS_TIME(year = 2008, month = 10, day = 1, hour =3) then error += 1
     if time[nt-1] ne QMS_TIME(year = 2008, month = 10, day = 1, hour = 21) then error += 1 
     
     testF = fdir + '3B42.081001.12.6A.nc'
-    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o1 =  OBJ_NEW('w_TRMM', FILE=testF)
     testF = fdir + '3B42.081001.15.6A.nc'
-    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o2 =  OBJ_NEW('w_TRMM', FILE=testF)
     test_pcp = test_o1->get_prcp()*1.5 + test_o2->get_prcp()*1.5    
     t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 15)
     if TOTAL(ABS(agg_trmm->get_prcp(t0 = t, t1 = t) - test_pcp)) ne 0 then error += 1
@@ -1171,18 +1171,18 @@ pro TEST_TRMM_AGG
     OBJ_DESTROY, test_o2
     
     testF = fdir + '3B42.081001.0.6A.nc'
-    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o1 =  OBJ_NEW('w_TRMM', FILE=testF)
     testF = fdir + '3B42.081001.3.6A.nc'
-    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o2 =  OBJ_NEW('w_TRMM', FILE=testF)
     test_pcp = test_o1->get_prcp()*1.5 + test_o2->get_prcp()*1.5
     if TOTAL(ABS(aggpcp[*,*,0] - test_pcp)) ne 0 then error += 1
     OBJ_DESTROY, test_o1
     OBJ_DESTROY, test_o2
     
     testF = fdir + '3B42.081001.18.6A.nc'
-    test_o1 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o1 =  OBJ_NEW('w_TRMM', FILE=testF)
     testF = fdir + '3B42.081001.21.6A.nc'
-    test_o2 =  OBJ_NEW('TRMM_nc', FILE=testF)
+    test_o2 =  OBJ_NEW('w_TRMM', FILE=testF)
     test_pcp = (test_o1->get_prcp() > 0) * 1.5 + (test_o2->get_prcp() > 0) * 1.5
     if TOTAL(ABS(aggpcp[*,*,6] - test_pcp)) ne 0 then error += 1
     t = QMS_TIME(year = 2008, month = 10, day = 1, hour = 21)
@@ -1211,7 +1211,7 @@ pro TEST_WRF_OUT
     ; Test 3Hourly product
     ;-------------------------
     
-    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d01_2008-10-26')
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
     
     dom1->get_time, time, nt, t0, t1    
     if nt ne 13 then error += 1    
@@ -1481,7 +1481,7 @@ pro TEST_WRF_GEO
     ; Test 3Hourly product
     ;-------------------------
     
-    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'geo_em.d03.nc')
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'geo_em.d03.nc')
     
     dom1->get_time, time, nt, t0, t1    
     if nt ne 1 then error += 1    
@@ -1556,8 +1556,8 @@ pro TEST_MODIS_SNOW
     ; Test 3Hourly product
     ;-------------------------
     
-    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=25)
-    modis = OBJ_NEW('MODIS_Grid', FILE=fdir+'MODIS/MOD10A1.A2008294.h26v06.005.2008299220621.hdf')
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=25)
+    modis = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOD10A1.A2008294.h26v06.005.2008299220621.hdf')
     map = dom1->reGrid(FACTOR=10)
     
     
@@ -1610,8 +1610,8 @@ pro TEST_POST_COPY_CROP, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1643,8 +1643,8 @@ pro TEST_POST_COPY_CROP, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1676,8 +1676,8 @@ pro TEST_POST_COPY_CROP, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1734,8 +1734,8 @@ pro TEST_POST_AGG, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1756,8 +1756,8 @@ pro TEST_POST_AGG, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1779,8 +1779,8 @@ pro TEST_POST_AGG, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1829,8 +1829,8 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1861,8 +1861,8 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1884,8 +1884,8 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     if ~FILE_TEST(origf) then error+=1
     if ~FILE_TEST(outf) then error+=1
     
-    orig = OBJ_NEW('WRF_nc', FILE=origf)
-    out = OBJ_NEW('WRF_nc', FILE=outf)
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
     
     orig->get_time, to, nto, to0, to1
     out->get_time, ta, nta, ta0, ta1    
@@ -1913,8 +1913,8 @@ pro TEST_WRF_AGG_MASSGRID
     ; Test 3Hourly product
     ;-------------------------
     
-    dom1 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d01_2008-10-26')
-    dom2 = OBJ_NEW('WRF_nc', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
     
     d2pcp = (dom2->get_prcp())[*,*,36]
     d1pcp = dom2->map_gridded_data((dom1->get_prcp())[*,*,12], dom1)
@@ -1943,9 +1943,9 @@ pro TEST_NEIREST_NEIGHBOR
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d01_2008-10-26', CROPBORDER=45)
+  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfout_d01_2008-10-26', CROPBORDER=45)
   dom1->Get_LonLat, wrflon, wrflat, wx, wy
-  trmm = OBJ_NEW('TRMM_nc', FILE=fdir+'/TRMM/3B42.081001.3.6A.nc', SUBSET_LL = [min(wrflon)-2,min(wrflat)-2,max(wrflon)+2,max(wrflat)+2])
+  trmm = OBJ_NEW('w_TRMM', FILE=fdir+'/TRMM/3B42.081001.3.6A.nc', SUBSET_LL = [min(wrflon)-2,min(wrflat)-2,max(wrflon)+2,max(wrflat)+2])
   trmm->Get_LonLat, trmmlon, trmmlat, tx, ty
   data = trmm->get_prcp()  
   
@@ -1985,7 +1985,7 @@ pro TEST_PLOT_MAP
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfout_d03_2008-10-26')
+  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfout_d03_2008-10-26')
   map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 600)  
   
 ;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/TiP.grd')  
@@ -2025,7 +2025,7 @@ pro TEST_PLOT_MAP_KIN
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/wrfinput_d03', CROPBORDER=5)
+  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfinput_d03', CROPBORDER=5)
   map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
   
   d = map->set_topography(GRDFILE='/home/fab/disk/Data/TOPO/KINNVI/KiN.grd', rotate = 0)  
@@ -2057,7 +2057,7 @@ pro TEST_PLOT_CASA
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('WRF_nc', FILE=fdir+ '/WRF/geo_em.d03.nc', CROPBORDER=5)
+  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/geo_em.d03.nc', CROPBORDER=5)
   map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
   
 ;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/KiN.grd')  
@@ -2088,7 +2088,7 @@ pro TEST_PLOT_MAP_TRMM
   fdir = TEST_file_directory() 
   error = 0 
 
-  dom1 = OBJ_NEW('TRMM_nc', FILE=fdir+'TRMM/3B43.000801.6.nc')
+  dom1 = OBJ_NEW('w_TRMM', FILE=fdir+'TRMM/3B43.000801.6.nc')
   map = OBJ_NEW('PLOT_MAP', dom1, Xsize = 1200)  
 
   d = map->set_shading_params(RELIEF_FACTOR=2.)

@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ; 
-; GEO_nc is the basis class for all kinds of NCDF files that 
+; w_GEO_nc is the basis class for all kinds of NCDF files that 
 ; contain geolocalisation data. It will try to detect the geolocalistion
 ; info from both dimensions and variables, as well as the
 ; time dimension if present. 
@@ -67,8 +67,8 @@
 ; 
 ;   Defines the attributes of the class. Attributes::
 ;   
-;        GEO_nc                      
-;            INHERITS NCDF               
+;        w_GEO_nc                      
+;            INHERITS w_NCDF               
 ;            XID : 0L                    
 ;            YID : 0L                    
 ;            TID : 0L                    
@@ -96,14 +96,14 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO GEO_nc__Define
+PRO w_GEO_nc__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {GEO_nc                      , $
-            INHERITS NCDF               , $
+  struct = {w_GEO_nc                    , $
+            INHERITS w_NCDF             , $
             XID : 0L                    , $
             YID : 0L                    , $
             TID : 0L                    , $
@@ -149,7 +149,7 @@ END
 ;          15-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-Function GEO_nc::Init, FILE = file, SUBSET = subset
+Function w_GEO_nc::Init, FILE = file, SUBSET = subset
            
            
   ; SET UP ENVIRONNEMENT
@@ -168,7 +168,7 @@ Function GEO_nc::Init, FILE = file, SUBSET = subset
   ;******************
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select GEO NCDF file to read', /MUST_EXIST)  
   if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
-  IF NOT self->NCDF::Init(file = file) THEN RETURN, 0    
+  IF NOT self->w_NCDF::Init(file = file) THEN RETURN, 0    
   
   ;*****************************
   ; Check  dimensions validity *
@@ -220,7 +220,7 @@ Function GEO_nc::Init, FILE = file, SUBSET = subset
   ;***********************
   ; Check  crop variable *
   ;***********************
-  if ~self->GEO_nc::define_subset(SUBSET = subset) then RETURN, 0 
+  if ~self->w_GEO_nc::define_subset(SUBSET = subset) then RETURN, 0 
   
   RETURN, 1
   
@@ -245,7 +245,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro GEO_nc::Cleanup
+pro w_GEO_nc::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -302,7 +302,7 @@ END
 ;          15-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-PRO GEO_nc::GetProperty  , $
+PRO w_GEO_nc::GetProperty  , $
             XID = XID    , $
             YID = YID    , $
             TID = TID    , $
@@ -335,7 +335,7 @@ PRO GEO_nc::GetProperty  , $
   IF Arg_Present(cropped) NE 0 THEN cropped = self.cropped
   IF Arg_Present(subset) NE 0 THEN subset = self.subset
   
-  self->NCDF::GetProperty, _Extra=extra
+  self->w_NCDF::GetProperty, _Extra=extra
     
 end
 
@@ -368,7 +368,7 @@ end
 ;          15-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro GEO_nc::get_time, time, nt, t0, t1
+pro w_GEO_nc::get_time, time, nt, t0, t1
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -434,7 +434,7 @@ end
 ;          09-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to GEO_nc_VARDEF or GEO_nc_VARID, or the name of the variable. 
+function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
                           time,  $
                           nt,  $
                           t0 = t0, $
@@ -457,7 +457,7 @@ function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   undefine, count, offset
   value = -1
   
-  if ~self->NCDF::get_Var_Info (Varid, $
+  if ~self->w_NCDF::get_Var_Info (Varid, $
     out_id = vid, $
     varinfo = varinfo , $
     units = units, $
@@ -518,7 +518,7 @@ function GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   pnok = where(count lt 0, cnt)
   if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
     
-  value = self->NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
+  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
   
   return, value
   
@@ -578,7 +578,7 @@ end
 ;          09-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a previous call to GEO_nc_VARDEF or GEO_nc_VARID, or the name of the variable. 
+function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
                           i, j, $
                           time,  $
                           nt,  $
@@ -601,7 +601,7 @@ function GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a prev
   undefine, count, offset
   value = -1
 
-  if ~self->NCDF::get_Var_Info (Varid, $
+  if ~self->w_NCDF::get_Var_Info (Varid, $
     out_id = vid, $
     varinfo = varinfo , $
     units = units, $
@@ -668,7 +668,7 @@ function GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a prev
   pnok = where(count lt 0, cnt)
   if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
     
-  value = self->NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
+  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
   
   return, reform(value)
   
@@ -709,7 +709,7 @@ end
 ;          15-Dec-2010 FaM
 ;          Written for upgrade to WAVE 0.1
 ;-
-pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
+pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -724,8 +724,8 @@ pro GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
   ok = utils_nc_LonLat(self.cdfid, lon_id, lat_id)
   
-  lon = self->GEO_nc::get_Var(lon_id, dimnames = londims)  
-  lat = self->GEO_nc::get_Var(lat_id, dimnames = latdims)  
+  lon = self->w_GEO_nc::get_Var(lon_id, dimnames = londims)  
+  lat = self->w_GEO_nc::get_Var(lat_id, dimnames = latdims)  
   
   nlondims = N_ELEMENTS(londims)
   nlatdims = N_ELEMENTS(latdims)
@@ -816,7 +816,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
+pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -842,7 +842,7 @@ pro GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
     if cnt ne 0 then tsrt = TIME_to_STR(time)
   endif   
   
-  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='GEO_nc view: ' + self.fname, $
+  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
         dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt
 
 end
@@ -857,7 +857,7 @@ end
 ;    Future calls to 'get_Var' will return the subseted data. 
 ;       
 ;    To reset to the original geoloc just call this method without arguments.
-;    Output is 1 if the GEO_nc object is updated successfully, 0 if not.
+;    Output is 1 if the w_GEO_nc object is updated successfully, 0 if not.
 ;    
 ;    This method should also be called internaly from redefined methods from child objects.
 ;    
@@ -886,7 +886,7 @@ end
 ;          15-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function GEO_nc::define_subset, SUBSET = subset
+function w_GEO_nc::define_subset, SUBSET = subset
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

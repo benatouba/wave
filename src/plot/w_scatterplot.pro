@@ -28,14 +28,10 @@
 ;    LEGEND_UL: in, optional 
 ;               if you do not want to put the legend in the upper left corner
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+; :Author: FaM
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;       Modified::
 ;
 ;-
 pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $

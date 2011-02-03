@@ -1,9 +1,9 @@
 ; docformat = 'rst'
 ;+
 ;      
-;       MODIS_Grid is the basis class for MODIS level 2 & 3 files. It reads
+;       w_MODIS is the basis class for MODIS level 2 & 3 files. It reads
 ;       the geolocalisation from the HDF-EOS file and provides subseting 
-;       tools to the user, as well as all the #GRID2d# transformation tools.
+;       tools to the user, as well as all the #w_Grid2D# transformation tools.
 ;       
 ;       Tested products so far::
 ;       MOD10A1
@@ -14,7 +14,7 @@
 ;       The following methods can be used directly. Non ducumented methods 
 ;       are not for external use.
 ;       + HDF-EOS methods
-;       + GRID2D methods
+;       + w_Grid2D methods
 ;       Overrided methods:
 ;       obj->Get_Var()  : get a specific variable along with some information, coherent with the grid geoloc
 ;       obj->QuickPlotVar    : plots a "flat" image of a given variable, coherent with the grid geoloc and adding geoloc infos to th image
@@ -23,8 +23,8 @@
 ;               
 ;      :Properties:
 ; 
-;          +HDF_EOS attributes  
-;          +Grid2D attributes  
+;          +w_HDF_EOS attributes  
+;          +w_Grid2D attributes  
 ;          t0: in, type = {ABS_DATE}      
 ;              first available time
 ;          t1: in, type = {ABS_DATE}      
@@ -62,9 +62,9 @@
 ; :Description:
 ;    Object structure definition. Attributes::
 ;   
-;     MODIS_Grid                      
-;            INHERITS HDF_EOS                   
-;            INHERITS Grid2D                   
+;     w_MODIS                      
+;            INHERITS w_HDF_EOS                   
+;            INHERITS w_Grid2D                   
 ;            t0 : {ABS_DATE}        
 ;            t1 : {ABS_DATE}        
 ;            subset : [0l,0l,0l,0l]    
@@ -88,15 +88,15 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO MODIS_Grid__Define
+PRO w_MODIS__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {MODIS_Grid                         ,  $
-            INHERITS HDF_EOS                   ,  $ ; For HDF file methods (get_Var, dump, etc.)
-            INHERITS Grid2D                    ,  $ ; For geolocalisation methods 
+  struct = {w_MODIS                         ,  $
+            INHERITS w_HDF_EOS                   ,  $ ; For HDF file methods (get_Var, dump, etc.)
+            INHERITS w_Grid2D                    ,  $ ; For geolocalisation methods 
             t0:              {ABS_DATE}        ,  $ ; first available time
             t1:              {ABS_DATE}        ,  $ ; last available time
             subset:          [0l,0l,0l,0l]     ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). It should not be set manually but using the #define_subset# method.
@@ -144,7 +144,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-Function MODIS_Grid::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
+Function w_MODIS::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
 
   ; SET UP ENVIRONNEMENT
@@ -162,7 +162,7 @@ Function MODIS_Grid::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSE
   ; Check arguments *
   ;******************
   if not KEYWORD_SET(file) then begin
-    file = DIALOG_PICKFILE(TITLE='Please select MODIS_Grid file to read', /MUST_EXIST)
+    file = DIALOG_PICKFILE(TITLE='Please select w_MODIS file to read', /MUST_EXIST)
     IF file EQ "" THEN MESSAGE, WAVE_Std_Message(/FILE)
   endif
   
@@ -170,7 +170,7 @@ Function MODIS_Grid::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSE
   ; Check validity *
   ;*****************
   if not EOS_Query(file, info) then message, WAVE_Std_Message(/FILE)
-  IF NOT self->HDF_EOS::Init(file = file) THEN RETURN, 0
+  IF NOT self->w_HDF_EOS::Init(file = file) THEN RETURN, 0
      
   ;*********
   ; Geoloc *
@@ -218,7 +218,7 @@ END
 ;    t1: out, type = {ABS_DATE}      
 ;        last available time
 ;    _Ref_Extra: 
-;         see #HDF_EOS:GetProperty# and #Grid2D::GetProperty#
+;         see #w_HDF_EOS:GetProperty# and #w_Grid2D::GetProperty#
 ;
 ;              
 ; :Author: Fabien Maussion::
@@ -233,7 +233,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO MODIS_Grid::GetProperty, $  
+PRO w_MODIS::GetProperty, $  
                    t0 =  t0, $
                    t1 =  t1, $    
                   _Ref_Extra=extra
@@ -251,8 +251,8 @@ PRO MODIS_Grid::GetProperty, $
   
   IF Arg_Present(t0) NE 0 THEN t0 = self.t0    
   IF Arg_Present(t1) NE 0 THEN t1 = self.t1    
-  self->HDF_EOS::GetProperty, _Extra=extra
-  self->Grid2D::GetProperty, _Extra=extra
+  self->w_HDF_EOS::GetProperty, _Extra=extra
+  self->w_Grid2D::GetProperty, _Extra=extra
   
 end
 
@@ -262,7 +262,7 @@ end
 ;       
 ;       Extracts the desired variable from the HDF file. The data obtained from this method
 ;       is consistent with the grid geolocalisation and should not be modified externally
-;       without using the suitable methods (see #Grid2D#).
+;       without using the suitable methods (see #w_Grid2D#).
 ;       
 ;       
 ; :Categories:
@@ -302,7 +302,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-function MODIS_Grid::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable.                       
+function w_MODIS::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable.                       
                        description = description , $ ; If available, the description of the variable
                        units = units, $ ; If available, the units of the variable
                        varname = varname , $  ; the name of the variable
@@ -367,7 +367,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-pro MODIS_Grid::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
+pro w_MODIS::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
@@ -388,7 +388,7 @@ end
 ; :Description:
 ;    It is called during the object instancing but can be called also once the object is created.
 ;       It subsets the original data to a region of interest and actualises Geolocalisation accordingly.
-;       Future calls to #MODIS_Grid::get_var# will return the subseted data. 
+;       Future calls to #w_MODIS::get_var# will return the subseted data. 
 ;       
 ;       To reset to the original geoloc just call this method without arguments.
 ;
@@ -420,7 +420,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
+function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -479,7 +479,7 @@ function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij
   ; First, define the ORIGINAL grid geoloc *
   ;*****************************************
   if FIRSTCALL then begin
-    IF NOT self->grid2D::Init(   nx = xdimsize          , $
+    IF NOT self->w_Grid2D::Init(   nx = xdimsize          , $
                                  ny = ydimsize          , $
                                  x0 = x0                , $
                                  y0 = y0                , $
@@ -487,7 +487,7 @@ function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij
                                  y1 = y1                , $
                                  proj = proj) THEN RETURN, 0
   endif else begin
-   IF NOT self->grid2D::ReInit(  nx = xdimsize          , $
+   IF NOT self->w_Grid2D::ReInit(  nx = xdimsize          , $
                                  ny = ydimsize          , $
                                  x0 = x0                , $
                                  y0 = y0                , $
@@ -563,7 +563,7 @@ function MODIS_Grid::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij
     y0 = y0 - self.tnt_c.dy*self.subset[1]
 
     
-    IF NOT self->grid2D::reInit(  nx = self.subset[2]    , $
+    IF NOT self->w_Grid2D::reInit(  nx = self.subset[2]    , $
                                   ny = self.subset[3]    , $
                                   dx = self.tnt_c.DX     , $
                                   dy = self.tnt_c.DY     , $

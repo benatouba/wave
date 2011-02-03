@@ -171,14 +171,10 @@
 ;    psym8: in, optional, type = numeric, default = 0
 ;            the psym for the plot 8
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+; :Author: FaM
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;       Modified::
 ;
 ;-
 pro w_TimeLinePlot, data,$  ; array to plot

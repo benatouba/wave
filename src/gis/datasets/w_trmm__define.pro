@@ -1,9 +1,9 @@
 ; docformat = 'rst'
 ;+
 ;
-;  TRMM_nc is the basis class for TRMM datasets in NetCDF format.
+;  w_TRMM is the basis class for TRMM datasets in NetCDF format.
 ;  It reads the geolocalisation from the file and provides subseting 
-;  tools to the user, as well as all the 'Grid2D' transformation tools.
+;  tools to the user, as well as all the 'w_Grid2D' transformation tools.
 ;              
 ;  Accepted products so far::
 ;  
@@ -32,11 +32,11 @@
 
 ;+
 ; :Description:
-;    Defines the attributes of the class Grid2D. Attributes::
+;    Defines the attributes of the class w_Grid2D. Attributes::
 ;
-;       TRMM_nc
-;            INHERITS Grid2D           
-;            INHERITS GEO_nc         
+;       w_TRMM
+;            INHERITS w_Grid2D           
+;            INHERITS w_GEO_nc         
 ;            type : ''
 ;
 ; :Categories:
@@ -54,15 +54,15 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO TRMM_nc__Define
+PRO w_TRMM__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { TRMM_nc                  ,  $
-            INHERITS Grid2D           ,  $
-            INHERITS GEO_nc           ,  $
+  struct = { w_TRMM                  ,  $
+            INHERITS w_Grid2D           ,  $
+            INHERITS w_GEO_nc           ,  $
             type:               ''       $ ; type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_a', '3B43_a'
             }
     
@@ -111,7 +111,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
+Function w_TRMM::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -128,7 +128,7 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   ; Check arguments *
   ;******************
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select TRMM ncdf file to read', /MUST_EXIST)  
-  IF NOT self->GEO_nc::Init(file = file) THEN RETURN, 0    
+  IF NOT self->w_GEO_nc::Init(file = file) THEN RETURN, 0    
  
   ;*****************
   ; Check filename *
@@ -153,7 +153,7 @@ Function TRMM_nc::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   ; Geoloc *
   ;*********
   self.cropped = ''
-  if NOT self->TRMM_nc::define_subset(SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum) THEN RETURN, 0
+  if NOT self->w_TRMM::define_subset(SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum) THEN RETURN, 0
       
   ;****************
   ; Read metadata *
@@ -206,7 +206,7 @@ END
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-pro TRMM_nc::Cleanup
+pro w_TRMM::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -236,7 +236,7 @@ END
 ;    type: out, optional, type = string
 ;          type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_agg', '3B43_agg'
 ;    _Ref_Extra: 
-;        see 'GEO_nc:GetProperty' and 'Grid2D::GetProperty'
+;        see 'w_GEO_nc:GetProperty' and 'w_Grid2D::GetProperty'
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -250,7 +250,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-PRO TRMM_nc::GetProperty,  $
+PRO w_TRMM::GetProperty,  $
                        type = type     ,  $ ; type of active file
                        _Ref_Extra=extra
     
@@ -267,14 +267,14 @@ PRO TRMM_nc::GetProperty,  $
       
   IF Arg_Present(type) NE 0 THEN type = self.type
   
-  self->GRID2D::GetProperty, _Extra=extra
-  self->GEO_nc::GetProperty, _Extra=extra
+  self->w_Grid2D::GetProperty, _Extra=extra
+  self->w_GEO_nc::GetProperty, _Extra=extra
   
 end
 
 ;+
 ; :Description:
-;    see 'GEO_nc:get_Var'
+;    see 'w_GEO_nc:get_Var'
 ;    
 ;    This function has been redefined because of the TRMM daily files that have
 ;    stupidly an other format.
@@ -292,7 +292,7 @@ end
 ;
 ; :Keywords:
 ;   _Ref_Extra: 
-;        see 'GEO_nc:get_Var'
+;        see 'w_GEO_nc:get_Var'
 ; 
 ; :Returns:
 ;         The variable
@@ -309,7 +309,7 @@ end
 ;          09-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function TRMM_nc::get_Var, varid, time, nt, _Ref_Extra = extra                     
+function w_TRMM::get_Var, varid, time, nt, _Ref_Extra = extra                     
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -324,7 +324,7 @@ function TRMM_nc::get_Var, varid, time, nt, _Ref_Extra = extra
   
   if self.type eq '3B42_d' then Message, 'The function get_var does not work properly with 3B42 daily files because their format is stupid. Use get_Prcp instead.', /INFORMATIONAL
     
-  return, self->GEO_nc::get_Var(varid, time, nt, _Extra=extra)
+  return, self->w_GEO_nc::get_Var(varid, time, nt, _Extra=extra)
 
 end
 
@@ -334,7 +334,7 @@ end
 ; 
 ;    Extracts the precipitation variable from the TRMM file. The data obtained from this method
 ;    is consistent with the grid geolocalisation and should not be modified externally
-;    without using the suitable methods (see 'Grid2D').
+;    without using the suitable methods (see 'w_Grid2D').
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -368,7 +368,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
+function w_TRMM::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -393,13 +393,13 @@ function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
       pcp = pcp[self.subset[0]:urx,self.subset[2]:ury]
     endif
   endif else if self.type eq '3B42_h' then begin
-    pcp = self->GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
+    pcp = self->w_GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
     units = 'mm hr-1'
   endif else if self.type eq '3B43' then begin
-    pcp = self->GEO_nc::get_Var('pcp', time, nt, t0 = t0, t1 = t1) 
+    pcp = self->w_GEO_nc::get_Var('pcp', time, nt, t0 = t0, t1 = t1) 
     units = 'mm hr-1'
   endif else begin ; agg files
-    pcp = self->GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
+    pcp = self->w_GEO_nc::get_Var('precipitation', time, nt, t0 = t0, t1 = t1) 
     NCDF_ATTGET, self.cdfid, 'precipitation', 'units', units
     units = STRING(units)
   endelse 
@@ -409,7 +409,7 @@ function TRMM_nc::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 end
 
 
-function TRMM_nc::get_Pcp_TS, x, y, $
+function w_TRMM::get_Pcp_TS, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
                               src = src, $
@@ -447,13 +447,13 @@ function TRMM_nc::get_Pcp_TS, x, y, $
     nt = 1
     if self.cropped ne 'FALSE' then pcp = pcp[self.subset[0]+point_i,self.subset[2]+point_j]
   endif else if self.type eq '3B42_h' then begin
-    pcp = self->GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     units = 'mm hr-1'
   endif else if self.type eq '3B43' then begin
-    pcp = self->GEO_nc::get_TS('pcp', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TS('pcp', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     units = 'mm hr-1'
   endif else begin ; agg files
-    pcp = self->GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     NCDF_ATTGET, self.cdfid, 'precipitation', 'units', units
     units = STRING(units)
   endelse
@@ -483,7 +483,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-pro TRMM_nc::w_QuickPlotPrcp
+pro w_TRMM::w_QuickPlotPrcp
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -511,7 +511,7 @@ end
 ; :Description:
 ; 
 ;    This function defines a new automatic subset for the TRMM file. It encapsulates
-;    the 'GEO_nc::define_dubset' method by replacing the SUBSET keyword with 'SUBSET_IJ'
+;    the 'w_GEO_nc::define_dubset' method by replacing the SUBSET keyword with 'SUBSET_IJ'
 ;    and adding the 'SUBSET_LL' keyword for Lon-Lat corners subset.
 ;    
 ;    It is called during the object instancing but can be called also once the instance is active.
@@ -519,7 +519,7 @@ end
 ;    Future calls to 'get_Var' will return the subseted data. 
 ;       
 ;    To reset to the original geoloc just call this method without arguments.
-;    Output is 1 if the TRMM_nc object is updated successfully, 0 if not.
+;    Output is 1 if the w_TRMM object is updated successfully, 0 if not.
 ;    
 ;    
 ; :Categories:
@@ -553,7 +553,7 @@ end
 ;          15-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
+function w_TRMM::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -586,10 +586,10 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   ;*****************************************
   ; First, define the ORIGINAL grid geoloc *
   ;*****************************************
-  ok = self->GEO_nc::define_subset()
+  ok = self->w_GEO_nc::define_subset()
   ok = utils_nc_LonLat(self.cdfid, lon_id, lat_id)  
-  lon = self->GEO_nc::get_Var(lon_id)  
-  lat = self->GEO_nc::get_Var(lat_id)
+  lon = self->w_GEO_nc::get_Var(lon_id)  
+  lat = self->w_GEO_nc::get_Var(lat_id)
   nx = N_ELEMENTS(lon)
   ny = N_ELEMENTS(lat)
   
@@ -607,7 +607,7 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   endcase
   
   if FIRSTCALL then begin
-    IF NOT self->grid2D::Init(   nx = nx                , $
+    IF NOT self->w_Grid2D::Init(   nx = nx                , $
                                  ny = ny                , $
                                  dx = 0.25D             , $
                                  dy = 0.25D             , $
@@ -616,7 +616,7 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
                                  proj = proj            , $
                                  meta = meta  ) THEN RETURN, 0
   endif else begin
-    IF NOT self->grid2D::ReInit(  nx = nx                , $
+    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
                                   ny = ny                , $
                                   dx = 0.25D             , $
                                   dy = 0.25D             , $
@@ -680,12 +680,12 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
     cx = iur - idl + 1
     cy = jur - jdl + 1
     if (cx lt 1) or (cy lt 1) then MESSAGE, 'Subset_LL corners are not compatible.'  ; Fatal error
-    ok = self->GEO_nc::define_subset(SUBSET=[idl,cx,jdl,cy])
+    ok = self->w_GEO_nc::define_subset(SUBSET=[idl,cx,jdl,cy])
   endif else if N_ELEMENTS(SUBSET_ij) eq 4 then begin
-    ok = self->GEO_nc::define_subset(SUBSET=SUBSET_ij)
+    ok = self->w_GEO_nc::define_subset(SUBSET=SUBSET_ij)
   endif else begin
    if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = [0L,0L,0L,0L]
-   return, self->GEO_nc::define_subset()
+   return, self->w_GEO_nc::define_subset()
   endelse
   
   if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = self.subset  
@@ -700,7 +700,7 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
     nx = N_ELEMENTS(lon)
     ny = N_ELEMENTS(lat)
     
-    IF NOT self->grid2D::reInit( nx = nx                , $
+    IF NOT self->w_Grid2D::reInit( nx = nx                , $
       ny = ny                , $
       dx = 0.25D             , $
       dy = 0.25D             , $
@@ -708,7 +708,7 @@ function TRMM_nc::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
       y0 = lat[ny-1]         , $
       proj = proj            , $
       meta = meta ) THEN begin
-        dummy = self->GEO_nc::define_subset() ; NO subset
+        dummy = self->w_GEO_nc::define_subset() ; NO subset
         RETURN, 0
       endif
     

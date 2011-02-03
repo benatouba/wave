@@ -1,11 +1,11 @@
-PRO WDTM__Define
+PRO w_DEM__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {WDTM                      ,  $
-            INHERITS Grid2D           ,  $
+  struct = {w_DEM                      ,  $
+            INHERITS w_Grid2D           ,  $
             file:               ''    ,  $
             hdr:                ''    ,  $ 
             z:      PTR_NEW()            $ ; the height
@@ -13,7 +13,7 @@ PRO WDTM__Define
     
 end
 
-Function WDTM::Init, FILE = file
+Function w_DEM::Init, FILE = file
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -70,7 +70,7 @@ Function WDTM::Init, FILE = file
   ;*****************************************
 
   GIS_make_proj, ret, proj, PARAM='1, WGS-84'  
-  IF NOT self->grid2D::Init( nx = coord.nx             , $
+  IF NOT self->w_Grid2D::Init( nx = coord.nx             , $
                              ny = coord.ny             , $
                              dx = coord.dx             , $
                              dy = coord.dy             , $
@@ -86,7 +86,7 @@ Function WDTM::Init, FILE = file
   
 END
 
-pro WDTM::Cleanup
+pro w_DEM::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -98,7 +98,7 @@ pro WDTM::Cleanup
  
 END
 
-PRO WDTM::GetProperty             ,  $
+PRO w_DEM::GetProperty             ,  $
             file = file           ,  $
             hdr = hdr             ,  $ 
             z = z                 ,  $ 
@@ -119,11 +119,11 @@ PRO WDTM::GetProperty             ,  $
   IF Arg_Present(hdr) NE 0 THEN type = self.hdr             
   IF Arg_Present(z) NE 0 THEN z = *self.z      
   
-  self->GRID2D::GetProperty, _Extra=extra
+  self->w_Grid2D::GetProperty, _Extra=extra
   
 end
 
-function WDTM::get_Z
+function w_DEM::get_Z
 
 ;, x, y, src, BILINEAR = bilinear
 
@@ -145,7 +145,7 @@ function WDTM::get_Z
     
 end
 
-pro WDTM::w_QuickPlotZ
+pro w_DEM::w_QuickPlotZ
 
   z = self->get_z()
   self->Get_LonLat, lon, lat

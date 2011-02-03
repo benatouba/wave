@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ;
-;  WRF_nc is the basis class for WRF datasets.
+;  w_WRF is the basis class for WRF datasets.
 ;  todo: describe the file
 ;  
 ;  
@@ -26,9 +26,9 @@
 ;+
 ; :Description:
 ;    Object structure definition. Attributes::
-;       WRF_nc                   
-;            INHERITS Grid2D           
-;            INHERITS GEO_nc           
+;       w_WRF                   
+;            INHERITS w_Grid2D           
+;            INHERITS w_GEO_nc           
 ;            type              : ''   
 ;                                type of active file: AGG, WRF, GEO, MET or INP
 ;            version           : ''  
@@ -71,15 +71,15 @@
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-PRO WRF_nc__Define
+PRO w_WRF__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { WRF_nc                   ,  $
-            INHERITS Grid2D           ,  $
-            INHERITS GEO_nc           ,  $
+  struct = { w_WRF                   ,  $
+            INHERITS w_Grid2D           ,  $
+            INHERITS w_GEO_nc           ,  $
             type:               ''    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
             version:            ''    ,  $ ; WRF version
             hstep:         {TIME_STEP},  $ ; Time step of the file
@@ -122,11 +122,11 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
-                                 SUBSET_IJ  = subset_ij,  $
-                                 LL_DATUM   = ll_datum ,  $
-                                 CROPCHILD  = cropchild   ,  $
-                                 CROPBORDER = cropborder 
+function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
+                               SUBSET_IJ  = subset_ij,  $
+                               LL_DATUM   = ll_datum ,  $
+                               CROPCHILD  = cropchild   ,  $
+                               CROPBORDER = cropborder 
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -135,7 +135,6 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self.subset = 'ERROR'
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, self->define_subset()
   ENDIF
@@ -191,7 +190,7 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
   x0 =  - (nx-1) / 2. * self.dx + e ; UL corner
   y0 =    (ny-1) / 2. * self.dy + n ; UL corner
   if FIRSTCALL then begin
-    IF NOT self->grid2D::Init(  nx = nx                , $
+    IF NOT self->w_Grid2D::Init(  nx = nx                , $
                                 ny = ny                , $
                                 dx = self.DX           , $
                                 dy = self.dy           , $
@@ -199,7 +198,7 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
                                 y0 = y0                , $
                                 proj = self.tnt_c.proj) THEN RETURN, 0  
   endif else begin
-   IF NOT self->grid2D::ReInit(  nx = nx                , $
+   IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
                                  ny = ny                , $
                                  dx = self.DX           , $
                                  dy = self.DY           , $
@@ -219,7 +218,7 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
     end
     'CROPCHILD': begin
       if self->get_Var_Info('NEST_POS') then begin
-        nest_pos = self->NCDF::get_Var('NEST_POS')
+        nest_pos = self->w_NCDF::get_Var('NEST_POS')
         nest_pos = nest_pos[*,*,0]
         npos = where(nest_pos ne 0, cnt)
         if cnt eq 0 then Message, 'You sure the domain has a nest?'
@@ -307,14 +306,14 @@ function WRF_nc::define_subset, SUBSET_LL  = subset_ll,  $
   endcase
   
   before = self.cropped
-  if ~self->GEO_nc::define_subset(SUBSET=isubs) then return, 0 
+  if ~self->w_GEO_nc::define_subset(SUBSET=isubs) then return, 0 
   self.cropped = before 
   if self.cropped ne 'FALSE' then begin
     x0 = x0 + self.dx*isubs[0]
     y0 = y0 - self.dy*(self.south_north - (isubs[3]+isubs[2]))
     nx = isubs[1]
     ny = isubs[3]
-    IF NOT self->grid2D::ReInit( nx = nx                , $
+    IF NOT self->w_Grid2D::ReInit( nx = nx                , $
                                  ny = ny                , $
                                  dx = self.Dx           , $
                                  dy = self.dy           , $
@@ -400,7 +399,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-Function WRF_nc::Init, FILE       = file     ,  $
+Function w_WRF::Init, FILE       = file     ,  $
                         SUBSET_LL  = subset_ll,  $
                         SUBSET_IJ  = subset_ij,  $
                         LL_DATUM   = ll_datum ,  $
@@ -423,7 +422,7 @@ Function WRF_nc::Init, FILE       = file     ,  $
   ;******************
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF ncdf file to read', /MUST_EXIST)
   if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
-  IF NOT self->GEO_nc::Init(file = file) THEN RETURN, 0    
+  IF NOT self->w_GEO_nc::Init(file = file) THEN RETURN, 0    
 
   ;****************
   ; Read metadata *
@@ -453,7 +452,7 @@ Function WRF_nc::Init, FILE       = file     ,  $
   ;*******
   ; Time *
   ;*******
-  ; Done by geo_nc
+  ; Done by w_GEO_nc
   if self.nt gt 1 then begin
    if ~check_TS(*self.time, hstep) then Message, 'Time serie in the file is not regular.'
     self.hstep = hstep
@@ -560,7 +559,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-pro WRF_nc::Cleanup
+pro w_WRF::Cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -622,7 +621,7 @@ END
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-PRO WRF_nc::GetProperty,  $
+PRO w_WRF::GetProperty,  $
     cropped = cropped         ,  $ ;
     type=type    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
     version=version    ,  $ ; WRF version
@@ -655,8 +654,8 @@ PRO WRF_nc::GetProperty,  $
   IF Arg_Present(j_parent_start) NE 0 THEN j_parent_start = self.j_parent_start
   IF Arg_Present(parent_grid_ratio) NE 0 THEN parent_grid_ratio = self.parent_grid_ratio
   
-  self->GRID2D::GetProperty, _Extra=extra
-  self->GEO_nc::GetProperty, _Extra=extra
+  self->w_Grid2D::GetProperty, _Extra=extra
+  self->w_GEO_nc::GetProperty, _Extra=extra
   
 end
 
@@ -717,7 +716,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-function WRF_nc::get_TS, varid, x, y, $
+function w_WRF::get_TS, varid, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
                               src = src, $
@@ -752,7 +751,7 @@ function WRF_nc::get_TS, varid, x, y, $
   self->transform, point_i, point_j, dummy1, dummy2, src=self, $
     LON_DST=point_lon, LAT_DST=point_lat
   
-  return, self->GEO_nc::get_TS(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+  return, self->w_GEO_nc::get_TS(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
@@ -796,7 +795,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-pro WRF_nc::plot_TS, varid, x, y, $
+pro w_WRF::plot_TS, varid, x, y, $
                             t0 = t0, t1 = t1, $
                             src = src
 
@@ -881,7 +880,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-function WRF_nc::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
+function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -904,7 +903,7 @@ function WRF_nc::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, N
     
 end
 
-;function WRF_nc::get_T, time0 = time0, time1 = time1, times, nt, units = units
+;function w_WRF::get_T, time0 = time0, time1 = time1, times, nt, units = units
 ;
 ;  ; SET UP ENVIRONNEMENT
 ;  @WAVE.inc

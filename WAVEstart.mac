@@ -34,18 +34,18 @@ pushd, root
 .run WAVE_colorbar.pro
 
 ; Compile objects
-.run Grid2D__Define.pro
-.run HDF__Define.pro
-.run HDF_EOS__Define.pro
-.run NCDF__Define.pro
-.run GEO_nc__Define.pro
+.run w_grid2d__define.pro
+.run w_hdf__define.pro
+.run w_hdf_eos__define.pro
+.run w_ncdf__define.pro
+.run w_geo_nc__define.pro
+
 
 ; Datasets
-.run TRMM_nc__Define.pro
-.run WRF_nc__Define.pro
-.run MODIS_Grid__Define.pro
-.run AMSR_E__Define.pro
-.run WDTM__Define.pro
+.run w_trmm__define.pro
+.run w_wrf__define.pro
+.run w_modis__define.pro
+.run w_dem__define.pro
 
 ; Plots
 .run w_map__define.pro

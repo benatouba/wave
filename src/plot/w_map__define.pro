@@ -151,7 +151,7 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   ;******************
   ; Check arguments *
   ;******************
-  if not OBJ_ISA(grid, 'Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='Grid2D')
+  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
   if ~KEYWORD_SET(Xsize) and ~KEYWORD_SET(Ysize) and ~KEYWORD_SET(FACTOR) then Ysize = 400
   
   self.grid = grid->reGrid(Xsize = Xsize,  Ysize = Ysize, FACTOR = factor) 

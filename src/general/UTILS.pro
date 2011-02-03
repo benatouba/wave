@@ -372,11 +372,11 @@ end
 ;    NOSHIFT: in, optional
 ;             if set, aggregat the files using their original timestamp.
 ;    SUBSET_IJ: in, optional
-;              set to aggregate only a subset of the file (see 'TRMM_nc')
+;              set to aggregate only a subset of the file (see 'w_TRMM')
 ;    SUBSET_LL: in, optional
-;              set to aggregate only a subset of the file (see 'TRMM_nc')
+;              set to aggregate only a subset of the file (see 'w_TRMM')
 ;    LL_DATUM: in, optional
-;               the datum for 'SUBSET_LL'  (see 'TRMM_nc')
+;               the datum for 'SUBSET_LL'  (see 'w_TRMM')
 ; 
 ; :Author:
 ;       Fabien Maussion::
@@ -482,7 +482,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   ; ---------------------------
   ; Read the Netcdf template file
   ; ---------------------------
-  template = OBJ_NEW('TRMM_nc', FILE=fileLIST[0], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+  template = OBJ_NEW('w_TRMM', FILE=fileLIST[0], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
   TEMPLATE->get_ncdf_coordinates, lon, lat, nx, ny
   TEMPLATE->GetProperty, SUBSET = subset
   OBJ_DESTROY, TEMPLATE
@@ -535,7 +535,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   
   for i = 0, cfiles-1 do begin
   
-    t_obj = OBJ_NEW('TRMM_nc', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+    t_obj = OBJ_NEW('w_TRMM', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
 
     pcp = (t_obj->get_prcp(t) > 0) * 3
     
