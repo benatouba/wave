@@ -70,12 +70,14 @@ PRO w_HDF__Define
   
   struct = {w_HDF                       ,  $
             path:               ''    ,  $ ; complete path of the active HDF file
-            HDFid:              0L    ,  $ ; id of the HDF file as given by  HDF_start 
+            hdfid:              0L    ,  $ ; id of the HDF file as given by  HDF_start 
             fname:              ''    ,  $ ; name of the active HDF file
             directory:          ''    ,  $ ; directory of the active HDF file
             Nvars:              0L    ,  $ ; The number of variables defined for this HDF file. 
-            Ngatts:             0L       $ ; The number of global attributes defined for this HDF file. 
+            Ngatts:             0L    ,  $ ; The number of global attributes defined for this HDF file. 
+            varNames:    PTR_NEW()       $ ; An array of (nVars) strings containing the variable names. 
             }
+            
     
 END
 
@@ -146,6 +148,9 @@ Function w_HDF::Init, FILE = file
   self.directory = directory
   self.Nvars = num_vars
   self.Ngatts = num_attr
+  
+  self->get_Varlist, varId, varnames
+  self.varNames = PTR_NEW(varnames, /NO_COPY)
  
   RETURN, 1
   
@@ -176,6 +181,7 @@ pro w_HDF::Cleanup
   COMPILE_OPT IDL2  
 
   HDF_SD_END, self.hdfID
+  PTR_FREE, self.varNames
   
 END
 
@@ -350,42 +356,7 @@ pro w_HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
   
 end
 
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       w_HDF::get_Var
-;
-; PURPOSE:
-;       extracts the desired variable from the HDF file
-;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; INPUT:
-;       varid : HDF SD index (int) or name (string) of the desired variable
-;       
-; OUTPUT:
-;       the variable
-;       
-; KEYWORDS:
-;        COUNT: (I) An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-;        NOREVERSE:(I) An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-;        START:(I) An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-;        STRIDE:(I) An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-;        description: (O) If available, the description of the variable
-;        units: (O) If available, the units of the variable
-;        varname: (O)the name of the variable
-;        dims : (O)the variable dimensions
-;        /NO_CALIB: the default behaviour id to check if calibration data is contained 
-;                   in the HDF variable attributes and apply it to the variable. Set this
-;                   keyword to avoid making an automatic calibration
-;
-; MODIFICATION HISTORY:
-;       Written by: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;-
-;-----------------------------------------------------------------------
+
 ;+
 ; :Description:
 ;    Extracts the desired variable from the HDF file
@@ -431,15 +402,89 @@ end
 ;     Last modification:  09-Dec-2010 FaM
 ;-
 function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable. 
-                       COUNT=count, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-                       NOREVERSE = noreverse, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-                       START=start, $  ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-                       STRIDE=stride, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
-                       description = description , $ ; If available, the description of the variable
-                       units = units, $ ; If available, the units of the variable
-                       varname = varname , $  ; the name of the variable
-                       dims = dims, $ ; the variable dimensions
-                       NO_CALIB = no_calib ; the variable dimensions
+                        COUNT=count, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+                        NOREVERSE = noreverse, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+                        START=start, $  ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+                        STRIDE=stride, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
+                        description = description , $ ; If available, the description of the variable
+                        units = units, $ ; If available, the units of the variable
+                        varname = varname , $  ; the name of the variable
+                        dims = dims, $ ; the variable dimensions
+                        NO_CALIB = no_calib ; the variable dimensions
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ON_ERROR,2
+  
+  if ~self->get_Var_Info (Varid, $
+                            out_id = vid, $ 
+                            units = units, $
+                            description = description, $
+                            varname = varname , $ 
+                            dims = dimss) then Message, '$Varid is not a correct variable ID'
+  
+  sdID = HDF_SD_Select(self.HDFid, vid)
+  
+  ; This routine throws all kinds of scary messages
+  !QUIET = 1
+  HDF_SD_GetInfo, sdID, DIMS=dims, NAME=varname, NATTS=natts, NDIMS=ndims, $
+        RANGE=range, TYPE=datatype, CALDATA=calData
+  !QUIET = 0
+  
+  HDF_SD_GETDATA, sdID, Data, COUNT=COUNT, NOREVERSE=NOREVERSE, START=START, STRIDE=STRIDE
+  IF calData.cal NE 0 and ~KEYWORD_SET(NO_CALIB) THEN data = calData.cal * (Temporary(data) - calData.offset)
+  
+  return, data
+  
+end
+
+;+
+; :Description:
+;    This function checks if a variable ID is valid and returns 1 if it is. Additionally,
+;    it tries to obtain a maximum of information about the desired variable.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    Varid: in, required, type = string/integer
+;           the variable ID (string or integer) to check
+;
+; :Keywords:
+;   out_id: out, type = long
+;           the hdf  variable ID (long)
+;   description: out, type = string
+;               If available, the description of the variable
+;   units: out, type = string
+;          If available, the units of the variable
+;   varname: out, type = string
+;            the name of the variable
+;   dims: out, type = long
+;         the variable dimensions
+; 
+; :Returns:
+;         1 if the variable id is valid, 0 if not
+; 
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin}
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;       Modified::
+;          09-Dec-2010 FaM
+;          First apparition for upgrade to WAVE 0.1
+;
+;-
+function w_HDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+                            out_id = out_id, $
+                            units = units, $
+                            description = description, $
+                            varname = varname , $ ; 
+                            dims = dims
                         
   
   ; SET UP ENVIRONNEMENT
@@ -450,21 +495,26 @@ function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a prev
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
     ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, -1
+    RETURN, FALSE
   ENDIF
   
-  if var_info(varid,/TYPE) eq IDL_STRING then  iVarid = HDF_SD_NAMETOINDEX(self.HDFid, Varid) else ivarid = Varid
+  if arg_okay(VarId, TYPE=IDL_STRING, /SCALAR) then begin
+    p = WHERE(str_equiv(*self.varNames) eq str_equiv(varid), cnt)
+    if cnt ne 0 then out_id = p[0] else return, FALSE
+  endif else if arg_okay(VarId, /INTEGER, /SCALAR) then begin
+    if varid lt 0 or varid ge self.Nvars then return, FALSE
+    out_id = varid    
+  endif else MESSAGE, WAVE_Std_Message('VarId', /ARG)
   
-  sdID = HDF_SD_Select(self.HDFid, iVarid)
+  
+  sdID = HDF_SD_Select(self.HDFid, out_id)
   ; This routine throws all kinds of scary messages
   !QUIET = 1
   HDF_SD_GetInfo, sdID, DIMS=dims, NAME=varname, NATTS=natts, NDIMS=ndims, $
         RANGE=range, TYPE=datatype, CALDATA=calData
   !QUIET = 0
   
-  HDF_SD_GETDATA, sdID, Data, COUNT=COUNT, NOREVERSE=NOREVERSE, START=START, STRIDE=STRIDE
-  IF calData.cal NE 0 and ~KEYWORD_SET(NO_CALIB) THEN data = calData.cal * (Temporary(data) - calData.offset)
-    
+     
   if ARG_PRESENT(description) then begin 
     description = ''
     for i = 0, natts -1 do begin
@@ -488,10 +538,11 @@ function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a prev
           then units = theAttribute
     endfor
   endif  
-  
-  return, data
+      
+  return, TRUE
   
 end
+
 
 ;+
 ; :Description:

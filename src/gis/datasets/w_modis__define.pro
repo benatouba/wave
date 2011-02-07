@@ -95,12 +95,12 @@ PRO w_MODIS__Define
   COMPILE_OPT IDL2  
   
   struct = {w_MODIS                         ,  $
-            INHERITS w_HDF_EOS                   ,  $ ; For HDF file methods (get_Var, dump, etc.)
-            INHERITS w_Grid2D                    ,  $ ; For geolocalisation methods 
-            t0:              {ABS_DATE}        ,  $ ; first available time
-            t1:              {ABS_DATE}        ,  $ ; last available time
-            subset:          [0l,0l,0l,0l]     ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). It should not be set manually but using the #define_subset# method.
-            cropped:         ''                   $ ; Set to "TRUE" or "FALSE" at the first initialisation and updated with #define_subset#
+            INHERITS w_HDF_EOS              ,  $ ; For HDF file methods (get_Var, dump, etc.)
+            INHERITS w_Grid2D               ,  $ ; For geolocalisation methods 
+            t0:              0LL            ,  $ ; first available time
+            t1:              0LL            ,  $ ; last available time
+            subset:          [0l,0l,0l,0l]  ,  $ ; if not equal to 0, it holds the indexes in the ORIGINAL hdf grid array in the form [x_ul,y_ul,nx,ny] (y=0 is at the top). It should not be set manually but using the #define_subset# method.
+            cropped:         ''                $ ; Set to "TRUE" or "FALSE" at the first initialisation and updated with #define_subset#
             }
     
 END
@@ -189,13 +189,13 @@ Function w_MODIS::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   d = utils_EOD_get_metadata(data,'RangeBeginningDate',10)
   st_date = strmid(d,8,2)+'.'+strmid(d,5,2)+'.'+strmid(d,0,4)
   st_time = utils_EOD_get_metadata(data,'RangeBeginningTime',8)
-  self.t0 = MAKE_ABS_DATE(DATE_STR=st_date, TIME_STR=st_time)
+  self.t0 = QMS_TIME(DATE_STR=st_date, TIME_STR=st_time)
   
   ; get range ending date/time
   d = utils_EOD_get_metadata(data,'RangeEndingDate',10)
   st_date = strmid(d,8,2)+'.'+strmid(d,5,2)+'.'+strmid(d,0,4)
   st_time = utils_EOD_get_metadata(data,'RangeBeginningTime',8)
-  self.t1 = MAKE_ABS_DATE(DATE_STR=st_date, TIME_STR=st_time)
+  self.t1 = QMS_TIME(DATE_STR=st_date, TIME_STR=st_time)
   
   ;bonus
   self.meta = info.GRID_NAMES[0]
@@ -254,6 +254,12 @@ PRO w_MODIS::GetProperty, $
   self->w_HDF_EOS::GetProperty, _Extra=extra
   self->w_Grid2D::GetProperty, _Extra=extra
   
+end
+
+pro w_MODIS::Get_Time, t0, t1
+   
+   self->GetProperty, t0 = t0, t1 = t1                
+                   
 end
 
 ;+
@@ -322,10 +328,10 @@ function w_MODIS::get_Var, Varid, $ ; The netCDF variable ID, returned from a pr
   ENDIF
   
   if self.cropped eq 'FALSE' then begin
-    data = self->HDF::get_Var(Varid, $
+    data = self->w_HDF::get_Var(Varid, $
       description = description , units = units, varname = varname , dims = dims, NO_CALIB = no_calib )
   endif else begin
-     data = self->HDF::get_Var(Varid, $
+     data = self->w_HDF::get_Var(Varid, $
                                start = [self.subset[0],self.subset[1]], $
                                count = [self.subset[2],self.subset[3]], $
                                description = description , units = units, varname = varname , dims = dims, NO_CALIB = no_calib )  
@@ -352,8 +358,8 @@ end
 ;             in the HDF variable attributes and apply it to the variable. Set this
 ;             keyword to avoid making an automatic calibration
 ;    LON_LAT:
-;
-; todo: describe lon_lat
+;             if set, the geolocalisation will be shown too (long process by
+;             large uncropped files)
 ;              
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -429,7 +435,7 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+    ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF
   
@@ -472,7 +478,7 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   y0 = upleft[1]
   x1 = lowright[0]
   y1 = lowright[1]
-  proj_str = str_equiv(projcode) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.2)') + ', 0.0, 0.0, 0.0, WGS-84, EOS Sinusoidal'
+  proj_str = str_equiv(projcode) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, WGS-84, EOS Sinusoidal'
   GIS_make_proj, ret, proj, PARAM = proj_str
   
   ;*****************************************

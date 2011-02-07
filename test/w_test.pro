@@ -606,17 +606,6 @@ pro time_bug
   
 end
 
-pro TEST_TIME
-  TEST_MAKE_ABS_DATE
-  TEST_QMS_TIME
-  TEST_JULIAN_DAYS
-  TEST_MAKE_REL_DATE
-  TEST_MAKE_TIME_STEP
-  TEST_MAKE_TIME_SERIE
-  TEST_MAKE_ENDED_TIME_SERIE
-  TEST_check_TS
-end
-
 
 pro TEST_TRMM_3B42
     
@@ -1472,6 +1461,51 @@ pro TEST_WRF_OUT
         
 end
 
+pro TEST_MODIS
+    
+    fdir = TEST_file_directory() + 'MODIS/'
+    error = 0 
+        
+    lst = OBJ_NEW('w_MODIS', FILE=fdir+'MOD11A2.A2008297.h25v05.005.2008311141349.hdf')
+    
+    lst->get_time, t0, t1       
+    if t0 ne QMS_TIME(year = 2008, month = 10, day = 23, hour = 00) then error += 1
+    if t1 ne QMS_TIME(year = 2008, month = 10, day = 30, hour = 00) then error += 1
+;    lst->QuickPlotVar, 'LST_Day_1km', /LON_LAT
+    lst->Get_LonLat, lon, lat, nx, ny, dat
+    
+    if ABS(lon[0,0] - 80.8358300128709) gt abs(lon[1,0]-lon[0,0])then error +=1 
+    if ABS(lat[0,0] - 30.0041666666667) gt abs(lat[0,1]-lat[0,0])/2dthen error +=1 
+    if ABS(lon[nx-1,ny-1] - 104.421709972251) gt abs((lon[nx-1,ny-1]-lon[nx-2,ny-1])/2d)*2 then error +=1 
+    if ABS(lat[nx-1,ny-1] - 39.9958333333333) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2d ) then error +=1 
+       
+    dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
+    map = OBJ_NEW('w_Map', dom2)
+    d = map->set_topography(GRDFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/TiP.grd')
+    GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
+    d = map->set_shape_file(SHPFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)
+    d = map->set_shading_params(RELIEF_FACTOR=1)
+    
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
+    CTLOAD, 13
+    d=map->set_Plot_Params(N_LEVELS=127,VAL_MIN=-24)
+    map->show_img
+    ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
+    if ok eq 'No' then error += 1
+    
+    ok =  lst->define_subset(SUBSET_LL= [90, 31, 92, 29])
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
+    map->show_img
+    ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
+    if ok eq 'No' then error += 1
+    
+    OBJ_DESTROY, lst     
+    OBJ_DESTROY, map 
+    OBJ_DESTROY,  dom2  
+    if error ne 0 then message, '% TEST_MODIS NOT passed', /CONTINUE else print, 'TEST_MODIS passed'
+        
+end
+
 pro TEST_WRF_GEO
     
     fdir = TEST_file_directory() + 'WRF/'
@@ -1547,35 +1581,6 @@ pro TEST_WRF_GEO
         
 end
 
-pro TEST_MODIS_SNOW
-   
-    fdir = TEST_file_directory()
-    error = 0 
-    
-    ;-------------------------
-    ; Test 3Hourly product
-    ;-------------------------
-    
-    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=25)
-    modis = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOD10A1.A2008294.h26v06.005.2008299220621.hdf')
-    map = dom1->reGrid(FACTOR=10)
-    
-    
-;    MODIS->Get_LonLat, lon, lat, nx, ny
-;    if nx ne 2400 then error +=1
-;    if ny ne 2400 then error +=1
-    
-    s = modis->get_Var('Snow_Cover_Daily_Tile')
-    ts =map->map_gridded_data(s, modis)
-    
-    w_QuickPlot, ts, COLORTABLE=13
-    
-    OBJ_DESTROY, dom1     
-    OBJ_DESTROY, map     
-    OBJ_DESTROY, modis     
-    if error ne 0 then message, '% TEST_MODIS_SNOW NOT passed', /CONTINUE else print, 'TEST_MODIS_SNOW passed'
-    
-end
 
 pro TEST_POST_COPY_CROP, REDO = redo
    
@@ -1937,6 +1942,7 @@ pro TEST_WRF_AGG_MASSGRID
 end
 
 pro TEST_NEIREST_NEIGHBOR
+
   @WAVE.inc
   error = 0
   
@@ -1972,145 +1978,21 @@ pro TEST_NEIREST_NEIGHBOR
   OBJ_DESTROY, trmm
   OBJ_DESTROY, dom1
   
-  
-  
   if error ne 0 then message, '% TEST_NEIREST_NEIGHBOR NOT passed', /CONTINUE else print, 'TEST_NEIREST_NEIGHBOR passed'
   
-end
-
-pro TEST_PLOT_MAP
-  
-  @WAVE.inc
-  
-  fdir = TEST_file_directory() 
-  error = 0 
-
-  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfout_d03_2008-10-26')
-  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 600)  
-  
-;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/TiP.grd')  
-  d = map->set_topography(GRDFILE='/home/fab/disk/Data/TOPO/Namco_SRTM/Namco.grd', ROTATE_SLOPE=3)  
-  d = map->set_shading_params(RELIEF_FACTOR=2.)
-  d = map->set_map_params(INTERVAL=1.)
-  
-  d = map->set_shape_file(/COUNTRIES, /COLOR)
-  GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
-  d = map->set_shape_file(SHPFILE=fdir+'/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)
-  
-  CTLOAD, 13
-  pcp = (dom1->get_Var('T2'))[*,*,12] - 273.15
-  d = map->set_data(pcp, /BILINEAR)    
-  d = map->set_Plot_Params(N_LEVELS=12)
-  
-  ud = (dom1->get_Var('U10'))[*,*,12] ;* 0 + 0.1 
-  vd = (dom1->get_Var('V10'))[*,*,12] ;* 0 ; + 1 
-  
-;  map->show_img
-;  map->draw_wind, dom1, ud, vd, 3, LENGTH=length, LEGEND = legend
-  
-  MAKE_WPLOT, map, TITLE = 'Temperature', BAR_TITLE = 'Celsius', PNG = png, PIXMAP = pixmap
-;  MAKE_WPLOT_WIND, map, dom1, ud, vd, 3, TITLE = 'Temperature and wind', BAR_TITLE = 'Celsius', PNG = png, PIXMAP = pixmap
-  
-  OBJ_DESTROY, dom1  
-  OBJ_DESTROY, map  
-  
-  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
   
 end
 
-pro TEST_PLOT_MAP_KIN
-  
-  @WAVE.inc
-  
-  fdir = TEST_file_directory() 
-  error = 0 
-
-  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfinput_d03', CROPBORDER=5)
-  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
-  
-  d = map->set_topography(GRDFILE='/home/fab/disk/Data/TOPO/KINNVI/KiN.grd', rotate = 0)  
-  d = map->set_shading_params(RELIEF_FACTOR=5.)  
-  d = map->set_map_params(C_INTERVAL=5.)
-  
-  CTLOAD, 13
-  d = map->set_Colors(NCOLORS=127)  
-  pcp = (dom1->get_var('TSK'))
-    map->getProperty, XSIZE = xsize, YSIZE = ysize   
-  pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
-  d = map->set_img(pcp)  
-  d = map->set_shape_file(/COUNTRIES, thick = 2)
-  d = map->set_shape_file(SHPFILE='/home/fab/Downloads/SJM_adm/SJM_adm1.shp', COLOR = 'dark red', thick = 2)
-  d = map->set_shape_file(SHPFILE='/home/fab/Downloads/world_adm0/world_adm0.shp', COLOR = 'dark green', thick = 2)
-  
-  map->show_img
-  OBJ_DESTROY, dom1  
-  OBJ_DESTROY, map  
-  
-  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
-  
+pro TEST_TIME
+  TEST_MAKE_ABS_DATE
+  TEST_QMS_TIME
+  TEST_JULIAN_DAYS
+  TEST_MAKE_REL_DATE
+  TEST_MAKE_TIME_STEP
+  TEST_MAKE_TIME_SERIE
+  TEST_MAKE_ENDED_TIME_SERIE
+  TEST_check_TS
 end
-
-pro TEST_PLOT_CASA
-  
-  @WAVE.inc
-  
-  fdir = TEST_file_directory() 
-  error = 0 
-
-  dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/geo_em.d03.nc', CROPBORDER=5)
-  map = OBJ_NEW('PLOT_MAP', dom1, Ysize = 700)  
-  
-;  d = map->set_topography(GRDFILE=fdir+'/MAPPING/KiN.grd')  
-  d = map->set_shading_params(RELIEF_FACTOR=2.)
-  d = map->set_map_params(C_INTERVAL=1)
-  
-  CTLOAD, 13
-  d = map->set_Colors(NCOLORS=256, /INVERTCOLORS)
-  
-  pcp = dom1->get_Var('LU_INDEX')
-  map->getProperty, XSIZE = xsize, YSIZE = ysize   
-  pcp = CONGRID(pcp, xsize, ysize, /CENTER)
-  d = map->set_img(pcp)  
-  d = map->set_shape_file(/COUNTRIES)
-    
-  map->show_img
-  OBJ_DESTROY, dom1  
-  OBJ_DESTROY, map  
-  
-  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
-  
-end
-
-pro TEST_PLOT_MAP_TRMM
-  
-  @WAVE.inc
-  
-  fdir = TEST_file_directory() 
-  error = 0 
-
-  dom1 = OBJ_NEW('w_TRMM', FILE=fdir+'TRMM/3B43.000801.6.nc')
-  map = OBJ_NEW('PLOT_MAP', dom1, Xsize = 1200)  
-
-  d = map->set_shading_params(RELIEF_FACTOR=2.)
-  
-  CTLOAD, 1
-  d = map->set_Colors(NCOLORS=256, /INVERTCOLORS)
-  map->getProperty, XSIZE = xsize, YSIZE = ysize   
-  
-  pcp = (dom1->get_prcp())
-  pcp = CONGRID(pcp, xsize, ysize, /CENTER, /INTERP)
-  d = map->set_img(pcp)  
-  d = map->set_shape_file(/COUNTRIES)
-  
-    
-  map->show_img
-  OBJ_DESTROY, dom1  
-  OBJ_DESTROY, map  
-  
-  if error ne 0 then message, '% TEST_PLOT_MAP NOT passed', /CONTINUE else print, 'TEST_PLOT_MAP passed'
-  
-end
-
 
 pro TEST_DATASETS
   TEST_TRMM_3B42
@@ -2118,6 +2000,9 @@ pro TEST_DATASETS
   TEST_TRMM_3B43  
   TEST_TRMM_AGG
   TEST_WRF_OUT
+  TEST_WRF_GEO
+  TEST_MODIS
+  
 end
 
 pro TEST_UTILS

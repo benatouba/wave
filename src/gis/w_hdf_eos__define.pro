@@ -25,23 +25,7 @@
 ;       
 ;-
 
-;-----------------------------------------------------------------------
-;+
-; NAME:
-;       HDF_EOS__Define
-;
-; PURPOSE:
-;       Object structure definition
-;
-; CATEGORY:
-;       WAVE grid objects
-;       
-; MODIFICATION HISTORY:
-;       Written by: Fabien Maussion 2010
-;       Modified:   04-Nov-2010 FaM
-;                   Written for upgrade to WAVE 0.1
-;-
-;-----------------------------------------------------------------------
+
 ;+
 ; :Description:
 ;    Defines the attributes of the class w_Grid2D. Attributes::
@@ -72,7 +56,7 @@ PRO w_HDF_EOS__Define
   COMPILE_OPT IDL2  
   
   struct = {w_HDF_EOS                      ,  $
-            INHERITS HDF                  ,  $
+            INHERITS w_HDF                 ,  $
             NUM_GRIDS  : 0L               ,  $        
             NUM_POINTS : 0L               ,  $          
             NUM_SWATHS : 0L                  $
@@ -101,7 +85,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-Function HDF_EOS::Init, FILE = file
+Function W_HDF_EOS::Init, FILE = file
            
            
   ; SET UP ENVIRONNEMENT
@@ -128,7 +112,7 @@ Function HDF_EOS::Init, FILE = file
   ;***************** 
   if not EOS_Query(file, info) then message, WAVE_Std_Message(/FILE)
   
-  IF NOT self->HDF::Init(file = file) THEN RETURN, 0  
+  IF NOT self->w_HDF::Init(file = file) THEN RETURN, 0  
   
   self.NUM_GRIDS = info.NUM_GRIDS
   self.NUM_POINTS =info.NUM_POINTS
@@ -165,7 +149,7 @@ END
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF_EOS::GetProperty, $
+PRO w_HDF_EOS::GetProperty, $
                   NUM_GRIDS     =      NUM_GRIDS, $          
                   NUM_POINTS    =      NUM_POINTS, $   
                   NUM_SWATHS    =      NUM_SWATHS, $
@@ -174,19 +158,13 @@ PRO HDF_EOS::GetProperty, $
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF
+  ON_ERROR,2
   
   IF Arg_Present(NUM_GRIDS) NE 0 THEN NUM_GRIDS = self.NUM_GRIDS
   IF Arg_Present(NUM_POINTS) NE 0 THEN NUM_POINTS = self.NUM_POINTS
   IF Arg_Present(NUM_SWATHS) NE 0 THEN NUM_SWATHS = self.NUM_SWATHS
   
-  self->HDF::GetProperty, _Extra=extra
+  self->w_HDF::GetProperty, _Extra=extra
   
 end
 
@@ -216,7 +194,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-PRO HDF_EOS::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables
+PRO w_HDF_EOS::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -280,7 +258,7 @@ PRO HDF_EOS::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables
     endfor ; Att OK
   ENDIF
  
-  self->HDF::dump, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN=lu
+  self->w_HDF::dump, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN=lu
  
   printf, lu, ''
   printf, lu, '}'

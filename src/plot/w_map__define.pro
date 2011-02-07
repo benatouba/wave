@@ -1,10 +1,37 @@
 ; docformat = 'rst'
 ;+
+; 
+;  w_Map is a central object of the WAVE graphics system: it generates
+;  "geolocalized" 2d plots for any kind of gridded data. The role of
+;  this object is to create a color image (in pixels) of gridded data 
+;  that can be used for other plots (with title, legend, etc.).  
+;  The basic flow chart is simple. The two first actions (instancing and
+;  mapping) are related to the map itself and the third step is 
+;  related to the data plot.
+;  
+;  1. Instancing: the object is created specifying an image size (in pixels) 
+;  and associating a 'w_Grid2D' object to the image. This information 
+;  is stored by the object instance and cannot be changed anymore.
+;  From now on, each pixel of the image is geolocalized for further 
+;  mapping and plotting purposes.
+;  
+;  2. Mapping: the user may add mapping options to the plot such as country 
+;  outlines, any kind of shape file, relief shading, lat-lon grid contour
+;  lines... This has to be done only once since it sometimes requires 
+;  computing time, and can be undone. Afterwards, this information 
+;  is stored for all the plots that will be further on generated.
+;  
+;  3. Set plot: the two last steps can be repeated in any order for all
+;  the future plots on the map. The data to be plotted has to be set, 
+;  as well as the plotting params (colors, levels)
+;  
+;  4. Get Img: the generated plot can be shown on an external window or 
+;  recovered for larger plots.
+;  
+; 
+; :Categories:
+;         WAVE/OBJ_PLOT 
 ;
-;  
-;  todo: describe the file
-;  
-;  
 ; :Properties:
 ;      
 ;      
@@ -13,37 +40,18 @@
 ;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-     
  
 ;+
 ; :Description:
-;    Defines the attributes of the class. Attributes::
-;         PLOT_PARAMS : for the colors and data-levels 
-;         MAP_SHAPE   : for the shape files drawing  
-;         MAP_PARAMS  : for the Lon-Lat/UTM contours drawing
-;         w_Map    :   
-;todo: describe w_Map
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Defines the attributes of the class.
+;    
 ;
 ; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2011.
 ;
 ;-    
 PRO w_Map__Define
@@ -54,88 +62,82 @@ PRO w_Map__Define
   
   ; This is for the colors and data-levels 
   struct = {PLOT_PARAMS                    , $
-            type           : ''            , $
-            nlevels        : 0L            , $ 
-            colors         : PTR_NEW()     , $  
-            levels         : PTR_NEW()     , $
-            inversecolors  : FALSE         , $
-            min_val        : 0D            , $
-            max_val        : 0D              $            
+            type           : ''            , $ ; USER or AUTO generated levels
+            nlevels        : 0L            , $ ; number of data levels
+            colors         : PTR_NEW()     , $ ; array of nlevels colors
+            levels         : PTR_NEW()     , $ ; array of nlevels data levels
+            min_val        : 0D            , $ ; min data level
+            max_val        : 0D              $ ; max data level           
             }
   
-  ; This is for the shape files drawing  
-  struct = {MAP_SHAPE                      , $
-            shape_file     : ''            , $
-            thick          : 0D            , $
-            style          : 0D            , $
-            color          : ''            , $
-            n_coord        : 0L            , $
-            coord          : PTR_NEW()     , $
-            conn           : PTR_NEW()       $            
+  ; This is the information for one shape file
+  struct = {MAP_SHAPE                      , $ 
+            shape_file     : ''            , $ ; path to the shape file
+            thick          : 0D            , $ ; thickness or the shape line for the plot
+            style          : 0D            , $ ; style or the shape line for the plot
+            color          : ''            , $ ; color or the shape line for the plot
+            n_coord        : 0L            , $ ; number of coordinates in the shape (private)
+            coord          : PTR_NEW()     , $ ; coordinates of the shape points (private)
+            conn           : PTR_NEW()       $ ; connivence info (private)          
             }
   
   ; This is for the Lon-Lat/UTM contours drawing
   struct = {MAP_PARAMS                     , $
-            type           : ''            , $
-            xticks         : PTR_new()     , $
-            yticks         : PTR_new()     , $
-            xlevels        : PTR_new()     , $
-            ylevels        : PTR_new()     , $
-            color          : ''            , $
-            interval       : 0D            , $
-            thick          : 0D            , $
-            style          : 0D              $
+            type           : ''            , $ ; LONLAT or UTM
+            xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
+            yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
+            xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
+            ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
+            color          : ''            , $ ; color of the contour lines
+            thick          : 0D            , $ ; thickness of the contour lines
+            style          : 0D              $ ; style of the contour lines
             }
      
-  struct = { w_Map                      , $
-             grid          : OBJ_NEW()     , $
-             Xsize         : 0L            , $
-             Ysize         : 0L            , $
-             img           : PTR_NEW()     , $
-             data          : PTR_NEW()     , $
-             slope         : PTR_NEW()     , $
-             nshapes       : 0L            , $                     
-             shapes        : PTR_NEW()     , $                            
-             map_params    : {MAP_PARAMS}  , $
-             plot_params   : {PLOT_PARAMS} , $
-             relief_factor : 0D            , $             
-             is_Shaped     : FALSE         , $
-             is_Shaded     : FALSE         , $
-             is_Mapped     : FALSE           $             
+  struct = { w_Map                         , $
+             grid          : OBJ_NEW()     , $ ; the grid object (nx = Xsize, ny = Ysize)
+             Xsize         : 0L            , $ ; X size of the image in pixels
+             Ysize         : 0L            , $ ; Y size of the image in pixels
+             img           : PTR_NEW()     , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
+             data          : PTR_NEW()     , $ ; active data array ([Xsize,Ysize]) of any numeric type
+             sl            : PTR_NEW()     , $ ; shading layer for topography shading
+             relief_factor : 0D            , $ ; strenght of the shading (default: 0.7)
+             nshapes       : 0L            , $ ; number of active shape files to plot                  
+             shapes        : PTR_NEW()     , $ ; array of nshapes {MAP_SHAPE} structures                               
+             map_params    : {MAP_PARAMS}  , $ ; the mapping params for contours
+             plot_params   : {PLOT_PARAMS} , $ ; the plotting params          
+             is_Shaped     : FALSE         , $ ; is there at least one shape to draw?
+             is_Shaded     : FALSE         , $ ; did the user specify a DEM for shading?
+             is_Mapped     : FALSE           $ ; did the user specify a contour to draw for mapping?         
              }
     
 END
 
 ;+
 ; :Description:
-;    Build function.
+;    Build function. The required parameter is an instance of 'w_grid2d' that 
+;    defines the map geolocalisation.
 ;    
-; :Categories:
-;         WAVE/OBJ_GIS 
-;      todo: describe params/keywords   
 ; :Params:
-;    grid: in,
-;
+;    grid: in, required, type = 'w_grid2d'
+;          the map geolocalisation
 ; :Keywords:
-;    Xsize: in,
-;    
-;    Ysize: in,
-;    
-;    FACTOR: in, optional
+;    Xsize: in, optional, type = integer
+;           the window X dimension size (the original grid X/Y ratio is conserved) 
+;    Ysize: in, optional, type = integer, default = 400
+;           the window Y dimension size (the original grid X/Y ratio is conserved) (if set, Xsize is ignored)
+;    FACTOR: in, optional, type = float
+;            a factor to multiply to the grid nx and ny to obtain the window size (if set, Xsize and Ysize are ignored)
+;    NO_COUNTRIES: in, optional, type = boolean
+;                  default behavior is to add country outlines to the map automatically. Set this keyword
+;                  to prevent this.
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
+Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES = no_countries
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -160,8 +162,8 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   self.Ysize = c.ny
   
   dummy = self->set_data()
-  dummy = self->set_plot_params()  
-  dummy = self->set_shape_file(/COUNTRIES)  
+  dummy = self->set_plot_params(COLORS='white')  
+  if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   dummy = self->set_map_params()  
   dummy = self->set_shading_params(RELIEF_FACTOR = 0.7)  
                 
@@ -171,23 +173,10 @@ END
 
 ;+
 ; :Description:
-;    todo: Describe the procedure.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;   utilitary routine to properly destroy the pointers.
 ;
 ; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2011.
 ;
 ;-    
 pro w_Map::DestroyPlotParams
@@ -202,6 +191,14 @@ pro w_Map::DestroyPlotParams
   
 end
 
+;+
+; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-  
 pro w_Map::DestroyMapParams
 
     ; SET UP ENVIRONNEMENT
@@ -219,24 +216,12 @@ end
 
 ;+
 ; :Description:
-;    todo: Describe the procedure.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;   utilitary routine to properly destroy the pointers.
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
-;-    
+;-  
 pro w_Map::DestroyShapes
 
     ; SET UP ENVIRONNEMENT
@@ -260,21 +245,8 @@ end
 ; :Description:
 ;    Destroy function. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2011.
 ;
 ;-    
 pro w_Map::Cleanup
@@ -286,7 +258,7 @@ pro w_Map::Cleanup
   OBJ_DESTROY, self.grid
   PTR_FREE, self.img 
   PTR_FREE, self.data 
-  PTR_FREE, self.slope    
+  PTR_FREE, self.sl    
   
   self->DestroyShapes         
   self->DestroyMapParams       
@@ -298,28 +270,9 @@ END
 ; :Description:
 ;    Get access to some params. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-; todo: describe keywords
-; :Keywords:
-;    XSIZE: out,
-;    
-;    YSIZE: out,
-;    
-;    LEVELS: out,
-;    
-;    COLORS: out,
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors
@@ -344,10 +297,12 @@ end
 
 ;+
 ; :Description:
-;    Sets plotting params
-;    
-;    todo: describe function etc.
-;
+;    Sets plotting parameters. This can happen at any 
+;    time during the plotting process, and can be 
+;    updated any time. When no levels are set, the levels
+;    are chosen automatically with the current data 
+;    array. When no colors are set, the colors are chosen
+;    automatically from the active color table.
 ;
 ;
 ; :Keywords:
@@ -396,16 +351,7 @@ function w_Map::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   ENDIF 
   
   self->DestroyPlotParams
-  
-;    struct = {PLOT_PARAMS                    , $
-;            type           : ''            , $
-;            nlevels        : 0L            , $ 
-;            colors         : PTR_NEW()     , $  
-;            levels         : PTR_NEW()     , $
-;            min_val        : 0D            , $
-;            max_val        : 0D              $            
-;            }
-  
+   
   is_Levels = N_ELEMENTS(levels) ne 0 
   is_Colors = N_ELEMENTS(colors) ne 0
   
@@ -445,7 +391,6 @@ function w_Map::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
   self.plot_params.min_val  = val_min
   self.plot_params.max_val  = val_max
-  self.plot_params.inversecolors = KEYWORD_SET(INVERTCOLORS)
   
   return, self->set_img()
 
@@ -513,7 +458,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   _interval = 10.
   _thick = 1.
   _style = 2.
-  _color = 'DArk Grey'
+  _color = 'Dark Grey'
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
@@ -522,7 +467,6 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
  
   self.map_params.type = _type
-  self.map_params.interval = _interval
   self.map_params.thick = _thick
   self.map_params.style = _style
   self.map_params.color = _color
@@ -728,7 +672,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
 
 end
 
-function w_Map::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
+function w_Map::set_topography, GRDFILE = grdfile
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -737,7 +681,7 @@ function w_Map::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    PTR_FREE, self.slope
+    PTR_FREE, self.sl
     self.is_Shaded = false
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
@@ -747,14 +691,14 @@ function w_Map::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
   ; Check arguments *
   ;******************
   if not KEYWORD_SET(grdfile) then begin
-    PTR_FREE, self.slope
+    PTR_FREE, self.sl
     self.is_Shaded = false
     return, 1
   end
   
   if N_ELEMENTS(grdfile) eq 0 then grdfile = DIALOG_PICKFILE(TITLE='Please select .grd file to read', /MUST_EXIST)
   if GRDFILE eq '' then begin
-    PTR_FREE, self.slope
+    PTR_FREE, self.sl
     self.is_Shaded = false
     return, 1
   end
@@ -800,31 +744,9 @@ function w_Map::set_topography, GRDFILE = grdfile, ROTATE_SLOPE = rotate_slope
   
   sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer
   
-;  if not KEYWORD_SET(ROTATE_SLOPE) then ROTATE_SLOPE = 0  
-;  case (ROTATE_SLOPE) of
-;    0: begin
-;      dhdx = 1 - Scale_Vector(dhdx , 0.0,  1.0)
-;      dhdy = 1 - Scale_Vector(dhdy , 0.0,  1.0)
-;    end
-;    1: begin
-;      dhdx = 1 - Scale_Vector(dhdx , 0.0,  1.0)
-;      dhdy = Scale_Vector(dhdy , 0.0,  1.0)
-;    end
-;    2: begin
-;      dhdx = Scale_Vector(dhdx , 0.0,  1.0)
-;      dhdy = Scale_Vector(dhdy , 0.0,  1.0)
-;    end
-;    3: begin
-;      dhdx = Scale_Vector(dhdx , 0.0,  1.0)
-;      dhdy = 1 - Scale_Vector(dhdy , 0.0,  1.0)
-;    end
-;    else: begin
-;      MESSAGE, WAVE_Error_Message('ROTATE_SLOPE', /ARG)
-;    end
-;  endcase
   
-  PTR_FREE, self.slope
-  self.slope = PTR_NEW(sl, /NO_COPY)
+  PTR_FREE, self.sl
+  self.sl = PTR_NEW(sl, /NO_COPY)
   self.is_Shaded = TRUE
  
   return, 1
@@ -1089,17 +1011,14 @@ function w_Map::shading
   ;******************
   ; Prepare shading *
   ;******************  
-  sl = *self.slope
-      
-  min_sl  = min(sl)
-  max_sl  = max(sl)
+  sl = *self.sl      
   mean_sl = moment(sl, SDEV=sdev_sl)
   
   p = where(sl gt 0, cnt)  
   if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
   p = 0  
-  level = 1.0 - 0.1*self.relief_factor ; 1.0 for 0% and 0.9 for 100%
-  sens  = 0.7*self.relief_factor       ; 0.0 for 0% and 0.7 for 100%
+  level = 1.0 - 0.1 * self.relief_factor ; 1.0 for 0% and 0.9 for 100%
+  sens  = 0.7 * self.relief_factor       ; 0.0 for 0% and 0.7 for 100%
   
   ;****************
   ; Apply shading *
@@ -1366,7 +1285,7 @@ pro w_Map::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tag
   if N_ELEMENTS(BAR_TAGS) eq 0 then bar_TAGS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
   
   if self.plot_params.nlevels lt 40 then begin
-    DCBar, *(self.plot_params.colors), COLOR = "BLACK", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
+    cgDCBar, *(self.plot_params.colors), COLOR = "BLACK", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
       TITLE=title, CHARSIZE = 2, /VERTICAL;, FONT=-1 ;, CHARTHICK=1
   endif else begin
     WAVE_COLORBAR, *(self.plot_params.colors), COLOR=FSC_Color("BLACK"), Position=[0.20,0.05,0.30,0.95], $

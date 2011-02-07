@@ -97,7 +97,7 @@ PRO w_NCDF__Define
             Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
             varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
             dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
-            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
+            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the attribute names. 
             dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
             RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
             }
@@ -807,6 +807,7 @@ function w_NCDF::get_Gatt_Info, attid, OUT_ID = out_id
     RETURN, FALSE
   ENDIF
   out_id = -1
+  
   if arg_okay(attid, TYPE=IDL_STRING, /SCALAR) then begin
     p = WHERE(str_equiv(*self.gattNames) eq str_equiv(attid), cnt)
     if cnt ne 0 then out_id = (*self.gattNames)[p[0]] else return, FALSE
@@ -941,7 +942,7 @@ PRO w_NCDF::dump, FILE = file
     sAtt_info = NCDF_attINQ(sid, sName, /GLOBAL)
     NCDF_ATTGET, sid, sName, sValue, /GLOBAL
     
-    text = '       ' + StrlowCase(sName) + ' = ' + str_equiv(sValue)
+    text = '       ' + sName + ' = ' + str_equiv(sValue)
     printf, lu, text
 
   endfor ; Att OK
@@ -959,7 +960,7 @@ PRO w_NCDF::dump, FILE = file
     ; If the dimension names are present, use them to get the dimension IDs, which are needed to define the variable.
     dimsIds = s_var_info.dim
     
-    text = '       ' + STRLOWCASE(s_var_info.DATATYPE) + ' ' + str_equiv(s_var_info.name) + '(' 
+    text = '       ' + STRLOWCASE(s_var_info.DATATYPE) + ' ' + s_var_info.name + '(' 
     for i =0, N_ELEMENTS(s_var_info.dim) - 1 do begin
       text += STRLOWCASE(str_equiv(t_dim_names[s_var_info.dim[i]]))
       if i ne N_ELEMENTS(s_var_info.dim) - 1 then  text += ','      
