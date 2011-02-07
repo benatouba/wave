@@ -81,6 +81,7 @@ pro TIME_init
   @WAVE.inc
 
   abs_date =   {ABS_DATE,          $
+    zone:        '',      $
     year:        0L,      $
     month:       0L,      $
     day:         0L,      $

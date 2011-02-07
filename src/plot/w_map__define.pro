@@ -165,7 +165,7 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   dummy = self->set_plot_params(COLORS='white')  
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   dummy = self->set_map_params()  
-  dummy = self->set_shading_params(RELIEF_FACTOR = 0.7)  
+  dummy = self->set_shading_params()  
                 
   RETURN, 1
   
@@ -306,35 +306,37 @@ end
 ;
 ;
 ; :Keywords:
-;    LEVELS: in, type = integer
+;    LEVELS: in, optional, type = numeric
+;            the data levels
 ;    
-;    N_LEVELS: in, type = long
+;    N_LEVELS: in, optional, type = long, default = 256
+;              number of data levels (ignored if levels is set)
 ;    
-;    VAL_MIN: in, type = double 
+;    VAL_MIN: in, optional, type = numeric, Default=MIN(data)
+;             the minimun data value to level (ignored if levels is set)
 ;    
-;    VAL_MAX: in, type = double
-;    
-;    COLORS: in, type = PTR_NEW()
-;    
-;    CMIN:
-;    
-;    CMAX:
-;    
-;    INVERTCOLORS:
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    VAL_MAX: in, optional, type = numeric, Default=MAX(data)
+;             the maximum data value to level (ignored if levels is set)
+;             
+;    COLORS: in, optional, type = any
+;            the colors palette (array of nlevels). If not set, colors are chosen
+;            automatically from nlevels and the active color table (see e.g. CTLoad)
+;            
+;    CMIN: in, optional, type = long
+;          minimun index in the color table (ignored if COLORS is set)
+;          
+;    CMAX: in, optional, type = long
+;          maximum index in the color table (ignored if COLORS is set)
+;          
+;    INVERTCOLORS: in, optional, type = boolean
+;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 201.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
-function w_Map::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
+function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
                                     COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors
          
   ; SET UP ENVIRONNEMENT
@@ -366,9 +368,8 @@ function w_Map::set_Plot_Params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
      endelse
   ENDIF else nlevels = n_levels
   
+  if is_Levels then nlevels = N_ELEMENTS(levels)
   
-  if is_Levels then if (nlevels ne N_ELEMENTS(LEVELS)) then $
-    message, '$levels and $n_levels are incompatible.'
   if is_colors then if (nlevels ne N_ELEMENTS(colors)) then $
     message, '$colors and $n_levels are incompatible.'
   
@@ -399,32 +400,26 @@ end
 
 ;+
 ; :Description:
-;    Sets map params
+;    This is to define the contours of lat lons on the map. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;todo: describe everything :)
 ; :Keywords:
-;    TYPE: in, type = string
+;    TYPE: in, optional, type = string, default = 'LONLAT'
+;          currently, only 'LONLAT' accepted. If set to '', removes the map contours
 ;    
-;    INTERVAL: in, type = double
+;    INTERVAL: in, optional, type = float, default =10.
+;              interval between contours 
+;              
+;    THICK: in, optional, type = float, default =1.
+;           thickness of the contour lines
 ;    
-;    THICK: in, type = double
-;    
-;    STYLE: in, type = double
-;    
-;    COLOR: in, type = string
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    STYLE: in, optional, type = float, default =2.
+;           style of the contour lines
+;           
+;    COLOR: in, optional, type = string, default ='dark grey'
+;           color of the contour lines
 ;
 ; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2011.
 ;
 ;-    
 function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
@@ -441,18 +436,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
     RETURN, 0
   ENDIF 
   
-    ; This is for the Lon-Lat/UTM contours drawing
-;  struct = {MAP_PARAMS                     , $
-;            type           : ''            , $
-;            xticks         : PTR_new()     , $
-;            yticks         : PTR_new()     , $
-;            xlevels        : PTR_new()     , $
-;            ylevels        : PTR_new()     , $
-;            color          : ''            , $
-;            interval       : 0D            , $
-;            thick          : 0D            , $
-;            style          : 0D              $
-;            }  
+  ; This is for the Lon-Lat/UTM contours drawing
    self->DestroyMapParams
   _type = 'LONLAT'
   _interval = 10.
@@ -487,11 +471,25 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
     if cnt gt 0 then lonlevels = levels[p]
     p = where(levels le floor(max(Lat)) and levels ge ceil(min(Lat)), cnt)
     if cnt gt 0 then latlevels = levels[p]
-    
-    ;TODO: ticks         
+   
+    for i=0,N_ELEMENTS(lonlevels)-1 do begin
+      p = where(Lon[*,0] le lonlevels[i] ,cnt)
+      if cnt ge 1 then begin
+        if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
+      endif
+    endfor
+    for i=0,N_ELEMENTS(latlevels)-1 do begin
+      p = where(Lat[0,*] le latlevels[i] ,cnt)
+      if cnt ge 1 then begin
+        if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
+      endif
+    endfor
+           
     self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
     self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY) 
-       
+    self.map_params.xticks = PTR_NEW(xticks/double(self.Xsize), /NO_COPY)
+    self.map_params.yticks = PTR_NEW(yticks/double(self.Ysize), /NO_COPY) 
+        
   endif else Message, 'Currently only LONLAT type is supported'
   
   return, 1
@@ -502,22 +500,15 @@ end
 ; :Description:
 ;    Set shading params.
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;    RELIEF_FACTOR:
-;todo: keyword
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    RELIEF_FACTOR: in, optional, type = float, default = 0.7 
+;                   the strenght of shading. no rule for this,
+;                   try and see (0.7 or 1.0 usually provide satisfying results)
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
@@ -533,7 +524,7 @@ function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
     RETURN, 0
   ENDIF 
     
-  _relief_factor = 0.  
+  _relief_factor = 0.7  
   if N_ELEMENTS(RELIEF_FACTOR) eq 1 then _relief_factor = RELIEF_FACTOR                           
   
   self.relief_factor = _relief_factor
@@ -544,18 +535,13 @@ end
 
 ;+
 ; :Description:
-;    Set image.
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;   This function is called internally. Do not call it by yourself.   
+;  
+; :Private:
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 function w_Map::set_img

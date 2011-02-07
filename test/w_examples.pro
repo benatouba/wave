@@ -40,8 +40,8 @@ pro examples_w_TimeLinePlot
                   data3/100., time, 'dark green', 'My data3', COMENT3='Other Units', NEWAXIS=3, NEWTITLE='Units/100', NEWRANGE=[0.2,0.8]
                   
   
-  ok = DIALOG_MESSAGE('Do you want to close all windows? (IDL> FSC_WDelete, /All)', /QUESTION)
-  if ok eq 'Yes' then FSC_WDelete, /All
+  ok = DIALOG_MESSAGE('Do you want to close all windows? (IDL> cgDelete, /All)', /QUESTION)
+  if ok eq 'Yes' then cgDelete, /All
   
 
 end
@@ -58,5 +58,9 @@ pro examples_w_ScatterPlot
   noise = RandomU(seed, n)*10. - 5.
   y = x + noise + 20.
   
-  w_ScatterPlot, x, y, XTITLE='X title', YTITLE='Y title', TITLE= 'Test plot 2', /LEGEND_UL, COLOR='red', PSYM=6
+  w_ScatterPlot, x, y, XTITLE='X title', YTITLE='Y title', TITLE= 'Test plot 2', /LEGEND_UL, COLOR='red', PSYM=6  
+  
+  ok = DIALOG_MESSAGE('Do you want to close all windows? (IDL> cgDelete, /All)', /QUESTION)
+  if ok eq 'Yes' then cgDelete, /All
+  
 end
