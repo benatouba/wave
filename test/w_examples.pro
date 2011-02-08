@@ -35,7 +35,7 @@ pro examples_w_TimeLinePlot
   ; Add a new axis
   data3 = LOADDATA(17)
   w_TimeLinePlot, data, time, 'My data', COMENT1='Random data', COLOR1= 'red',  $
-                  THICKNESS=2, STYLE1= 5, TITLE='Example single plot with new axis', YTITLE='Unit', range = [-10,110], HORILINE=0,$
+                  STYLE1= 5, TITLE='Example single plot with new axis', YTITLE='Unit', range = [-10,110], HORILINE=0,$
                   data2, time2, 'blue', 'My data2', COMENT2='Sample of random data', STYLE2=0, $
                   data3/100., time, 'dark green', 'My data3', COMENT3='Other Units', NEWAXIS=3, NEWTITLE='Units/100', NEWRANGE=[0.2,0.8]
                   
