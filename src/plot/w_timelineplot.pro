@@ -210,7 +210,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   @WAVE.inc            
          
    ; prepare the plot  
-   device, DECOMPOSED=0, RETAIN=2  
+   device, DECOMPOSED=1, RETAIN=2  
    pp = !ORDER ;To restore later
    !ORDER = 0
    

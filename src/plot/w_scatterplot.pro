@@ -43,7 +43,7 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   @WAVE.inc                   
 
    ; prepare the plot 
-   device, DECOMPOSED=0, RETAIN=2 ;, SET_FONT='Courier Italic', /TT_FONT  
+   device, DECOMPOSED=1, RETAIN=2
    pp = !ORDER ;To restore later
    !ORDER = 0
   

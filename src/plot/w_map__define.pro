@@ -1225,8 +1225,8 @@ pro w_Map::show_img, win, PIXMAP = pixmap
   !ORDER = 0
 
   if TNT_OS eq 'WINDOWS' then set_plot, 'WIN' else set_plot, 'X'
-  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1
   
+  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1  
   cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot', PIXMAP = pixmap, /FREE
   cgControl, EXECUTE=0
   win = !D.WINDOW
