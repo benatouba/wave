@@ -1286,7 +1286,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
   IF supportsTrueColor THEN BEGIN
     CASE Size(_colors, /TNAME) OF
       'STRING': BEGIN
-        _colors = FSC_Color(_colors, DECOMPOSED=1, FILE=file)
+        _colors = cgColor(_colors, DECOMPOSED=1, FILE=file)
       END
       'INT': BEGIN
         TVLCT, r, g, b, /GET

@@ -533,131 +533,19 @@ function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
 
 end
 
-;+
-; :Description:
-;   This function is called internally. Do not call it by yourself.   
-;  
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;
-;
-;-    
-function w_Map::set_img
-  
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    PTR_FREE, self.img
-    ok = self->set_img()
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, 0
-  ENDIF 
-
-  img = BYTARR(self.Xsize, self.Ysize)       
-  
-  for l=0, self.plot_params.nlevels-1 do begin
-    if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
-    else p = where((*self.data) ge (*self.plot_params.levels)[l], cnt)
-    if cnt gt 0 then img[p]= l
-  endfor
-    
-  PTR_FREE, self.img
-  SELF.img = PTR_NEW(img, /NO_COPY)
-  
-  return, 1
-
-end
 
 ;+
 ; :Description:
-;    Set data. 
-;    todo: describe + params/keywords
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-; :Params:
-;    data:
-;    
-;    grid:
+;   To set a topography for the shading layer.
 ;
 ; :Keywords:
-;    BILINEAR:
-;    
-;    MISSING:
-;    
-;    VAL_MIN:
-;    
-;    VAL_MAX:
+;    GRDFILE: the .grd file to read (with hdr !!!)
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by DiS, FaM, 2011
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
-;-    
-function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
-                             
-  
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    PTR_FREE, self.data
-    ok = self->set_data()
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, 0
-  ENDIF 
-
-  if N_PARAMS() eq 0 then begin
-   data = BYTARR(self.Xsize, self.Ysize) 
-   PTR_FREE, self.data
-   self.data = PTR_NEW(data, /NO_COPY)
-   return, self->set_img()
-  endif  
-  
-  if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
-  
-  if N_ELEMENTS(grid) eq 0 then begin
-     if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
-      else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
-  endif else begin
-    _data = self.grid->map_gridded_data(data, grid, MISSING = missing, BILINEAR = bilinear)
-  endelse    
-  
-  PTR_FREE, self.data
-  self.data = PTR_NEW(_data, /NO_COPY)
-  
-   ; Levels
-  if self.plot_params.type eq 'AUTO' then begin
-    if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
-    if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)
-    _levels = ((val_max - val_min) / Float(self.plot_params.nlevels)) * Indgen(self.plot_params.nlevels) + val_min
-    ptr_free, self.plot_params.levels
-    self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
-    self.plot_params.min_val = val_min
-    self.plot_params.max_val = val_max
-  endif
-
-  return, self->set_img()
-
-end
-
+;-
 function w_Map::set_topography, GRDFILE = grdfile
   
   ; SET UP ENVIRONNEMENT
@@ -693,7 +581,7 @@ function w_Map::set_topography, GRDFILE = grdfile
   if str_equiv(spli[1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
   hdr = spli[0] + '.hdr'
   
-  self.grid->get_Lonlat, lon, lat ; TODO: change this into GRID kind of things  
+  self.grid->get_Lonlat, lon, lat, nx, ny ; TODO: change this into GRID kind of things  
   self.grid->getProperty, tnt_c = c
   
   ; Open DEM grid
@@ -725,54 +613,64 @@ function w_Map::set_topography, GRDFILE = grdfile
   if cnt gt 0 then z[p] = 0
   z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
   
-  GIS_xy_derivatives, ret, rotate(z,7), dx = c.dx, dy = c.dy, DFDX=dhdx,DFDY=dhdy
+  if str_equiv(c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then begin
+    ddx = mean(c.dx * 111200 * cos(lat * !pi / 180d ))
+    ddy = c.dy * 111200
+  endif else begin
+    ddx = c.dx
+    ddy = c.dy
+  endelse
+  
+  GIS_xy_derivatives, ret, rotate(z,7), dx = ddx, dy = ddy, DFDX=dhdx,DFDY=dhdy
   if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message('Error by calculating derivatives.')
   
-  sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer
-  
+  sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer  
   
   PTR_FREE, self.sl
   self.sl = PTR_NEW(sl, /NO_COPY)
   self.is_Shaded = TRUE
- 
+  
   return, 1
-
+  
 end
 
 ;+
 ; :Description:
-;    set shape file
-;todo: describe
-; :Categories:
-;         WAVE/OBJ_GIS 
+;    Set a shape file to draw on the map.
+;    
 ;
 ; :Keywords:
-;    SHPFILE:
+;    SHPFILE: in, required
+;             the shapefile to read (.shp). If not set, a dialog window will open
 ;    
-;    SHP_SRC:
+;    SHP_SRC: in, optional
+;             the shapefile coordinate system (datum or proj) default is WGS-84
 ;    
-;    COUNTRIES:
+;    COUNTRIES: in, optional, type = boolean
+;               if set, the two previous keywords are ignored and the standard world boundaries 
+;               shape file is read.
 ;    
-;    COLOR:
+;    COLOR: in, optional, type = string
+;           the color of the shape lines
 ;    
-;    THICK:
+;    THICK:in, optional, type = float
+;           the thick of the shape lines
 ;    
-;    STYLE:
+;    STYLE:in, optional, type = float
+;          the style of the shape lines
 ;    
-;    REMOVE_ENTITITES:
-;    
-;    KEEP_ENTITITES:
+;    REMOVE_ENTITITES:in, optional, type = long
+;                     an array containing the id of the shape entities to remove from the plot
+;                     All other entities are plotted normally.
+;                     
+;    KEEP_ENTITITES:in, optional, type = long
+;                   an array containing the id of the shape entities to keep for the plot. 
+;                   All other entities are ignored.
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
@@ -791,9 +689,11 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
     RETURN, 0
   ENDIF 
 
-  if KEYWORD_SET(COUNTRIES) then return, self->set_shape_file(SHPFILE = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', $
+  if KEYWORD_SET(COUNTRIES) then begin
+   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
+   return, self->set_shape_file(SHPFILE = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
             COLOR = color, THICK = thick, STYLE = style, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites)
-    
+  endif  
   ;******************
   ; Check arguments *
   ;******************
@@ -808,7 +708,10 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    return, 1
   endif
   
-  if ~KEYWORD_SET(shp_src) then GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
+  if ~KEYWORD_SET(shp_src) then begin
+   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
+   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
+  endif
   if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
   if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
   if ~is_proj and ~is_dat then Message, WAVE_Std_Message('shp_src', /ARG)
@@ -922,23 +825,148 @@ end
 
 ;+
 ; :Description:
-;    Change image to rgb.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;   This function is called internally each time
+;   the plot params or the data are set. 
+;   You do not have to call it by yourself.   
+;  
+; :Private:
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;
+;-    
+function w_Map::set_img
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    PTR_FREE, self.img
+    ok = self->set_img()
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  img = BYTARR(self.Xsize, self.Ysize)       
+  
+  for l=0, self.plot_params.nlevels-1 do begin
+    if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
+    else p = where((*self.data) ge (*self.plot_params.levels)[l], cnt)
+    if cnt gt 0 then img[p]= l
+  endfor
+    
+  PTR_FREE, self.img
+  SELF.img = PTR_NEW(img, /NO_COPY)
+  
+  return, 1
+
+end
+
+;+
+; :Description:
+;    Set the data to plot. the data is then loaded and stored,
+;    and an image is generated based on the stored plot 
+;    parameters.
+;
+; :Params:
+;    data: in, required, type = 2D array
+;          the data array to plot
+;    
+;    grid: in, optional, type = w_grid2d
+;          the grid associated to the data (see 'w_grid2d::map_gridded_data'). If not set,
+;          data is assumed to be in the same grid as the map and will be resized to the map 
+;          grid using congrid (dangerous if you do not know what you are doing, faster if you sure
+;          the data is related to the same grid)
+;
+; :Keywords:
+;    BILINEAR: in, optional, type = boolean
+;              set this if you want the data to be linearily interpolated
+;              onto the map
+;    
+;    MISSING: in, optional, type = numeric
+;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
+;    
+;    VAL_MIN: in, optional, type = numeric, Default=MIN(data)
+;             the minimun data value to level (ignored if levels is set using 'set_plot_params')
+;    
+;    VAL_MAX: in, optional, type = numeric, Default=MAX(data)
+;             the maximum data value to level (ignored if levels is set using 'set_plot_params')
+;
+;    KEEP_LEVELS: in, optional, type = BOOLEAN
+;                 default behavior is that if the user didnt specified data levels explicitely before,
+;                 the levels are always chosen dynamicaly. Set this keyword to keep the previous data level settings
+;
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-    
+function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max, KEEP_LEVELS = keep_levels
+                             
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    PTR_FREE, self.data
+    ok = self->set_data()
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  if N_PARAMS() eq 0 then begin
+   data = BYTARR(self.Xsize, self.Ysize) 
+   PTR_FREE, self.data
+   self.data = PTR_NEW(data, /NO_COPY)
+   return, self->set_img()
+  endif  
+  
+  if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
+  
+  if N_ELEMENTS(grid) eq 0 then begin
+     if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
+      else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
+  endif else begin
+    _data = self.grid->map_gridded_data(data, grid, MISSING = missing, BILINEAR = bilinear)
+  endelse    
+  
+  PTR_FREE, self.data
+  self.data = PTR_NEW(_data, /NO_COPY)
+  
+   ; Levels
+  if self.plot_params.type eq 'AUTO' and ~ KEYWORD_SET(KEEP_LEVELS) then begin
+    if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
+    if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)
+    _levels = ((val_max - val_min) / Float(self.plot_params.nlevels)) * Indgen(self.plot_params.nlevels) + val_min
+    ptr_free, self.plot_params.levels
+    self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
+    self.plot_params.min_val = val_min
+    self.plot_params.max_val = val_max
+  endif
+
+  return, self->set_img()
+
+end
+
+
+
+;+
+; :Description:
+;    Change image color palette indexes into rgb image for plot without shading
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;
 ;
 ;-    
 function w_Map::img_to_rgb
@@ -958,21 +986,14 @@ end
     
 ;+
 ; :Description:
-;    Shading function.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+; 
+;    Change image color palette indexes into rgb image for plot with shading
+; 
+; :Private:
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 function w_Map::shading
@@ -1030,36 +1051,31 @@ end
 
 ;+
 ; :Description:
-;    Mapping
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Adds the contours to the device
+; 
+; :Private:
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-    
 function w_Map::mapping
+  
+  wid = cgQuery(TITLE=windowTitle, /CURRENT)
+  if wid ne -1 then wind = 1 
 
   if self.map_params.type eq 'LONLAT' then begin
   
     self.grid->get_Lonlat, lon, lat
     
-    FSC_Contour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
+    cgContour, lon, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
-      LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick
+      LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=wind
       
-    FSC_Contour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /OVERPLOT, XTICKLEN = -0.2, $
+    cgContour, lat, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
-      LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick
+      LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=wind
       
   endif
   
@@ -1067,9 +1083,23 @@ function w_Map::mapping
   
 end
 
+;+
+; :Description:
+;    Adds the shapes to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-   
 function w_Map::shaping
   
   shapes = *(self.shapes)
+  
+  wid = cgQuery(TITLE=windowTitle, /CURRENT)
+  if wid ne -1 then wind = 1 
   
   for i = 0, self.nshapes-1 do begin
     sh = shapes[i]
@@ -1084,7 +1114,7 @@ function w_Map::shaping
       _coord = coord[*,idx]      
       x = _coord[0,*]
       y = _coord[1,*]            
-      plots, X , Y , /DEVICE,  Color=FSC_Color(sh.color), THICK=sh.thick, LINESTYLE=sh.style      
+      cgPlots, X/double(self.Xsize), Y/double(self.Ysize), /NORMAL,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = wind
     endwhile  
   endfor
   
@@ -1158,7 +1188,7 @@ pro w_Map::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, THI
   ud = ud[xi,yi]
   vd = vd[xi,yi]  
   
-  partvelvec, ud, vd, devDLX, devDLY, /OVER, VECCOLORS=FSC_Color('black'), LENGTH=length, THICK=thick, /DEVICE
+  partvelvec, ud, vd, devDLX, devDLY, /OVER, VECCOLORS=cgColor('black'), LENGTH=length, THICK=thick, /DEVICE
   
 end
 
@@ -1196,28 +1226,29 @@ pro w_Map::show_img, win, PIXMAP = pixmap
 
   if TNT_OS eq 'WINDOWS' then set_plot, 'WIN' else set_plot, 'X'
   DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1
-     
-  window, XSIZE=self.Xsize, YSIZE=self.Ysize, Title='Map Plot', PIXMAP = pixmap, /FREE
-  win = !D.WINDOW
   
+  cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot', PIXMAP = pixmap, /FREE
+  cgControl, EXECUTE=0
+  win = !D.WINDOW
+;  cgControl, EXECUTE=0
   if self.is_Shaded then begin
     img = self->shading()
   endif else begin
     img = self->img_to_rgb()
   endelse  
   
-  if self.is_Mapped then begin
-   d = bytarr(self.Xsize, self.Ysize)
-   d[1] = 1
-   FSC_Contour,  d , POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /NODATA
-  endif
-  
+;  if self.is_Mapped then begin
+;   d = bytarr(self.Xsize, self.Ysize)
+;   d[1] = 1
+;   cgContour,  d , POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /NODATA, /WINDOW
+;  endif  
 
-  tv, img, true = 1
-      
+  cgImage, img, true = 1, /WINDOW
+  
   if self.is_Shaped then ok = self->shaping() 
   if self.is_Mapped then ok = self->mapping() 
   
+  cgControl, EXECUTE=1
   !ORDER = pp
   
 end
@@ -1274,7 +1305,7 @@ pro w_Map::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tag
     cgDCBar, *(self.plot_params.colors), COLOR = "BLACK", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
       TITLE=title, CHARSIZE = 2, /VERTICAL;, FONT=-1 ;, CHARTHICK=1
   endif else begin
-    WAVE_COLORBAR, *(self.plot_params.colors), COLOR=FSC_Color("BLACK"), Position=[0.20,0.05,0.30,0.95], $
+    cgColorbar, PALETTE=*(self.plot_params.colors), COLOR=cgColor("BLACK"), Position=[0.20,0.05,0.30,0.95], $
       TITLE=title, CHARSIZE = 2, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val ;, FONT=-1 ;, CHARTHICK=1
   endelse
   !ORDER = pp

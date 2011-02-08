@@ -54,10 +54,13 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   if ~KEYWORD_SET(color) then color = 'black'
   if ~KEYWORD_SET(psym) then psym = 1
   
-  cgWindow, 'cgPlot', x, y, title = title, CHARSIZE=1.8, /NORMAL, $
-    CHARTHICK = 1.3, THICK=2., XTITLE = xtitle, Ytitle = Ytitle,  POSITION = [0.14,0.12,0.94,0.92], /NODATA, YSTYLE = 1, xstyle = 1, $
-       WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window', XRANGE=range, YRANGE= range, PSYM=psym
-;  cgControl, Execute=0  
+  cgWindow, 'cgPlot', WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window'
+  cgControl, Execute=0
+  
+  cgPlot, x, y, title = title, CHARSIZE=1.5, /NORMAL, $
+    CHARTHICK = 1, THICK=2., XTITLE = xtitle, Ytitle = Ytitle,  POSITION = [0.14,0.12,0.94,0.92], /NODATA, YSTYLE = 1, xstyle = 1, $
+       XRANGE=range, YRANGE= range, PSYM=psym, /WINDOW      
+    
   cgplots, [range[0],range[1]], [range[0],range[1]], color = cgColor('grey'), LINESTYLE=5, /WINDOW
   
   cgplot, x, y,  COLOR=cgColor(color), PSYM=psym, /OVERPLOT, /WINDOW
@@ -73,7 +76,7 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.85] $
     else  pos = [0.5, 0.22]
     
-    cgText, pos[0], pos[1], text, CHARSIZE= 2., COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW 
+    cgText, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW 
         
   endif
   
@@ -84,9 +87,9 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
     
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.80] $
     else  pos = [0.5, 0.17]
-    cgtext, pos[0], pos[1], text, CHARSIZE= 2., COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /ADDCMD
+    cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW
   endif
-;  cgControl, Execute=1  
+  cgControl, Execute=1  
   !ORDER = pp
     
 end

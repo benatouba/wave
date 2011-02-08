@@ -180,7 +180,7 @@
 pro w_TimeLinePlot, data,$  ; array to plot
                     time, $   ; time (same size as data)
                     tag,  $   ; legend (str)
-                    color1 = color1,$ ; All FSC colors strings accepted. default: black
+                    color1 = color1,$ ; All cg colors strings accepted. default: black
                     style1 = style1,$ ; linestyle. default: line
                     psym1 = psym1, $
                     COMENT1 = coment1,$ ; comment below the legend
@@ -337,23 +337,24 @@ pro w_TimeLinePlot, data,$  ; array to plot
   y = [0.85, 0.85]  
   dx1 = 0.012
   dx2 = 0.018
-  dy1 = 0.008
+  dy1 = 0.007
   dy2 = 0.04
-  tsiz = 2.
+  tsiz = 1.5
   tthi = 1.
-  csiz = 1.3
+  csiz = 1.
   cthi = 1.
   
-  plo_siz = 1.8
-  plo_thi = 1.2
+  plo_siz = 1.
+  plo_thi = 1.
 
   jd = TIME_to_JD(time[p1:p2])  
-
-  cgWindow, 'cgPlot', jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
-    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [0.1,0.09,0.65,0.92], XTICK_GET=xs, YTICK_GET=ys, $
-     /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym, $
-       WXSize = 1200, WYSize = 600, WTITLE = 'w_TimeLinePlot resizable window'
-;  cgControl, Execute=0   
+  
+  cgWindow, WXSize = 1000, WYSize = 600, WTITLE = 'w_TimeLinePlot resizable window'
+  cgControl, EXECUTE=0  
+  cgPlot, jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
+   CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = [0.1,0.09,0.65,0.92], XTICK_GET=xs, YTICK_GET=ys, $
+    /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = 1, PSYM=psym, /WINDOW
+       
         
   if N_ELEMENTS(HORILINE) eq 1 then cgPlots, [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('Black'), LINESTYLE=5, /WINDOW
   if N_ELEMENTS(VERTILINE) eq 1 then $
@@ -371,6 +372,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   endif else begin
     cgplots, x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, PSYM=psym, SYMSIZE=thickness, /WINDOW
   endelse
+  
 
   cgtext, x[1]+ dx1 ,  y[0]-dy1, tag, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color1), /NORMAL , /WINDOW
   if KEYWORD_SET(coment1) then cgtext, x[1]+dx2 ,  y[0]-dy2, coment1, CHARSIZE=csiz, CHARTHICK = cthi, COLOR = cgColor(color1), /NORMAL, /WINDOW
@@ -524,7 +526,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
     cgtext, x[1]+dx1 ,  y[0]-dy1, tag8, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, /WINDOW
     if KEYWORD_SET(coment8) then cgtext, x[1]+dx2 ,  y[0]-dy2, coment8, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, /WINDOW
   endif  
-;  cgControl, Execute=1
+  cgControl, Execute=1
   
   !ORDER = pp
   

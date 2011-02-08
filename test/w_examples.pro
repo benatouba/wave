@@ -58,7 +58,7 @@ pro examples_w_ScatterPlot
   noise = RandomU(seed, n)*10. - 5.
   y = x + noise + 20.
   
-  w_ScatterPlot, x, y, XTITLE='X title', YTITLE='Y title', TITLE= 'Test plot 2', /LEGEND_UL, COLOR='red', PSYM=6  
+  w_ScatterPlot, x, y, XTITLE='Data 1', YTITLE='Data 2', TITLE= 'My nice scatter plot', /LEGEND_UL, COLOR='red', PSYM=6  
   
   ok = DIALOG_MESSAGE('Do you want to close all windows? (IDL> cgDelete, /All)', /QUESTION)
   if ok eq 'Yes' then cgDelete, /All

@@ -1534,7 +1534,7 @@ end
 ;       IDL> print, MISSING
 ;                 16          17          18          19          20          21          22          23          24       
 ;       IDL> reconstructedData = INTERPOL(badData, badTS.qms, fullTS.qms)
-;       IDL> plot, MYDATA, color = FSC_COLOR('blue'), BACKGROUND = FSC_COLOR('white')
+;       IDL> plot, MYDATA, color = cgCOLOR('blue'), BACKGROUND = cgCOLOR('white')
 ;       IDL> oplot, RECONSTRUCTEDDATA, color = FSC_COLOR('red'), LINESTYLE = 2
 ;    
 ; 

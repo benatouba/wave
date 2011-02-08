@@ -31,7 +31,6 @@ pushd, root
 .run TIME.pro
 .run UTILS.pro
 .run POST.pro
-.run WAVE_colorbar.pro
 
 ; Compile objects
 .run w_grid2d__define.pro
@@ -39,7 +38,6 @@ pushd, root
 .run w_hdf_eos__define.pro
 .run w_ncdf__define.pro
 .run w_geo_nc__define.pro
-
 
 ; Datasets
 .run w_trmm__define.pro
@@ -50,9 +48,8 @@ pushd, root
 ; Plots
 .run w_map__define.pro
 .run w_quickplot.pro
-.run w_timelineplot.pro
-.run w_scatterplot.pro
-
+;.run w_timelineplot.pro
+;.run w_scatterplot.pro
 
 resolve_all, /QUIET
 

@@ -83,12 +83,17 @@ pro WAVE_init
   ;****************************
   print, ''
   TIME_init
+  !ORDER = 0 
+  cgWindow_SetDefs, PS_ENCAPSULATED=1, IM_RESIZE = 75, ps_metric=1
+  window, /FREE, /PIXMAP
+  if !D.WINDOW ge 0 then wdelete, !D.WINDOW
   
   print, ''
   print, '*******************'
   print, '* Ride the Wave ! *'
   print, '*******************'
   
+
   ;*******
   ; Exit *
   ;*******

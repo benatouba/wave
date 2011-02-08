@@ -1493,8 +1493,9 @@ pro TEST_MODIS
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
     if ok eq 'No' then error += 1
     
-    ok =  lst->define_subset(SUBSET_LL= [90, 31, 92, 29])
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
+    ok =  lst->define_subset(SUBSET_LL= [90, 32, 91, 30])
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, /KEEP_LEVELS)
+    
     map->show_img
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
