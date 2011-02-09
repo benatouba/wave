@@ -748,9 +748,10 @@ pro TEST_TRMM_3B42
     ok = trmm_3B42->define_subset(SUBSET_LL=[70.01,10.02,120.01,45.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B42->w_QuickPlotPrcp
+    trmm_3B42->QuickPlotPrcp, wid = wid
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
+    WIDGET_CONTROL, wid, /DESTROY
     trmm_3B42->get_ncdf_coordinates, lon, lat, nx, ny  
     if lon[0,0] ne 70.125 then error += 1
     if lon[0,ny-1] ne 70.125 then error += 1
@@ -983,9 +984,10 @@ pro TEST_TRMM_3B43
     ok = trmm_3B43->define_subset(SUBSET_LL=[-70.01,-10.02,-29.76,25.0001], SUBSET_IJ=mysubs)
     if ok ne 1 THEN error +=1  
             
-    trmm_3B43->w_QuickPlotPrcp
+    trmm_3B43->QuickPlotPrcp, wid = wid
     ok = DIALOG_MESSAGE('Do you see a plot?', /QUESTION)
     if ok eq 'No' then error += 1
+    WIDGET_CONTROL, wid, /DESTROY
     trmm_3B43->get_ncdf_coordinates, lon, lat, nx, ny    
     if lon[0,0] ne -70.125 then error += 1
     if lon[0,ny-1] ne -70.125 then error += 1
@@ -1266,10 +1268,10 @@ pro TEST_WRF_OUT
     if snt ne 6 then error +=1
     if max(abs(p-op[*,*,*,3:8])) ne 0 then  error += 1
     
-    dom1->QuickPlotVar, 'T2', t0 = time[3], t1 = time[8]
+    dom1->QuickPlotVar, 'T2', t0 = time[3], t1 = time[8], wid = wid
     ok = DIALOG_MESSAGE('Do you see a temperature plot?', /QUESTION)
     if ok eq 'No' then error += 1
-     
+     WIDGET_CONTROL, wid, /DESTROY
      ;----------------------------
      ; CROP BORDER
      ;----------------------------
@@ -1455,7 +1457,7 @@ pro TEST_WRF_OUT
     dom1->plot_TS, 'T2', 90.1, 31.2, src = dat 
     ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
     if ok eq 'No' then error += 1
-        
+    cgDelete, /ALL
     OBJ_DESTROY, dom1     
     if error ne 0 then message, '% TEST_WRF_OUT NOT passed', /CONTINUE else print, 'TEST_WRF_OUT passed'
         
@@ -1471,7 +1473,6 @@ pro TEST_MODIS
     lst->get_time, t0, t1       
     if t0 ne QMS_TIME(year = 2008, month = 10, day = 23, hour = 00) then error += 1
     if t1 ne QMS_TIME(year = 2008, month = 10, day = 30, hour = 00) then error += 1
-;    lst->QuickPlotVar, 'LST_Day_1km', /LON_LAT
     lst->Get_LonLat, lon, lat, nx, ny, dat
     
     if ABS(lon[0,0] - 80.8358300128709) gt abs(lon[1,0]-lon[0,0])then error +=1 
@@ -1480,25 +1481,25 @@ pro TEST_MODIS
     if ABS(lat[nx-1,ny-1] - 39.9958333333333) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2d ) then error +=1 
        
     dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
-    map = OBJ_NEW('w_Map', dom2)
-    d = map->set_topography(GRDFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/TiP.grd')
+    map = OBJ_NEW('w_Map', dom2, /NO_COUNTRIES)   
     GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
-    d = map->set_shape_file(SHPFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)
-    d = map->set_shading_params(RELIEF_FACTOR=1)
-    
+    d = map->set_shape_file(SHPFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
-    d=map->set_Plot_Params(N_LEVELS=127,VAL_MIN=-24)
-    map->show_img
+    d=map->set_Plot_Params(VAL_MIN=-24)
+    map->show_img, /RESIZABLE
+    map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
     if ok eq 'No' then error += 1
     
     ok =  lst->define_subset(SUBSET_LL= [90, 32, 91, 30])
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, /KEEP_LEVELS)
     
-    map->show_img
+    map->show_img, /RESIZABLE
+    map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
+    cgDelete, /ALL
     
     OBJ_DESTROY, lst     
     OBJ_DESTROY, map 
@@ -2002,8 +2003,7 @@ pro TEST_DATASETS
   TEST_TRMM_AGG
   TEST_WRF_OUT
   TEST_WRF_GEO
-  TEST_MODIS
-  
+  TEST_MODIS  
 end
 
 pro TEST_UTILS

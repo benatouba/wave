@@ -64,3 +64,86 @@ pro examples_w_ScatterPlot
   if ok eq 'Yes' then cgDelete, /All
   
 end
+
+
+pro examples_w_working_with_gis_objects      
+
+  
+end
+
+; Make its own map from the scratch (you will probably never need this...)
+pro examples_working_with_w_map   
+   
+   ; 1. define a grid for the map
+   GIS_make_proj, ret, proj, PARAM='1, WGS-84' ; This is the standard lat-lon rectangular projection (easy but ugly ;-)
+   x0 = 5.  ; top left corner lon 
+   y0 = 60. ; top left corner lat
+   x1 = 20. ; bot right corner lon 
+   y1 = 45. ; bot right corner lat
+   dx = 1. ; Original grid resolution (ignored afterwards)
+   dy = 1. ; Original grid resolution (ignored afterwards)      
+   grid = OBJ_NEW('w_Grid2D', x0 = x0, y0 = y0, x1 = x1, y1 = y1, dx = dx, dy = dy, proj = proj)
+   
+   ; 2. Define the map from this grid
+   map = OBJ_NEW('w_Map', grid, YSIZE= 600) ; size of the final image
+   OBJ_DESTROY, grid ;no need for this anymore
+   
+   ; 3. Get some info about the map 
+   map->show_img, /RESIZABLE
+   map->GetProperty, tnt_c = map_coord, XSIZE=xs, YSIZE=ys
+   
+   print, 'Image size in pixels: [' + STRING(xs, FORMAT='(I3)') + ',' +STRING(ys, FORMAT='(I3)') +']'
+   print, 'Resolution of one pix in lon: ' + STRING(map_coord.dx, FORMAT='(F4.2)') + ' and in lat: ' + STRING(map_coord.dy, FORMAT='(F4.2)')
+   
+   ; 3. Meliorate the map
+   dummy = map->set_map_params(INTERVAL=5, COLOR='Blue')
+   
+   ; shape file
+   shp = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/DEU_adm3.shp'
+   GIS_make_datum, ret, shp_src, NAME = 'WGS-84' ; the source coordinate system of the shape file. In this case, i know this is lat-lon in WGS-84
+   dummy = map->set_shape_file(SHPFILE=shp, shp_src = shp_src, COLOR = 'dark red')
+   map->show_img, /RESIZABLE
+   
+   ; This is too much, I am just interested in Berlin
+   dummy = map->set_shape_file() ; remove all shapes
+   dummy = map->set_shape_file(/COUNTRIES) ; add countries outlines
+   dummy = map->set_shape_file(SHPFILE=shp, shp_src = shp_src, COLOR = 'black', KEEP_ENTITITES=189, THICK=2) 
+   ; I looked at my shape file with envi and found out that berlin was the 189th entity
+   map->show_img, /RESIZABLE
+   
+   ;4. get some data to plot
+   modisFile = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MODIS/MODIS_b.hdf'
+   modis_ = OBJ_NEW('w_MODIS', FILE=modisFile)
+   ; have a look
+   modis_->get_Varlist, /PRINT
+   lst = modis_->get_Var('LST_Day_1km')
+   ; have a first look at the data
+   w_QuickPlot, lst, COLORTABLE=13, TITLE='Modis LST'
+   
+   ; I See some values are missing, a simple plot will not look satisfying:
+   CTLOAD, 13 ; I want to have it colorfull
+   dummy = map->set_plot_params(N_LEVELS=256) ; I want a lot of colors 
+   dummy = map->set_data(lst, modis_)  
+   map->show_img, /RESIZABLE
+   map->show_color_bar, /RESIZABLE
+   
+   ; So I prepare my data so it looks better:   
+   pmissing = where(lst lt 1, cnt)  
+   lst = lst - 273.15 ; to kelvins
+   lst[pmissing] = -999.
+   
+   ;5. Plot it   
+   dummy = map->set_plot_params(N_LEVELS=256, NEUTRAL_COLOR='grey') ; I want a lot of colors 
+   dummy = map->set_data(lst, modis_, MISSING=-999.)  
+   map->show_img, /RESIZABLE
+   map->show_color_bar, /RESIZABLE
+   
+   ;6. Alternative
+   
+   
+       
+   OBJ_DESTROY, modis_
+   OBJ_DESTROY, map
+  
+end
+

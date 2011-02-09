@@ -145,12 +145,12 @@ function w_DEM::get_Z
     
 end
 
-pro w_DEM::w_QuickPlotZ
+pro w_DEM::w_QuickPlotZ, WID = wid
 
   z = self->get_z()
   self->Get_LonLat, lon, lat
     
   w_QuickPlot, z, COLORTABLE=13, TITLE= 'Height (m)', WINDOW_TITLE='view: ' + self.file, dimnames = 'Z', CBARTITLE='meters', $
-              COORDX=lon, COORDY=lat
+              COORDX=lon, COORDY=lat, WID = wid
 
 end

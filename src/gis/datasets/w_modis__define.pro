@@ -360,6 +360,8 @@ end
 ;    LON_LAT:
 ;             if set, the geolocalisation will be shown too (long process by
 ;             large uncropped files)
+;    WID: out
+;         the widget id
 ;              
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -373,7 +375,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-pro w_MODIS::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
+pro w_MODIS::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat, WID = wid
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
@@ -384,9 +386,9 @@ pro w_MODIS::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat
     self->Get_LonLat, lon, lat
     if N_ELEMENTS(lon) ne N_ELEMENTS(var) then message, '???'
     w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, DIMNAMES=['lon','lat'] ,CBARTITLE=units, $
-      COORDX=lon, COORDY=lat
+      COORDX=lon, COORDY=lat, WID = wid
       
-  endif else  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, CBARTITLE=units
+  endif else  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='MODIS view: ' + self.fname, CBARTITLE=units, WID = wid
 
 end
 

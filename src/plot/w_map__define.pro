@@ -66,6 +66,7 @@ PRO w_Map__Define
             nlevels        : 0L            , $ ; number of data levels
             colors         : PTR_NEW()     , $ ; array of nlevels colors
             levels         : PTR_NEW()     , $ ; array of nlevels data levels
+            neutral        : 0L            , $ ; neutral color
             min_val        : 0D            , $ ; min data level
             max_val        : 0D              $ ; max data level           
             }
@@ -93,6 +94,18 @@ PRO w_Map__Define
             style          : 0D              $ ; style of the contour lines
             }
      
+  ; This is for the wind vectors 
+  struct = {WIND_PARAMS                    , $
+            type           : ''            , $ ; currently VECTORS
+            velx           : PTR_new()     , $ ; x velocities
+            vely           : PTR_new()     , $ ; y velocities
+            posx           : PTR_new()     , $ ; coordinates in the device
+            posy           : PTR_new()     , $ ; coordinates in the device
+            color          : ''            , $ ; color of the arrows
+            thick          : 0D            , $ ; thickness of the arrows
+            length         : 0D              $ ; lenght of the arrows
+            }
+     
   struct = { w_Map                         , $
              grid          : OBJ_NEW()     , $ ; the grid object (nx = Xsize, ny = Ysize)
              Xsize         : 0L            , $ ; X size of the image in pixels
@@ -105,9 +118,11 @@ PRO w_Map__Define
              shapes        : PTR_NEW()     , $ ; array of nshapes {MAP_SHAPE} structures                               
              map_params    : {MAP_PARAMS}  , $ ; the mapping params for contours
              plot_params   : {PLOT_PARAMS} , $ ; the plotting params          
+             wind_params   : {WIND_PARAMS} , $ ; the wind params          
              is_Shaped     : FALSE         , $ ; is there at least one shape to draw?
              is_Shaded     : FALSE         , $ ; did the user specify a DEM for shading?
-             is_Mapped     : FALSE           $ ; did the user specify a contour to draw for mapping?         
+             is_Mapped     : FALSE         , $ ; did the user specify a contour to draw for mapping?         
+             is_Winded     : FALSE           $ ; did the user specify wind flows ?         
              }
     
 END
@@ -166,7 +181,8 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   dummy = self->set_map_params()  
   dummy = self->set_shading_params()  
-                
+  dummy = self->set_wind()  
+               
   RETURN, 1
   
 END
@@ -198,6 +214,30 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;
+;-    
+pro w_Map::DestroyWindParams
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  ptr_free, self.wind_params.velx
+  ptr_free, self.wind_params.vely
+  ptr_free, self.wind_params.posx
+  ptr_free, self.wind_params.posy
+    
+  self.wind_params = {WIND_PARAMS}
+  self.is_Winded = FALSE
+  
+end
+
+;+
+; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;
 ;-  
 pro w_Map::DestroyMapParams
 
@@ -210,6 +250,7 @@ pro w_Map::DestroyMapParams
   ptr_free, self.map_params.xlevels
   ptr_free, self.map_params.ylevels
   
+  self.map_params = {MAP_PARAMS}
   self.is_Mapped = FALSE
   
 end
@@ -235,6 +276,7 @@ pro w_Map::DestroyShapes
       ptr_free, (shapes[i]).conn
     endfor
   endif
+  
   ptr_free, self.shapes
   self.nshapes = 0L
   self.is_Shaped = FALSE
@@ -263,6 +305,7 @@ pro w_Map::Cleanup
   self->DestroyShapes         
   self->DestroyMapParams       
   self->DestroyPlotParams     
+  self->DestroyWindParams     
   
 END
 
@@ -275,7 +318,7 @@ END
 ;
 ;
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors
+PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -292,6 +335,7 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   if ARG_PRESENT(YSIZE) then ysize = self.Ysize
   if ARG_PRESENT(levels) then levels = *self.plot_params.levels
   if ARG_PRESENT(colors) then colors = *self.plot_params.colors
+  if ARG_PRESENT(tnt_c) then self.grid->getProperty, TNT_C = tnt_c
      
 end
 
@@ -337,7 +381,7 @@ end
 ;
 ;-    
 function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
-                                    COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors
+                                    COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color
          
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -376,7 +420,9 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   ; Colors
   if is_Colors then _colors = utils_color_convert(COLORS = colors) $
    else _colors = utils_color_convert(NCOLORS = nlevels, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors)
-  
+  if KEYWORD_SET(NEUTRAL_COLOR) then _neutral = utils_color_convert(COLORS = NEUTRAL_COLOR) else $
+     _neutral = cgColor('white')
+
   ; Levels
   if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
   if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)  
@@ -384,7 +430,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
    _levels = levels 
    val_min = min(levels)
    val_max = max(levels)   
-  endif else _levels = ((val_max - val_min) / Float(nlevels)) * Indgen(nlevels) + val_min
+  endif else _levels = ((val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
    
   ; Fill up
   self.plot_params.nlevels  = nlevels
@@ -392,6 +438,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
   self.plot_params.min_val  = val_min
   self.plot_params.max_val  = val_max
+  self.plot_params.neutral  = _neutral
   
   return, self->set_img()
 
@@ -851,12 +898,19 @@ function w_Map::set_img
     RETURN, 0
   ENDIF 
 
-  img = BYTARR(self.Xsize, self.Ysize)       
+  img = INTARR(self.Xsize, self.Ysize)
+  
+  dataTypeName = Size(*self.data, /TNAME)
+  CASE dataTypeName OF
+    'FLOAT': epsilon = (MACHAR()).eps
+    'DOUBLE': epsilon = (MACHAR(DOUBLE=1)).eps    
+    ELSE: epsilon =0
+  ENDCASE
   
   for l=0, self.plot_params.nlevels-1 do begin
-    if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
-    else p = where((*self.data) ge (*self.plot_params.levels)[l], cnt)
-    if cnt gt 0 then img[p]= l
+    if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] - epsilon and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
+    else p = where((*self.data) ge (*self.plot_params.levels)[l]- epsilon, cnt)
+    if cnt gt 0 then img[p]= l + 1
   endfor
     
   PTR_FREE, self.img
@@ -930,6 +984,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   endif  
   
   if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
+  if KEYWORD_SET(missing) then MISS = true else MISS = false
   
   if N_ELEMENTS(grid) eq 0 then begin
      if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
@@ -945,7 +1000,27 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   if self.plot_params.type eq 'AUTO' and ~ KEYWORD_SET(KEEP_LEVELS) then begin
     if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
     if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)
-    _levels = ((val_max - val_min) / Float(self.plot_params.nlevels)) * Indgen(self.plot_params.nlevels) + val_min
+    if MISS then begin
+      dataTypeName = Size(missing, /TNAME)
+      CASE dataTypeName OF
+        'FLOAT': BEGIN
+          epsilon = (MACHAR()).eps
+          indices = Where( Abs(*self.data - missing) gt epsilon, count)
+        END
+        'DOUBLE': BEGIN
+          epsilon = (MACHAR(DOUBLE=1)).eps
+          indices = Where( Abs(*self.data - missing) gt epsilon, count)
+        END
+        ELSE: BEGIN
+          indices = Where(*self.data EQ missing, count)
+        END
+      ENDCASE
+      if count ne 0 then begin
+        val_min = MIN((*self.data)[indices])
+        val_max = MAX((*self.data)[indices])
+      endif
+    endif    
+    _levels = ((val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
     ptr_free, self.plot_params.levels
     self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
     self.plot_params.min_val = val_min
@@ -956,6 +1031,78 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
 
 end
 
+
+function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK=thick, COLOR = color
+                             
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyWindParams
+    ok = self->set_wind()
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+  
+  if ~KEYWORD_SET(length) then length = self.wind_params.length
+  if ~KEYWORD_SET(thick) then thick = self.wind_params.thick  
+  if ~KEYWORD_SET(density) then density = 3
+  if ~KEYWORD_SET(color) then color = self.wind_params.color  
+  type = 'VECTORS'
+  
+  if N_PARAMS() eq 0 then begin
+   self->DestroyWindParams
+   self.wind_params.type = type
+   self.wind_params.length = length
+   self.wind_params.thick = thick
+   self.wind_params.thick = color
+   return, 1
+  endif  
+  
+  if N_PARAMS() ne 3 then Message, WAVE_Std_Message(/NARG)
+  
+  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
+  if not array_processing(ud, vd) then Message, WAVE_Std_Message(/ARG)  
+  if density ne 1 and density ne 3 and density ne 5 and density ne 7 then Message, 'Density must be odd-numbered (1,3,5,7).'
+           
+  grid->getProperty, tnt_c = c   
+  nxg = C.nx
+  nyg = C.ny
+    
+  fx = FLOOR(double(nxg)/density) ; possible points
+  fy = FLOOR(double(nyg)/density) ; possible points
+  s = floor(density/2.) ; where to start (1 for 3, 2 for 5, etc.)
+    
+  xi = INDGEN(fx, /DOUBLE) * DENSITY + s
+  yi = INDGEN(fy, /DOUBLE) * DENSITY + s
+  
+  x = xi * c.dx + c.x0
+  y = yi * c.dy + c.y1
+  utils_1d_to_2d, x, y, x, y  
+  self.grid->transform_XY, x, y, c.proj, posX, posY, /NEAREST
+  
+  utils_1d_to_2d, xi, yi, xi, yi
+  velx = ud[xi,yi]
+  vely = vd[xi,yi] 
+  
+  self->DestroyWindParams
+  self.wind_params.type = type
+  self.wind_params.length = length
+  self.wind_params.thick = thick
+  self.wind_params.color = color
+  self.wind_params.velx = PTR_NEW(velx, /NO_COPY)
+  self.wind_params.vely = PTR_NEW(vely, /NO_COPY)
+  self.wind_params.posx = PTR_NEW(posx, /NO_COPY)
+  self.wind_params.posy = PTR_NEW(posy, /NO_COPY)
+  self.is_Winded = TRUE
+  
+  return, 1
+
+end
 
 
 ;+
@@ -971,7 +1118,7 @@ end
 ;-    
 function w_Map::img_to_rgb
 
-    utils_color_rgb, *self.plot_params.colors, s_r, s_g, s_b
+    utils_color_rgb, [self.plot_params.neutral, *self.plot_params.colors], s_r, s_g, s_b
     r = byte(0 > s_r[*self.img] < 255)
     g = byte(0 > s_g[*self.img] < 255)
     b = byte(0 > s_b[*self.img] < 255)
@@ -1010,7 +1157,7 @@ function w_Map::shading
   gp = bindgen(256)
   bp = bindgen(256)
   
-  utils_color_rgb, *self.plot_params.colors, s_r, s_g, s_b  
+  utils_color_rgb, [self.plot_params.neutral, *self.plot_params.colors], s_r, s_g, s_b  
   rp[0:nlevels-1] = s_r[*]
   gp[0:nlevels-1] = s_g[*]
   bp[0:nlevels-1] = s_b[*]
@@ -1060,22 +1207,19 @@ end
 ;
 ;
 ;-    
-function w_Map::mapping
+function w_Map::draw_map, WINDOW = window  
   
-  wid = cgQuery(TITLE=windowTitle, /CURRENT)
-  if wid ne -1 then wind = 1 
-
   if self.map_params.type eq 'LONLAT' then begin
   
     self.grid->get_Lonlat, lon, lat
     
     cgContour, lon, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
-      LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=wind
+      LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
       
     cgContour, lat, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
-      LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=wind
+      LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
       
   endif
   
@@ -1094,13 +1238,10 @@ end
 ;
 ;
 ;-   
-function w_Map::shaping
+function w_Map::draw_shapes, WINDOW = window  
   
   shapes = *(self.shapes)
-  
-  wid = cgQuery(TITLE=windowTitle, /CURRENT)
-  if wid ne -1 then wind = 1 
-  
+    
   for i = 0, self.nshapes-1 do begin
     sh = shapes[i]
     conn = *(sh.conn)
@@ -1114,7 +1255,7 @@ function w_Map::shaping
       _coord = coord[*,idx]      
       x = _coord[0,*]
       y = _coord[1,*]            
-      cgPlots, X/double(self.Xsize), Y/double(self.Ysize), /NORMAL,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = wind
+      cgPlots, X, Y, /DEVICE,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window      
     endwhile  
   endfor
   
@@ -1124,71 +1265,33 @@ end
 
 ;+
 ; :Description:
-;    To display the wind.
-;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;todo: describe params/keywords
-; :Params:
-;    grid:
-;    
-;    ud:
-;    
-;    vd:
-;    
-;    density:
-;
-; :Keywords:
-;    LENGTH:
-;    
-;    LEGEND:
-;    
-;    THICK:
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Adds the wind vectors to the device
+; 
+; :Private:
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
-;-    
-pro w_Map::draw_wind, grid, ud, vd, density, LENGTH=length, LEGEND = legend, THICK=thick
+;-  
+function w_Map::draw_wind, WINDOW = window
 
   ;--------------------------
   ; Set up environment
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
-    
-  if ~KEYWORD_SET(length) then length =0.05  
-  if density ne 1 and density ne 3 and density ne 5 and density ne 7 then message, 'Not ready yet.'
   
-  grid->getProperty, tnt_c = c   
-  nxg = C.nx
-  nyg = C.ny
-    
-  fx = FLOOR(double(nxg)/density) ; possible points
-  fy = FLOOR(double(nyg)/density) ; possible points
-  s = floor(density/2.) ; where to start (1 for 3, 2 for 5, etc.)
-    
-  xi = INDGEN(fx, /DOUBLE) * DENSITY + s
-  yi = INDGEN(fy, /DOUBLE) * DENSITY + s
+  partvelvec, self.wind_params.velx, $
+              self.wind_params.vely, $
+              self.wind_params.posx, $
+              self.wind_params.posy, $
+              VECCOLORS=cgColor(self.wind_params.color), $
+              LENGTH = self.wind_params.length, $
+              thick = self.wind_params.thick, $              
+              /OVER,  /DEVICE, WINDOW = window
   
-  x = xi * c.dx + c.x0
-  y = yi * c.dy + c.y1
-  utils_1d_to_2d, x, y, x, y  
-  self.grid->transform_XY, x, y, c.proj, devDLX, devDLY, /NEAREST
-  
-  utils_1d_to_2d, xi, yi, xi, yi
-  ud = ud[xi,yi]
-  vd = vd[xi,yi]  
-  
-  partvelvec, ud, vd, devDLX, devDLY, /OVER, VECCOLORS=cgColor('black'), LENGTH=length, THICK=thick, /DEVICE
+  return, 1
   
 end
 
@@ -1196,60 +1299,71 @@ end
 ; :Description:
 ;    Show the image.
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;todo: describe..
-; :Params:
-;    win:
-;
-; :Keywords:
-;    PIXMAP:
-;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
 ;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
+;     Written by FaM, 2011.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-   
-pro w_Map::show_img, win, PIXMAP = pixmap
+pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
 
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
   @WAVE.inc
-  
-   pp = !ORDER ;To restore later
+    
+  pp = !ORDER ;To restore later
   !ORDER = 0
-
-  if TNT_OS eq 'WINDOWS' then set_plot, 'WIN' else set_plot, 'X'
   
   DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1  
-  cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot', PIXMAP = pixmap, /FREE
-  cgControl, EXECUTE=0
-  win = !D.WINDOW
-;  cgControl, EXECUTE=0
-  if self.is_Shaded then begin
-    img = self->shading()
+  
+  if KEYWORD_SET(RESIZABLE) then begin
+    cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot'
+    cgControl, EXECUTE=0
+    cgWIN = true
   endif else begin
-    img = self->img_to_rgb()
-  endelse  
-  
-;  if self.is_Mapped then begin
-;   d = bytarr(self.Xsize, self.Ysize)
-;   d[1] = 1
-;   cgContour,  d , POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, /NODATA, /WINDOW
-;  endif  
+    undefine, cgWIN
+    cgDisplay, /FREE, XSIZE=self.Xsize, YSIZE=self.Ysize, /PIXMAP, Title='Map Plot'
+    xwin = !D.WINDOW
+  endelse
 
-  cgImage, img, true = 1, /WINDOW
+  if self.is_Shaded then img = self->shading() else img = self->img_to_rgb()
   
-  if self.is_Shaped then ok = self->shaping() 
-  if self.is_Mapped then ok = self->mapping() 
+  if self.is_Mapped then begin
+    false_im = BYTARR(self.Xsize, self.Ysize) & false_im[0] = 1
+    cgContour, false_im, POSITION = [0,0,1,1], /NORMAL, /NODATA, WINDOW = cgWIN    
+  endif
+      
+  cgImage, img, true = 1, WINDOW = cgWIN
+
+  if self.is_Shaped then ok = self->draw_shapes(WINDOW = cgWIN) 
+  if self.is_Mapped then ok = self->draw_map(WINDOW = cgWIN)
+  if self.is_Winded then ok = self->draw_wind(WINDOW = cgWIN)
   
-  cgControl, EXECUTE=1
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
+    img = Transpose(tvrd(/TRUE), [1,2,0])
+    WDELETE, xwin
+    cgDisplay, /FREE, XSIZE=self.Xsize, YSIZE=self.Ysize, Title='Map Plot'
+    cgImage, img
+ endif
   !ORDER = pp
+  
+end
+
+function w_Map::get_img, XSIZE = xsize, YSIZE = ysize
+
+  self->show_img, /PIXMAP
+  xwin = !D.WINDOW
+  XSIZE = !D.X_SIZE
+  YSIZE = !D.Y_SIZE
+  img = Transpose(tvrd(/TRUE), [1,2,0])
+  WDELETE, xwin
+  
+  return, img
   
 end
 
@@ -1257,57 +1371,59 @@ end
 ; :Description:
 ;    To show a color bar. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;todo: describe everything
-; :Params:
-;    win:
-;
-; :Keywords:
-;    PIXMAP:
-;    
-;    TITLE:
-;    
-;    BAR_TAGS:
-;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
 ;            TU Berlin
 ;
 ; :History:
-;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
+;     Written by FaM, 2011.
 ;
 ;-   
-pro w_Map::show_color_bar, win, PIXMAP = pixmap, TITLE=title, BAR_TAGS = bar_tags
+pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap
 
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
   @WAVE.inc
-  
+    
   pp = !ORDER ;To restore later
   !ORDER = 0
-
-  if TNT_OS eq 'WINDOWS' then set_plot, 'WIN' else set_plot, 'X'
-  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1
+  
+  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1  
   
   xs = self.Ysize * 0.2
   ys = self.Ysize * 0.75
-     
-  window, XSIZE= xs, YSIZE=ys, Title='Color bar', PIXMAP = pixmap, /FREE
-  win = !D.WINDOW
-  tv, BYTARR(3, xs, ys)+255, /TRUE
+  
+  if KEYWORD_SET(RESIZABLE) then begin
+    cgWindow, WXSIZE=xs, WYSIZE=ys, Title='Color bar'
+    cgControl, EXECUTE=0
+    cgWIN = true
+  endif else begin
+    undefine, cgWIN
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='Color bar'
+    xwin = !D.WINDOW
+  endelse
+
+  cgImage, BYTARR(3, xs, ys)+255, /TRUE, WINDOW=cgWIN
   
   if N_ELEMENTS(BAR_TAGS) eq 0 then bar_TAGS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
   
   if self.plot_params.nlevels lt 40 then begin
-    cgDCBar, *(self.plot_params.colors), COLOR = "BLACK", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
-      TITLE=title, CHARSIZE = 2, /VERTICAL;, FONT=-1 ;, CHARTHICK=1
+    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
+      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=2.
   endif else begin
-    cgColorbar, PALETTE=*(self.plot_params.colors), COLOR=cgColor("BLACK"), Position=[0.20,0.05,0.30,0.95], $
-      TITLE=title, CHARSIZE = 2, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val ;, FONT=-1 ;, CHARTHICK=1
+    utils_color_rgb, *(self.plot_params.colors), r,g,b    
+    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=FSC_Color('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=2.,$
+      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val, WINDOW=cgWIN
   endelse
+  
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
+    img = Transpose(tvrd(/TRUE), [1,2,0])
+    WDELETE, xwin
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title='Map Plot'
+    cgImage, img
+  endif
   !ORDER = pp
   
 end

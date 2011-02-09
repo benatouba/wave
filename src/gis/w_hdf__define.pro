@@ -562,7 +562,8 @@ end
 ;              keyword to avoid making an automatic calibration
 ;    UPSIDEDOWN: in, optional
 ;                to rotate the variable before plotting it
-;
+;    WID: out
+;         the widget id
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -574,14 +575,14 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro w_HDF::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN
+pro w_HDF::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN, WID = wid
 
   var = self->get_Var(Varid, varname = varname, units = units, DESCRIPTION=DESCRIPTION, NO_CALIB = NO_CALIB)
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='HDF view: ' + self.fname, CBARTITLE=units
+  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='HDF view: ' + self.fname, CBARTITLE=units, WID = wid
 
 end
 

@@ -832,7 +832,8 @@ end
 ; :Keywords:
 ;    UPSIDEDOWN: in, optional
 ;                to rotate the variable before plotting it
-;
+;    WID: out
+;         the widget id
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -844,7 +845,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
+pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -863,7 +864,7 @@ pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units
+  w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='NCDF view: ' + self.fname, dimnames = dimnames, CBARTITLE=units, WID = wid
 
 end
 

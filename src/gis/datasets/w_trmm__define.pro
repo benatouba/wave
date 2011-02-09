@@ -474,7 +474,10 @@ end
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
 ;            TU Berlin
-;
+;  :Keywords:
+;    WID: out
+;         the widget id
+;         
 ; :History:
 ;     Written by FaM, 2010.
 ;
@@ -483,7 +486,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
-pro w_TRMM::w_QuickPlotPrcp
+pro w_TRMM::QuickPlotPrcp, WID = wid
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -501,9 +504,9 @@ pro w_TRMM::w_QuickPlotPrcp
   if self.type eq '3B42_d' then self->Get_LonLat, lon, lat else self->get_ncdf_coordinates, lon, lat
   
   if N_ELEMENTS(times) eq 1 then w_QuickPlot, pcp, COLORTABLE=2, TITLE= self.meta + ' ' + TIME_to_STR(times), $
-    WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat'] $
+    WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat'], WID = wid $
       else w_QuickPlot, pcp, COLORTABLE=2, TITLE= self.meta, dim3tags=TIME_to_STR(times), $
-          WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat','time']
+          WINDOW_TITLE = 'NCDF view: ' + self.fname, COORDX=lon, COORDY=lat, CBARTITLE='Prcp ' + units, DIMNAMES=['lon','lat','time'], WID = wid
 
 end
 

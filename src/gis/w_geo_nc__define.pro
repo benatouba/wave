@@ -736,6 +736,8 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
     ok = TRUE
   endif 
   
+  if nlondims eq 2 and nlatdims eq 2 then ok = TRUE
+  
   if nlondims eq 3 and nlatdims eq 3 then begin
     if self.TID ge 0 then begin ; We found the time dimension in the file  
       p = where(londims eq (*self.dimNames)[self.TID], cnt)  
@@ -804,7 +806,8 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
-;       
+;    WID: out
+;         the widget id     
 ; :Author:
 ;       Fabien Maussion::
 ;           FG Klimatologie
@@ -816,7 +819,7 @@ end
 ; :History:
 ;     Last modification:  09-Dec-2010 FaM
 ;-
-pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
+pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WID = wid
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -843,7 +846,7 @@ pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN
   endif   
   
   w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
-        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt
+        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt, WID = wid
 
 end
 

@@ -504,6 +504,15 @@ PRO w_QuickPlot_Resize, event
   
 END
 
+pro w_quickplot_delete_all
+
+ id = 1
+ while (id ne 0) do begin
+   id = WIDGET_INFO(0, FIND_BY_UNAME = 'W_QUICKPLOT') 
+   WIDGET_CONTROL, id, /DESTROY
+ endwhile
+
+end
 
 pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
                 CbarTitle = CbarTitle, $ ; The title of the color bar
@@ -519,6 +528,7 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
                 dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0]) 
                 dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*]) 
                 INTERPOLATE = interpolate, $ ; bilinear interoplation of the image
+                wid = wid, $
                 Group_Leader = group
     
   ; SET UP ENVIRONNEMENT
@@ -695,7 +705,7 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   plotView->Add, plotModel
   
   ; Create the widgets for this program.  
-  tlb = Widget_Base(Title=Window_Title, MBar=menubase, TLB_Size_Events=1, Column=1, Base_Align_Center=1)
+  tlb = Widget_Base(Title=Window_Title, MBar=menubase, TLB_Size_Events=1, Column=1, Base_Align_Center=1, UNAME = 'W_QUICKPLOT')
     
   ; Create the draw widget. RETAIN=0 is necessary to generate EXPOSE events.    
   drawID = Widget_Draw(tlb, XSize=wxsize, YSize=wysize, $
@@ -897,5 +907,6 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   Widget_Control, tlb, Set_UValue=info, /No_Copy
   
   XManager, 'w_QuickPlot', tlb, Cleanup='w_QuickPlot_Cleanup', Group_Leader=group, /No_Block, Event_Handler='w_QuickPlot_Resize'
+  wid = tlb
   
 END
