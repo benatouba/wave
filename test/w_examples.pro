@@ -1,7 +1,7 @@
 
 pro examples_w_TimeLinePlot
   
-  data = LOADDATA(17)
+  data = cgDemoData(17)
   n = N_ELEMENTS(data)
   startT = QMS_TIME(year = 2011, day = 01, month = 01)
   step = MAKE_TIME_STEP(minute = 30)
@@ -18,7 +18,7 @@ pro examples_w_TimeLinePlot
                   THICKNESS=2, STYLE1= 5, TITLE='Example single plot with options', YTITLE='Unit', range = [-10,110], HORILINE=0
                   
   ; Add a second plot
-  data2 = LOADDATA(17)
+  data2 = cgDemoData(17)
   data2 = data2[15:78]
   time2  = time[15:78]
   w_TimeLinePlot, data, time, 'My data', COMENT1='Random data', COLOR1= 'red',  $
@@ -33,7 +33,7 @@ pro examples_w_TimeLinePlot
                   data2, time2, 'blue', 'My data2', COMENT2='Sample of random data', STYLE2=0
   
   ; Add a new axis
-  data3 = LOADDATA(17)
+  data3 = cgDemoData(17)
   w_TimeLinePlot, data, time, 'My data', COMENT1='Random data', COLOR1= 'red',  $
                   STYLE1= 5, TITLE='Example single plot with new axis', YTITLE='Unit', range = [-10,110], HORILINE=0,$
                   data2, time2, 'blue', 'My data2', COMENT2='Sample of random data', STYLE2=0, $
@@ -48,7 +48,7 @@ end
 
 pro examples_w_ScatterPlot
   
-  x = LOADDATA(17)
+  x = cgDemoData(17)
   n = N_ELEMENTS(x)
   y = x * 2. + 1.
     

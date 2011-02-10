@@ -831,7 +831,8 @@ pro w_WRF::plot_TS, varid, x, y, $
                           varname = varname , $ ; 
                           dims = dims, $ ;
                           dimnames = dimnames )
-   
+  
+  ;TODO: if var dim 2 then more than one curve 
   
   w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
