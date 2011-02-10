@@ -857,7 +857,7 @@ pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info() then MESSAGE, 'Variable not found'
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'
 
   var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
   

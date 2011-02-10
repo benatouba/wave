@@ -735,8 +735,14 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
    s = LONG(t[2])
    milli = LONG64( (DOUBLE(t[2]) - FLOOR(double(t[2]))) * 1000D )
   endif else return, FALSE  
-      
-  time0 = (MAKE_ABS_DATE(YEAR=y, MONTH=mo, DAY=d, HOUR = h, MINUTE=mi, SECOND=s, MILLISECOND=milli)).qms
+       
+  is_OLD = FALSE
+  if y lt 1900 then begin 
+    is_OLD = TRUE
+    jd0 = JULDAY(mo,d,y,h,mi,s)
+    time0 = QMS_TIME(YEAR=1900, MONTH=01, DAY=01)
+    jd1 = TIME_to_JD(time0)
+  endif else time0 = QMS_TIME(YEAR=y, MONTH=mo, DAY=d, HOUR = h, MINUTE=mi, SECOND=s, MILLISECOND=milli)
   
   NCDF_VARGET, Cdfid, vok, u
   
@@ -764,8 +770,13 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
     'DS': fac = D_QMS
     else: return, FALSE
   endcase
-
-  time = time0 + fac * LONG64(u)
+  
+  if is_OLD then begin 
+   deltaU = (jd1 - jd0) * D_QMS / fac else  deltaU = 0 
+   if MIN(u) lt deltaU then deltaU = 0 
+  endif else deltaU = 0 
+  
+  time = time0 + fac * LONG64(u - deltaU)
   nt = N_ELEMENTS(time)
   time0 = time[0]
   time1 = time[nt-1]
@@ -1400,3 +1411,88 @@ pro utils_color_rgb, color, r, g, b
   endfor
 
 end
+
+;+
+; :Description:
+;    To generate an ASCII template from an ascci file.
+;
+; :Keywords:
+;    FILE: in, optional
+;          the ascii file to template (if not set, a dialog window will open)
+;
+; :History:
+;     Written by FaM, 2010.
+;     
+;-
+pro utils_make_template, FILE = file
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+
+  if ~KEYWORD_SET(file) then file = DIALOG_PICKFILE(FILTER='*.dat', TITLE='Please select data file to template', /FIX_FILTER, /MUST_EXIST)
+  
+  template = ASCII_TEMPLATE(file)
+
+  GEN_str_subst, ret, file, '.dat', '.tpl', tpl_file_path
+  SAVE, template, filename=tpl_file_path
+  ok = DIALOG_MESSAGE('File: ' + tpl_file_path + ' saved')
+  
+end
+
+;+
+; :Description:
+;    Transform ater vapor mixing ratio e.g from WRF output ([kg/kg])
+;    to relative humidity
+;
+; :Params:
+;    qv: in, required
+;        Water vapor mixing ratio in [kg/kg].
+;    p: in, required
+;        Full pressure (perturbation + base state pressure) with the same dimension structure as qv. Units must be [Pa]. 
+;    t: in, required
+;        Temperature in [K] with the same dimension structure as qv
+;
+;  :Returns:
+;    Relative humidity [%]
+;
+;
+; :Author: NCAR (NCL)
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;-
+function utils_qv_to_rh, qv, p, t
+  
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not array_processing(qv, p, t) then message, WAVE_Std_Message(/ARG)
+
+  SVP1=0.6112D
+  SVP2=17.67D
+  SVP3=29.65D
+  SVPT0=273.15D
+  
+  ;      DOUBLE PRECISION QVS,ES,PRESSURE,TEMPERATURE
+  ;      DOUBLE PRECISION EP_2,R_D,R_V
+  R_D=287.D
+  R_V=461.6D
+  EP_2=R_D/R_V
+  
+  EP_3=0.622D
+  
+  PRESSURE = P
+  TEMPERATURE = T
+  
+  ES = 10.D*SVP1*EXP(SVP2* (TEMPERATURE-SVPT0)/(TEMPERATURE-SVP3))
+  
+  QVS = EP_3 * ES / (0.01D * PRESSURE - (1.D - EP_3)*ES)
+  
+  RH = 100.D*((QV/QVS < 1.0D) > 0.0D)
+  
+  RETURN, rh
+  
+END
