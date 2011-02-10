@@ -1213,12 +1213,12 @@ function w_Map::draw_map, WINDOW = window
   
     self.grid->get_Lonlat, lon, lat
     
-    cgContour, lon, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
+    cgContour, lon, /OVERPLOT, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE,  $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
       
-    cgContour, lat, POSITION = [0,0,1,1], /NORMAL, /OVERPLOT, XTICKLEN = -0.2, $
-      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
+    cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, $
+      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, $
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
       
   endif
@@ -1327,18 +1327,13 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
     cgWIN = true
   endif else begin
     undefine, cgWIN
-    cgDisplay, /FREE, XSIZE=self.Xsize, YSIZE=self.Ysize, /PIXMAP, Title='Map Plot'
+    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
     xwin = !D.WINDOW
   endelse
 
   if self.is_Shaded then img = self->shading() else img = self->img_to_rgb()
-  
-  if self.is_Mapped then begin
-    false_im = BYTARR(self.Xsize, self.Ysize) & false_im[0] = 1
-    cgContour, false_im, POSITION = [0,0,1,1], /NORMAL, /NODATA, WINDOW = cgWIN    
-  endif
       
-  cgImage, img, true = 1, WINDOW = cgWIN
+  cgImage, img, WINDOW = cgWIN, /KEEP_ASPECT_RATIO, /SAVE ;, /Erase
 
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = cgWIN) 
   if self.is_Mapped then ok = self->draw_map(WINDOW = cgWIN)
@@ -1347,7 +1342,7 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
   if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
-    cgDisplay, /FREE, XSIZE=self.Xsize, YSIZE=self.Ysize, Title='Map Plot'
+    cgDisplay, self.Xsize, self.Ysize, /FREE, Title='Map Plot'
     cgImage, img
  endif
   !ORDER = pp
@@ -1404,8 +1399,6 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='Color bar'
     xwin = !D.WINDOW
   endelse
-
-  cgImage, BYTARR(3, xs, ys)+255, /TRUE, WINDOW=cgWIN
   
   if N_ELEMENTS(BAR_TAGS) eq 0 then bar_TAGS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
   
