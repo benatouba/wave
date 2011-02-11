@@ -772,7 +772,7 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
   endcase
   
   if is_OLD then begin 
-   deltaU = (jd1 - jd0) * D_QMS / fac else  deltaU = 0 
+   deltaU = (jd1 - jd0) * D_QMS / fac
    if MIN(u) lt deltaU then deltaU = 0 
   endif else deltaU = 0 
   

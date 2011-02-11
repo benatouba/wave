@@ -817,6 +817,7 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
     
       vid = vartokeep.name[v]
       if ~vartokeep.found[v] then continue ; was not in the file
+      if vartokeep.Unstag[v] then continue ; not implemented
       
       s_var_info = NCDF_VARINQ(fid,vid)
       ndims = s_var_info.ndims
@@ -843,8 +844,10 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
           printf, unit, '   Static field ' + vid + ' filled.'
           flush, unit  
           endif
-      endif else if vartokeep.D3toD2[v] or vartokeep.Unstag[0] then begin
-        ; do nothing (not supported)      
+      endif else if vartokeep.D3toD2[v] then begin
+          if ndims eq 4 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], 1, my_e_index - my_spin_index + 1] $
+            else message, 'Impossible'
+          NCDF_VARPUT, tid, vid, reform(var), OFFSET=[0,0,ps]
       endif else begin
         if ndims eq 1 then begin
           NCDF_VARGET, fid, vid, var, OFFSET=[my_spin_index], COUNT=[my_e_index - my_spin_index + 1]
@@ -1094,19 +1097,14 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   ;Go threw the dimensions.
   for i =0, inq.ndims-1 do begin  
     NCDF_DIMINQ, sid, i, sName, sSize     
-    if N_ELEMENTS(s_dim_names) eq 0 then s_dim_names = sName else s_dim_names=[s_dim_names,sName]
-;    if N_ELEMENTS(s_dim_Sizes) eq 0 then s_dim_Sizes = sSize else s_dim_Sizes=[s_dim_Sizes,sSize] 
-;    if N_ELEMENTS(s_dim_ids) eq 0 then s_dim_ids = i else s_dim_ids=[s_dim_ids,i]          
+    if N_ELEMENTS(s_dim_names) eq 0 then s_dim_names = sName else s_dim_names=[s_dim_names,sName]       
     p = where(str_equiv(dimtokeep) eq str_equiv(sName), cnt)    
     if cnt eq 0 then begin ;Nothing to be done
       printf, unit, '  -:', sName, ': ', STR_equiv(sSize), ' (ignored)'
     endif else begin
       if str_equiv(sName) eq 'TIME' then ssize = nt ; No more "infinite dimension"
       if (str_equiv(sName) eq 'TIME') and i ne 0 then MESSAGE, 'Time HAS to be the dimension 0.'      
-      tdimid  = NCDF_DIMDEF(tid, sName, ssize)     
-;      if N_ELEMENTS(t_dim_names) eq 0 then t_dim_names = sName else t_dim_names=[t_dim_names,sName]
-;      if N_ELEMENTS(t_dim_Sizes) eq 0 then t_dim_Sizes = sSize else t_dim_Sizes=[t_dim_Sizes,sSize] 
-;      if N_ELEMENTS(t_dim_ids) eq 0 then t_dim_ids = tdimid else t_dim_ids=[t_dim_ids,tdimid]            
+      tdimid  = NCDF_DIMDEF(tid, sName, ssize)           
       printf, unit, '  +:', sName, ': ', STR_equiv(sSize)
     endelse
   endfor ; Dimensions OK
@@ -1214,16 +1212,23 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       addInfo = '+STATIC+'
     endif    
     
-    if vartokeep.D3toD2[p] or vartokeep.Unstag[0] then begin 
-      MESSAGE, 'D3TOD2 or UNSTAGGER parameters currently not supported.', /INFORMATIONAL
+    if vartokeep.Unstag[p] then begin 
+      MESSAGE, 'UNSTAGGER parameter currently not supported.', /INFORMATIONAL
       text = '  -:' + STRLOWCASE(s_var_info.DATATYPE) + '  ' + str_equiv(s_var_info.name) + '('
       for i =0, N_ELEMENTS(dimsIds) - 1 do begin
         text += STRLOWCASE(str_equiv(s_dim_names[dimsIds[i]]))
         if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','
       endfor
-      text += ')  ; (ignored: D3TOD2 or UNSTAGGER parameters currently not supported.)'
+      text += ')  ; (ignored: UNSTAGGER parameter currently not supported.)'
       printf, unit, text
       continue
+    endif
+    
+    if vartokeep.D3toD2[p] then begin
+      s = WHERE(str_equiv(s_dim_names[dimsIds]) ne str_equiv('bottom_top_stag') and str_equiv(s_dim_names[dimsIds]) ne str_equiv('bottom_top'), c)
+      if c eq N_ELEMENTS(dimsIds) then Message, 'Hmmm, third dimension not found? '
+      dimsIds = dimsIds[s]
+      addInfo = '+D3TOD2+'
     endif
         
     ; Define the variable.
@@ -1335,8 +1340,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
           'LONG': tlong = 1
           'SHORT': tshort = 1
         ENDCASE
-        
-        
+                
         ; Add the attribute to the file.
         NCDF_AttPut, tid, TvID, sName, sValue,  $
           BYTE=tbyte, $
