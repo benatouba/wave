@@ -845,11 +845,21 @@ pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WI
     if cnt ne 0 then tsrt = TIME_to_STR(time)
   endif   
   
-  if N_ELEMENTS(DIMNAMES) eq 3 then w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
-        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt, WID = wid $
-       else if N_ELEMENTS(DIMNAMES) eq 4 then w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
-                  dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim4tags = tsrt, WID = wid
-        
+  case (N_ELEMENTS(DIMNAMES)) of
+    2: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, WID = wid 
+    end
+    3: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+         dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt, WID = wid
+    end
+    4: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+            dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim4tags = tsrt, WID = wid
+    end
+    else: MESSAGE, 'Variable is not of suitable dimension.'
+  endcase      
 
 end
 

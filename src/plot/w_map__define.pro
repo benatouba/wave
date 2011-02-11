@@ -1146,7 +1146,7 @@ end
 function w_Map::shading
 
   if self.relief_factor eq 0 then return, self->img_to_rgb()
-  nlevels = self.plot_params.nlevels
+  nlevels = self.plot_params.nlevels + 1
   
   if nlevels eq 0 or nlevels gt 127 then begin
    MESSAGE, 'Shading: max number of colors is 127', /INFORMATIONAL
