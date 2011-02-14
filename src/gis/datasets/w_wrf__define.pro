@@ -720,6 +720,7 @@ function w_WRF::get_TS, varid, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
                               src = src, $
+                              K = K, $
                               point_i = point_i, $
                               point_j = point_j, $
                               point_lon = point_lon, $
@@ -752,6 +753,7 @@ function w_WRF::get_TS, varid, x, y, $
     LON_DST=point_lon, LAT_DST=point_lat
   
   return, self->w_GEO_nc::get_TS(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+                          K = K , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $

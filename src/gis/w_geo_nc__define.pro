@@ -546,6 +546,8 @@ end
 ;        the variable number of times
 ;
 ; :Keywords:
+;   K: in, optional, type = long
+;      if a third dimension is available AND is not TIME, index of the level to retrieve.
 ;   T0: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
@@ -584,6 +586,7 @@ function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a pr
                           nt,  $
                           t0 = t0, $
                           t1 = t1, $
+                          k = k , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
@@ -620,25 +623,26 @@ function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a pr
   count = LONARR(ndims) - 1
   offset = LONARR(ndims) - 1
 
-  p = where(dimnames eq (*self.dimNames)[self.XID], cnt)
+  pi = where(dimnames eq (*self.dimNames)[self.XID], cnt)
   if cnt ne 0 then begin
     off = self.subset[0] + i
-    if off ge dims[p[0]] or off lt 0 then Message, WAVE_Std_Message('i', /RANGE)
-    offset[p[0]] = off
-    count[p[0]] = 1
+    if off ge dims[pi[0]] or off lt 0 then Message, WAVE_Std_Message('i', /RANGE)
+    offset[pi[0]] = off
+    count[pi[0]] = 1
   endif
-  p = where(dimnames eq (*self.dimNames)[self.YID], cnt)
+  pj = where(dimnames eq (*self.dimNames)[self.YID], cnt)
   if cnt ne 0 then begin
     off = self.subset[2] + j
-    if off ge dims[p[0]] or off lt 0 then Message, WAVE_Std_Message('j', /RANGE)
-    offset[p[0]] = off
-    count[p[0]] = 1
+    if off ge dims[pj[0]] or off lt 0 then Message, WAVE_Std_Message('j', /RANGE)
+    offset[pj[0]] = off
+    count[pj[0]] = 1
   endif
   
   time = *self.time
+  pt = -1
   if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file
   
-    p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
+    pt = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
     if cnt ne 0 then begin ; the variable has a time dimension
       p0 = 0
       p1 = self.nt-1
@@ -652,8 +656,8 @@ function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a pr
       endif
       ; Ok, now set the offset and count accordingly
       time = time[p0:p1]
-      offset[p[0]] = p0
-      count[p[0]] = p1 - p0 + 1
+      offset[pt[0]] = p0
+      count[pt[0]] = p1 - p0 + 1
                   
     endif else begin ; the variable has no time dimension
       time = self.t0
@@ -661,6 +665,31 @@ function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a pr
     
   endif  
   nt = N_ELEMENTS(time)
+  
+  ; Now check for third dimension
+  IF N_ELEMENTS(k) ne 0 then begin
+    case (ndims) of
+      3: begin
+        if pt[0] eq -1 then begin
+          pk = where(offset lt 0, cnt)
+          if k ge dims[pk[0]] or k lt 0 then Message, WAVE_Std_Message('k', /RANGE)
+          offset[pk[0]] = k
+          count[pk[0]] = 1
+        endif ; else ignore it too
+      end
+      4: begin
+        if pt[0] ne -1 then begin
+          pk = where(offset lt 0, cnt)
+          if k ge dims[pk[0]] or k lt 0 then Message, WAVE_Std_Message('k', /RANGE)
+          offset[pk[0]] = k
+          count[pk[0]] = 1
+        endif ; else ignore it too        
+      end
+      else: ; Just ignore it
+    endcase
+    
+  endif
+  
       
   ; Now fill every dimension that have not been cropped with std values
   pnok = where(offset lt 0, cnt)
