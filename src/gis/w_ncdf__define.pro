@@ -523,6 +523,70 @@ end
 
 ;+
 ; :Description:
+;    Get some informations on variable attributes from a NCDF variable.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: in, type = long/string
+;            the variable id 
+;    vattsIds: out, type = long
+;              NCDF vatts indexes
+;    vattNames: out, type = string array
+;               attributes name
+;
+; :Keywords:
+;    PRINTVATTS: in, optional
+;                to print the infos in the console
+;
+; :Author:
+;       Fabien Maussion::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  20-Dec-2010 FaM
+;     Added 
+;-
+pro w_NCDF::get_VattsList, varid, vattsIds, vattNames, PRINTVATTS = printvatts
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if not self->get_Var_Info(varid, out_id = out_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)  
+  
+  s_var_info = NCDF_VARINQ(self.cdfid,out_id)
+       
+  if s_var_info.natts eq 0 then return ; no need to continue
+ 
+  ; Copy the variable attributes
+  for sattid = 0, s_var_info.NATTS - 1 do begin
+    
+    sName = NCDF_ATTNAME(self.cdfid, out_id, sattid)
+    if N_ELEMENTS(vattNames) eq 0 then vattNames = sName else vattNames=[vattNames,sName]
+    if N_ELEMENTS(vattsIds) eq 0 then vattsIds = sattid else vattsIds=[vattsIds,sattid] 
+
+  endfor
+
+  if KEYWORD_SET(PRINTVATTS) then for i = 0, s_var_info.natts-1 DO print, 'Id: ' + str_equiv(vattsIds[i]) + $
+       '. Name: ' + vattNames[i]
+  
+end
+
+;+
+; :Description:
 ;    Extracts the desired variable from the NCDF file.
 ;
 ; :Categories:
@@ -675,7 +739,7 @@ function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from 
   varinfo = NCDF_VARINQ(self.Cdfid, out_id)
   
   if ARG_PRESENT(varname) then varname = varinfo.Name
-  
+  ;TODO: take account of the new self.gevatt routines
   if ARG_PRESENT(description) then begin 
     description = ''
     for i = 0, varinfo.natts -1 do begin
@@ -813,6 +877,112 @@ function w_NCDF::get_Gatt_Info, attid, OUT_ID = out_id
     if cnt ne 0 then out_id = (*self.gattNames)[p[0]] else return, FALSE
   endif else MESSAGE, WAVE_Std_Message('attid', /ARG)
    
+  return, TRUE
+  
+end
+
+
+;+
+; :Description:
+;    Extracts the desired variable attribute from the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: in, required, type = long/str
+;
+;    attid: in, required, type = str
+;       
+; :Keywords:
+;
+; :Returns:
+;    The variable
+;
+; :Author:
+;       Roman Finkelnburg::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  13-Feb-2011 RoF
+;-
+function w_NCDF::get_VAtt, varid, attid
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ON_ERROR, 2
+  
+  if ~arg_okay(attid) then message, WAVE_Std_Message('attid', /ARG)
+  
+  if not self->get_Var_Info(varid, out_id = var_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)
+  if not self->get_VAtt_Info(var_id, attid, OUT_ID = att_id) then MESSAGE, WAVE_Std_Message('attid', /ARG)
+  
+  NCDF_ATTGET, self.cdfid, var_id, att_id, value
+  
+  return, value
+  
+end
+
+
+;+
+; :Description:
+;    Extracts the desired variable attribute from the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: in, required, type = long/str
+;
+;    attid: in, required, type = str
+;           (case independent)
+;       
+; :Keywords: 
+; 
+;    OUT_ID: out, optional, type = str
+;            the equivalent attribute ID (case dependent)
+;
+; :Returns:
+;    The variable
+;
+; :Author:
+;       Roman Finkelnburg::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  13-Feb-2011 RoF
+;-
+function w_NCDF::get_VAtt_Info, varid, attid, OUT_ID = out_id
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, FALSE
+  ENDIF
+    
+  if not self->get_Var_Info(varid, out_id = var_id) then return, false
+  self->get_VattsList, var_id, vattsids, vatssnames
+  
+  if arg_okay(attid, TYPE=IDL_STRING, /SCALAR) then begin
+    p = WHERE(str_equiv(vatssnames) eq str_equiv(attid), cnt)
+    if cnt ne 0 then out_id = vatssnames[p[0]] else return, FALSE
+  endif else MESSAGE, WAVE_Std_Message('attid', /ARG) 
+  
   return, TRUE
   
 end
@@ -992,51 +1162,3 @@ PRO w_NCDF::dump, FILE = file
   
 end
 
-;;;;;;;;;;;;;;;;;
-;+
-; :Description:
-;    Extracts the desired variable attribute from the NCDF file.
-;
-; :Categories:
-;         WAVE/OBJ_GIS   
-;         
-; :Params:
-;    vname: in, required, type = long/str
-;
-;    attname: in, required, type = long/str
-;       
-; :Keywords:
-;
-; :Returns:
-;    The variable
-;
-; :Author:
-;       Roman Finkelnburg::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
-; :History:
-;     Last modification:  13-Feb-2011 RoF
-;-
-function w_NCDF::get_VAtt, varid, AttName
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, !VALUES.F_NAN
-  ENDIF
-    
-  if not self->get_Var_Info(varid, out_id = out_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)
-  
-  NCDF_ATTGET, self.cdfid, out_id, AttName, value
-  
-  return, value
-end

@@ -147,6 +147,7 @@ pro examples_working_with_w_map, RESIZABLE = resizable
     if ok eq 'Yes' then begin
       cgDelete, /All
       WIDGET_CONTROL, wid, /DESTROY
+      while !D.WINDOW ne -1 do WDELETE, !D.WINDOW
     endif  
      
    OBJ_DESTROY, modis_
