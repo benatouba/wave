@@ -991,3 +991,52 @@ PRO w_NCDF::dump, FILE = file
   close, lu ; close file  
   
 end
+
+;;;;;;;;;;;;;;;;;
+;+
+; :Description:
+;    Extracts the desired variable attribute from the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    vname: in, required, type = long/str
+;
+;    attname: in, required, type = long/str
+;       
+; :Keywords:
+;
+; :Returns:
+;    The variable
+;
+; :Author:
+;       Roman Finkelnburg::
+;           FG Klimatologie
+;           TU Berlin
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification:  13-Feb-2011 RoF
+;-
+function w_NCDF::get_VAtt, varid, AttName
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, !VALUES.F_NAN
+  ENDIF
+    
+  if not self->get_Var_Info(varid, out_id = out_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)
+  
+  NCDF_ATTGET, self.cdfid, out_id, AttName, value
+  
+  return, value
+end
