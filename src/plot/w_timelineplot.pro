@@ -239,7 +239,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
      p2 = nt - 1
    endelse
   
-  if ~KEYWORD_SET(range) then range = [MIN(data[p1:p2]), MAX(data[p1:p2])]
+  if ~KEYWORD_SET(range) then range = [MIN(data[p1:p2], /NAN), MAX(data[p1:p2],/NAN)]
   
   ; Make X AXIS
   if KEYWORD_SET(hours) then begin

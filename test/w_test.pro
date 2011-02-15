@@ -1,6 +1,18 @@
-function TEST_file_directory
-   ; Put the WAVE test pack path here.
-   return, '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/'     
+function TEST_file_directory, RESET = reset
+
+  common W_TEST_CMN, TEST_CMN_ROOT_DIR
+  ; Put the WAVE test pack path here.
+  
+  if N_ELEMENTS(TEST_CMN_ROOT_DIR) eq 0  or KEYWORD_SET(RESET) then TEST_CMN_ROOT_DIR = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/'
+  
+  if  ~FILE_TEST(TEST_CMN_ROOT_DIR) then TEST_CMN_ROOT_DIR = DIALOG_PICKFILE(TITLE='Please indicate the test directory', /MUST_EXIST, /DIRECTORY)
+  
+  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/WRF/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
+  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/MAPPING/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
+  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/MODIS/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
+  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/TRMM/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
+  
+  return, TEST_CMN_ROOT_DIR
 end
 
 pro TEST_MAKE_ABS_DATE
@@ -589,6 +601,150 @@ pro TEST_check_TS
   if mis[1] ne 10 then error+=1  
   
   if error ne 0 then message, '% TEST_check_TS NOT passed', /CONTINUE else print, 'TEST_check_TS passed'
+  
+end
+
+pro TEST_TS_FILL_MISSING
+  
+   ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc   
+
+  error = 0  
+  startTime = make_abs_date(YEAR=2005, MONTH=01, DAY=01, HOUR=00, MINUTE=00, SECOND=00)
+  endTime = make_abs_date(YEAR=2005, MONTH=01, DAY=03, HOUR=00, MINUTE=01, SECOND=00)
+  step = MAKE_TIME_STEP(hour = 1)
+  
+  goodTS = MAKE_ENDED_TIME_SERIE(startTime, endTime, TIMESTEP=step, NSTEPS = nsteps)
+  goodData = (cgDemoData(17))[0:nsteps-1]
+
+  ok = check_TS(goodTS, probableStep)  
+  if ok eq false then error+=1
+  if probableStep.dms ne step.dms then error+=1
+
+  badTS = [goodTS[1:4],goodTS[6:9],goodTS[11:40]]
+  badData = [goodData[1:4],goodData[6:9],goodData[11:40]]
+  missT = [0,5,10,41,42,43,44,45,46,47,48]  
+  ok = check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
+  if ok eq TRUE then error+=1  
+  filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
+  if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
+  if N_ELEMENTS(filled_Data) ne N_ELEMENTS(goodData) then error +=1
+  if total(inds - missT) ne 0 then error +=1
+  if GOODDATA[3] ne filled_Data[3] then error +=1
+  if GOODDATA[40] ne filled_Data[40] then error +=1
+  if total(filled_data[where(FINITE(filled_Data) eq 1)] - badData) ne 0 then error +=1
+  
+  badTS = [goodTS[0:4],goodTS[6:9],goodTS[11:40],goodTS[48]]
+  badData = [goodData[0:4],goodData[6:9],goodData[11:40],goodData[48]]
+  missT = [5,10,41,42,43,44,45,46,47]  
+  ok = check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
+  if ok eq TRUE then error+=1  
+  filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
+  if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
+  if N_ELEMENTS(filled_Data) ne N_ELEMENTS(goodData) then error +=1
+  if total(inds - missT) ne 0 then error +=1
+  if GOODDATA[3] ne filled_Data[3] then error +=1
+  if GOODDATA[40] ne filled_Data[40] then error +=1
+  if total(filled_data[where(FINITE(filled_Data) eq 1)] - badData) ne 0 then error +=1  
+  
+  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, goodTS, INDEXES=inds)
+  if total(GOODDATA - filled_Data) ne 0 then error +=1  
+  if N_ELEMENTS(inds) ne 1 then error +=1 
+  if inds[0] ne -1 then error +=1 
+  
+  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, badTS, INDEXES=inds)
+  if total(badData - filled_Data) ne 0 then error +=1  
+  if N_ELEMENTS(inds) ne 1 then error +=1 
+  if inds[0] ne -1 then error +=1   
+  
+  
+  if error ne 0 then message, '% TEST_TS_FILL_MISSING NOT passed', /CONTINUE else print, 'TEST_TS_FILL_MISSING passed'
+  
+end
+
+pro TEST_TS_MEAN
+  
+   ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc   
+
+  error = 0  
+  
+  ; Very simple tests
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 6, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 1 then error += 1 
+  if st.mean[0] ne 3.5 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 0)]   
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 1 then error += 1 
+  if st.mean[0] ne 3.5 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6), QMS_TIME(year = 2009, day = 1, hour = 6, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 2 then error += 1 
+  if st.mean[0] ne 3 then error += 1 
+  if st.mean[1] ne 4 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 5) then error += 1 
+  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+ 
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 2 then error += 1 
+  if st.mean[0] ne 3 then error += 1 
+  if st.mean[1] ne 4 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, NEW_TIME=[QMS_TIME(year = 2009, day = 1), QMS_TIME(year = 2009, day = 2)])
+  if st.nt ne 1 then error += 1 
+  if st.mean[0] ne 3.5 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1) then error += 1 
+
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, /DAY)
+  if st.nt ne 1 then error += 1 
+  if st.mean[0] ne 3.5 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1) then error += 1 
+
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
+  st = TS_MEAN_STATISTICS(data, time, NEW_TIME=[QMS_TIME(year = 2009, day = 2), QMS_TIME(year = 2009, day = 3)])
+  if st.nt ne 1 then error += 1 
+  if FINITE(st.mean[0]) ne 0 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
+
+  data = [3.,4.,5.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 33), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 59)]   
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 3 then error += 1 
+  if TOTAL(FINITE(st.mean) - [1,0,1]) ne 0 then error += 1 
+  if TOTAL(ABS(st.mean - [3.,0,4.5]), /NAN) ne 0 then error += 1 
+  
+  data = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
+  time =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 6, minute = 10), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=10))
+  st = TS_MEAN_STATISTICS(data, time, /HOUR)
+  if st.nt ne 2 then error += 1 
+  if st.mean[0] ne 1. then error += 1 
+  if st.mean[1] ne 2. then error += 1 
+  if st.stddev[1] ne STDDEV([2.,3.,3.,1.,1.,2.]) then error += 1 
+  if st.max[1] ne 3. then error += 1 
+  if st.min[1] ne 1. then error += 1 
+  if st.nel[1] ne 6. then error += 1 
+  if st.tot[1]/st.nel[1]  ne st.mean[1] then error += 1 
+  
+  if error ne 0 then message, '% TEST_TS_MEAN NOT passed', /CONTINUE else print, 'TEST_TS_MEAN passed'
   
 end
 
@@ -1994,13 +2150,15 @@ pro TEST_TIME
   TEST_MAKE_TIME_SERIE
   TEST_MAKE_ENDED_TIME_SERIE
   TEST_check_TS
+  TEST_TS_FILL_MISSING
+  TEST_TS_MEAN
 end
 
-pro TEST_DATASETS
+pro TEST_DATASETS, NCDF = ncdf
   TEST_TRMM_3B42
   TEST_TRMM_3B42_daily
   TEST_TRMM_3B43  
-  TEST_TRMM_AGG
+  if KEYWORD_SET(NCDF) then  TEST_TRMM_AGG
   TEST_WRF_OUT
   TEST_WRF_GEO
   TEST_MODIS  
@@ -2017,10 +2175,10 @@ pro TEST_POST, REDO = redo
   TEST_POST_AGG_CROPPED, REDO = redo
 end
 
-pro w_TEST
+pro w_TEST, NCDF = ncdf,  REDO = redo
   TEST_TIME
-  TEST_DATASETS
+  TEST_DATASETS, NCDF = ncdf
   TEST_UTILS
-  TEST_POST
+  if KEYWORD_SET(NCDF) then TEST_POST, REDO = redo
 end
 

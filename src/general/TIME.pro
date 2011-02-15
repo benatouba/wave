@@ -1730,3 +1730,211 @@ function search_Wtime, ts, time, pos = pos, cnt = cnt
   if cnt ge 1 then return, TRUE else return, FALSE
   
 end
+
+;+
+; :Description:
+;    This function fills gaps in a time serie with a user defined or NaN values.
+;    It is based on the IDL value_locate function, which is pretty fast.
+;
+; :Params:
+;    data: in, required, type = numeric
+;          the data serie to complete
+;    time: in, required, type = {ABS_DATE}/qms
+;          the time serie associated to data
+;    new_time: in, required, type = {ABS_DATE}/qms
+;              the output time serie (complete)
+;              
+; :Keywords:
+;    FILL_VALUE: in, optional, default = !VALUES.F_NAN
+;                the value to insert into the gaps
+;    INDEXES: out, type = long
+;             the indexes in 'new_time' where the gaps ere filled (-1 if the time series was complete)           
+; 
+; :Returns:
+;    An array of same size as 'new_time' similar to 'data' but with gaps filled.
+;  
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXES = indexes
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ON_ERROR, 2
+  
+  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /NUMERIC)
+  if ~ check_WTIME(time, OUT_QMS=qms1) then message, WAVE_Std_Message('time', /ARG)
+  if ~ check_WTIME(new_time, OUT_QMS=qms2) then message, WAVE_Std_Message('new_time', /ARG)
+   
+  n = N_elements(data) 
+  if n_elements(qms1) ne n then message, 'data and time arrays must have same number of elements'
+  
+  s = VALUE_LOCATE(qms1, qms2) < (n-1) ;Subscript intervals
+  If not KEYWORD_SET(FILL_VALUE) then FILL_VALUE = !VALUES.F_NAN
+  
+  out = data[s > 0]  
+  sd = s[1:*] - s[0:N_ELEMENTS(s)-2]
+  
+  indexes = -1
+  
+  p1 = WHERE(sd eq 0, cnt)
+  if cnt ne 0 then begin
+   out[p1+1] = FILL_VALUE 
+   indexes = [indexes, p1+1]
+  endif
+  
+  p2 = WHERE(s eq -1, cnt)
+  if cnt ne 0 then begin
+   out[p2] = FILL_VALUE 
+   indexes = [indexes, p2]
+  endif  
+  
+  if N_ELEMENTS(indexes) gt 1 then indexes = indexes[1:*]
+  indexes = indexes[UNIQ(indexes, SORT(indexes))]
+  
+  RETURN, out
+
+end
+
+
+;-----------------------------------------------------------------------
+;+
+; NAME:
+;       TIB_AWS_MEAN_SERIE
+;
+; PURPOSE:
+;       TIB_AWS_MEAN_SERIE computes daily or hourly mean values from a time serie.
+;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;       ! it can be confusing: The value at 13:00 is the mean value from 13:01 to 14:00 ! 
+;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;
+; CATEGORY:
+;       AWS
+;
+; CALLING SEQUENCE:
+;       result = TIB_AWS_MEAN_SERIE, value, time, newtime [, MAXS = maxs, MINS = mins, /DAY, /HOUR]
+;
+; INPUT:
+;       value: the time serie
+;       time:  corresponding time
+;
+; OUTPUT:
+;       result: the mean values
+;       newtime: the time of the result
+;
+; KEYWORDS:
+;       MAXS = maxs: if you need it, the maximums
+;       MINS = mins: if you need it, the minimus 
+;       /DAY: if you want the daily vals
+;       /HOUR: if you want the hourly vals
+;       /SIXHOUR: if you want 6 hourly vals
+;-
+;-----------------------------------------------------------------------
+function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
+           DAY = day, HOUR = hour, MONTH = month, NEW_TIME = new_time
+
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ON_ERROR, 2
+  
+  if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
+  if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
+ 
+  n = n_elements(qms1)
+  if ~ array_processing(qms1, data, REP_A1=_data) then message, '$DATA and $TIME arrays must have same number of elements'
+  
+  sor = SORT(qms1)
+  qms1 = qms1[sor]
+  _data = _data[sor]
+    
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin  
+  
+    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
+     else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY) 
+    
+    qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
+    qmsend = CEIL(qms1[n-1] / double(qms)) * qms
+    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms   
+    
+    regular = TRUE
+    
+  endif else if KEYWORD_SET(MONTH) then begin
+  
+    regular = FALSE
+    
+    message, 'Month currently not implemented: use the $new_time keyword.'
+    
+  endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
+    
+    if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
+    qms2 = qms2[sort(qms2)]
+    
+    regular = check_TS(qms2)
+    
+  endif else message, 'One of the positionnal keywords must be set.'  
+  
+  if not KEYWORD_SET(MISSING) then begin
+    dataTypeName = Size(data, /TNAME)
+    CASE dataTypeName OF
+        'FLOAT': MISSING = !VALUES.F_NAN
+        'DOUBLE': MISSING = !VALUES.D_NAN
+         else: missing = -999
+    endcase
+  endif
+  
+  regular = false ;TODO: implement regular with hitogram
+  
+  if regular then begin
+  
+  endif else begin
+      
+      s = VALUE_LOCATE(qms1, qms2)
+      
+      nnt = N_ELEMENTS(qms2)
+      means = REPLICATE(data[0], nnt-1) * 0
+      maxs = means & mins = means
+      tots = means & nels = LONG(means) & stddevs = means
+      
+      for i = 0,  N_ELEMENTS(s) - 2 do begin
+        a = s[i]+1
+        b = s[i+1]
+        if a le b then begin
+          means[i] = MEAN(data[a:b] , /NAN)
+          mins[i] = MIN(data[a:b], MAX=m, /NAN)
+          maxs[i] = m
+          tots[i] = TOTAL(data[a:b], /NAN)
+          stddevs[i] = stddev(data[a:b], /NAN)
+          nels[i] = TOTAL(FINITE(data[a:b]))
+        endif else begin
+          means[i] =  missing
+          mins[i] =  missing
+          maxs[i] =  missing
+          tots[i] =  missing
+          stddevs[i] =  missing
+          nels[i] =  0
+        endelse
+      endfor
+      
+      qms2 = qms2[0: nnt-2]
+
+  endelse
+  
+  RETURN, {nt: N_ELEMENTS(qms2), $
+           time:qms2, $
+           mean:means, $
+           min:mins, $
+           max:maxs, $
+           tot:tots, $
+           stddev:stddevs, $
+           nel:nels }
+
+end
+
