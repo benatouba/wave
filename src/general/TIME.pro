@@ -1508,7 +1508,7 @@ end
 ;    IDL> goodTS = MAKE_ENDED_TIME_SERIE(startTime, endTime, TIMESTEP=step, NSTEPS = nsteps)
 ;    mydata = INDGEN(nsteps)^2
 ;    
-;    IDL> if check_TS(goodTS, probableStep) eq TRUE then print, 'TS is regular' else print, 'TS is NOT regular'
+;    IDL> if check_TimeSerie(goodTS, probableStep) eq TRUE then print, 'TS is regular' else print, 'TS is NOT regular'
 ;    TS is regular
 ;    IDL> help, PROBABLESTEP, /STR
 ;    ** Structure TIME_STEP, 6 tags, length=32, data length=28:
@@ -1521,7 +1521,7 @@ end
 ;       
 ;       IDL> badTS = [goodTS[0:15],goodTS[25:*]]
 ;       IDL> badData = [mydata[0:15],mydata[25:*]]
-;       IDL> if check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=missing) eq TRUE then print, 'TS is regular' else print, 'TS is NOT regular'
+;       IDL> if check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=missing) eq TRUE then print, 'TS is regular' else print, 'TS is NOT regular'
 ;       TS is NOT regular
 ;       IDL> help, PROBABLESTEP, /STR
 ;       ** Structure TIME_STEP, 6 tags, length=32, data length=28:
@@ -1535,7 +1535,7 @@ end
 ;                 16          17          18          19          20          21          22          23          24       
 ;       IDL> reconstructedData = INTERPOL(badData, badTS.qms, fullTS.qms)
 ;       IDL> plot, MYDATA, color = cgCOLOR('blue'), BACKGROUND = cgCOLOR('white')
-;       IDL> oplot, RECONSTRUCTEDDATA, color = FSC_COLOR('red'), LINESTYLE = 2
+;       IDL> oplot, RECONSTRUCTEDDATA, color = cgCOLOR('red'), LINESTYLE = 2
 ;    
 ; 
 ; :Author:
@@ -1550,7 +1550,7 @@ end
 ;          22-Nov-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function check_TS, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
+function check_TimeSerie, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1877,7 +1877,7 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
     if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
     qms2 = qms2[sort(qms2)]
     
-    regular = check_TS(qms2)
+    regular = check_TimeSerie(qms2)
     
   endif else message, 'One of the positionnal keywords must be set.'  
   

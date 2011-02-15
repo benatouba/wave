@@ -454,7 +454,7 @@ Function w_WRF::Init, FILE       = file     ,  $
   ;*******
   ; Done by w_GEO_nc
   if self.nt gt 1 then begin
-   if ~check_TS(*self.time, hstep) then Message, 'Time serie in the file is not regular.'
+   if ~check_TimeSerie(*self.time, hstep) then Message, 'Time serie in the file is not regular.'
     self.hstep = hstep
   endif else if self.nt eq 1 then begin
     self.hstep = MAKE_TIME_STEP()
@@ -716,7 +716,7 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-function w_WRF::get_TS, varid, x, y, $
+function w_WRF::get_TimeSerie, varid, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
                               src = src, $
@@ -752,7 +752,7 @@ function w_WRF::get_TS, varid, x, y, $
   self->transform, point_i, point_j, dummy1, dummy2, src=self, $
     LON_DST=point_lon, LAT_DST=point_lat
   
-  return, self->w_GEO_nc::get_TS(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+  return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
                           K = K , $
                           varinfo = varinfo , $ ; 
                           units = units, $
@@ -783,7 +783,6 @@ end
 ;    t1: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the last time of the variable timeserie
 ;    src
-;    PNG
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -797,9 +796,9 @@ end
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
-pro w_WRF::plot_TS, varid, x, y, $
-                            t0 = t0, t1 = t1, $
-                            src = src
+pro w_WRF::plot_TimeSerie, varid, x, y, $
+                           t0 = t0, t1 = t1, $
+                           src = src
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -816,7 +815,7 @@ pro w_WRF::plot_TS, varid, x, y, $
   
   if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
   
-  var = self->get_ts( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+  var = self->get_TimeSerie( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                          x, $
                          y, $
                          times, nt, $

@@ -409,7 +409,7 @@ function w_TRMM::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 end
 
 
-function w_TRMM::get_Pcp_TS, x, y, $
+function w_TRMM::get_Prcp_TimeSerie, x, y, $
                               time, nt, $
                               t0 = t0, t1 = t1, $
                               src = src, $
@@ -447,13 +447,13 @@ function w_TRMM::get_Pcp_TS, x, y, $
     nt = 1
     if self.cropped ne 'FALSE' then pcp = pcp[self.subset[0]+point_i,self.subset[2]+point_j]
   endif else if self.type eq '3B42_h' then begin
-    pcp = self->w_GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TimeSerie('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     units = 'mm hr-1'
   endif else if self.type eq '3B43' then begin
-    pcp = self->w_GEO_nc::get_TS('pcp', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TimeSerie('pcp', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     units = 'mm hr-1'
   endif else begin ; agg files
-    pcp = self->w_GEO_nc::get_TS('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
+    pcp = self->w_GEO_nc::get_TimeSerie('precipitation', point_i, point_j, time, nt, t0 = t0, t1 = t1)
     NCDF_ATTGET, self.cdfid, 'precipitation', 'units', units
     units = STRING(units)
   endelse

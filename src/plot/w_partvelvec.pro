@@ -1,94 +1,58 @@
 ;+
-; NAME:
-;      PARTVELVEC
+; :Description:
+;    This procedure plots the velocity vectors of particles (at the
+;    positions of the particles). It has been adapted from the IDLAstro 
+;    library to the WAVE.
 ;
-; PURPOSE:
-;       Plot the velocity vectors of particles at their positions
-; EXPLANATION:
-;       This procedure plots the velocity vectors of particles (at the
-;       positions of the particles).
-;
-; CATEGORY:
-;       Plotting, Two-dimensional.
-;
-; CALLING SEQUENCE:
-;       PARTVELVEC, VELX, VELY, POSX, POSY [, X, Y]
-;
-; INPUTS:
-;       VELX:  An array of any dimension, containing the x-components
+; :Params:
+;       VELX: in, required
+;              An array of any dimension, containing the x-components
 ;              of the particle velocities.
-;       VELY:  An array of the same dimension as velx, containing the
+;       VELY: in, required
+;                An array of the same dimension as velx, containing the
 ;              y-components of the particle velocities.
-;       POSX:  An array of the same dimension as velx, containing the
+;       POSX: in, required
+;              An array of the same dimension as velx, containing the
 ;              x-components of the particle positions.
-;       POSY:  An array of the same dimension as velx, containing the
+;       POSY: in, required
+;              An array of the same dimension as velx, containing the
 ;              y-components of the particle positions.
+;       X: in, optional
+;          Optional abcissae values. X must be a vector.
+;       Y: in, optional
+;          Optional ordinate values. Y must be a vector. If only X
+;           is specified, then Y is taken equal to be equal to X.
 ;
-; OPTIONAL INPUTS:
-;       X:   Optional abcissae values. X must be a vector.
-;       Y:   Optional ordinate values. Y must be a vector. If only X
-;            is specified, then Y is taken equal to be equal to X.
+; :Keywords:
+;       FRACTION:   in, optional
+;                   The fraction of the vectors to plot. They are
+;                   taken at random from the complete sample. Default is
+;                   FRACTION = 1.0, use all vectors
 ;
-; OPTIONAL INPUT KEYWORD PARAMETERS:
-;       FRACTION:   The fraction of the vectors to plot. They are
-;                   taken at random from the complete sample.    Default is
-;              FRACTION = 1.0, use all vectors
+;       LENGTH:     in, optional
+;                   The maximum vectorlength relative to the plot data
+;                   window. Default = 0.08
 ;
-;       LENGTH:     The maximum vectorlength relative to the plot data
-;                   window.   Default = 0.08
-;
-;       COLOR:      The color for the vectors, axes and titles.
-;              Default=!P.COLOR
+;       COLOR:      in, optional
+;                   The color for the vectors, axes and titles.
+;                   Default=!P.COLOR
 ;
 ;       OVER:       Plot over the previous plot
 ;
-;       VECCOLORS:  The vector colors. Must be either a scalar, or
+;       VECCOLORS:  in, optional
+;                   The vector colors. Must be either a scalar, or
 ;                   a vector the same size as VELX. Is set to COLOR by default.
 ;
-;       Plot        All other keywords available to PLOT are also used
-;       Keywords:   by this procedure.
+;    _EXTRA: All other keywords available to cgPlot are also accepted
 ;
-; OUTPUTS:
-;       This procedure plots the velocity vectors (VELX,VELY) at the
-;       positions of the particles, (POSX,POSY). If X and Y are not
-;       specified, then the size of the plot is such that all vectors
-;       just fit within in the plot data window.
+; :Author: Joop Schaye (jschaye@astro.rug.nl), Sep 1996.
 ;
-; SIDE EFFECTS:
-;       Plotting on the current device is performed.
+; :History:
+;      Converted to WAVE by Fam, 2011
 ;
-; EXAMPLE:
-;       Generate some particle positions and velocities.
 ;
-;         POSX=RANDOMU(seed,200)
-;         POSY=RANDOMU(seed,200)
-;         VELX=RANDOMU(seed,200)-0.5
-;         VELY=RANDOMU(seed,200)-0.5
-;
-;       Plot the particle velocities.
-;
-;         PARTVELVEC, VELX, VELY, POSX, POSY
-;
-;       Example using vector colors.
-;
-;         POSX=RANDOMU(seed,200)
-;         POSY=RANDOMU(seed,200)
-;         VELX=RANDOMU(seed,200)-0.5
-;         VELY=RANDOMU(seed,200)-0.5
-;         magnitude = SQRT(velx^2 + vely^2)
-;         LOADCT, 5, NCOLORS=254, BOTTOM=1 ; Load vector colors
-;         TVLCT, 0, 255, 0, 255 ; Plot in GREEN
-;         colors = BytScl(magnitude, Top=254) + 1B
-;         PARTVELVEC, VELX, VELY, POSX, POSY, COLOR=255, VECCOLORS=colors
-;
-; MODIFICATION HISTORY:
-;       Written by:  Joop Schaye (jschaye@astro.rug.nl), Sep 1996.
-;       Converted to IDL V5.0   W. Landsman   September 1997
-;       Added /OVER keyword   Theo Brauers (th.brauers@fz-juelich.de) Jul 2002
-;       Added VECCOLORS keyword. David Fanning (david@dfanning.com) March, 2005
 ;-
-
-PRO partvelvec, velx, vely, posx, posy, x, y, OVER = over, VECCOLORS=vecColors, $
+PRO w_partvelvec, velx, vely, posx, posy, x, y, OVER = over, VECCOLORS=vecColors, $
     FRACTION=fraction,LENGTH=length,COLOR=color, WINDOW = window, _EXTRA=extra
     
     

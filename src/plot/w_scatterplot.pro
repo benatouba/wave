@@ -54,7 +54,7 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   if ~KEYWORD_SET(color) then color = 'black'
   if ~KEYWORD_SET(psym) then psym = 1
   
-  cgWindow, 'cgPlot', WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window'
+  cgWindow, WXSize = 600, WYSize = 600, WTITLE = 'WScatter_plot resizable window'
   cgControl, Execute=0
   
   cgPlot, x, y, title = title, CHARSIZE=1.5, /NORMAL, $

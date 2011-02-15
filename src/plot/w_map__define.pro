@@ -181,7 +181,7 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   dummy = self->set_map_params()  
   dummy = self->set_shading_params()  
-  dummy = self->set_wind()  
+  dummy = self->set_wind(COLOR='black', LENGTH=0.08, THICK=1)  
                
   RETURN, 1
   
@@ -356,10 +356,10 @@ end
 ;    N_LEVELS: in, optional, type = long, default = 256
 ;              number of data levels (ignored if levels is set)
 ;    
-;    VAL_MIN: in, optional, type = numeric, Default=MIN(data)
+;    VAL_MIN: in, optional, type = numeric, default=MIN(data)
 ;             the minimun data value to level (ignored if levels is set)
 ;    
-;    VAL_MAX: in, optional, type = numeric, Default=MAX(data)
+;    VAL_MAX: in, optional, type = numeric, default=MAX(data)
 ;             the maximum data value to level (ignored if levels is set)
 ;             
 ;    COLORS: in, optional, type = any
@@ -586,7 +586,8 @@ end
 ;   To set a topography for the shading layer.
 ;
 ; :Keywords:
-;    GRDFILE: the .grd file to read (with hdr !!!)
+;    GRDFILE: in, required, type = string
+;             the .grd file to read (with hdr !!!)
 ;
 ;
 ; :History:
@@ -944,10 +945,10 @@ end
 ;    MISSING: in, optional, type = numeric
 ;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
 ;    
-;    VAL_MIN: in, optional, type = numeric, Default=MIN(data)
+;    VAL_MIN: in, optional, type = numeric, default=MIN(data)
 ;             the minimun data value to level (ignored if levels is set using 'set_plot_params')
 ;    
-;    VAL_MAX: in, optional, type = numeric, Default=MAX(data)
+;    VAL_MAX: in, optional, type = numeric, default=MAX(data)
 ;             the maximum data value to level (ignored if levels is set using 'set_plot_params')
 ;
 ;    KEEP_LEVELS: in, optional, type = BOOLEAN
@@ -1032,6 +1033,33 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
 end
 
 
+;+
+; :Description:
+;    If you want to add wind vectors to your plot.
+;
+; :Params:
+;    ud: in, required, type = 2d array
+;        the wind field in U direction
+;    vd: in, required, type = 2d array
+;        the wind field in V direction
+;    grid: in, required, type = w_grid2d
+;          the grid associated to the wind field (same X and Y dimensions as ud and vd)
+;
+; :Keywords:
+;    DENSITY: in, optional, type = long, default = 3
+;             the vectors density, in grid points. Supported are (1,3,5,7)
+;    LENGTH: in, optional, type = float, default = 0.08
+;            The maximum vectorlength relative to the plot data 
+;    THICK: in, optional, type = float, default = 1
+;           vectors thickness
+;    COLOR: in, optional, type = string, default = "black"
+;           vectors color
+;
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
 function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK=thick, COLOR = color
                              
   
@@ -1059,7 +1087,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
    self.wind_params.type = type
    self.wind_params.length = length
    self.wind_params.thick = thick
-   self.wind_params.thick = color
+   self.wind_params.color = color
    return, 1
   endif  
   
@@ -1282,14 +1310,14 @@ function w_Map::draw_wind, WINDOW = window
   compile_opt idl2
   @WAVE.inc
   
-  partvelvec, self.wind_params.velx, $
-              self.wind_params.vely, $
-              self.wind_params.posx, $
-              self.wind_params.posy, $
-              VECCOLORS=cgColor(self.wind_params.color), $
-              LENGTH = self.wind_params.length, $
-              thick = self.wind_params.thick, $              
-              /OVER,  /DEVICE, WINDOW = window
+  w_partvelvec, *self.wind_params.velx, $
+                *self.wind_params.vely, $
+                *self.wind_params.posx, $
+                *self.wind_params.posy, $
+                VECCOLORS=cgColor(self.wind_params.color), $
+                LENGTH = self.wind_params.length, $
+                thick = self.wind_params.thick, $              
+                /OVER,  /DEVICE, WINDOW = window
   
   return, 1
   
@@ -1374,7 +1402,7 @@ end
 ;     Written by FaM, 2011.
 ;
 ;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap
+pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, LABELS = labels
 
   ;--------------------------
   ; Set up environment
@@ -1400,14 +1428,14 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap
     xwin = !D.WINDOW
   endelse
   
-  if N_ELEMENTS(BAR_TAGS) eq 0 then bar_TAGS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
+  if N_ELEMENTS(LABELS) eq 0 then LABELS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
   
   if self.plot_params.nlevels lt 40 then begin
-    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=bar_tags, Position=[0.20,0.05,0.30,0.95], $
+    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=[0.20,0.05,0.30,0.95], $
       TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=2.
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
-    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=FSC_Color('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=2.,$
+    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=cgColor('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=2.,$
       TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val, WINDOW=cgWIN
   endelse
   

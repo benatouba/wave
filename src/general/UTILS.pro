@@ -433,7 +433,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
     else  time = [time, QMS_TIME(YEAR=y, MONTH=m, DAY=d, HOUR=h)]
   endfor
   time = time[sort(time)]    
-  if ~check_TS(time) then message, '  The files do not form a continous time serie.'
+  if ~check_TimeSerie(time) then message, '  The files do not form a continous time serie.'
   
   if ~KEYWORD_SET(NOSHIFT) then time = time[1:(N_ELEMENTS(time)-1)]
   nt = N_ELEMENTS(time)
@@ -1206,7 +1206,7 @@ end
 ;
 ; :Keywords:
 ;    COLORS: in, optional
-;            if it is a 1-dimensional vector, the colors to convert (strings ins FSC_colors, 
+;            if it is a 1-dimensional vector, the colors to convert (strings in cgcolor, 
 ;            indexes in the current color table, etc.)
 ;            if it is a two dimensional vector, it must be 3xN dimensional whereas the three 
 ;            first columns are the RGB values. 

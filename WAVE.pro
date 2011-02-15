@@ -126,6 +126,8 @@ end
 ;          title of the dialog window if `talk` is set
 ;    TALK: in, optional, type = boolean, default = 0
 ;          if you want the error message to be popped up
+;    _Extra: in, optional
+;            all keywords accepted by `message`
 ;
 ; :Returns: 
 ;   'OK'

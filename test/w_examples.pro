@@ -1,5 +1,19 @@
+; docformat = 'rst'
+;+
+;
+; Here you will find some examples of code to realize some tasks using the 
+; WAVE library.
+;
+;-
 
-pro examples_w_TimeLinePlot
+;+
+; :Description:
+; 
+;    How To make some line plots with a time axis and save them as png or postscript. 
+;
+;
+;-
+pro w_examples_TimeLinePlot
   
   data = cgDemoData(17)
   n = N_ELEMENTS(data)
@@ -46,7 +60,13 @@ pro examples_w_TimeLinePlot
 
 end
 
-pro examples_w_ScatterPlot
+;+
+; :Description:
+;    How To make a scatter plot
+;
+;
+;-
+pro w_examples_ScatterPlot
   
   x = cgDemoData(17)
   n = N_ELEMENTS(x)
@@ -65,16 +85,29 @@ pro examples_w_ScatterPlot
   
 end
 
-
-pro examples_w_working_with_gis_objects      
+;+
+; :Description:
+; 
+;    How To use gis objects.
+;
+;
+;-
+pro w_examples_working_with_gis_objects      
 
   
 end
 
-; Make its own map from the scratch (you will probably never need this...)
-pro examples_working_with_w_map, RESIZABLE = resizable 
-   
-   ; 1. define a grid for the map
+;+
+; :Description:
+; 
+;    How To make a colour full 2D plot. 
+;
+;
+;-
+pro w_examples_working_with_w_map, RESIZABLE = resizable 
+
+   ; 1. define a grid for the map from the scratch 
+   ; (you will probably not have to do this, unless you have specific mapping needs)
    GIS_make_proj, ret, proj, PARAM='1, WGS-84' ; This is the standard lat-lon rectangular projection (easy but ugly ;-)
    x0 = 5.  ; top left corner lon 
    y0 = 60. ; top left corner lat
@@ -138,11 +171,14 @@ pro examples_working_with_w_map, RESIZABLE = resizable
    map->show_img, RESIZABLE = resizable
    map->show_color_bar, RESIZABLE = resizable
    
-   ;6. Alternative
-   pok = where(lst gt 1, cnt)  
-   cgWindow, WXSIZE=500, WYSIZE=300
-   cgHistoplot, lst[pok], BINSIZE = 3, LOCATIONS = locs, /WINDOW
-  
+   ;6. Finite color scale
+   my_levels = INDGEN(11) * 3 + 2
+   my_tags =  str_equiv(my_levels)
+   CTLOAD, 13 ; I want to have it colorfull
+   dummy = map->set_plot_params(LEVELS=my_levels)
+   map->show_img, RESIZABLE = resizable
+   map->show_color_bar, RESIZABLE = resizable, TITLE='Celsius', LABELS = my_tags
+   
     ok = DIALOG_MESSAGE('Do you want to close all windows?', /QUESTION) ;else ok = 'no'
     if ok eq 'Yes' then begin
       cgDelete, /All

@@ -573,7 +573,7 @@ pro TEST_MAKE_ENDED_TIME_SERIE
   
 end
 
-pro TEST_check_TS
+pro TEST_check_TimeSerie
 
   @WAVE.inc
 
@@ -584,14 +584,14 @@ pro TEST_check_TS
   
   goodTS = MAKE_ENDED_TIME_SERIE(startTime, endTime, TIMESTEP=step, NSTEPS = nsteps)
   
-  ok = check_TS(goodTS, probableStep)
+  ok = check_TimeSerie(goodTS, probableStep)
   
   if ok eq false then error+=1
   if probableStep.dms ne step.dms then error+=1
   
   badTS = [goodTS[0:4],goodTS[6:9],goodTS[11:*]]
   
-  ok = check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
+  ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
   
   if ok eq TRUE then error+=1
   if step.dms ne probableStep.dms then error+=1
@@ -600,7 +600,7 @@ pro TEST_check_TS
   if mis[0] ne 5 then error+=1
   if mis[1] ne 10 then error+=1  
   
-  if error ne 0 then message, '% TEST_check_TS NOT passed', /CONTINUE else print, 'TEST_check_TS passed'
+  if error ne 0 then message, '% TEST_check_TimeSerie NOT passed', /CONTINUE else print, 'TEST_check_TimeSerie passed'
   
 end
 
@@ -618,14 +618,14 @@ pro TEST_TS_FILL_MISSING
   goodTS = MAKE_ENDED_TIME_SERIE(startTime, endTime, TIMESTEP=step, NSTEPS = nsteps)
   goodData = (cgDemoData(17))[0:nsteps-1]
 
-  ok = check_TS(goodTS, probableStep)  
+  ok = check_TimeSerie(goodTS, probableStep)  
   if ok eq false then error+=1
   if probableStep.dms ne step.dms then error+=1
 
   badTS = [goodTS[1:4],goodTS[6:9],goodTS[11:40]]
   badData = [goodData[1:4],goodData[6:9],goodData[11:40]]
   missT = [0,5,10,41,42,43,44,45,46,47,48]  
-  ok = check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
+  ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
   if ok eq TRUE then error+=1  
   filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
   if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
@@ -638,7 +638,7 @@ pro TEST_TS_FILL_MISSING
   badTS = [goodTS[0:4],goodTS[6:9],goodTS[11:40],goodTS[48]]
   badData = [goodData[0:4],goodData[6:9],goodData[11:40],goodData[48]]
   missT = [5,10,41,42,43,44,45,46,47]  
-  ok = check_TS(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
+  ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
   if ok eq TRUE then error+=1  
   filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
   if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
@@ -794,14 +794,14 @@ pro TEST_TRMM_3B42
     if lat[1439,399] ne 49.875 then error += 1
     
     ;TEST ts
-    if trmm_3B42->get_TS('lon', 0, 0)  ne -179.875 then error += 1
-    if trmm_3B42->get_TS('lon', 0, 399) ne -179.875 then error += 1
-    if trmm_3B42->get_TS('lon', 1439,0) ne 179.875 then error += 1
-    if trmm_3B42->get_TS('lon', 1439,399) ne 179.875 then error += 1    
-    if trmm_3B42->get_TS('lat', 0, 0)  ne -49.875 then error += 1
-    if trmm_3B42->get_TS('lat', 1439,0) ne -49.875 then error += 1
-    if trmm_3B42->get_TS('lat', 0,399) ne 49.875 then error += 1
-    if trmm_3B42->get_TS('lat', 1439,399) ne 49.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 0, 0)  ne -179.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 0, 399) ne -179.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 1439,0) ne 179.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 1439,399) ne 179.875 then error += 1    
+    if trmm_3B42->get_TimeSerie('lat', 0, 0)  ne -49.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', 1439,0) ne -49.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', 0,399) ne 49.875 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', 1439,399) ne 49.875 then error += 1
     
     trmm_3B42->Get_LonLat, gislon, gislat, nx, ny
     if total(abs(gislon-lon)) gt 1e-6 then  error += 1
@@ -831,7 +831,7 @@ pro TEST_TRMM_3B42
     if vtime ne time then error += 1
     if total(abs(varOrig-varPcp)) ne 0 then  error += 1
     
-    ts = trmm_3B42->get_Pcp_TS(1,1, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    ts = trmm_3B42->get_Prcp_TimeSerie(1,1, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
     if ts ne varPcp[1,1] then error += 1
     if pi ne 1 then error += 1
     if pj ne 1 then error += 1    
@@ -839,7 +839,7 @@ pro TEST_TRMM_3B42
     if plat ne -49.875+0.250  then error += 1
     
     GIS_make_datum, ret, datum, NAME='WGS-84'
-    ts = trmm_3B42->get_Pcp_TS(-179.870,-49.870, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    ts = trmm_3B42->get_Prcp_TimeSerie(-179.870,-49.870, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
     if ts ne varPcp[0,0] then error += 1
     if pi ne 0 then error += 1
     if pj ne 0 then error += 1    
@@ -847,7 +847,7 @@ pro TEST_TRMM_3B42
     if plat ne -49.875 then error += 1
     
     GIS_make_datum, ret, datum, NAME='WGS-84'
-    ts = trmm_3B42->get_Pcp_TS(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    ts = trmm_3B42->get_Prcp_TimeSerie(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
     if ts ne varPcp[pi,pj] then error += 1
     if abs(plon - lon[pi,pj]) gt 1e-10 then error += 1
     if abs(plat - lat[pi,pj]) gt 1e-10 then error += 1
@@ -919,14 +919,14 @@ pro TEST_TRMM_3B42
     if lat[nx-1,ny-1] ne 45.125 then error += 1   
     
         ;TEST ts
-    if trmm_3B42->get_TS('lon', 0, 0)  ne 70.125 then error += 1
-    if trmm_3B42->get_TS('lon', 0, ny-1) ne 70.125 then error += 1
-    if trmm_3B42->get_TS('lon', nx-1,0) ne 120.125 then error += 1
-    if trmm_3B42->get_TS('lon', nx-1,ny-1) ne 120.125 then error += 1    
-    if trmm_3B42->get_TS('lat', 0, 0)  ne 10.125 then error += 1
-    if trmm_3B42->get_TS('lat', nx-1,0) ne 10.125 then error += 1
-    if trmm_3B42->get_TS('lat', 0,ny-1) ne 45.125 then error += 1
-    if trmm_3B42->get_TS('lat', nx-1,ny-1) ne 45.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 0, 0)  ne 70.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', 0, ny-1) ne 70.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', nx-1,0) ne 120.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lon', nx-1,ny-1) ne 120.125 then error += 1    
+    if trmm_3B42->get_TimeSerie('lat', 0, 0)  ne 10.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', nx-1,0) ne 10.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', 0,ny-1) ne 45.125 then error += 1
+    if trmm_3B42->get_TimeSerie('lat', nx-1,ny-1) ne 45.125 then error += 1
     
     trmm_3B42->Get_LonLat, gislon, gislat, gisnx, gisny
     if gisnx ne nx then  error += 1
@@ -950,7 +950,7 @@ pro TEST_TRMM_3B42
     if total(abs(varOrigCrop-varPcp)) ne 0 then  error += 1
     
     GIS_make_datum, ret, datum, NAME='WGS-84'
-    ts = trmm_3B42->get_Pcp_TS(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
+    ts = trmm_3B42->get_Prcp_TimeSerie(94.875,19.875, SRC=datum, POINT_I=pi, POINT_J=pj, POINT_LAT=plat, POINT_LON=plon)
     if ts ne varPcp[pi,pj] then error += 1
     if abs(plon - lon[pi,pj]) gt 1e-10 then error += 1
     if abs(plat - lat[pi,pj]) gt 1e-10 then error += 1
@@ -1604,13 +1604,13 @@ pro TEST_WRF_OUT
     if ~ok then error+=1
     dom1->get_LONLAT, lon, lat, nx, ny
     
-    plon = DOM1->get_TS('XLONG', 90.,29.,SRC=dat)
-    plat = DOM1->get_TS('XLAT', 90.,29.,SRC=dat)
+    plon = DOM1->get_TimeSerie('XLONG', 90.,29.,SRC=dat)
+    plat = DOM1->get_TimeSerie('XLAT', 90.,29.,SRC=dat)
     
     if abs(pLON[0]-90.) gt MEAN(LON[1:*,0]-LON[0:NX-2,0])/2. then error +=1
     if abs(pLAT[0]-29.) gt MEAN(LAT[0,1:*]-LAT[0,0:Ny-2])/2. then error +=1
     
-    dom1->plot_TS, 'T2', 90.1, 31.2, src = dat 
+    dom1->plot_TimeSerie, 'T2', 90.1, 31.2, src = dat 
     ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
@@ -1736,6 +1736,53 @@ pro TEST_WRF_GEO
     
     OBJ_DESTROY, dom1     
     if error ne 0 then message, '% TEST_WRF_GEO NOT passed', /CONTINUE else print, 'TEST_WRF_GEO passed'
+        
+end
+
+
+pro TEST_W_MAP
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    map =  OBJ_NEW('w_map', wrf, YSIZE=600)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1)
+    
+    ok = wrf->define_subset(CROPBORDER=20)
+    if not ok then error +=1
+    
+    T2 = (wrf->get_Var('T2'))[*,*,8]
+    CTLOAD, 13   
+    ok = map->set_plot_params(N_LEVELS=125)
+    if not ok then error +=1
+    ok = map->set_data(t2, wrf, MISSING = -999.)
+    if not ok then error +=1
+    u = TOTAL(wrf->get_Var('U10', time, nt), 3)
+    v = TOTAL(wrf->get_Var('V10'), 3)
+    u = u / nt
+    v = v / nt
+    ok = map->set_wind(u, v, wrf, density = 3)
+    if not ok then error +=1
+    
+    map->show_img, /RESIZABLE
+    ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
+    if ok eq 'No' then error += 1
+       
+    ok = map->set_wind()
+    map->show_img, /RESIZABLE
+    if not ok then error +=1
+    ok = DIALOG_MESSAGE('Do you see a temperature plot without wind vectors?', /QUESTION)
+    if ok eq 'No' then error += 1
+    cgDelete, /ALL
+    OBJ_DESTROY, wrf     
+    OBJ_DESTROY, map     
+    if error ne 0 then message, '% TEST_W_MAP NOT passed', /CONTINUE else print, 'TEST_W_MAP passed'
         
 end
 
@@ -2149,7 +2196,7 @@ pro TEST_TIME
   TEST_MAKE_TIME_STEP
   TEST_MAKE_TIME_SERIE
   TEST_MAKE_ENDED_TIME_SERIE
-  TEST_check_TS
+  TEST_check_TimeSerie
   TEST_TS_FILL_MISSING
   TEST_TS_MEAN
 end
@@ -2162,6 +2209,7 @@ pro TEST_DATASETS, NCDF = ncdf
   TEST_WRF_OUT
   TEST_WRF_GEO
   TEST_MODIS  
+  TEST_W_MAP
 end
 
 pro TEST_UTILS

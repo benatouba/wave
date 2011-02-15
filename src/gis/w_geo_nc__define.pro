@@ -580,7 +580,7 @@ end
 ;          09-Dec-2010 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;-
-function w_GEO_nc::get_TS, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
+function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
                           i, j, $
                           time,  $
                           nt,  $
