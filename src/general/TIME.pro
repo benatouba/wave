@@ -1,5 +1,4 @@
 ; docformat = 'rst'
-
 ;+
 ; 
 ; This bundle of structures and procedures gives a background to the WAVE user
@@ -1801,42 +1800,58 @@ function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXE
 
 end
 
-
-;-----------------------------------------------------------------------
 ;+
-; NAME:
-;       TIB_AWS_MEAN_SERIE
+; :Description:
+;    Computes interval mean values and other statistics from a time serie. 
+;    Both input and output time series can be irregular. You can compute hourly 
+;    means by e.g. setting the `HOUR` keyword to 1, the first and last time
+;    being computed automatically, or by setting the desired output
+;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
+;    output time serie).
+;    
+;    !CAREFULL: it can be confusing: The value at 13:00 is the mean value from 13:01 to 14:00 !
 ;
-; PURPOSE:
-;       TIB_AWS_MEAN_SERIE computes daily or hourly mean values from a time serie.
-;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-;       ! it can be confusing: The value at 13:00 is the mean value from 13:01 to 14:00 ! 
-;       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; :Params:
+;    data: in, required, type = array
+;          the data serie to analyse
+;    time: in, required, type = {ABS_DATE}/qms
+;          the associated time (same size as data)
 ;
-; CATEGORY:
-;       AWS
+; :Keywords:
+;    MISSING: in, optional, default = NaN
+;             if no value is found within an interval, the missing
+;             value is assigned the the statistics
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored i `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded) 
+; 
+; :Returns:
+;     A structure of the form::
+;     
+;        {nt: number of elements in the time serie
+;         time: the time in qms
+;         mean: the mean value for each time interval
+;         min: the min value for each time interval
+;         max: the max value for each time interval
+;         tot: the sum of all values for each time interval
+;         nel: the number of elements found in each interval
+;         stddev: the standard deviation of the data within the intervals
+;         }
 ;
-; CALLING SEQUENCE:
-;       result = TIB_AWS_MEAN_SERIE, value, time, newtime [, MAXS = maxs, MINS = mins, /DAY, /HOUR]
+; :History:
+;     Written by FaM, 2011.
 ;
-; INPUT:
-;       value: the time serie
-;       time:  corresponding time
-;
-; OUTPUT:
-;       result: the mean values
-;       newtime: the time of the result
-;
-; KEYWORDS:
-;       MAXS = maxs: if you need it, the maximums
-;       MINS = mins: if you need it, the minimus 
-;       /DAY: if you want the daily vals
-;       /HOUR: if you want the hourly vals
-;       /SIXHOUR: if you want 6 hourly vals
 ;-
-;-----------------------------------------------------------------------
 function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
-           DAY = day, HOUR = hour, MONTH = month, NEW_TIME = new_time
+           DAY = day, HOUR = hour, NEW_TIME = new_time
 
 
   ; Set Up environnement
@@ -1865,12 +1880,6 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
     qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms   
     
     regular = TRUE
-    
-  endif else if KEYWORD_SET(MONTH) then begin
-  
-    regular = FALSE
-    
-    message, 'Month currently not implemented: use the $new_time keyword.'
     
   endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
     
@@ -1933,8 +1942,8 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
            min:mins, $
            max:maxs, $
            tot:tots, $
-           stddev:stddevs, $
-           nel:nels }
+           nel:nels,$ 
+           stddev:stddevs}
 
 end
 

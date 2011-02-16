@@ -37,7 +37,8 @@
 ;                   The color for the vectors, axes and titles.
 ;                   Default=!P.COLOR
 ;
-;       OVER:       Plot over the previous plot
+;       OVER:       in, optional
+;                   Plot over the previous plot
 ;
 ;       VECCOLORS:  in, optional
 ;                   The vector colors. Must be either a scalar, or
