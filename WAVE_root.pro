@@ -12,7 +12,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  22-Nov-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 ;+
@@ -24,15 +24,8 @@
 ;    root: out, type = string
 ;          The path to the WAVE library
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;           
 ; :History:
-;       Written by Fam, 2009
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+;       Written by FaM, 2009
 ;-
 pro WAVE_root, root
 

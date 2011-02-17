@@ -15,7 +15,7 @@
 ;       
 ;       =================================================================
 ; :Properties:
-; todo: describe properties
+; TODO: DOC: describe properties
 ;                 
 ;          NUM_GRIDS: in, type = long                
 ;          NUM_POINTS: in, type = long                
@@ -38,16 +38,8 @@
 ; :Categories:
 ;         WAVE/OBJ_GIS   
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF_EOS__Define
  
@@ -74,16 +66,9 @@ END
 ; :Keywords:
 ;    FILE: in, optional, type = string
 ;          the path to the HDF_EOS file. If not set, a dialog window will open
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;          
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;    Written by FaM, 2010.
 ;-
 Function W_HDF_EOS::Init, FILE = file
            
@@ -125,8 +110,6 @@ END
 ;+
 ; :Description:
 ;    Get access to some params. 
-;: FaM, 2010
-;       Modified:   04-Nov-2010 FaM
 ;                 
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -138,16 +121,8 @@ END
 ;    _Ref_Extra: out, optional   
 ;                see #HDF:GetProperty#
 ;                
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF_EOS::GetProperty, $
                   NUM_GRIDS     =      NUM_GRIDS, $          
@@ -182,17 +157,9 @@ end
 ;              Global attributes wont be written in the ASCII file 
 ;    NO_VARIABLES: in, optional, type = string
 ;                  variable wont be written in the ASCII file 
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF_EOS::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables
 

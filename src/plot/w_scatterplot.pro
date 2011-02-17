@@ -32,7 +32,6 @@
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-
 pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
                    RANGE = range, NOFIT = nofit, NOCORRELATION = nocorrelation, COLOR = color, PSYM=psym, $

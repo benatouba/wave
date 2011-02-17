@@ -64,16 +64,8 @@
 ;    
 ; :Private: 
 ;           
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;
 ;-
 pro TIME_init
 
@@ -180,17 +172,8 @@ end
 ;     03.02.2003 06:00:00
 ;     04.02.2003 06:00:00
 ;    
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
                       TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day
@@ -241,7 +224,7 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
     if nT lt n then time_str = [time_str, STRARR(n - nT) + time_str[nT-1]]
     if nD lt n then date_str = [date_str, STRARR(n - nD) + date_str[nD-1]]
          
-    ; TODO: unefficient to use GEN_str_time here ...
+    ; TODO: Update routine: unefficient to use GEN_str_time here ...
     GEN_str_time, ret, tt, DSTR=DATE_Str, DMASK='DD.MM.YYYY',TSTR=time_str,TMASK='HH:MM:SS' 
     my_time = LONG64(tt.qt)* D_QMS + LONG64(tt.hour)* H_QMS + LONG64(tt.minute)* M_QMS + LONG64(tt.second)* S_QMS
         
@@ -386,17 +369,8 @@ end
 ;    15.10.1984 01:02:03
 ;    16.10.1984 01:02:03
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond
 
@@ -547,18 +521,9 @@ end
 ;   01.04.2008 00:00:00
 ;   
 ; It is also usefull if you want to convert your qms(s) in date structures.
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+; 
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
                           QMS = qms, TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, REFdate = refdate, JULIAN_DAY = julian_day
@@ -721,18 +686,8 @@ end
 ;  IDL> print, TIME_to_STR(shift)
 ;  01.09.1999 00:00:00
 ;    
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond
 
@@ -884,18 +839,9 @@ end
 ;   2010.11.22 16:46:13
 ;   IDL> print, TIME_to_STR(time)
 ;   22.11.2010 16:46:13
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;   
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
 
@@ -980,17 +926,8 @@ end
 ; :Returns:
 ;    the time in Dulian Days
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function TIME_to_JD, time
 
@@ -1083,18 +1020,9 @@ end
 ;        SECOND          LONG                 0
 ;        MILLISECOND     LONG                 0
 ;        DMS             LONG64                  -3540000
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;        
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, DMS = dms
 
@@ -1208,18 +1136,9 @@ end
 ;     01.07.2007 00:00:00
 ;     01.04.2007 00:00:00
 ;     01.01.2007 00:00:00
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;     
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=year, MONTH=month, QMSTIME = qmstime
 
@@ -1356,18 +1275,9 @@ end
 ;      01.01.2006 00:00:00
 ;      01.01.2005 00:00:00
 ;      01.01.2004 00:00:00
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;      
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = nsteps, YEAR = year, MONTH = month, QMSTIME = qmstime
 
@@ -1536,18 +1446,9 @@ end
 ;       IDL> plot, MYDATA, color = cgCOLOR('blue'), BACKGROUND = cgCOLOR('white')
 ;       IDL> oplot, RECONSTRUCTEDDATA, color = cgCOLOR('red'), LINESTYLE = 2
 ;    
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function check_TimeSerie, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
 
@@ -1636,17 +1537,9 @@ end
 ; :Returns:
 ;    TRUE if the 'time' is a good WAVE time format, FALSE in all other cases.
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          07-Dec-2010 FaM
-;          first appearance
 ;-
 function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_ABSDATE = was_absdate, WAS_QMS = was_qms
 
@@ -1703,14 +1596,8 @@ end
 ;    cnt: out
 ;         the number of index(es) found
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-
 function search_Wtime, ts, time, pos = pos, cnt = cnt
   
@@ -1752,11 +1639,8 @@ end
 ; :Returns:
 ;    An array of same size as 'new_time' similar to 'data' but with gaps filled.
 ;  
-;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-
 function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXES = indexes
 
@@ -1848,7 +1732,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-
 function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
            DAY = day, HOUR = hour, NEW_TIME = new_time
@@ -1899,7 +1782,7 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
     endcase
   endif
   
-  regular = false ;TODO: implement regular with hitogram
+  regular = false ;TODO: Update routine: implement regular with hitogram
   
   if regular then begin
   

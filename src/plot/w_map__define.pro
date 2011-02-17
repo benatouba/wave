@@ -34,15 +34,13 @@
 ;
 ; :Properties:
 ;      
-;      
+;     
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
 ;            TU Berlin
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-     
  
 ;+
@@ -52,7 +50,6 @@
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-    
 PRO w_Map__Define
  
@@ -149,8 +146,6 @@ END
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES = no_countries
      
@@ -193,7 +188,6 @@ END
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-    
 pro w_Map::DestroyPlotParams
 
@@ -213,7 +207,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-    
 pro w_Map::DestroyWindParams
 
@@ -237,7 +230,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-  
 pro w_Map::DestroyMapParams
 
@@ -261,7 +253,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-  
 pro w_Map::DestroyShapes
 
@@ -289,7 +280,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-    
 pro w_Map::Cleanup
 
@@ -315,8 +305,6 @@ END
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
     
@@ -376,9 +364,7 @@ end
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
 ;
 ; :History:
-;     Written by FaM, 201.
-;
-;
+;     Written by FaM, 2011.
 ;-    
 function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
                                     COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color
@@ -467,7 +453,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-    
 function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
   
@@ -555,8 +540,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
   
@@ -592,7 +575,6 @@ end
 ;
 ; :History:
 ;     Written by DiS, FaM, 2011
-;
 ;-
 function w_Map::set_topography, GRDFILE = grdfile
   
@@ -629,7 +611,7 @@ function w_Map::set_topography, GRDFILE = grdfile
   if str_equiv(spli[1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
   hdr = spli[0] + '.hdr'
   
-  self.grid->get_Lonlat, lon, lat, nx, ny ; TODO: change this into GRID kind of things  
+  self.grid->get_Lonlat, lon, lat, nx, ny ; TODO: Update routine: change this into GRID kind of things  
   self.grid->getProperty, tnt_c = c
   
   ; Open DEM grid
@@ -715,11 +697,8 @@ end
 ;                   an array containing the id of the shape entities to keep for the plot. 
 ;                   All other entities are ignored.
 ;
-;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
                                     COLOR = color, THICK = thick, STYLE = style, $
@@ -772,7 +751,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    range = [min(glon),max(glon),min(glat),max(glat)]
   end
   if is_proj then begin
-   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: this
+   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: Update routine: this
   end
   
   ; read shp file and create polygon object from entities
@@ -881,8 +860,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::set_img
   
@@ -958,8 +935,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max, KEEP_LEVELS = keep_levels
                              
@@ -1060,7 +1035,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-
 function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK=thick, COLOR = color
                              
@@ -1143,8 +1117,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::img_to_rgb
 
@@ -1170,8 +1142,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::shading
 
@@ -1234,8 +1204,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-    
 function w_Map::draw_map, WINDOW = window  
   
@@ -1265,8 +1233,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-   
 function w_Map::draw_shapes, WINDOW = window  
   
@@ -1301,8 +1267,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-  
 function w_Map::draw_wind, WINDOW = window
 
@@ -1335,8 +1299,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-   
 pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
 
@@ -1402,7 +1364,6 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-   
 pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, LABELS = labels
 

@@ -78,7 +78,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 
@@ -99,17 +99,8 @@
 ; :Categories:
 ;         WAVE/OBJ_GIS   
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 PRO w_Grid2D__Define
  
@@ -164,17 +155,8 @@ END
 ; :Returns:
 ;    1 if the NCDF object is updated successfully, 0 if not
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 Function w_Grid2D::ReInit ,  $
     nx = nx           ,  $
@@ -326,17 +308,8 @@ END
 ; :Returns:
 ;    1 if the NCDF object is updated successfully, 0 if not
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 Function w_Grid2D::Init ,  $
     nx = nx           ,  $
@@ -387,17 +360,8 @@ END
 ; :Categories:
 ;    WAVE/OBJ_GIS   
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_Grid2D::Cleanup
 
@@ -432,18 +396,8 @@ END
 ;       meta: out, optional, type = string
 ;               a string containg infos about the grid.
 ;
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longitudes of the grid 
                             lat   =  lat   ,  $ ; 2D array containing the latitudes of the grid 
@@ -491,19 +445,9 @@ END
 ;            number of y elements
 ;       datum : out, optional, type = {TNT_DATUM}
 ;               the datum in which the lat and lon are defined
-;
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;               
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_Grid2D::Get_LonLat, lon, lat, nx, ny, datum
 
@@ -575,18 +519,8 @@ END
 ;       proj : out, optional, type = {TNT_PROJ}
 ;               the projection in which the E/N are defined
 ;
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_Grid2D::Get_XY, x, y, nx, ny, proj
 
@@ -637,18 +571,9 @@ END
 ;           the northings of (x,y) in the object grid 
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;             
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST=nearest
  
@@ -766,18 +691,9 @@ end
 ; :Keywords:
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;             
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 PRO w_Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST = nearest
  
@@ -821,18 +737,9 @@ end
 ; :Keywords:
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 PRO w_Grid2D::transform_XY, x, y, proj, i, j, NEAREST = nearest
 
@@ -877,17 +784,8 @@ end
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
 
@@ -924,7 +822,7 @@ end
 ;    which is very demanding in both memory and processor use. If your LatLon arrays are too
 ;    large, the program may lag or even go out of memory.
 ;       
-;    ! 05.11.2010: BACKWARDS METHOD NOT IMPLEMENTED YET !
+;    TODO: Update routine: ! 05.11.2010: BACKWARDS METHOD NOT IMPLEMENTED YET !
 ;    ====================================================
 ;       
 ;       
@@ -950,17 +848,8 @@ end
 ; :Returns:
 ;    the transformed data array in the grid (same dims)
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = missing, BACKWARDS = backwards
 
@@ -985,7 +874,7 @@ function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING =
   if siz[0] eq 3 then nt = siz[3]
   
   if KEYWORD_SET(BACKWARDS) then begin
-   ;TODO: implement this (idea is already here)
+   ;TODO: Update routine: implement this (idea is already here)
   endif else begin
   
     ntot =  N_ELEMENTS(data[*,*,0])
@@ -1042,17 +931,8 @@ end
 ; :Returns:
 ;    The remaped data array, of the same dimensions of the object grid, with an eventual 3rd dim (time/Z)
 ;    
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear
      
@@ -1159,17 +1039,8 @@ end
 ; :Returns:
 ;     A new w_Grid2D, which is a resampled version of the object grid
 ;     
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
 

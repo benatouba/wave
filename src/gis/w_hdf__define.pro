@@ -7,7 +7,7 @@
 ;       
 ;       It should be the superclass from all HDF related objects.
 ;       
-;        TODO: add the same functionalities as Ncdf.
+;        TODO: Update routines: add the same functionalities as Ncdf.
 ;       
 ; :Properties: 
 ;          path: in, type = string
@@ -50,17 +50,9 @@
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS   
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;         
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF__Define
  
@@ -91,17 +83,9 @@ END
 ; :Keywords:
 ;     FILE: in, optional, type = string
 ;           the path to the HDF file. If not set, a dialog window will open
-;          
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 Function w_HDF::Init, FILE = file
            
@@ -163,16 +147,8 @@ END
 ; :Categories:
 ;         WAVE/OBJ_GIS   
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;    Written by FaM, 2010.
 ;-
 pro w_HDF::Cleanup
 
@@ -205,17 +181,9 @@ END
 ;           The number of variables defined for this HDF file. 
 ;    Ngatts: out, type = long
 ;            The number of global attributes defined for this HDF file.
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;    
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF::GetProperty, $
             path = path, $  ; complete path of the active HDF file
@@ -269,17 +237,9 @@ end
 ; :Keywords:
 ;    PRINTVARS: in, optional
 ;               to print the infos in the console
-;               
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
@@ -367,7 +327,7 @@ end
 ; :Params:
 ;    Varid: in, required, type = integer/ string
 ;           HDF SD index (int) or name (string) of the desired variable
-;         todo: check keywords  
+;         TODO: DOC: Describe keywords (check) 
 ; :Keywords:
 ;        COUNT: in, optional, type = integer vector
 ;               An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
@@ -389,17 +349,9 @@ end
 ;                  the default behaviour id to check if calibration data is contained 
 ;                  in the HDF variable attributes and apply it to the variable. Set this
 ;                  keyword to avoid making an automatic calibration
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;                  
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable. 
                         COUNT=count, $ ; An optional vector containing the counts to be used in reading Value (see #HDF_SD_GetData#).
@@ -467,17 +419,8 @@ end
 ; :Returns:
 ;         1 if the variable id is valid, 0 if not
 ; 
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          First apparition for upgrade to WAVE 0.1
-;
 ;-
 function w_HDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                             out_id = out_id, $
@@ -564,16 +507,9 @@ end
 ;                to rotate the variable before plotting it
 ;    WID: out
 ;         the widget id
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_HDF::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, UPSIDEDOWN = UPSIDEDOWN, WID = wid
 
@@ -604,16 +540,8 @@ end
 ;    LUN: in, optional, type = string
 ;         If given, the dum routine will write into the given lun (/GET_LUN)
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, LUN = lun
 

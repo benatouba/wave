@@ -475,7 +475,7 @@ PRO w_QuickPlot_Resize, event
   ; Resize the draw widget.  
   info.thisWindow->SetProperty, Dimension=[event.x > 400, event.y-info.basesize]
 
-; TODO: keepratio doesnt work
+; TODO: Update routine: keepratio doesnt work
 ;  ; Keep the aspect ratio of the graphic?  
 ;  IF info.keepAspect THEN BEGIN
 ;    

@@ -9,7 +9,7 @@
 ; This is achieved by checking if the NetCDF file follows the COARDS conventions,
 ; and by verifiying some dimension names against a list of known suitable names.
 ; 
-; TODO: currently this list is hard coded, it would be better using configuration files
+; TODO: Update routine: currently this list is hard coded, it would be better using configuration files
 ; 
 ; The X, Y and time coordinates are then available through the 'get_ncdf_coordinates'
 ; and 'get_time' methods. Also, the 'QuickPlotVar' method is extended to include 
@@ -58,7 +58,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  15-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 
@@ -82,19 +82,9 @@
 ;            
 ; :Categories:
 ;         WAVE/OBJ_GIS   
-;         
-;    
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 PRO w_GEO_nc__Define
  
@@ -137,17 +127,8 @@ END
 ; :Returns:              
 ;     1 if the object has been created succesfully.
 ;     
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 Function w_GEO_nc::Init, FILE = file, SUBSET = subset
            
@@ -232,18 +213,9 @@ END
 ;    
 ; :Categories:
 ;    WAVE/OBJ_GIS   
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;    
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_GEO_nc::Cleanup
 
@@ -289,18 +261,9 @@ END
 ;            Four elements array: see file description 
 ;    _Ref_Extra: 
 ;        see 'NCDF:GetProperty' 
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;        
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 PRO w_GEO_nc::GetProperty  , $
             XID = XID    , $
@@ -355,18 +318,9 @@ end
 ;        first time in qms         (-1 if not found)   
 ;    t1: out, type = LL64
 ;        end time in qms         (-1 if not found) 
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;        
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_GEO_nc::get_time, time, nt, t0, t1
 
@@ -421,18 +375,9 @@ end
 ; 
 ; :Returns:
 ;         The variable
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
                           time,  $
@@ -445,7 +390,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                           varname = varname , $ ; 
                           dims = dims, $ ;
                           dimnames = dimnames ;
-                          ;TODO: add Keywords ZDIMID, ZDIMINDS
+                          ;TODO: Update routine: add Keywords ZDIMID, ZDIMINDS
                         
   
   ; SET UP ENVIRONNEMENT
@@ -568,17 +513,8 @@ end
 ; :Returns:
 ;         The variable
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
                           i, j, $
@@ -725,18 +661,10 @@ end
 ;               defaut behaviour is to return a 2D array of lats and lons. If they are one dimensional
 ;               in the original file, they will be transformed to the 2d equivalent arrays (see 'utils_1d_to_2d').
 ;               Set this keyword to prevent this action.
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;               
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Written for upgrade to WAVE 0.1
+
 ;-
 pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
@@ -837,16 +765,9 @@ end
 ;       if set, it defines the last time of the variable timeserie
 ;    WID: out
 ;         the widget id     
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;         
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WID = wid
   
@@ -919,17 +840,8 @@ end
 ; :Returns:
 ;     1 if the subset was defined succesfully.
 ;          
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_GEO_nc::define_subset, SUBSET = subset
 

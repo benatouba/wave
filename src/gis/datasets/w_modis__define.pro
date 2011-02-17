@@ -72,21 +72,9 @@
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
-;
-;
-;
-;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;          
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 PRO w_MODIS__Define
  
@@ -113,7 +101,6 @@ END
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
-;
 ; :Keywords:
 ;       FILE: in, optional, type = string 
 ;             the path to the MODIS file. If not set, a dialog window will open
@@ -130,19 +117,9 @@ END
 ;                 
 ;   :Returns:
 ;                 1 if the object is created successfully.        
-;
-;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;           
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 Function w_MODIS::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 
@@ -220,18 +197,8 @@ END
 ;    _Ref_Extra: 
 ;         see #w_HDF_EOS:GetProperty# and #w_Grid2D::GetProperty#
 ;
-;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 PRO w_MODIS::GetProperty, $  
                    t0 =  t0, $
@@ -295,18 +262,8 @@ end
 ; :Returns:
 ;           the variable
 ;
-;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function w_MODIS::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to HDF_VARDEF or HDF_VARID, or the name of the variable.                       
                        description = description , $ ; If available, the description of the variable
@@ -363,17 +320,8 @@ end
 ;    WID: out
 ;         the widget id
 ;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 pro w_MODIS::QuickPlotVar, Varid, NO_CALIB = NO_CALIB, LON_LAT = lon_lat, WID = wid
 
@@ -414,19 +362,8 @@ end
 ;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84 
 ;                   datum in which the Lat and Lons are defined. Default: WGS-84
 ;
-;
-;              
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 

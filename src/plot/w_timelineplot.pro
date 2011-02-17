@@ -175,7 +175,6 @@
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;
 ;-
 pro w_TimeLinePlot, data,$  ; array to plot
                     time, $   ; time (same size as data)
@@ -267,7 +266,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
     XTICKFORMAT = ['LABEL_DATE']
     xtunits = 'Days'
     xtinter = days 
-  endif else begin ;TODO: meliorate the automatic time AXIS definition
+  endif else begin ;TODO: Update routine: meliorate the automatic time AXIS definition
     s = MAKE_TIME_STEP(DMS=tqms[p2] - tqms[p1])
     if s.day gt 900 then begin
     dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])

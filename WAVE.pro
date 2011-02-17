@@ -27,7 +27,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  22-Nov-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 ;+
@@ -42,17 +42,9 @@
 ;    General/WAVE
 ;    
 ; :Private: 
-;           
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
-;       Written by Fam, 2009
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;
+;       Written by FaM, 2009
 ;-
 pro WAVE_init
 
@@ -132,16 +124,8 @@ end
 ; :Returns: 
 ;   'OK'
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
-;       Written by FaM, 13 Jul 2010 (Arranged from D. W. Fanning "Error_Message.pro")
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;
+;       Written by FaM, 2010. Arranged from D. W. Fanning "Error_Message.pro")
 ;-
 FUNCTION WAVE_Error_Message, theMessage   , $
     WARNING   = warning                   , $
@@ -376,16 +360,8 @@ END
 ;     IDL> print, WAVE_Std_Message()
 ;     Error unknown or not specified. 
 ;     
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
-;       Written by FaM, 13 Jul 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
-;
+;       Written by FaM, 2010.
 ;-
 function WAVE_Std_Message, var   , $
            ARG = arg       , $ 

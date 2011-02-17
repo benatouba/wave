@@ -44,15 +44,10 @@
 ;                   31.000000       31.000000       31.000000
 ;                   32.000000       32.000000       32.000000
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
+;       
 ;-
 pro utils_1d_to_2d, ax, ay, x, y
 
@@ -101,15 +96,9 @@ end
 ;    accumulated: in, required, default=none
 ;                 the accumulated variable (dim 1 or 3)
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
 ;-
 function utils_acc_to_step, accumulated
 
@@ -173,15 +162,8 @@ end
 ;    point in the input grid. 
 ;     
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
 ;-
 function utils_nearest_neighbor, ilon, ilat, flon, flat, DISTANCES = distances, $
                   CLASSICAL = classical, TRIANGULATION = triangulation, FOURPOINTS = fourpoints
@@ -309,15 +291,8 @@ end
 ; :Returns:
 ;     the fitted data   
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
 ;-
 function utils_compute_nearest_neighbor, pos, data
 
@@ -378,15 +353,8 @@ end
 ;    LL_DATUM: in, optional
 ;               the datum for 'SUBSET_LL'  (see 'w_TRMM')
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   15-Dec-2010 FaM
-;                   Written for upgrade to WAVE 0.1
 ;-
 pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = end_time, OUTFILE = outfile, $
     NOSHIFT = noshift, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
@@ -570,7 +538,7 @@ end
 ;    
 ;    !!! Not implemented yet !!!
 ;    see 'utils_TRMM_aggregate_3B42' 
-;    
+; TODO: Implement procedure   
 ;-
 pro utils_trmm_aggregate_3B43
     
@@ -591,16 +559,8 @@ end
 ;    objstring: in, type= , default=none
 ;    n_char: in, type= , default=none
 ;
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010
-;       Modified:   22-Nov-2010 FaM
-;                   Documentation for upgrade to WAVE 0.1
 ;-
 function utils_eod_get_metadata, pvlstring, objstring, n_char
 
@@ -640,17 +600,8 @@ end
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          10-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
 
@@ -805,17 +756,8 @@ end
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          10-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function utils_wrf_time, cdfid, time, time0, time1, nt
 
@@ -867,17 +809,8 @@ end
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          10-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function utils_nc_LonLat, cdfid, lon_id, lat_id
 
@@ -932,18 +865,10 @@ end
 ;             and the classes 25 to 33 are all set to 0. 
 ;             
 ;             If set, the mew dominant Category (LU_INDEX) will be computed, as well as the new LANDMASK.
-;             TODO: Carefull: SOILCTOP, SOILCBOT, SCT_DOM, SCB_DOM are NOT actualized, but this should be ok...
+; TODO: Update routine: Careful - SOILCTOP, SOILCBOT, SCT_DOM, SCB_DOM are NOT actualized, but this should be ok...
 ;             
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 16 Dec 2010 
-;       Modified:   16-Dec-2010 FaM
-;                   First aparition
-;
 ;-
 pro utils_usgs_24_to_33, file, NEW_LUF = new_luf
 
@@ -1154,20 +1079,11 @@ end
 ;     IDL> print, utils_aggregate_Grid_data(array, 2)
 ;            1.0000000       1.0000000
 ;            2.5000000       2.5000000
-; 
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          22-Dec-2010 FaM
-;          First apparition
-;
 ;-
-function utils_aggregate_Grid_data, array, ratio ; TODO: add grid update
+function utils_aggregate_Grid_data, array, ratio ; TODO: Update routine: add grid update
 
   ; Set Up environnement
   @WAVE.inc
@@ -1228,15 +1144,8 @@ end
 ;    B: out, optional
 ;       the equivalent rgB triplet
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2011.
-;
-;       Modified::
-;
 ;-
 function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, CMAX = cmax, INVERTCOLORS = INVERTCOLORS, R = r, G = g, B = b
 
@@ -1373,16 +1282,9 @@ end
 ;    r: out
 ;    g: out
 ;    b: out
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2011.
-;
-;
 ;-
 pro utils_color_rgb, color, r, g, b
    
@@ -1456,12 +1358,8 @@ end
 ;  :Returns:
 ;    Relative humidity [%]
 ;
-;
-; :Author: NCAR (NCL)
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
 ;-
 function utils_qv_to_rh, qv, p, t
   

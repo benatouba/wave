@@ -42,11 +42,8 @@
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;         
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;
 ;-
 PRO w_TRMM__Define
  
@@ -93,17 +90,8 @@ END
 ; :Returns:
 ;    1 if the object is created successfully. 
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 Function w_TRMM::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
            
@@ -188,17 +176,8 @@ END
 ; :Categories:
 ;    WAVE/OBJ_GIS   
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          22-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 pro w_TRMM::Cleanup
 
@@ -231,18 +210,8 @@ END
 ;          type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_agg', '3B43_agg'
 ;    _Ref_Extra: 
 ;        see 'w_GEO_nc:GetProperty' and 'w_Grid2D::GetProperty'
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 PRO w_TRMM::GetProperty,  $
                        type = type     ,  $ ; type of active file
@@ -290,18 +259,9 @@ end
 ; 
 ; :Returns:
 ;         The variable
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;         
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_TRMM::get_Var, varid, time, nt, _Ref_Extra = extra                     
   
@@ -349,18 +309,9 @@ end
 ; 
 ;  :Returns:
 ;     precipitation
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;     
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 function w_TRMM::get_prcp, time, nt, units = units, t0 = t0, t1 = t1
 
@@ -474,11 +425,6 @@ end
 ;         
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 pro w_TRMM::QuickPlotPrcp, WID = wid
 
@@ -537,18 +483,9 @@ end
 ;                     fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.                       
 ; :Returns:
 ;     1 if the subset was defined succesfully.
-;          
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;     
 ; :History:
 ;      Written by FaM, 2010.
-;       
-;       Modified::
-;          15-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function w_TRMM::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum
 

@@ -45,7 +45,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 ;+
@@ -69,17 +69,11 @@
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS   
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
 ; :Version:
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_NCDF__Define
  
@@ -127,7 +121,7 @@ END
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 Function w_NCDF::Init, FILE = file
            
@@ -205,7 +199,7 @@ END
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_NCDF::Cleanup
 
@@ -263,7 +257,7 @@ END
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_NCDF::GetProperty, $
     path = path, $
@@ -329,17 +323,9 @@ end
 ; :Keywords:
 ;    PRINTVARS: in, optional
 ;               to print the infos in the console
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;               
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
 
@@ -430,16 +416,8 @@ end
 ;    PRINTDIMS: in, optional
 ;               to print the infos in the console
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
 
@@ -483,18 +461,9 @@ end
 ; :Keywords:
 ;    PRINTGATTS: in, optional
 ;               to print the infos in the console
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;               
 ; :History:
-;     Last modification:  20-Dec-2010 FaM
-;     Added 
+;     Written by FaM, 2010.
 ;-
 pro w_NCDF::get_gattsList, gattsIds, gattNames, PRINTGATTS = printgatts
 
@@ -540,17 +509,8 @@ end
 ;    PRINTVATTS: in, optional
 ;                to print the infos in the console
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  20-Dec-2010 FaM
-;     Added 
+;    Written by FaM, 2010.
 ;-
 pro w_NCDF::get_VattsList, varid, vattsIds, vattNames, PRINTVATTS = printvatts
 
@@ -619,17 +579,9 @@ end
 ;
 ; :Returns:
 ;    The variable
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                         COUNT=COUNT, $ ; An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
@@ -694,18 +646,9 @@ end
 ; 
 ; :Returns:
 ;         1 if the variable id is valid, 0 if not
-; 
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
 ;
-; :History:
+;       :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          First apparition for upgrade to WAVE 0.1
-;
 ;-
 function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                             out_id = out_id, $
@@ -739,7 +682,7 @@ function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from 
   varinfo = NCDF_VARINQ(self.Cdfid, out_id)
   
   if ARG_PRESENT(varname) then varname = varinfo.Name
-  ;TODO: take account of the new self.gevatt routines
+  ;TODO: Update routine: take account of the new self.gevatt routines
   if ARG_PRESENT(description) then begin 
     description = ''
     for i = 0, varinfo.natts -1 do begin
@@ -802,16 +745,8 @@ end
 ; :Returns:
 ;    The global attribute
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 function w_NCDF::get_Gatt, attid 
   
@@ -844,17 +779,9 @@ end
 ;           the netcdf attribute ID (string)
 ; :Returns:
 ;         1 if the attribute id is valid, 0 if not
-; 
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin}
-;
-; :History:
-;     Written by FaM, 2010.
 ;
 ;       Modified::
-;          20-Dec-2010 FaM
-;          First apparition for upgrade to WAVE 0.1
+;         Written by FaM, 2010.
 ;
 ;-
 function w_NCDF::get_Gatt_Info, attid, OUT_ID = out_id
@@ -898,17 +825,9 @@ end
 ;
 ; :Returns:
 ;    The variable
-;
-; :Author:
-;       Roman Finkelnburg::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  13-Feb-2011 RoF
+;     Written by RoF, 2011.
 ;-
 function w_NCDF::get_VAtt, varid, attid
 
@@ -951,16 +870,8 @@ end
 ; :Returns:
 ;    The variable
 ;
-; :Author:
-;       Roman Finkelnburg::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  13-Feb-2011 RoF
+;     Written by RoF,2011.
 ;-
 function w_NCDF::get_VAtt_Info, varid, attid, OUT_ID = out_id
 
@@ -1004,16 +915,9 @@ end
 ;                to rotate the variable before plotting it
 ;    WID: out
 ;         the widget id
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
+;         
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid
 
@@ -1049,16 +953,8 @@ end
 ;    FILE: in, optional, type = string
 ;          An optional string containing the path to the output ASCII file. If not set, a dialog window will open
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
 ; :History:
-;     Last modification:  09-Dec-2010 FaM
+;     Written by FaM, 2010.
 ;-
 PRO w_NCDF::dump, FILE = file
 

@@ -22,7 +22,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  29-Nov-2010 FaM
+;     Written by FaM, 2010.
 ;-
 
 
@@ -43,17 +43,9 @@
 ; :Keywords:
 ;    CNT: out, optional, type =  numeric
 ;         the number of files found.
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;         
 ; :History:
-;       Written by FaM, 03 Dec 2010 
-;       Modified:   03-Dec-2010 FaM
-;                   First aparition
-;
+;       Written by FaM, 2010 
 ;-
 function POST_list_files, domain, directory, CNT = cnt
 
@@ -135,17 +127,8 @@ end
 ;   IDL> print, DIMTOKEEP
 ;   Time DateStrLen west_east south_north
 ;    
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          29-Nov-2010 FaM
-;          Extention of available actions to perform on the variables and upgrade to WAVE 0.1
 ;-
 function POST_parse_Vartokeep, file, vartokeep, dimtokeep
 
@@ -244,18 +227,9 @@ end
 ;
 ; :Returns:
 ;     a string of the same format as standard WRF files
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
 ;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          29-Nov-2010 FaM
-;          Doc for upgrade to WAVE 0.1
 ;-
 function POST_absDate_to_wrfstr, absDate
   
@@ -308,17 +282,8 @@ end
 ; :Returns:
 ;     a string of the same format as standard WRF files (2003-09-01_12_00_00)
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          29-Nov-2010 FaM
-;          Doc for upgrade to WAVE 0.1
 ;-
 function POST_absDate_to_wrffname, absDate
   
@@ -372,17 +337,8 @@ end
 ; :Returns:
 ;     a string of the format for WRF cropped directories (2003.09.01)
 ; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
-;       Written by FaM, 201.
-;       
-;       Modified::
-;          01-Jan-2011 FaM
-;          First appearance
+;       Written by FaM, 2011.
 ;-
 function POST_absDate_to_wrfdir, absDate
   
@@ -437,16 +393,8 @@ end
 ;           the output directory. If the file already exists, it will be overwritten.
 ;           default is to ask the user where to put the file
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
-;       Written by FaM, 03 Dec 2010 
-;       Modified:   03-Dec-2010 FaM
-;                   First aparition
-;
+;       Written by FaM, 2010.
 ;-
 pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
 
@@ -750,18 +698,9 @@ end
 ;                where to start the copy in the original files
 ;    e_index: in, required
 ;                where to end the copy in the original files
-; 
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;                
 ; :History:
 ;       Written by FaM, 2010.
-;       
-;       Modified::
-;          07-Dec-2010 FaM
-;          Upgrade to WAVE 0.1
 ;-
 pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index 
   
@@ -960,17 +899,9 @@ end
 ;              others.
 ;    VARTOKEEP_FILE: in, optional, type = string
 ;              The path to the variable file to parse (see 'POST_parse_Vartokeep').
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;              
 ; :History:
 ;       Written by FaM, 2010 
-;       Modified:   03-Dec-2010 FaM
-;                   Update to V0.1, added VarToKeep Files, and more
-;
 ;-
 pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
 
@@ -1491,7 +1422,7 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   ; Check the input
   ; ---------------
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select directory containing the directories to parse', /MULTIPLE_FILES)
-  directories = FILE_SEARCH(directory, '[12][0123456789][0123456789][0123456789].[0123456789][0123456789]', /EXPAND_ENVIRONMENT) ;TODO: not perfect
+  directories = FILE_SEARCH(directory, '[12][0123456789][0123456789][0123456789].[0123456789][0123456789]', /EXPAND_ENVIRONMENT) ;TODO: Update routine: not perfect
   ndirs = N_ELEMENTS(directories)
   if ndirs eq 0 then return
   if N_ELEMENTS(OUTdirectory) eq 0 then OUTdirectory = DIALOG_PICKFILE(TITLE='Please select directory to put the output', /DIRECTORY)  

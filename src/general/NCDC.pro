@@ -68,18 +68,9 @@
 ;
 ; :Returns:
 ;       An empty NCDC structure.
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;       
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_make_daily_data_struct, name, id, time, lat, lon, elev
 
@@ -138,18 +129,9 @@ end
 ;
 ;  :Returns:
 ;       An empty NCDC structure.
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
+;       
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_make_hourly_data_struct, name, id, time, lat, lon, elev
     
@@ -199,17 +181,8 @@ end
 ;  :Returns:
 ;       The corrected value(s) of the NCDC file.
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_VAL_from_ASCII, ascii_data, ascii_tag
 
@@ -363,17 +336,8 @@ end
 ;  :Returns:
 ;       The date in julian day format.
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_parse_htime, YRMODAHRMN
 
@@ -411,17 +375,8 @@ end
 ;  :Returns:
 ;       The date in julian day format.
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_parse_time, yearmoda
 
@@ -465,17 +420,8 @@ end
 ;  :Returns:
 ;       The values from all stations from the specified tag in a structure.
 ;
-; :Author:
-;       Fabien Maussion, Cornelia Klein::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, CoK 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_get_VALUES, data, tag, START_TIME = startT, END_TIME = endT
 
@@ -551,17 +497,8 @@ end
 ;          VALUES          FLOAT     Array[3653, 18]
 ;          WEATHER_IND     STRING    Array[3653]
 ;
-; :Author:
-;       Fabien Maussion, Cornelia Klein::
-;           FG Klimatologie
-;           TU Berlin
-;
 ; :History:
 ;       Written by FaM, CoK 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_DAILY_DATA, DIR_PATH = dir, START_TIME = startT, END_TIME = endT
 
@@ -684,22 +621,13 @@ end
 ; :Returns:
 ;       Data in the form of a structure (see the comment header for more info). 
 ;       If more than one station is parsed, an array of structures is returned.
-;
-; :Author:
-;       Fabien Maussion, Cornelia Klein::
-;           FG Klimatologie
-;           TU Berlin
-;
+;       
 ; :History:
 ;       Written by FaM, CoK 2009.
-;       
-;       Modified::
-;          24-Nov-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;-
 function NCDC_HOURLY_DATA, DIR_PATH = dir_path, TPL_PATH = tpl, START_TIME = startT, END_TIME = endT
 
-;TODO: a lot of "for" loops to remove  
+;TODO: Update routine: a lot of "for" loops to remove  
 
   ; Set up environment
 

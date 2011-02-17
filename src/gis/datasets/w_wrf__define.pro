@@ -57,19 +57,8 @@
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 PRO w_WRF__Define
  
@@ -98,7 +87,7 @@ END
 
 ;+
 ; :Description:
-;    Describe the procedure.
+;    TODO: DOC: Describe the procedure.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -109,18 +98,9 @@ END
 ;    LL_DATUM
 ;    CROPCHILD
 ;    CROPBORDER
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
                                SUBSET_IJ  = subset_ij,  $
@@ -343,22 +323,14 @@ end
 ;    LL_DATUM
 ;    CROPCHILD
 ;    CROPBORDER
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
-;-      
+;-   
+   
 ;+
 ; :Description:
-;    Describe the procedure.
+;    TODO: DOC: Describe the procedure.
 ;
 ;
 ;
@@ -382,22 +354,13 @@ end
 ;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
 ;       CROPCHILD:
 ;       CROPBORDER:
-;todo: finish keyword description
+;TODO: DOC: describe keywords
 ;
 ; :Returns:
 ;    1 if the object is created successfully. 
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-
 Function w_WRF::Init, FILE       = file     ,  $
                         SUBSET_LL  = subset_ll,  $
@@ -545,19 +508,8 @@ END
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 pro w_WRF::Cleanup
 
@@ -581,7 +533,7 @@ END
 ;+
 ; :Description:
 ;    Get access to some params. 
-; todo: complete keyword description
+; TODO: DOC: describe keywords
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
@@ -607,19 +559,9 @@ END
 ;                       ratio to parent
 ;    
 ;    _Ref_Extra:
-;                                      
-;                                
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 PRO w_WRF::GetProperty,  $
     cropped = cropped         ,  $ ;
@@ -664,7 +606,7 @@ end
 ;    This function reads a variable from the file but only
 ;    at a specific location.
 ;    
-;    todo: complete keyword description
+;    TODO: DOC: describe keywords
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -703,18 +645,9 @@ end
 ;          the variable dimensions
 ;    dimnames: out, type = string
 ;              the dimensions names
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;              
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 function w_WRF::get_TimeSerie, varid, x, y, $
                               time, nt, $
@@ -776,7 +709,7 @@ end
 ;            The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
 ;    x
 ;    y
-; todo: describe missing params/ keywords
+; TODO: DOC: describe params/keywords
 ; :Keywords:
 ;    t0: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the first time of the variable timeserie
@@ -784,17 +717,8 @@ end
 ;        if set, it defines the last time of the variable timeserie
 ;    src
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 pro w_WRF::plot_TimeSerie, varid, x, y, $
                            t0 = t0, t1 = t1, $
@@ -833,7 +757,7 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
                           dims = dims, $ ;
                           dimnames = dimnames )
   
-  ;TODO: if var dim 2 then more than one curve 
+  ;TODO: Update routine: if var dim 2 then more than one curve 
   
   w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
   
@@ -850,7 +774,7 @@ end
 ;+
 ; :Description:
 ;    Retrieve PRCP info.
-;    todo: complete keyword description
+;    TODO:DOC: describe keywords
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -869,18 +793,9 @@ end
 ;    STEP_WIZE
 ;    NONCONVECTIVE
 ;    CONVECTIVE
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;    
 ; :History:
 ;     Written by FaM, 2010.
-;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
-;
 ;-      
 function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
 

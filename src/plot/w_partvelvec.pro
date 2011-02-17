@@ -50,8 +50,6 @@
 ;
 ; :History:
 ;      Converted to WAVE by Fam, 2011
-;
-;
 ;-
 PRO w_partvelvec, velx, vely, posx, posy, x, y, OVER = over, VECCOLORS=vecColors, $
     FRACTION=fraction,LENGTH=length,COLOR=color, WINDOW = window, _EXTRA=extra
