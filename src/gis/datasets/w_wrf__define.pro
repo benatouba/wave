@@ -2,7 +2,7 @@
 ;+
 ;
 ;  w_WRF is the basis class for WRF datasets.
-;  todo: describe the file
+;  TODO: DOC: describe the file
 ;  
 ;  
 ; :Properties:

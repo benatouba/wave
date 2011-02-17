@@ -42,16 +42,10 @@
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;         
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
 ;
 ; :History:
 ;     Written by FaM, 2010.
 ;
-;       Modified::
-;          09-Dec-2010 FaM
-;          Documentation for upgrade to WAVE 0.1
 ;
 ;-
 PRO w_TRMM__Define
