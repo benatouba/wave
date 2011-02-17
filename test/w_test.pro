@@ -1639,7 +1639,7 @@ pro TEST_MODIS
     dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
     map = OBJ_NEW('w_Map', dom2, /NO_COUNTRIES)   
     GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
-    d = map->set_shape_file(SHPFILE='/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
+    d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
     d=map->set_Plot_Params(VAL_MIN=-24)

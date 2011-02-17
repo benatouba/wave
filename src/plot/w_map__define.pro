@@ -999,8 +999,10 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   
    ; Levels
   if self.plot_params.type eq 'AUTO' and ~ KEYWORD_SET(KEEP_LEVELS) then begin
-    if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
-    if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)
+    pfin = where(finite(*self.data) eq 1, cntfin)  
+    if cntfin eq 0 then MESSAGE, '$data has no finite element.'
+    if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN((*self.data)[pfin])
+    if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX((*self.data)[pfin])
     if MISS then begin
       dataTypeName = Size(missing, /TNAME)
       CASE dataTypeName OF
@@ -1347,7 +1349,7 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
   pp = !ORDER ;To restore later
   !ORDER = 0
   
-  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1  
+  DEVICE, RETAIN=2, DECOMPOSED=1  
   
   if KEYWORD_SET(RESIZABLE) then begin
     cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot'
@@ -1413,7 +1415,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   pp = !ORDER ;To restore later
   !ORDER = 0
   
-  DEVICE, RETAIN=2, TRUE_COLOR=24, DECOMPOSED=1  
+  DEVICE, RETAIN=2, DECOMPOSED=1  
   
   xs = self.Ysize * 0.2
   ys = self.Ysize * 0.75
@@ -1432,10 +1434,10 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   
   if self.plot_params.nlevels lt 40 then begin
     cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=[0.20,0.05,0.30,0.95], $
-      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=2.
+      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=1.
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
-    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=cgColor('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=2.,$
+    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=cgColor('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=1.,$
       TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val, WINDOW=cgWIN
   endelse
   

@@ -122,7 +122,9 @@ PRO w_QuickPlot_DimChange, event
   
   info.underTitle->GetProperty, STRINGS = str
   info.underTitle->SetProperty, STRINGS = [str[0],tunderTitle]  
-  range = [min(data), max(data)]
+  pfin = where(finite(data) eq 1, cntfin)  
+  if cntfin eq 0 then MESSAGE, '$data has no finite element.'
+  range = [min(data[pfin]), max(data[pfin])]
   if range[0] eq range[1] then range[1] += 1
   info.cbar->SetProperty, Range = range
   typ = SIZE(range, /TYPE)
@@ -678,7 +680,9 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
     Location=[posim[2], 1000, 0.125])
     
   ; Create colorbar 
-  brange = [min(*imagePtr), max(*imagePtr)]
+  pfin = where(finite(*imagePtr) eq 1, cntfin)  
+  if cntfin eq 0 then MESSAGE, '$data has no finite element.'
+  brange = [min((*imagePtr)[pfin]), max((*imagePtr)[pfin])]
   if brange[0] eq brange[1] then brange[1] += 1
   cbar =  Obj_New('VColorBar', Palette=THISPALETTE, Range=brange, $
    Position=posbar, color = axisColor, Title=CbarTitle)
