@@ -304,3 +304,23 @@ pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new
   if was_absdate then new_time = MAKE_ABS_DATE(QMS=new_time)
 
 end
+
+
+function AWS_irts, att, sb
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  ON_ERROR, 2
+  
+  if ~ array_processing(att, sb) then Message, WAVE_Std_Message(/ARG)
+
+  PSB = 49.9092 + 0.59237 * SB + 0.00558 * SB * SB
+  HSB = 4.2828 + 0.4248 * SB - 0.00077 * SB * SB
+  KSB = 52.0705 - 5.3816 * SB + 0.387 * SB * SB
+  
+  SEC = (0.25 / PSB )*(( ATT - HSB )^2 - KSB) ;  
+
+  return, ATT - SEC
+  
+end

@@ -1830,3 +1830,64 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
 
 end
 
+
+
+function TS_resample, data, time, $
+           DAY = day, HOUR = hour, M10 = m10, NEW_TIME = new_time
+
+  
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+;  ON_ERROR, 2
+  
+  if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
+  if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
+ 
+  n = n_elements(qms1)
+  if ~ array_processing(qms1, data, REP_A1=_data) then message, '$DATA and $TIME arrays must have same number of elements'
+  
+  sor = SORT(qms1)
+  qms1 = qms1[sor]
+  _data = _data[sor]
+ 
+  if ~ check_TimeSerie(qms1, its) then message, '$TIME not regular'
+  iqms = its.dms  
+ 
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) or KEYWORD_SET(M10) then begin    
+    if KEYWORD_SET(hour) then oqms = H_QMS $
+     else if KEYWORD_SET(day) then oqms = D_QMS $
+       else if KEYWORD_SET(m10) then oqms = M_QMS * 10LL 
+    
+    qmstart = FLOOR((qms1[0]-1LL) / double(oqms)) * oqms
+    qmsend = (CEIL((qms1[n-1] + iqms) / double(oqms)) - 1) * oqms
+    qms2 = qmstart + INDGEN((qmsend-qmstart)/oqms + 1) * oqms + oqms
+       
+    regular = TRUE
+    
+  endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
+  
+    if ~check_TimeSerie(qms2, tso) then MESSAGE, '$NEW_TIME not regular'
+    if qms2[0] le qms1[0] then Message, '$NEW_TIME[0] out of range'
+    if qms2[N_ELEMENTS(qms2)-1] gt qms1[n-1] + iQMS then Message, '$NEW_TIME[1] out of range'
+    
+    oqms = tso.dms
+    qms2 = [qms2[0] - oqms, qms2]
+    
+  endif else message, 'One of the positionnal keywords must be set.' 
+  
+  s = VALUE_LOCATE(qms1,qms2) < (n-1) ;Subscript intervals.
+  
+;  sample = 0D  
+;  for i = 0, N_ELEMENTS(newtime) - 1 do sample = [sample,value[s[i]]]
+  sample = _data[s]
+  
+  sample = sample[0: N_ELEMENTS(sample)-2]
+  qms2 = qms2[1: N_ELEMENTS(qms2)-1] 
+  if N_ELEMENTS(qms2) ne N_ELEMENTS(sample) then message, 'oups'
+  
+  RETURN, {data:sample,time:qms2,nt:N_ELEMENTS(qms2)} 
+
+end
+

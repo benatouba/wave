@@ -417,6 +417,18 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   y0 = upleft[1]
   x1 = lowright[0]
   y1 = lowright[1]
+  ; The UpperLeftPointMtrs is in projection coordinates, and identifies the very 
+  ; upper left corner of the upper left pixel of the image data
+  ; The LowerRightMtrs identifies the very lower right corner of the lower right pixel of the image data. 
+  ; These projection coordinates are the only metadata that accurately reflect the extreme corners of the gridded image 
+  dx = (x1 - x0) / double(xdimsize)/2d
+  dy = (y1 - y0) / double(ydimsize)/2d
+  x0 += dx
+  x1 -= dx
+  y0 += dy
+  y1 -= dy  
+  
+;  proj_str = str_equiv(37) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, 86400, 0, WGS-84, Integerized Sinusoidal'
   proj_str = str_equiv(projcode) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, WGS-84, EOS Sinusoidal'
   GIS_make_proj, ret, proj, PARAM = proj_str
   
@@ -424,7 +436,7 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   ; First, define the ORIGINAL grid geoloc *
   ;*****************************************
   if FIRSTCALL then begin
-    IF NOT self->w_Grid2D::Init(   nx = xdimsize          , $
+    IF NOT self->w_Grid2D::Init( nx = xdimsize          , $
                                  ny = ydimsize          , $
                                  x0 = x0                , $
                                  y0 = y0                , $

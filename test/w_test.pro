@@ -13,6 +13,7 @@ function TEST_file_directory, RESET = reset
   if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/TRMM/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
   
   return, TEST_CMN_ROOT_DIR
+  
 end
 
 pro TEST_MAKE_ABS_DATE
@@ -745,6 +746,74 @@ pro TEST_TS_MEAN
   if st.tot[1]/st.nel[1]  ne st.mean[1] then error += 1 
   
   if error ne 0 then message, '% TEST_TS_MEAN NOT passed', /CONTINUE else print, 'TEST_TS_MEAN passed'
+  
+end
+
+pro TEST_TS_RESAMPLE
+  
+   ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc   
+
+  error = 0  
+  
+  ; Very simple tests
+  data = [3.,4.]
+  time = [QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00)]   
+  st = TS_resample(data, time, /HOUR)
+  if st.nt ne 48 then error += 1 
+  if st.data[0] ne 3 then error += 1 
+  if st.data[1] ne 3 then error += 1 
+  if st.data[23] ne 3 then error += 1 
+  if st.data[24] ne 4 then error += 1 
+  if st.data[47] ne 4 then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 01) then error += 1 
+  if st.time[23] ne QMS_TIME(year = 2009, day = 2, hour = 00) then error += 1 
+  if st.time[47] ne QMS_TIME(year = 2009, day = 3, hour = 00) then error += 1 
+  data = [3.,4.]
+ 
+  time = [QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00)]   
+  st = TS_resample(data, time, /M10)
+  if st.nt ne 48*6 then error += 1 
+  if st.data[0] ne 3 then error += 1 
+  if st.data[1] ne 3 then error += 1 
+  if st.data[23] ne 3 then error += 1 
+  if st.data[24] ne 3 then error += 1 
+  
+  if st.data[143] ne 3 then error += 1   
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 00, minute = 10) then error += 1 
+  if st.time[143] ne QMS_TIME(year = 2009, day = 2, hour = 00, minute = 00) then error += 1 
+  if st.data[144] ne 4 then error += 1   
+  if st.time[144] ne QMS_TIME(year = 2009, day = 2, hour = 00, minute = 10) then error += 1 
+  if st.time[48*6-1] ne QMS_TIME(year = 2009, day = 3, hour = 00, minute = 00) then error += 1 
+ 
+  t = TS_MEAN_STATISTICS(st.data, st.time, /DAY)
+  if t.time[0] ne  QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00) then error +=1
+  if t.time[1] ne  QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00) then error +=1
+  if t.mean[0] ne  3 then error +=1
+  if t.mean[1] ne  4 then error +=1
+  if t.nt ne 2 then error +=1
+  
+  st_d = TS_resample(data, time, NEW_TIME=st.time)  
+  if st_d.nt ne st.nt then error +=1
+  if total(ABS(st_d.time - st.time)) ne 0 then error +=1
+  if total(ABS(st_d.data - st.data)) ne 0 then error +=1
+
+  st_d = TS_resample(data, time, NEW_TIME=st.time[3:149])  
+  if st_d.nt ne N_ELEMENTS(st.time[3:149]) then error +=1
+  if st_d.time[0] ne st.time[3] then error +=1
+  if st_d.time[N_ELEMENTS(st.time[3:149])-1] ne st.time[149] then error +=1
+  
+  if st_d.data[0] ne 3 then error +=1
+  if st_d.data[1] ne 3 then error +=1
+  if st_d.data[56] ne 3 then error +=1
+  p = where(st_d.time eq QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00))
+  
+  if st_d.data[p] ne 3 then error +=1
+  if st_d.data[p+1] ne 4 then error +=1
+  if st_d.data[N_ELEMENTS(st.time[3:149])-1] ne 4 then error +=1
+
+  if error ne 0 then message, '% TEST_TS_RESAMPLE NOT passed', /CONTINUE else print, 'TEST_TS_RESAMPLE passed'
   
 end
 
@@ -1631,35 +1700,58 @@ pro TEST_MODIS
     if t1 ne QMS_TIME(year = 2008, month = 10, day = 30, hour = 00) then error += 1
     lst->Get_LonLat, lon, lat, nx, ny, dat
     
-    if ABS(lon[0,0] - 80.8358300128709) gt abs(lon[1,0]-lon[0,0])then error +=1 
-    if ABS(lat[0,0] - 30.0041666666667) gt abs(lat[0,1]-lat[0,0])/2dthen error +=1 
-    if ABS(lon[nx-1,ny-1] - 104.421709972251) gt abs((lon[nx-1,ny-1]-lon[nx-2,ny-1])/2d)*2 then error +=1 
-    if ABS(lat[nx-1,ny-1] - 39.9958333333333) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2d ) then error +=1 
+    if ABS(lon[0,0] - 80.8358300128709d) gt abs(lon[1,0]-lon[0,0])/2.then error +=1    
+    if ABS(lat[0,0] - 30.0041666666667d) gt abs(lat[0,1]-lat[0,0])/2. then error +=1 
+    if ABS(lon[nx-1,ny-1] - 104.421709972251d) gt abs((lon[nx-1,ny-1]-lon[nx-2,ny-1])/2.) then error +=1 
+    if ABS(lat[nx-1,ny-1] - 39.9958333333333d) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2.) then error +=1 
        
-    dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=5)
-    map = OBJ_NEW('w_Map', dom2, /NO_COUNTRIES)   
+    dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12)
+    map = OBJ_NEW('w_Map', dom2, YSIZE=500)   
     GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1.)
+    d = map->set_map_params(INTERVAL=5)
     d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
-    d=map->set_Plot_Params(VAL_MIN=-24)
+    d=map->set_Plot_Params(N_LEVELS=126,VAL_MIN=-24)
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
     if ok eq 'No' then error += 1
     
-    ok =  lst->define_subset(SUBSET_LL= [90, 32, 91, 30])
+    ok =  lst->define_subset(SUBSET_LL= [90, 31.8, 91, 30.1])
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, /KEEP_LEVELS)
     
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
-    cgDelete, /ALL
+;    cgDelete, /ALL
     
     OBJ_DESTROY, lst     
     OBJ_DESTROY, map 
     OBJ_DESTROY,  dom2  
+    
+    ;====================
+    ; MARCO file
+    ;====================
+    marco = OBJ_NEW('w_MODIS', FILE=fdir+'MOD13Q1.A2006113.h11v10.005.2008109011450.hdf')
+    
+    marco->transform, 0, 0, dummy1, dummy2, src=marco, LON_DST=lon00, LAT_DST=lat00
+    marco->transform, 4799,4799, dummy1, dummy2, src=marco, LON_DST=lon11, LAT_DST=lat11    
+    
+    lon_envi00 = (- 74.492444D - 74.489241) / 2d 
+    lat_envi00 = (- 20.D - 19.997917D) / 2d 
+    lon_envi11 = (- 60.925597D - 60.928103D) / 2d 
+    lat_envi11 = (- 10.D - 10.002083D) / 2d 
+    
+    if ABS(lon00 - lon_envi00) ge 1e-5 then error +=1 
+    if ABS(lat00 - lat_envi00) ge 1e-5 then error +=1 
+    if ABS(lon11 - lon_envi11) ge 1e-5 then error +=1 
+    if ABS(lat11 - lat_envi11) ge 1e-5 then error +=1 
+    
+    OBJ_DESTROY, marco
     if error ne 0 then message, '% TEST_MODIS NOT passed', /CONTINUE else print, 'TEST_MODIS passed'
         
 end

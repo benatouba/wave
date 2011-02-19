@@ -169,6 +169,7 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    dummy = map->set_plot_params(N_LEVELS=256, NEUTRAL_COLOR='grey') ; I want a lot of colors 
    dummy = map->set_data(lst, modis_, MISSING=-999.)  
    map->show_img, RESIZABLE = resizable
+   cgControl, CREATE_PS='test.ps'
    map->show_color_bar, RESIZABLE = resizable
    
    ;6. Finite color scale

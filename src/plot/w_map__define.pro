@@ -1249,9 +1249,15 @@ function w_Map::draw_shapes, WINDOW = window
       idx = conn[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
       _coord = coord[*,idx]      
-      x = _coord[0,*]
-      y = _coord[1,*]            
-      cgPlots, X, Y, /DEVICE,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window      
+      x = _coord[0,*] / double(self.Xsize)
+      y = _coord[1,*]  / double(self.Ysize)   
+;      if KEYWORD_SET(WINDOW) then begin
+;        WSet, cgQuery(/Current) 
+;        devCoords = CONVERT_COORD(x/ double(self.Xsize), y/ double(self.Ysize), /NORMAL, /TO_DEVICE)
+;        cgPlots, devCoords[0,*], devCoords[1,*], /DEVICE,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window
+;      endif else 
+      cgPlots, x, y, /NORMAL,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window
+      
     endwhile  
   endfor
   
@@ -1325,7 +1331,7 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
 
   if self.is_Shaded then img = self->shading() else img = self->img_to_rgb()
       
-  cgImage, img, WINDOW = cgWIN, /KEEP_ASPECT_RATIO, /SAVE ;, /Erase
+  cgImage, img, WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1] ;, /Erase/KEEP_ASPECT_RATIO,
 
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = cgWIN) 
   if self.is_Mapped then ok = self->draw_map(WINDOW = cgWIN)
@@ -1398,7 +1404,12 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
       TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=1.
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
-    cgColorbar, PALETTE=rotate([[r],[g],[b]],4), COLOR=cgColor('black'), Position=[0.20,0.05,0.30,0.95], CHARSIZE=1.,$
+    if N_ELEMENTS(r) lt 256 then begin
+     r = congrid(r,256) 
+     g = congrid(g,256) 
+     b = congrid(b,256)       
+    end
+    cgColorbar, PALETTE= [[r],[g],[b]], Position=[0.20,0.05,0.30,0.95], CHARSIZE=1.,$
       TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val, WINDOW=cgWIN
   endelse
   
