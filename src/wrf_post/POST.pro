@@ -577,7 +577,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   GEN_str_subst, ret, fileList, input_dir, '', arbo
   arbo = FILE_DIRNAME(arbo)
   arboU = arbo[SORT(arbo)]
-  
+  OarboU = arboU[UNIQ(arboU)]
   
   OPENW, unit, output_dir + '/wrf_cpy_crop.log', /GET_LUN
   
@@ -625,6 +625,24 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     arboU[i] = new_dir
   endfor 
    
+  printf, unit, ''
+  printf, unit, 'Ok. Lets start to copy everything but the WRF files.'
+  printf, unit, ''
+  printf, unit, '...'
+  printf, unit, ''
+  flush, unit  
+  
+  for i=0, N_ELEMENTS(OarboU) - 1 do begin
+    files_tocpy = FILE_SEARCH(input_dir + '/' + OarboU[i],'*' ,/EXPAND_ENVIRONMENT, count = cnttocpy)
+    if cnttocpy eq 0 then CONTINUE
+    for j = 0, cnttocpy - 1 do begin
+      filetocpy = files_tocpy[j]
+      if str_equiv(STRMID(FILE_BASENAME(filetocpy),0,6)) eq str_equiv('wrfout') then continue
+      dest = output_dir + '/' + arboU[i] + '/' + STRMID(filetocpy, N_ELEMENTS(byte(input_dir + '/' + OarboU[i])), N_ELEMENTS(byte(filetocpy)) - N_ELEMENTS(byte(input_dir + '/' + OarboU[i])))
+      FILE_COPY, filetocpy, dest, /RECURSIVE, /OVERWRITE
+    endfor  
+  endfor 
+  
   printf, unit, ''
   printf, unit, 'Ok. Lets start copy-cropping stuff: '
   printf, unit, ''
