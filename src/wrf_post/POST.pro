@@ -620,8 +620,12 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     hour = LONG(STRMID(fname,22,2))
     ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)    
     new_dir = FILE_DIRNAME(arboU[i]) + '/' + POST_absDAte_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
-    FILE_MKDIR, output_dir + '/' + new_dir
-    printf, unit, '  + ' + output_dir + '/' + new_dir
+    new_dir = FILE_DIRNAME(output_dir + '/' + new_dir, /MARK_DIRECTORY) +  FILE_BASENAME(output_dir + '/' + new_dir)
+    if dom eq 1 then begin
+      FILE_MKDIR, new_dir
+      printf, unit, ': ' + arboU[i]
+      printf, unit, '  ---> ' + new_dir
+    endif
     arboU[i] = new_dir
   endfor 
    
@@ -631,17 +635,23 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   printf, unit, '...'
   printf, unit, ''
   flush, unit  
-  
+  FarboU = arboU[UNIQ(arboU)]
   for i=0, N_ELEMENTS(OarboU) - 1 do begin
     files_tocpy = FILE_SEARCH(input_dir + '/' + OarboU[i],'*' ,/EXPAND_ENVIRONMENT, count = cnttocpy)
-    if cnttocpy eq 0 then CONTINUE
-    for j = 0, cnttocpy - 1 do begin
-      filetocpy = files_tocpy[j]
-      if str_equiv(STRMID(FILE_BASENAME(filetocpy),0,6)) eq str_equiv('wrfout') then continue
-      dest = output_dir + '/' + arboU[i] + '/' + STRMID(filetocpy, N_ELEMENTS(byte(input_dir + '/' + OarboU[i])), N_ELEMENTS(byte(filetocpy)) - N_ELEMENTS(byte(input_dir + '/' + OarboU[i])))
-      FILE_COPY, filetocpy, dest, /RECURSIVE, /OVERWRITE
-    endfor  
-  endfor 
+    if cnttocpy ne 0 then begin
+      for j = 0, cnttocpy - 1 do begin
+        filetocpy = files_tocpy[j]
+        if str_equiv(STRMID(FILE_BASENAME(filetocpy),0,6)) ne str_equiv('wrfout') then begin
+          ntr = N_ELEMENTS(byte(input_dir + '/' + OarboU[i]))
+          dest = FarboU[i] + '/' + STRMID(filetocpy, ntr, N_ELEMENTS(byte(filetocpy)) - ntr)
+          dest =  FILE_DIRNAME(dest, /MARK_DIRECTORY) +  FILE_BASENAME(dest)
+          FILE_COPY, filetocpy, dest, /RECURSIVE, /OVERWRITE
+          printf, unit, ': ' + filetocpy
+          printf, unit, '  ---> ' + dest
+        endif
+      endfor
+    endif
+  endfor
   
   printf, unit, ''
   printf, unit, 'Ok. Lets start copy-cropping stuff: '
@@ -671,7 +681,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     printf, unit, '  Start : ' + fileList[i] + ' ... '
     flush, unit
     syst = QMS_TIME()
-    POST_crop_file, fileList[i], OUTDIRECTORY = output_dir + '/' + arboU[i] + '/'
+    POST_crop_file, fileList[i], OUTDIRECTORY = arboU[i] + '/'
     tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
     printf, unit, '  ... Done: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.'
   endfor
