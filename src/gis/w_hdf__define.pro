@@ -134,6 +134,7 @@ Function w_HDF::Init, FILE = file
   self.Ngatts = num_attr
   
   self->get_Varlist, varId, varnames
+  PTR_FREE, self.varNames
   self.varNames = PTR_NEW(varnames, /NO_COPY)
  
   RETURN, 1

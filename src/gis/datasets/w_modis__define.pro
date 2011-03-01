@@ -184,6 +184,30 @@ END
 
 ;+
 ; :Description:
+;    Destroy function. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :History:
+;     Written by FaM, 2010.
+;-      
+pro w_MODIS::Cleanup
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+
+  HDF_SD_END, self.hdfID
+  PTR_FREE, self.varNames
+  
+  Ptr_Free, self.lon 
+  Ptr_Free, self.lat
+  
+END
+
+;+
+; :Description:
 ;    Get access to some params. 
 ;
 ; :Categories:

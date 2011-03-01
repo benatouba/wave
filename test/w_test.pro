@@ -1439,10 +1439,8 @@ pro TEST_WRF_OUT
     
     ;-------------------------
     ; Test 3Hourly product
-    ;-------------------------
-    
-    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
-    
+    ;-------------------------    
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')    
     dom1->get_time, time, nt, t0, t1    
     if nt ne 13 then error += 1    
     if t0 ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 12) then error += 1
@@ -1452,8 +1450,7 @@ pro TEST_WRF_OUT
 
     dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
      dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
-      type = typ, version = ver
-     
+      type = typ, version = ver     
     dom1->get_ncdf_coordinates, lon, lat, nx, ny
     
     if nx ne 150 then error += 1
@@ -1717,14 +1714,14 @@ pro TEST_WRF_OUT
     if ~ ok then error+=1
     if TOTAL(ABS(out_data-t2_bef_crop) ne 0) then error+=1
     if ~utils_compare_grid(dom1, out_grid) then error+=1 
+    OBJ_DESTROY, out_grid
     
     ; TEST grid regrid
     GIS_make_datum, ret, src, NAME='WGS-84'
     ok = dom1->subset(t2_bef_crop, CORNERS=[91.,31.,93.,33.], src =src, OUT_GRID = out_grid, OUT_DATA=out_data)    
     if ~ ok then  error+=1
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
-    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
-    
+    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1    
     OBJ_DESTROY, out_grid
     OBJ_DESTROY, dom1_crop         
     
@@ -2389,6 +2386,9 @@ pro TEST_MOSAIC
   modata = MOSAIC->map_gridded_data(data3, h26v05, DATA_DST = modata)
   modata = MOSAIC->map_gridded_data(data4, h26v06, DATA_DST = modata)
   
+  p = where(modata eq 0, cnt)
+  if cnt ne 0 then error+=1
+  
   ok = map->set_data(modata, mosaic, MISSING=0)
   map->show_img, /RESIZABLE, TITLE= 'Mosaic'    
   
@@ -2400,8 +2400,9 @@ pro TEST_MOSAIC
   OBJ_DESTROY, h25v05
   OBJ_DESTROY, h25v06
   OBJ_DESTROY, h26v05
-  OBJ_DESTROY, h26v05
+  OBJ_DESTROY, h26v06
   OBJ_DESTROY, mosaic
+
   if error ne 0 then message, '% TEST_MOSAIC NOT passed', /CONTINUE else print, 'TEST_MOSAIC passed'
   
   

@@ -107,6 +107,28 @@ Function W_HDF_EOS::Init, FILE = file
   
 END
 
+
+;+
+; :Description:
+;    Destroy function. 
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;
+; :History:
+;    Written by FaM, 2010.
+;-
+pro w_HDF_EOS::Cleanup
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+
+  HDF_SD_END, self.hdfID
+  PTR_FREE, self.varNames
+  
+END
+
 ;+
 ; :Description:
 ;    Get access to some params. 
