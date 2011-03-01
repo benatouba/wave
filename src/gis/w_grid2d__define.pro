@@ -581,12 +581,7 @@ PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF
+  ON_ERROR, 2
   
   ;*****************************************
   ; If src is a grid, y has to be rotated  *
@@ -595,12 +590,15 @@ PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST
     Message, 'Src is a {TNT_COORD} structure. We only accept w_Grid2D objects, please make one.' 
   endif else if (OBJ_VALID(src)) then begin
     if OBJ_ISA(src, 'w_Grid2D') then begin
-      _y = self.tnt_c.ny - y  - 1
       src->getProperty, TNT_C = mysrc
+      _y = mysrc.ny - y  - 1
     endif else MESSAGE, 'SRC is an object but not a grid??'
+  endif else if N_ELEMENTS(src) ne 0 then begin
+      mysrc = src
+      _y = y
   endif else begin
-    _y = y
-    mysrc = src
+     mysrc = self.tnt_c
+    _y = mysrc.ny - y  - 1
   endelse  
   _x = x
   
@@ -924,7 +922,7 @@ end
 ;
 ; :Keywords:
 ;    MISSING: in, optional
-;             value to set to missing values in the final grid. 0. is the default valuel
+;             value to set to missing values in the final grid. NaN or 0 are default values depending on the data type
 ;    BILINEAR: in, optional
 ;             set to use bilinear interpolation instead of NN
 ;
@@ -934,7 +932,7 @@ end
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear
+function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, DATA_DST = DATA_DST
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -949,7 +947,30 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   
   if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   
-  if ~KEYWORD_SET(missing) then missing = 0
+  if ~ arg_okay(data, /NUMERIC) then Message, WAVE_Std_Message('data', /ARG)
+  siz_src = SIZE(data)
+  if siz_src[0] eq 2 then n = 1 else if siz_src[0] eq 3 then n = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
+  mx = siz_src[1] & my = siz_src[2]
+  
+  is_dst = FALSE
+  if N_ELEMENTS(DATA_DST) ne 0 then begin
+     if ~ arg_okay(DATA_DST, /NUMERIC) then Message, WAVE_Std_Message('DATA_DST', /ARG)
+     siz_dst = SIZE(DATA_DST)
+     if siz_dst[0] ne siz_src[0] then Message, '$DATA and $DATA_DST do not match'
+     if siz_dst[1] ne self.tnt_c.nx then Message, '$DATA_DST not of suitable X dimension' 
+     if siz_dst[2] ne self.tnt_c.ny then Message, '$DATA_DST not of suitable Y dimension' 
+     is_dst = TRUE
+  endif
+  
+  if ~ is_dst and N_ELEMENTS(missing) eq 0 then begin
+      dataTypeName = Size(data, /TNAME)
+      CASE dataTypeName OF
+        'FLOAT' : missing = !VALUES.F_NAN
+        'DOUBLE': missing = !VALUES.D_NAN
+        'BYTE': missing = 0
+        ELSE: missing = -999
+      ENDCASE
+  endif 
 
   src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
@@ -979,44 +1000,23 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   
   ;***********************************
   ; Get the data in the source grid  *
-  ;***********************************  
-  mx = (N_ELEMENTS(data[*,0,0])-1)
-  my = (N_ELEMENTS(data[0,*,0])-1)
-  p = where((i_dst lt 0) or (j_dst lt 0) or (i_dst gt mx) or (j_dst gt my), cnt)  ; OUT of range
-  n = N_ELEMENTS(data[0,0,*])
-  
-  if KEYWORD_SET(BILINEAR) then begin
-  
-    if n eq 1 then begin
-      tdata = BILINEAR(data, reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny))      
-      if cnt ne 0 then tdata[p] = missing
-      tdata = reform(tdata, self.tnt_c.nx, self.tnt_c.ny) 
-    endif else begin
-      for i = 0L, n-1 do begin
-        tmp =  BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny))
-        if cnt ne 0 then tmp[p] = missing
-        tmp = reform(tmp, self.tnt_c.nx, self.tnt_c.ny)
-        if N_ELEMENTS(tdata) eq 0 then tdata = tmp else data_dst =[[[tdata]],[[tmp]]]
-      endfor
-    endelse
+  ;***********************************
+  p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out)  ; OUT of range
+  bili = KEYWORD_SET(BILINEAR)
     
-  endif else begin ; Nearest neighbor
-  
-    if n eq 1 then begin
-      tdata = data[i_dst, j_dst]
-      if cnt ne 0 then tdata[p] = missing
-      tdata = reform(tdata, self.tnt_c.nx, self.tnt_c.ny)
-    endif else begin
-      for i = 0L, n-1 do begin
-        tmp = (reform(data[*,*,i]))[i_dst, j_dst]
-        if cnt ne 0 then tmp[p] = missing
-        tmp = reform(tmp, self.tnt_c.nx, self.tnt_c.ny)
-        if N_ELEMENTS(tdata) eq 0 then tdata = tmp else tdata =[[[tdata]],[[tmp]]]
-      endfor
-    endelse
-    
-  endelse
-  
+  for i = 0L, n-1 do begin
+    if bili then tmp = BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny)) $
+      else tmp = (reform(data[*,*,i]))[i_dst, j_dst]
+    if cnt_out ne 0 then begin
+      if is_dst then begin
+        tmp2 = data_dst[*,*,i]
+        tmp[p_out] = tmp2[p_out]
+      endif else tmp[p_out] = missing
+    endif
+    tmp = reform(tmp, self.tnt_c.nx, self.tnt_c.ny)
+    if N_ELEMENTS(tdata) eq 0 then tdata = tmp else tdata =[[[tdata]],[[tmp]]]
+  endfor
+   
   return, tdata
      
 end
@@ -1060,9 +1060,112 @@ function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   dx = self.tnt_c.dx / double(FACTOR)
   dy = self.tnt_c.dy / double(FACTOR)
   
-  x0 = self.tnt_c.x0 - 0.5*self.tnt_c.dx + dx/2.
-  y0 = self.tnt_c.y0 + 0.5*self.tnt_c.dy - dy/2.
+  x0 = self.tnt_c.x0 - 0.5d*self.tnt_c.dx + dx/2d
+  y0 = self.tnt_c.y0 + 0.5d*self.tnt_c.dy - dy/2d
   
   return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
+    
+end
+
+
+;+
+; :Description:
+;    This function makes a subsets of the object grid, and of a data
+;    array if needed.
+;
+; :Params:
+;    data: in, optional
+;          two or three dimensional data array associated to the object grid
+;
+; :Keywords:
+;    CORNERS: in, optional
+;             the subset corners in the form: [DLX,DLY,URX,URY].
+;    SRC: in, optional
+;         the source coordinates of the corners. If not set, the corners are assumed to be indices in the object grid
+;    CROPBORDER: in, optional
+;                to remove CROPBORDER indexes on the border of the grid
+;    OUT_GRID: out
+;              the new w_grid_2d object
+;    OUT_DATA: out
+;              the subseted data
+; 
+; :Returns:
+;    TRUE if everything went fine
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function w_Grid2D::subset, data, CORNERS = corners, SRC = src, CROPBORDER = cropborder, OUT_GRID = out_grid, OUT_DATA = out_data
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+
+  isubs = [0, 0, self.tnt_c.nx-1,self.tnt_c.ny-1]
+  if KEYWORD_SET(CROPBORDER) then begin
+     if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
+     if cropborder lt 0 or cropborder ge self.tnt_c.nx / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
+     if cropborder lt 0 or cropborder ge self.tnt_c.ny / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
+     isubs = [cropborder, cropborder, self.tnt_c.nx-1-cropborder, self.tnt_c.ny-1-cropborder]
+  endif else if KEYWORD_SET(CORNERS) then begin
+     if ~ arg_okay(CORNERS, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET_ij', /ARG)
+     x = CORNERS[[0,2]]
+     y = CORNERS[[1,3]]     
+     self->transform, x, y, i, j, SRC = src, /NEAREST
+     if i[0] ge i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+     if j[0] ge j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+     if i[0] lt 0 then begin
+       message, 'X Down left corner out of bounders: set to 0', /INFORMATIONAL
+       i[0] = 0
+     endif
+     if j[0] lt 0 then begin
+       message, 'Y Down left corner out of bounders: set to 0', /INFORMATIONAL
+       j[0] = 0
+     endif
+     if i[1] ge self.tnt_c.nx then begin
+       message, 'X Upper right corner out of bounders: set to nx-1', /INFORMATIONAL
+       i[1] = self.tnt_c.nx-1
+     endif
+     if j[1] ge self.tnt_c.ny then begin
+       message, 'Y Upper right corner out of bounders: set to ny-1', /INFORMATIONAL
+       j[1] = self.tnt_c.ny-1
+     endif     
+     isubs = [i[0], j[0], i[1], j[1]]     
+  endif
+  
+  x0 = self.tnt_c.x0 + isubs[0] * self.tnt_c.dx
+  y0 = self.tnt_c.y0 - (self.tnt_c.ny-1-isubs[3]) * self.tnt_c.dy
+  x1 = self.tnt_c.x0 + isubs[2] * self.tnt_c.dx
+  y1 = self.tnt_c.y1 + isubs[1] * self.tnt_c.dy
+  if ARG_PRESENT(OUT_GRID) then OUT_GRID = OBJ_NEW('w_Grid2D', x0=x0, y0=y0, x1=x1, y1=y1, dx=self.tnt_c.dx, dy=self.tnt_c.dy, PROJ=self.tnt_c.proj, META=self.meta + ' subset')
+  if N_ELEMENTS(data) ne 0 then begin
+    siz = SIZE(data)
+    case (siz[0]) of
+      2: begin
+        if siz[1] ne self.tnt_c.nx then  MESSAGE, WAVE_Std_Message('data', /ARG)
+        if siz[2] ne self.tnt_c.ny then  MESSAGE, WAVE_Std_Message('data', /ARG)
+        OUT_DATA = data[isubs[0]:isubs[2],isubs[1]:isubs[3]]        
+      end
+      3: begin
+        if siz[1] ne self.tnt_c.nx then  MESSAGE, WAVE_Std_Message('data', /ARG)
+        if siz[2] ne self.tnt_c.ny then  MESSAGE, WAVE_Std_Message('data', /ARG)  
+        OUT_DATA = data[isubs[0]:isubs[2],isubs[1]:isubs[3],*]            
+      end
+      else: begin
+        MESSAGE, WAVE_Std_Message('data', /ARG)
+      end
+    endcase
+  endif
+    
+  return, 1
     
 end

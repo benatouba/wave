@@ -1344,6 +1344,273 @@ end
 
 ;+
 ; :Description:
+;    Compares two {TNT_ELLIPSOID} structuress
+;
+; :Params:
+;    ell1: in, required
+;           the first ell
+;    ell2: in, required
+;           the second ell
+;
+; :Keywords:
+;    epsilon: in, optional, default = (MACHAR(DOUBLE=1)).eps
+;             the tolerance
+;  
+;  :Returns:
+;    1 if the ell are the same, 0 if not
+;  
+;  
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_compare_ellipsoid, ell1, ell2, epsilon = epsilon
+    
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+  
+  if not arg_okay(ell1, STRUCT={TNT_ELLIPSOID}) then return, 0
+  if not arg_okay(ell2, STRUCT={TNT_ELLIPSOID}) then return, 0
+  
+  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR(DOUBLE=1)).eps
+  
+  if str_equiv(ell1.name) ne  str_equiv(ell2.name)  then return, 0 
+  if ABS(ell1.a - ell2.a) gt epsilon then return, 0 
+  if ABS(ell1.b - ell2.b) gt epsilon then return, 0 
+            
+  return, 1
+    
+end
+
+;+
+; :Description:
+;    Compares two {TNT_DATUM} structuress
+;
+; :Params:
+;    dat1: in, required
+;           the first dat
+;    dat2: in, required
+;           the second dat
+;
+; :Keywords:
+;    epsilon: in, optional, default = (MACHAR(DOUBLE=1)).eps
+;             the tolerance
+;  
+;  :Returns:
+;    1 if the dat are the same, 0 if not
+;  
+;  
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_compare_datum, dat1, dat2, epsilon = epsilon
+    
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+  
+  if not arg_okay(dat1, STRUCT={TNT_DATUM}) then return, 0
+  if not arg_okay(dat2, STRUCT={TNT_DATUM}) then return, 0
+  
+  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR(DOUBLE=1)).eps
+  
+  if str_equiv(dat1.name) ne  str_equiv(dat2.name)  then return, 0 
+  if ~ utils_compare_ellipsoid(dat1.ellipsoid, dat1.ellipsoid, epsilon = epsilon) then return, 0 
+  if ABS(dat1.dx - dat2.dx) gt epsilon then return, 0 
+  if ABS(dat1.dy - dat2.dy) gt epsilon then return, 0 
+  if ABS(dat1.dz - dat2.dz) gt epsilon then return, 0 
+            
+  return, 1
+    
+end
+
+;+
+; :Description:
+;    Compares two {TNT_PROJ} structuress
+;
+; :Params:
+;    proj1: in, required
+;           the first proj
+;    proj2: in, required
+;           the second proj
+;
+; :Keywords:
+;    epsilon: in, optional, default = (MACHAR(DOUBLE=1)).eps
+;             the tolerance
+;  
+;  :Returns:
+;    1 if the proj are the same, 0 if not
+;  
+;  
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_compare_proj, proj1, proj2, epsilon = epsilon
+    
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+  
+  if not arg_okay(proj1, STRUCT={TNT_PROJ}) then return, 0
+  if not arg_okay(proj2, STRUCT={TNT_PROJ}) then return, 0
+  
+  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR(DOUBLE=1)).eps
+  
+  if str_equiv(proj1.name) ne  str_equiv(proj2.name)  then return, 0 
+  if ~ utils_compare_datum(proj1.datum, proj2.datum, epsilon = epsilon) then return, 0 
+  if proj1.idx ne proj2.idx then return, 0 
+  if ABS(proj1.a - proj2.a) gt epsilon then return, 0 
+  if ABS(proj1.b - proj2.b) gt epsilon then return, 0 
+  if ABS(proj1.azi - proj2.azi) gt epsilon then return, 0 
+  if total(ABS(proj1.lat - proj2.lat)) gt 3*epsilon then return, 0 
+  if total(ABS(proj1.lon - proj2.lon)) gt 3*epsilon then return, 0 
+  if total(ABS(proj1.xy - proj2.xy)) gt 2*epsilon then return, 0 
+  if ABS(proj1.h - proj2.h) gt epsilon then return, 0 
+  if total(ABS(proj1.sp - proj2.sp)) gt 2*epsilon then return, 0 
+  if proj1.zone ne proj2.zone then return, 0 
+  if proj1.flag ne proj2.flag then return, 0 
+  if ABS(proj1.k0 - proj2.k0) gt epsilon then return, 0 
+  if ABS(proj1.rot - proj2.rot) gt epsilon then return, 0 
+  if total(ABS(proj1.shp - proj2.shp)) gt 2*epsilon then return, 0 
+  if ABS(proj1.ang - proj2.ang) gt epsilon then return, 0   
+  if total(ABS(proj1.som - proj2.som)) gt 2*epsilon then return, 0 
+  if total(ABS(proj1.sat - proj2.sat)) gt 2*epsilon then return, 0 
+  if str_equiv(proj1.envi) ne  str_equiv(proj2.envi)  then return, 0 
+          
+  return, 1
+    
+end
+
+;+
+; :Description:
+;    Compares two w_grid_2d objects
+;
+; :Params:
+;    grid1: in, required
+;           the first grid
+;    grid2: in, required
+;           the second grid
+;
+; :Keywords:
+;    epsilon: in, optional, default = (MACHAR(DOUBLE=1)).eps
+;             the tolerance
+;  
+;  :Returns:
+;    1 if the grids are the same, 0 if not
+;  
+;  
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_compare_grid, grid1, grid2, epsilon = epsilon
+    
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+    
+  if ~ OBJ_VALID(grid1) then return, 0
+  if ~ OBJ_ISA(grid1, 'w_Grid2D') then  return, 0
+  if ~ OBJ_VALID(grid2) then return, 0
+  if ~ OBJ_ISA(grid2, 'w_Grid2D') then  return, 0
+  
+  grid1->GetProperty, TNT_C=c1
+  grid2->GetProperty, TNT_C=c2
+  
+  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR(DOUBLE=1)).eps
+  
+  if ABS(c1.nx - c2.nx) gt 0 then return, 0
+  if ABS(c1.ny - c2.ny) gt 0 then return, 0
+  if ABS(c1.dx - c2.dx) gt epsilon then return, 0
+  if ABS(c1.dy - c2.dy) gt epsilon then return, 0
+  if ABS(c1.x0 - c2.x0) gt epsilon then return, 0
+  if ABS(c1.y0 - c2.y0) gt epsilon then return, 0
+  if ABS(c1.y1 - c2.y1) gt epsilon then return, 0
+  if ABS(c1.x1 - c2.x1) gt epsilon then return, 0
+  if ~ utils_compare_proj(c1.proj, c2.proj, epsilon = epsilon)  then return, 0 
+        
+  return, 1
+    
+end
+
+
+;+
+; :Description:
+;    This functions combines one or more grids to make the "biggest possible"
+;    grid with it.
+;
+; :Params:
+;    grids: in, required
+;           an array of grid objects
+;
+; :Returns:
+;    a w_grid_2d object, mosaic of the input grids.
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_MOSAIC_grid, grids
+
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+;  ON_ERROR,2
+  
+  if N_ELEMENTS(grids) eq 0 then MESSAGE, WAVE_Std_Message(/NARG)
+  if ~ OBJ_VALID(grids[0]) then MESSAGE, WAVE_Std_Message('grids', /ARG)
+  if ~ OBJ_ISA(grids[0], 'w_Grid2D') then MESSAGE, WAVE_Std_Message('grids', /ARG)
+  
+  (grids[0])->getProperty, tnt_c = c  , meta = meta
+  x0 = c.x0
+  y0 = c.y0
+  x1 = c.x1
+  y1 = c.y1
+  dx = c.dx
+  dy = c.dy
+  proj = c.proj
+  
+  for i = 1, N_ELEMENTS(grids)-1 do begin
+    if ~ OBJ_VALID(grids[i]) then MESSAGE, WAVE_Std_Message('grids', /ARG)
+    if ~ OBJ_ISA(grids[i], 'w_Grid2D') then MESSAGE, WAVE_Std_Message('grids', /ARG)
+    (grids[i])->getProperty, tnt_c = c  
+    if ~ utils_compare_proj(proj, c.proj) then MESSAGE, 'Projections do not match.'
+    if ABS(dx - c.dx) gt (MACHAR()).eps then MESSAGE, 'Dxs do not match.'
+    if ABS(dy - c.dy) gt (MACHAR()).eps then MESSAGE, 'Dys do not match.'
+    x0 = min([x0,c.x0]) 
+    y0 = max([y0,c.y0])
+    x1 = max([x1,c.x1])
+    y1 = min([y1,c.y1])    
+  endfor
+  
+  return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, x1=x1, y1=y1, dx=dx, dy=dy, PROJ=proj, META=meta + ' mosaic')
+      
+end
+
+
+;+
+; :Description:
 ;    Transform ater vapor mixing ratio e.g from WRF output ([kg/kg])
 ;    to relative humidity
 ;

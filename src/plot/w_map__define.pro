@@ -425,8 +425,8 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
      _neutral = cgColor('white')
 
   ; Levels
-  if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data)
-  if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data)  
+  if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data) else self.plot_params.type = 'USER'
+  if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data) else self.plot_params.type = 'USER'
   if is_Levels then begin 
    _levels = levels 
    val_min = min(levels)
@@ -634,8 +634,8 @@ function w_Map::set_topography, GRDFILE = grdfile
   end
   
   spli = STRSPLIT(grdfile, '.', /EXTRACT)
-  if str_equiv(spli[1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
-  hdr = spli[0] + '.hdr'
+  if str_equiv(spli[N_ELEMENTS(spli)-1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
+  GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
   
   self.grid->get_Lonlat, lon, lat, nx, ny ; TODO: Update routine: change this into GRID kind of things  
   self.grid->getProperty, tnt_c = c
@@ -814,7 +814,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
       continue
     endif
     
-    self.grid->transform, x, y, x, y, SRC = shp_src, /NEAREST
+    self.grid->transform, x, y, x, y, SRC = shp_src
     if n_elements(coord) eq 0 then coord = [1#x,1#y] else coord = [[coord],[[1#x,1#y]]]
 
     parts = *ent.parts
@@ -986,7 +986,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   endif  
   
   if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
-  if KEYWORD_SET(missing) then MISS = true else MISS = false
+  if N_ELEMENTS(missing) ne 0 then MISS = true else MISS = false
   
   if N_ELEMENTS(grid) eq 0 then begin
      if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
@@ -1005,7 +1005,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
     if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN((*self.data)[pfin])
     if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX((*self.data)[pfin])
     if MISS then begin
-      dataTypeName = Size(missing, /TNAME)
+      dataTypeName = Size(*self.data, /TNAME)
       CASE dataTypeName OF
         'FLOAT': BEGIN
           epsilon = (MACHAR()).eps
@@ -1016,7 +1016,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
           indices = Where( Abs(*self.data - missing) gt epsilon, count)
         END
         ELSE: BEGIN
-          indices = Where(*self.data EQ missing, count)
+          indices = Where(*self.data ne missing, count)
         END
       ENDCASE
       if count ne 0 then begin
@@ -1275,13 +1275,8 @@ function w_Map::draw_shapes, WINDOW = window
       idx = conn[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
       _coord = coord[*,idx]      
-      x = _coord[0,*] / double(self.Xsize)
+      x = _coord[0,*]  / double(self.Xsize)
       y = _coord[1,*]  / double(self.Ysize)   
-;      if KEYWORD_SET(WINDOW) then begin
-;        WSet, cgQuery(/Current) 
-;        devCoords = CONVERT_COORD(x/ double(self.Xsize), y/ double(self.Ysize), /NORMAL, /TO_DEVICE)
-;        cgPlots, devCoords[0,*], devCoords[1,*], /DEVICE,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window
-;      endif else 
       cgPlots, x, y, /NORMAL,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window
       
     endwhile  
@@ -1308,14 +1303,17 @@ function w_Map::draw_wind, WINDOW = window
   compile_opt idl2
   @WAVE.inc
   
+  x = *self.wind_params.posx  / double(self.Xsize)
+  y = *self.wind_params.posy / double(self.Ysize)   
+  
   w_partvelvec, *self.wind_params.velx, $
                 *self.wind_params.vely, $
-                *self.wind_params.posx, $
-                *self.wind_params.posy, $
+                x, $
+                y, $
                 VECCOLORS=cgColor(self.wind_params.color), $
                 LENGTH = self.wind_params.length, $
                 thick = self.wind_params.thick, $              
-                /OVER,  /DEVICE, WINDOW = window
+                /OVER,  /NORMAL, WINDOW = window
   
   return, 1
   
@@ -1332,7 +1330,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
+pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid, TITLE = title
 
   ;--------------------------
   ; Set up environment
@@ -1345,8 +1343,10 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
   
   DEVICE, RETAIN=2, DECOMPOSED=1  
   
+  if NOT KEYWORD_SET(title) then title = 'Map Plot'
+  
   if KEYWORD_SET(RESIZABLE) then begin
-    cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, Title='Map Plot'
+    cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, WTitle=title
     cgControl, EXECUTE=0
     cgWIN = true
   endif else begin
@@ -1366,7 +1366,7 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid
   if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
-    cgDisplay, self.Xsize, self.Ysize, /FREE, Title='Map Plot'
+    cgDisplay, self.Xsize, self.Ysize, /FREE, Title=title
     cgImage, img
  endif
   !ORDER = pp
@@ -1414,7 +1414,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   ys = self.Ysize * 0.75  
   _Position=[0.20,0.05,0.30,0.95]
   if KEYWORD_SET(RESIZABLE) then begin
-    cgWindow, WXSIZE=xs, WYSIZE=ys, Title='Color bar'
+    cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle='Color bar'
     cgControl, EXECUTE=0
     cgWIN = true
   endif else if KEYWORD_SET(WINDOW) or KEYWORD_SET(POSITION) then begin

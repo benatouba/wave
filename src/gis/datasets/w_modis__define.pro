@@ -352,7 +352,7 @@ end
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;    SUBSET_LL : in, type = float vector
+;       SUBSET_LL : in, type = float vector
 ;                set it to the desired subset corners to automatically subset the data. Form = [ul_lon, ul_lat, dr_lon, dr_lat]
 ;                (it is assumed that lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
 ;       SUBSET_IJ : in, out, type = long vector  
@@ -472,35 +472,35 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
     ;**********
     if iul lt 0 then begin
       iul = 0
-      MESSAGE, 'Upper left corner out of X range. Setting to 0.', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Upper left corner out of X range. Setting to 0.', /INFORMATIONAL
     endif
     if iul gt (self.tnt_c.nx - 1) then begin
       iul = (self.tnt_c.nx - 1)
-      MESSAGE, 'Upper left corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Upper left corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
     endif
     if jul lt 0 then begin
       jul = 0
-      MESSAGE, 'Upper left corner out of Y range. Setting to 0.', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Upper left corner out of Y range. Setting to 0.', /INFORMATIONAL
     endif
     if jul gt (self.tnt_c.ny - 1) then begin
       jul = (self.tnt_c.ny - 1)
-      MESSAGE, 'Upper left corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Upper left corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
     endif
     if idr lt 0 then begin
       idr = 0
-      MESSAGE, 'Down right corner out of X range. Setting to 0.', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Down right corner out of X range. Setting to 0.', /INFORMATIONAL
     endif
     if idr gt (self.tnt_c.nx - 1) then begin
       idr = (self.tnt_c.nx - 1)
-      MESSAGE, 'Down right corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Down right corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
     endif
     if jdr lt 0 then begin
       jdr = 0
-      MESSAGE, 'Down right corner out of Y range. Setting to 0.', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Down right corner out of Y range. Setting to 0.', /INFORMATIONAL
     endif
     if jdr gt (self.tnt_c.ny - 1) then begin
       jdr = (self.tnt_c.ny - 1)
-      MESSAGE, 'Down right corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
+      if ~ !QUIET then MESSAGE, 'Down right corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
     endif             
     cx = idr - iul + 1
     cy = jdr - jul + 1    

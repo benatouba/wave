@@ -1511,9 +1511,12 @@ pro TEST_WRF_OUT
     ok = DIALOG_MESSAGE('Do you see a temperature plot?', /QUESTION)
     if ok eq 'No' then error += 1
      WIDGET_CONTROL, wid, /DESTROY
+     
+     
      ;----------------------------
      ; CROP BORDER
      ;----------------------------
+     t2_bef_crop = dom1->get_var('t2')     
      ok = dom1->define_subset(CROPBORDER=5)
      if ~ok then error+=1
      
@@ -1558,14 +1561,37 @@ pro TEST_WRF_OUT
     if max(abs(tj-j)) ne 0 then  error += 1    
  
     if max(abs(dom1->get_var('t2',t0 = time[2],t1 = time[4])-ot2[5:144,5:144,2:4])) ne 0 then  error += 1
- 
-     
+    t2_after_crop = dom1->get_var('t2')
+    dom1_crop = dom1->reGrid()
+    
     ;----------------------------
     ; RESET
     ;----------------------------
     ok = dom1->define_subset()
     if ~ok then error+=1    
-
+    
+    ; TEST grid regrid
+    ok = dom1->subset(t2_bef_crop, OUT_GRID = out_grid, OUT_DATA=out_data)  
+    if ~ ok then error+=1
+    if TOTAL(ABS(out_data-t2_bef_crop) ne 0) then error+=1
+    if ~utils_compare_grid(dom1, out_grid) then error+=1 
+    OBJ_DESTROY, out_grid
+    ; TEST grid regrid
+    ok = dom1->subset(t2_bef_crop, CROPBORDER=5, OUT_GRID = out_grid, OUT_DATA=out_data)    
+    if ~ ok then  error+=1
+    if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
+    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    OBJ_DESTROY, out_grid
+    
+    ; TEST grid regrid
+    ok = dom1->subset(t2_bef_crop, CORNERS=[5,5,144,144], OUT_GRID = out_grid, OUT_DATA=out_data)    
+    if ~ ok then  error+=1
+    if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
+    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    
+    OBJ_DESTROY, out_grid
+    OBJ_DESTROY, dom1_crop       
+    
     
     dom1->get_time, time, nt, t0, t1    
     if nt ne 13 then error += 1    
@@ -1679,7 +1705,29 @@ pro TEST_WRF_OUT
     if abs(GISLON[NX-1,Ny-1]-93.) gt MEAN(GISLON[1:*,ny-1]-GISLON[0:NX-2,ny-1])/2. then error +=1
     if abs(GISLAT[0,0]-31.) gt MEAN(GISLAT[0,1:*]-GISLAT[0,0:Ny-2])/2. then error +=1
     if abs(GISLAT[NX-1,Ny-1]-33.) gt MEAN(GISLAT[nx-1,1:*]-GISLAT[nx-1,0:Ny-2])/2. then error +=1
-     
+    
+    t2_after_crop = dom1->get_var('t2')
+    dom1_crop = dom1->reGrid()
+    
+    
+    ; TEST grid regrid
+    ok = dom1->define_subset()
+    if ~ok then error+=1    
+    ok = dom1->subset(t2_bef_crop, OUT_GRID = out_grid, OUT_DATA=out_data)  
+    if ~ ok then error+=1
+    if TOTAL(ABS(out_data-t2_bef_crop) ne 0) then error+=1
+    if ~utils_compare_grid(dom1, out_grid) then error+=1 
+    
+    ; TEST grid regrid
+    GIS_make_datum, ret, src, NAME='WGS-84'
+    ok = dom1->subset(t2_bef_crop, CORNERS=[91.,31.,93.,33.], src =src, OUT_GRID = out_grid, OUT_DATA=out_data)    
+    if ~ ok then  error+=1
+    if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
+    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    
+    OBJ_DESTROY, out_grid
+    OBJ_DESTROY, dom1_crop         
+    
     ;----------------------------
     ; TEST TS 
     ;----------------------------
@@ -1720,7 +1768,7 @@ pro TEST_MODIS
     if ABS(lat[nx-1,ny-1] - 39.9958333333333d) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2.) then error +=1 
        
     dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12)
-    map = OBJ_NEW('w_Map', dom2, YSIZE=500)   
+    map = OBJ_NEW('w_Map', dom2, YSIZE=400)   
     GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1.)
@@ -1856,7 +1904,7 @@ pro TEST_W_MAP
     ;-------------------------
     
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
-    map =  OBJ_NEW('w_map', wrf, YSIZE=600)
+    map =  OBJ_NEW('w_map', wrf, YSIZE=400)
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)
     
@@ -2294,6 +2342,71 @@ pro TEST_NEIREST_NEIGHBOR
   
 end
 
+pro TEST_MOSAIC
+
+  @WAVE.inc
+  error = 0
+  
+  fdir = TEST_file_directory() 
+   
+  ; Map
+  dom1 = OBJ_NEW('w_WRF', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=35)
+  map = OBJ_NEW('w_Map', dom1, XSIZE= 400)
+  OBJ_DESTROY, dom1  
+  
+  CTLOAD, 13
+  ok = map->set_plot_params(N_LEVELS=255, VAL_MAX=240, VAL_MIN=1)
+  
+  ; Modiss
+  !QUIET = 1
+  h25v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v05.005.2008299202523.hdf', SUBSET_LL=[89.,33.,96.,28.])
+  h25v05->getProperty, tnt_c = c
+  data1 = BYTARR(c.nx, c.ny) + 20B
+  ok = map->set_data(data1, h25v05, MISSING=0)
+  map->show_img, /RESIZABLE, TITLE= 'h25v05'
+  h25v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v06.005.2008299213852.hdf', SUBSET_LL=[89.,33.,94.,28.])
+  h25v06->getProperty, tnt_c = c
+  data2 = BYTARR(c.nx, c.ny) + 80B
+  ok = map->set_data(data2, h25v06, MISSING=0)
+  map->show_img , /RESIZABLE, TITLE= 'h25v06' 
+  h26v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v05.005.2008299222304.hdf', SUBSET_LL=[89.,33.,94.,28.])
+  h26v05->getProperty, tnt_c = c
+  data3 = BYTARR(c.nx, c.ny) + 160
+  ok = map->set_data(data3, h26v05, MISSING=0)
+  map->show_img , /RESIZABLE, TITLE= 'h26v05' 
+  h26v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v06.005.2008299220621.hdf', SUBSET_LL=[89.,33.,94.,28.])
+  h26v06->getProperty, tnt_c = c
+  data4 = BYTARR(c.nx, c.ny) + 240B
+  ok = map->set_data(data4, h26v06, MISSING=0)
+  map->show_img  , /RESIZABLE, TITLE= 'h26v05'
+  !QUIET = 0  
+  
+  grids = [h25v05,h25v06,h26v05,h26v05]  
+  mosaic = utils_MOSAIC_grid(grids)
+  
+  modata = MOSAIC->map_gridded_data(data1, h25v05, MISSING = 0)
+  modata = MOSAIC->map_gridded_data(data2, h25v06, DATA_DST = modata)
+  modata = MOSAIC->map_gridded_data(data3, h26v05, DATA_DST = modata)
+  modata = MOSAIC->map_gridded_data(data4, h26v06, DATA_DST = modata)
+  
+  ok = map->set_data(modata, mosaic, MISSING=0)
+  map->show_img, /RESIZABLE, TITLE= 'Mosaic'    
+  
+  ok = DIALOG_MESSAGE('Do you see nice mosaic?', /QUESTION)
+  if ok eq 'No' then error += 1
+  cgDelete, /all
+  
+  OBJ_DESTROY, map
+  OBJ_DESTROY, h25v05
+  OBJ_DESTROY, h25v06
+  OBJ_DESTROY, h26v05
+  OBJ_DESTROY, h26v05
+  OBJ_DESTROY, mosaic
+  if error ne 0 then message, '% TEST_MOSAIC NOT passed', /CONTINUE else print, 'TEST_MOSAIC passed'
+  
+  
+end
+
 pro TEST_TIME
   TEST_MAKE_ABS_DATE
   TEST_QMS_TIME
@@ -2323,6 +2436,7 @@ end
 pro TEST_UTILS
   TEST_WRF_AGG_MASSGRID
   TEST_NEIREST_NEIGHBOR
+  TEST_MOSAIC
 end
 
 pro TEST_POST, REDO = redo

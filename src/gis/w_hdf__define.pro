@@ -273,10 +273,11 @@ pro w_HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
     
     ; This routine throws all kinds of scary messages if CALDATA, for example, is
     ; not in the file. Turn this off for this call.
+    _quiet = !QUIET
     !QUIET = 1
     HDF_SD_GetInfo, sdID, DIMS=dims, NAME=name, NATTS=natts, NDIMS=ndims, $
       RANGE=range, TYPE=datatype, CALDATA=calData
-    !QUIET = 0
+    !QUIET = _quiet
     
     varndims = [varndims, ndims]
     varid = [varid, j]
@@ -380,10 +381,11 @@ function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a prev
   sdID = HDF_SD_Select(self.HDFid, vid)
   
   ; This routine throws all kinds of scary messages
+  _quiet = !QUIET
   !QUIET = 1
   HDF_SD_GetInfo, sdID, DIMS=dims, NAME=varname, NATTS=natts, NDIMS=ndims, $
         RANGE=range, TYPE=datatype, CALDATA=calData
-  !QUIET = 0
+  !QUIET = _quiet
   
   HDF_SD_GETDATA, sdID, Data, COUNT=COUNT, NOREVERSE=NOREVERSE, START=START, STRIDE=STRIDE
   IF calData.cal NE 0 and ~KEYWORD_SET(NO_CALIB) THEN data = calData.cal * (Temporary(data) - calData.offset)
@@ -452,10 +454,11 @@ function w_HDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
   
   sdID = HDF_SD_Select(self.HDFid, out_id)
   ; This routine throws all kinds of scary messages
+  _quiet = !QUIET 
   !QUIET = 1
   HDF_SD_GetInfo, sdID, DIMS=dims, NAME=varname, NATTS=natts, NDIMS=ndims, $
         RANGE=range, TYPE=datatype, CALDATA=calData
-  !QUIET = 0
+  !QUIET = _quiet
   
      
   if ARG_PRESENT(description) then begin 
@@ -603,10 +606,11 @@ PRO w_HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, 
       
       ; This routine throws all kinds of scary messages if CALDATA, for example, is
       ; not in the file. Turn this off for this call.
+      _quiet = !QUIET
       !QUIET = 1
       HDF_SD_GetInfo, sdID, DIMS=dims, NAME=name, NATTS=natts, NDIMS=ndims, $
         RANGE=range, TYPE=datatype, CALDATA=calData
-      !QUIET = 0
+      !QUIET = _quiet
       
       text = '       HDF_SD Ind: ' + str_equiv(j) + '. Type: ' + STRLOWCASE(DATATYPE) + '. ' + STRING(name) + '. Dim: ('
       for i =0, ndims - 1 do begin

@@ -194,6 +194,7 @@ function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
     'BORDER': begin
       if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
       if cropborder lt 0 or cropborder ge nx / 2 then message, 'Cropsize not ok'
+      if cropborder lt 0 or cropborder ge ny / 2 then message, 'Cropsize not ok'
       isubs = [cropborder, nx-2*cropborder, cropborder, ny-2*cropborder]
     end
     'CROPCHILD': begin

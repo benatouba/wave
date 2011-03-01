@@ -197,7 +197,7 @@ PRO w_partvelvec, velx, vely, posx, posy, x, y, OVER = over, VECCOLORS=vecColors
     cgplots,[px[i],x1[i],x1[i]-(vx[i]*rcos+vy[i]*rsin)/vel[i], $
       x1[i],x1[i]-(vx[i]*rcos-vy[i]*rsin)/vel[i]], $
       [py[i],y1[i],y1[i]-(vy[i]*rcos-vx[i]*rsin)/vel[i], $
-      y1[i],y1[i]-(vy[i]*rcos+vx[i]*rsin)/vel[i]],COLOR=vecColors[i], WINDOW = window, THICK = thick,  /DEVICE
+      y1[i],y1[i]-(vy[i]*rcos+vx[i]*rsin)/vel[i]],COLOR=vecColors[i], WINDOW = window, THICK = thick, _EXTRA=extra
   ENDFOR
   
 END  ; End of procedure PARTVELVEC.

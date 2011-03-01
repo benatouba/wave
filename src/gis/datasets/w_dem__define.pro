@@ -38,9 +38,10 @@ Function w_DEM::Init, FILE = file
   self.hdr = hdr
   
   ; Open DEM grid
+  _quiet = !QUIET
   !QUIET = 1
   GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
-  !QUIET = 0
+  !QUIET = _quiet
   if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
 
   ; Check and correct TNT coordinate structure
