@@ -1166,7 +1166,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
   ENDIF ELSE begin ; COLORS given
     if arg_okay(colors, N_DIM=2) then begin
       dims = SIZE(colors, /DIMENSIONS)
-      if dims[0] ne 3 then message, WAVE_Std_Message('colors', /ARG)
+      if dims[1] ne 3 then message, WAVE_Std_Message('colors', /ARG)
       _colors = COLOR24(colors)
     endif else _colors = colors
   endelse

@@ -1,7 +1,7 @@
 ;+
 ; :Description:
 ;    This is a simple routine based on the Coyote cg* commands to create a simple
-;    plot with a time axis. Inputs are the serie to plot and time in absolute date.
+;    plot with a time axis in hours of the day. Inputs are the serie to plot and the time od day.
 ;    One can plot up to 8 time series and add a new axis, legend, etc. Therefore, 
 ;    the number of parameters is very high but also very repetitive (see examples).
 ;
@@ -10,7 +10,7 @@
 ;    data: in, required, type = numeric
 ;          the data to plot
 ;    time: in, required, type = qms/{ABS_DATE}
-;          the time (same size as data)
+;          the time (same size as data) in HOURS OF DAY
 ;    tag: in, required, type = string
 ;          the tag related to data for the legend
 ;          
@@ -94,24 +94,14 @@
 ;             a title for the X axis
 ;    YTITLE: in, optional, type = string, default = ''
 ;             a title for the Y axis 
-;    MONTHS: in, optional, type = numeric
-;            interval in months for the time axis ticks
-;    DAYS: in, optional, type = numeric
-;            interval in days for the time axis ticks
-;    YEARS: in, optional, type = numeric
-;            interval in years for the time axis ticks
-;    MONYEAR: in, optional, type = numeric
-;            interval in months and year for the time axis ticks
 ;    HOURS: in, optional, type = numeric
 ;            interval in hours for the time axis ticks
 ;    ZOOM: in, optional, type = qms/{ABS_DATA}
 ;            a two element array [date, date] wher to zoom in the time serie
 ;    RANGE: in, optional, type = numeric
 ;            a two element array for the range for the Y axis. Default: [min(data), max(data)]
-;    FORCE_XAXIS: in, optional, type = boolean
-;                 if you want to force the exact X axis range 
-;    FORCE_YAXIS: in, optional, type = boolean
-;                 if you want to force the exact Y axis range 
+;    FORCE_AXIS: in, optional, type = boolean
+;                if you want to force the exact axis ranges (x and y)
 ;    NEWAXIS: in, optional, type = numeric
 ;             if a second axis has to be drawn, NEWAXIS = x means that the new axis is drawn 
 ;             starting at dataX plot.
@@ -180,7 +170,7 @@
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-pro w_TimeLinePlot, data,$  ; array to plot
+pro w_diurnalPlot, data,$  ; array to plot
                     time, $   ; time (same size as data)
                     tag,  $   ; legend (str)
                     color1 = color1,$ ; All cg colors strings accepted. default: black
@@ -189,16 +179,11 @@ pro w_TimeLinePlot, data,$  ; array to plot
                     COMENT1 = coment1,$ ; comment below the legend
                     TITLE = title, $ ; graph title
                     XTITLE = xtitle,$ ; x axis title (not necessary)
-                    MONTHS = months,$ ; X tick lenght in months
-                    DAYS = days, $; X tick lenght in days 
-                    YEARS = years,$ ; X tick lenght in years 
-                    MONYEAR = monyear, $ ; X tick lenght in month + years 
                     HOURS = hours,$ ; X tick lenght in hours 
                     ZOOM=zoom, $ ; format [{abs_date}1,{abs_date}2]
                     YTITLE = Ytitle,$ ; title of the y axis
                     RANGE = range, $ ; Y data range
-                    FORCE_XAXIS = force_xAxis, $ ; force axis range
-                    FORCE_YAXIS = force_yAxis, $ ; force axis range
+                    FORCE_AXIS = force_Axis, $ ; force axis range
                     NEWAXIS = newaxis, NEWRANGE = newrange, NEWTITLE = newtitle, $ ; if a second axis is to be drawn
                     THICKNESS = thickness, PIXMAP = pixmap, $ ; line thickness
                     HORILINE = HORILINE, VERTILINE = VERTILINE, $ ; if horizontal or vertical lines have to be drawn
@@ -213,7 +198,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc            
-   ON_ERROR, 2
+  ON_ERROR, 2
    
    
    ; prepare the plot  
@@ -222,8 +207,9 @@ pro w_TimeLinePlot, data,$  ; array to plot
    !ORDER = 0
    
    ;Check args
-   if ~ check_WTIME(time, OUT_QMS=tqms) then message, WAVE_Std_Message('time', /ARG)
-   nt = N_ELEMENTS(tqms)
+   if ~arg_okay(time, /NUMERIC) then message, WAVE_Std_Message('time', /ARG)
+   if ~arg_okay(time, NRANGE = [0,24]) then message, WAVE_Std_Message('time', /RANGE)
+   nt = N_ELEMENTS(time)
    if N_ELEMENTS(data) ne nt then message, WAVE_Std_Message('data', /ARG)
    
    if ~KEYWORD_SET(title) then title = 'Data'
@@ -232,17 +218,16 @@ pro w_TimeLinePlot, data,$  ; array to plot
    if ~KEYWORD_SET(psym1) then psym = 0 else psym = psym1
    if ~KEYWORD_SET(thickness) then thickness = 2
    if ~KEYWORD_SET(newaxis) then newaxis = 0
-   if KEYWORD_SET(force_xAxis) then xstyle = 1 else xstyle = 0
-   if KEYWORD_SET(force_yAxis) then yforce = 1 else yforce = 0
-   if newaxis ne 0 then YSTYLE = yforce + 8 else YSTYLE = yforce
+   if KEYWORD_SET(force_Axis) then force = 1 else force = 0
+   if newaxis ne 0 then YSTYLE = force + 8 else YSTYLE = force
+   xstyle = 1
    
    if N_ELEMENTS(tag) eq 0 then tag = 'Data'
 
    IF KEYWORD_SET(zoom) then begin
-     if ~ check_WTIME(zoom, OUT_QMS=tzoom) then message, WAVE_Std_Message('zoom', /ARG)
      if N_ELEMENTS(zoom) ne 2 then message, WAVE_Std_Message('zoom', NELEMENTS=2)
-     p1 = VALUE_LOCATE(tqms,tzoom[0]) > 0
-     p2 = VALUE_LOCATE(tqms,tzoom[1])
+     p1 = VALUE_LOCATE(time,tzoom[0]) > 0
+     p2 = VALUE_LOCATE(time,tzoom[1])
    endif else begin
      p1 = 0
      p2 = nt - 1
@@ -252,96 +237,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
   if ~KEYWORD_SET(range) then range = [MIN(data[p1:p2], /NAN), MAX(data[p1:p2],/NAN)]
   
   ; Make X AXIS
-  if KEYWORD_SET(hours) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Hours'
-    xtinter = hours 
-  ENDIF else if KEYWORD_SET(monYEAR) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M','%Y'])
-    XTICKFORMAT = ['LABEL_DATE','LABEL_DATE']
-    xtunits = ['Months','Year']
-    xtinter = monYEAR 
-  ENDIF else if KEYWORD_SET(months) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = months 
-  ENDIF else if KEYWORD_SET(years) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Years'
-    xtinter = years 
-  ENDIF else if KEYWORD_SET(Days) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis 
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Days'
-    xtinter = days 
-  endif else begin ;TODO: Update routine: meliorate the automatic time AXIS definition
-    s = MAKE_TIME_STEP(DMS=tqms[p2] - tqms[p1])
-    if s.day gt 900 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 6
-    endif else if s.day gt 600 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 4
-    endif else if s.day gt 300 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 3
-    endif else if s.day gt 150 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 1
-    endif else if s.day gt 90 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 30
-    endif else if s.day gt 60 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 15
-    endif else if s.day gt 45 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 15
-    endif else if s.day gt 30 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 7
-    endif else if s.day gt 12 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 3
-    endif else if s.day gt 1 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 1
-    endif else if s.hour gt 6 then begin
-     dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-     XTICKFORMAT = ['LABEL_DATE']
-     xtunits = 'Hours'
-     xtinter = 12
-    endif else begin
-     dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-     XTICKFORMAT = ['LABEL_DATE']
-     xtunits = 'Hours'
-     xtinter = 6
-    endelse
-  endelse 
-
+  xtitle = 'Time of day'
+  if NOT KEYWORD_SET(hours) then hours = 4
+  xminor = hours
+  
   ; Legend    
   x = [0.75, 0.79] ; Line for legend 1
   y = [0.85, 0.85 ] ; Line for legend 1
@@ -363,19 +262,18 @@ pro w_TimeLinePlot, data,$  ; array to plot
   
   ppos = [0.1,0.1,0.67,0.90] ; Plot position
   
-   
-  jd = TIME_to_JD(time[p1:p2])  
+  jd = time[p1:p2]
   
-  cgWindow, WXSize = 1000, WYSize = 600, WTITLE = 'w_TimeLinePlot resizable window'
+  cgWindow, WXSize = 1000, WYSize = 600, WTITLE = 'w_diurnalPlot resizable window'
   cgControl, EXECUTE=0  
   cgPlot, jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = ppos, XTICK_GET=xs, YTICK_GET=ys, $
-    /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, /WINDOW
+    /NODATA, XTICKINTERVAL = HOURS, XMINOR = xminor, YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, /WINDOW
        
         
-  if N_ELEMENTS(HORILINE) ne 0 then cgPlots, [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('dark grey'), LINESTYLE=5, /WINDOW
-  if N_ELEMENTS(VERTILINE) ne 0 then $
-    for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [TIME_to_JD(VERTILINE[i]),TIME_to_JD(VERTILINE[i])], $
+  if N_ELEMENTS(HORILINE) eq 1 then cgPlots, [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('dark grey'), LINESTYLE=5, /WINDOW
+  if N_ELEMENTS(VERTILINE) eq 1 then $
+    for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [VERTILINE[i],VERTILINE[i]], $
            range, color = cgColor('black'), LINESTYLE=5, /WINDOW
   ; real plot
   if ~KEYWORD_SET(psym1) then begin
@@ -407,10 +305,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style2) eq 1 then style = style2 
     y = y - ddy
     if ~KEYWORD_SET(psym2) then begin
-      cgplot, TIME_to_JD(time2), data2, COLOR = cgColor(color2), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time2, data2, COLOR = cgColor(color2), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color2), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time2)], data2, COLOR = cgColor(color2), PSYM=psym2, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time2], data2, COLOR = cgColor(color2), PSYM=psym2, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM2 eq 10 then psym2 = 0
       cgplots, x, y,  COLOR = cgColor(color2), THICK=thickness, /NORMAL, PSYM=psym2, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -428,10 +326,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style3) eq 1  then style = style3 
     y = y - ddy
     if ~KEYWORD_SET(psym3) then begin
-      cgplot, TIME_to_JD(time3), data3, COLOR = cgColor(color3), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time3, data3, COLOR = cgColor(color3), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color3), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time3)], data3, COLOR = cgColor(color3), PSYM=psym3, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time3], data3, COLOR = cgColor(color3), PSYM=psym3, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM3 eq 10 then psym3 = 0
       cgplots, x, y,  COLOR = cgColor(color3), THICK=thickness, /NORMAL, PSYM=psym3, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -449,10 +347,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style4) eq 1  then style = style4 
     y = y - ddy
     if ~KEYWORD_SET(psym4) then begin
-      cgplot, TIME_to_JD(time4), data4, COLOR = cgColor(color4), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time4, data4, COLOR = cgColor(color4), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color4), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time4)], data4, COLOR = cgColor(color4), PSYM=psym4, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time4], data4, COLOR = cgColor(color4), PSYM=psym4, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM4 eq 10 then psym4 = 0
       cgplots, x, y,  COLOR = cgColor(color4), THICK=thickness, /NORMAL, PSYM=psym4, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -470,10 +368,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style5) eq 1  then style = style5 
     y = y - ddy
     if ~KEYWORD_SET(psym5) then begin
-      cgplot, TIME_to_JD(time5), data5, COLOR = cgColor(color5), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time5, data5, COLOR = cgColor(color5), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color5), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time5)], data5, COLOR = cgColor(color5), PSYM=psym5, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time5], data5, COLOR = cgColor(color5), PSYM=psym5, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM5 eq 10 then psym5 = 0
       cgplots, x, y,  COLOR = cgColor(color5), THICK=thickness, /NORMAL, PSYM=psym5, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -491,10 +389,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style6) eq 1  then style = style6 
     y = y - ddy
     if ~KEYWORD_SET(psym6) then begin
-      cgplot, TIME_to_JD(time6), data6, COLOR = cgColor(color6), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time6, data6, COLOR = cgColor(color6), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color6), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time6)], data6, COLOR = cgColor(color6), PSYM=psym6, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time6], data6, COLOR = cgColor(color6), PSYM=psym6, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM6 eq 10 then psym6 = 0
       cgplots, x, y,  COLOR = cgColor(color6), THICK=thickness, /NORMAL, PSYM=psym6, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -512,10 +410,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style7) eq 1  then style = style7 
     y = y - ddy
     if ~KEYWORD_SET(psym7) then begin
-      cgplot, TIME_to_JD(time7), data7, COLOR = cgColor(color7), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time7, data7, COLOR = cgColor(color7), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color7), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time7)], data7, COLOR = cgColor(color7), PSYM=psym7, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time7], data7, COLOR = cgColor(color7), PSYM=psym7, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM7 eq 10 then psym7 = 0
       cgplots, x, y,  COLOR = cgColor(color7), THICK=thickness, /NORMAL, PSYM=psym7, SYMSIZE=thickness, /WINDOW
     endelse   
@@ -533,10 +431,10 @@ pro w_TimeLinePlot, data,$  ; array to plot
     if N_ELEMENTS(style8) eq 1  then style = style8 
     y = y - ddy
     if ~KEYWORD_SET(psym8) then begin
-      cgplot, TIME_to_JD(time8), data8, COLOR = cgColor(color8), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
+      cgplot, time8, data8, COLOR = cgColor(color8), THI =  thickness, LINESTYLE=style, /OVERPLOT, /WINDOW
       cgplots, x, y,  COLOR = cgColor(color8), THICK=thickness, /NORMAL, LINESTYLE=style, /WINDOW
     endif else begin
-      cgplot, [TIME_to_JD(time8)], data8, COLOR = cgColor(color8), PSYM=psym8, SYMSIZE=thickness, /WINDOW, /OVERPLOT
+      cgplot, [time8], data8, COLOR = cgColor(color8), PSYM=psym8, SYMSIZE=thickness, /WINDOW, /OVERPLOT
       if PSYM8 eq 10 then psym8 = 0
       cgplots, x, y,  COLOR = cgColor(color8), THICK=thickness, /NORMAL, PSYM=psym8, SYMSIZE=thickness, /WINDOW
     endelse   

@@ -1473,7 +1473,7 @@ function check_TimeSerie, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_mis
   mytime = mytime[SORT(mytime)]
   n = N_ELEMENTS(mytime)
   steps = mytime[1:n-1] - mytime[0:n-2]
-  h = HISTOGRAM(steps, omin = om, /L64)
+  h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=min(steps))
   m = MAX(h, p)
   steps = steps - p - om
   timestep = MAKE_TIME_STEP(DMS = p + om)
@@ -1658,7 +1658,7 @@ function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXE
   if n_elements(qms1) ne n then message, 'data and time arrays must have same number of elements'
   
   s = VALUE_LOCATE(qms1, qms2) < (n-1) ;Subscript intervals
-  If not KEYWORD_SET(FILL_VALUE) then FILL_VALUE = !VALUES.F_NAN
+  If N_ELEMENTS(FILL_VALUE) eq 0 then FILL_VALUE = !VALUES.F_NAN
   
   out = data[s > 0]  
   sd = s[1:*] - s[0:N_ELEMENTS(s)-2]
@@ -1804,7 +1804,8 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
           maxs[i] = m
           tots[i] = TOTAL(data[a:b], /NAN)
           stddevs[i] = stddev(data[a:b], /NAN)
-          nels[i] = TOTAL(FINITE(data[a:b]))
+          dumm = where(FINITE(data[a:b]) eq 1, cnt)
+          nels[i] = cnt
         endif else begin
           means[i] =  missing
           mins[i] =  missing
@@ -1889,5 +1890,114 @@ function TS_resample, data, time, $
   
   RETURN, {data:sample,time:qms2,nt:N_ELEMENTS(qms2)} 
 
+end
+
+
+;+
+; :Description:
+;    This function computes the diurnal statistics of a time serie. It tries to guess
+;    the series time step using `check_TimeSerie` and returns the statistics
+;    ot the time serie based on the hour of day.  
+;
+; :Params:
+;    data: in, required
+;          the data to analyse
+;    time: in, required
+;          the time
+;
+; :Keywords:
+;    MISSING: in, optional
+;             value to give to missing data. Default NaN
+;    
+; :Returns:
+;     A structure of the form::
+;     
+;        {nt: number of elements in the time
+;         time: the time of DAY in HOURS
+;         mean: the mean value for each time of day
+;         min: the min value for each time of day
+;         max: the max value for each time of day
+;         tot: the sum of all values for each time of day
+;         nel: the number of elements found in each time of day
+;         stddev: the standard deviation of the data within each time of day
+;         }
+;
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+function TS_DIURNAL_MEANS, data, time, MISSING = missing
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  ON_ERROR, 2
+  
+  if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
+  if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
+  
+  n = n_elements(qms1)
+  if ~ array_processing(qms1, data, REP_A1=_data) then message, '$DATA and $TIME arrays must have same number of elements'
+  
+  sor = SORT(qms1)
+  qms1 = qms1[sor]
+  _data = _data[sor]
+  
+  ok = check_TimeSerie(qms1, tstep)
+  
+  dqms = 86400000ll
+  timeofday = qms1 - (qms1 / dqms) * dqms
+  
+  if tstep.dms lt D_QMS then sqms = tstep.dms else Message, 'Timeserie not accepted for diurnal means.'
+  
+  if not KEYWORD_SET(MISSING) then begin
+    dataTypeName = Size(data, /TNAME)
+    CASE dataTypeName OF
+      'FLOAT': MISSING = !VALUES.F_NAN
+      'DOUBLE': MISSING = !VALUES.D_NAN
+      else: missing = -999
+    endcase
+  endif
+  
+  NSTEPS = dqms / sqms
+  newtime = INDGEN(NSTEPS) * sqms
+  
+  means = REPLICATE(data[0], NSTEPS) * 0
+  maxs = means & mins = means
+  tots = means & nels = LONG(means) & stddevs = means
+  
+  for i = 0, N_ELEMENTS(newtime) - 1 do begin
+    p = where(timeofday eq newtime[i], cnt)
+    if cnt ne 0 then begin
+      means[i] = MEAN(data[p] , /NAN)
+      mins[i] = MIN(data[p], MAX=m, /NAN)
+      maxs[i] = m
+      tots[i] = TOTAL(data[p], /NAN)
+      stddevs[i] = stddev(data[p], /NAN)
+      dumm = where(FINITE(data[p]) eq 1, cnt)
+      nels[i] = cnt
+    endif else begin
+      means[i] =  missing
+      mins[i] =  missing
+      maxs[i] =  missing
+      tots[i] =  missing
+      stddevs[i] =  missing
+      nels[i] =  0
+    endelse
+  endfor
+  
+  newtime = newtime / DOUBLE(dqms) * 24.
+  
+  RETURN, {nt: nsteps, $
+    time:newtime, $
+    mean:means, $
+    min:mins, $
+    max:maxs, $
+    tot:tots, $
+    nel:nels,$
+    stddev:stddevs}
+    
+    
 end
 

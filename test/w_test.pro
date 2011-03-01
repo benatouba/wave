@@ -817,6 +817,20 @@ pro TEST_TS_RESAMPLE
   
 end
 
+pro TEST_TS_DIURNAL_MEANS
+  
+   ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc   
+
+  error = 0  
+  
+  ;TODO: TEST: TS_DIURNAL_MEANS
+  
+  if error ne 0 then message, '% TEST_TS_DIURNAL_MEANS NOT passed', /CONTINUE else print, 'TEST_TS_DIURNAL_MEANS passed'
+  
+end
+
 pro time_bug
 
 
@@ -1727,7 +1741,7 @@ pro TEST_MODIS
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
-;    cgDelete, /ALL
+    cgDelete, /ALL
     
     OBJ_DESTROY, lst     
     OBJ_DESTROY, map 
@@ -2291,6 +2305,8 @@ pro TEST_TIME
   TEST_check_TimeSerie
   TEST_TS_FILL_MISSING
   TEST_TS_MEAN
+  TEST_TS_RESAMPLE
+  TEST_TS_DIURNAL_MEANS  
 end
 
 pro TEST_DATASETS, NCDF = ncdf

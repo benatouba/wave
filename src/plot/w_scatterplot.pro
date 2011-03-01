@@ -63,7 +63,7 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   cgplots, [range[0],range[1]], [range[0],range[1]], color = cgColor('grey'), LINESTYLE=5, /WINDOW
   
   cgplot, x, y,  COLOR=cgColor(color), PSYM=psym, /OVERPLOT, /WINDOW
-  
+    
   if ~KEYWORD_SET(NOFIT) then begin  
     l = LINFIT(x, y, /DOUBLE)    
     cgPlots, range, l[0] + l[1] * range, color = cgColor('dark grey'), NOCLIP = 0, /WINDOW    
@@ -86,6 +86,16 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
     
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.80] $
     else  pos = [0.5, 0.17]
+    cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW
+  endif
+  
+  if ~KEYWORD_SET(NOBIAS) then begin
+    mb = mean(y - x)
+
+    text = 'Bias = ' + STRING(mb, FORMAT='(F5.2)')
+    
+    if KEYWORD_SET(LEGEND_UL) then pos = [0.35, 0.80] $
+    else  pos = [0.68, 0.17]
     cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW
   endif
   cgControl, Execute=1  

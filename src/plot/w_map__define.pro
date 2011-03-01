@@ -84,13 +84,16 @@ PRO w_Map__Define
             type           : ''            , $ ; LONLAT or UTM
             xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
             yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
+            xtickvalues    : PTR_new()     , $ ; value of the ticks on the Xaxis
+            ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
             color          : ''            , $ ; color of the contour lines
+            labeled        : 0L            , $ ; if the contours have to labelled
             thick          : 0D            , $ ; thickness of the contour lines
             style          : 0D              $ ; style of the contour lines
             }
-     
+
   ; This is for the wind vectors 
   struct = {WIND_PARAMS                    , $
             type           : ''            , $ ; currently VECTORS
@@ -239,8 +242,11 @@ pro w_Map::DestroyMapParams
 
   ptr_free, self.map_params.xticks
   ptr_free, self.map_params.yticks
+  ptr_free, self.map_params.xtickvalues
+  ptr_free, self.map_params.ytickvalues
   ptr_free, self.map_params.xlevels
   ptr_free, self.map_params.ylevels
+
   
   self.map_params = {MAP_PARAMS}
   self.is_Mapped = FALSE
@@ -306,7 +312,7 @@ END
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
+PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c, MAP_PARAMS = map_params
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -324,6 +330,15 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   if ARG_PRESENT(levels) then levels = *self.plot_params.levels
   if ARG_PRESENT(colors) then colors = *self.plot_params.colors
   if ARG_PRESENT(tnt_c) then self.grid->getProperty, TNT_C = tnt_c
+  if ARG_PRESENT(MAP_PARAMS) then begin
+    pokX = where(*self.map_params.xticks gt 0. and *self.map_params.xticks lt 1.)
+    pokY = where(*self.map_params.yticks gt 0. and *self.map_params.yticks lt 1.)
+    MAP_PARAMS = {xticks  : (*self.map_params.xticks)[pokX] , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
+                  yticks  : (*self.map_params.yticks)[pokY] , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
+                  xlevels : (*self.map_params.xtickvalues)[pokX], $ ; values of the plotted contours in Xcoordinates
+                  ylevels : (*self.map_params.ytickvalues)[pokY]  $ ; values of the plotted contours in Ycoordinates
+                  }
+  end
      
 end
 
@@ -393,14 +408,14 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   IF N_Elements(n_levels) EQ 0 THEN BEGIN
      IF ~is_Levels and ~is_Colors THEN nlevels = 256 $
      ELSE begin
-       if is_colors then nlevels = N_Elements(colors)
+       if is_colors then nlevels = N_Elements(colors[*,0])
        if is_Levels then nlevels = N_Elements(levels)              
      endelse
   ENDIF else nlevels = n_levels
   
   if is_Levels then nlevels = N_ELEMENTS(levels)
   
-  if is_colors then if (nlevels ne N_ELEMENTS(colors)) then $
+  if is_colors then if (nlevels ne N_ELEMENTS(colors[*,0])) then $
     message, '$colors and $n_levels are incompatible.'
   
   ; Colors
@@ -416,7 +431,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
    _levels = levels 
    val_min = min(levels)
    val_max = max(levels)   
-  endif else _levels = ((val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+  endif else _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
    
   ; Fill up
   self.plot_params.nlevels  = nlevels
@@ -450,11 +465,15 @@ end
 ;           
 ;    COLOR: in, optional, type = string, default ='dark grey'
 ;           color of the contour lines
+;           
+;    LABEL: in, optional, type=integer, default=0
+;           A 0 means no contour levels are labelled. A 1 means all contour levels are
+;           labelled. A 2 means label every 2nd contour level is labelled, and so on
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color
+function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, LABEL = label
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -475,17 +494,20 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   _thick = 1.
   _style = 2.
   _color = 'Dark Grey'
+  _label = 0
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
- 
+  if N_ELEMENTS(LABEL) eq 1 then _label = LABEL
+  
   self.map_params.type = _type
   self.map_params.thick = _thick
   self.map_params.style = _style
   self.map_params.color = _color
+  self.map_params.labeled = _label
                            
   self.is_Mapped = _type ne ''
   
@@ -496,7 +518,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   
   if self.map_params.type eq 'LONLAT' then begin
   
-    self.grid->get_Lonlat, lon, lat
+    self.grid->get_Lonlat, lon, lat, nx, ny
     Nlevels = 360 / _interval
     levels = INDGEN(Nlevels) * _interval - 170
     p = where(levels le floor(max(Lon)) and levels ge ceil(min(Lon)), cnt)
@@ -506,22 +528,26 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
    
     for i=0,N_ELEMENTS(lonlevels)-1 do begin
       p = where(Lon[*,0] le lonlevels[i] ,cnt)
-      if cnt ge 1 then begin
+      if cnt gt 1 and cnt lt nx then begin
         if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
+        if N_ELEMENTS(xtickValues) eq 0 then xtickValues =  lonlevels[i] else xtickValues = [xtickValues, lonlevels[i]]
       endif
     endfor
     for i=0,N_ELEMENTS(latlevels)-1 do begin
       p = where(Lat[0,*] le latlevels[i] ,cnt)
-      if cnt ge 1 then begin
+      if cnt gt 1 and cnt lt ny then begin
         if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
+        if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  latlevels[i] else ytickValues = [ytickValues, latlevels[i]]
       endif
     endfor
-           
+          
     self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
     self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY) 
     self.map_params.xticks = PTR_NEW(xticks/double(self.Xsize), /NO_COPY)
     self.map_params.yticks = PTR_NEW(yticks/double(self.Ysize), /NO_COPY) 
-        
+    self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
+    self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY) 
+            
   endif else Message, 'Currently only LONLAT type is supported'
   
   return, 1
@@ -998,7 +1024,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
         val_max = MAX((*self.data)[indices])
       endif
     endif    
-    _levels = ((val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
+    _levels = (double(val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
     ptr_free, self.plot_params.levels
     self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
     self.plot_params.min_val = val_min
@@ -1052,10 +1078,10 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
     RETURN, 0
   ENDIF 
   
-  if ~KEYWORD_SET(length) then length = self.wind_params.length
-  if ~KEYWORD_SET(thick) then thick = self.wind_params.thick  
+  if ~KEYWORD_SET(length) then length = 0.08
+  if ~KEYWORD_SET(thick) then thick = 1
   if ~KEYWORD_SET(density) then density = 3
-  if ~KEYWORD_SET(color) then color = self.wind_params.color  
+  if ~KEYWORD_SET(color) then color = 'black'
   type = 'VECTORS'
   
   if N_PARAMS() eq 0 then begin
@@ -1211,12 +1237,12 @@ function w_Map::draw_map, WINDOW = window
   
     self.grid->get_Lonlat, lon, lat
     
-    cgContour, lon, /OVERPLOT, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE,  $
-      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, $
+    cgContour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE,  $
+      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
       
     cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, $
-      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, $
+      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
       
   endif
@@ -1371,7 +1397,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, LABELS = labels
+pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position
 
   ;--------------------------
   ; Set up environment
@@ -1385,12 +1411,22 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   DEVICE, RETAIN=2, DECOMPOSED=1  
   
   xs = self.Ysize * 0.2
-  ys = self.Ysize * 0.75
-  
+  ys = self.Ysize * 0.75  
+  _Position=[0.20,0.05,0.30,0.95]
   if KEYWORD_SET(RESIZABLE) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, Title='Color bar'
     cgControl, EXECUTE=0
     cgWIN = true
+  endif else if KEYWORD_SET(WINDOW) or KEYWORD_SET(POSITION) then begin
+    undefine, cgWIN
+    if KEYWORD_SET(POSITION) then begin
+     _Position = POSITION
+     PIXMAP = TRUE
+    end
+    if KEYWORD_SET(WINDOW) then begin
+      cgWIN = window
+      RESIZABLE = TRUE
+    endif else xwin = !D.WINDOW
   endif else begin
     undefine, cgWIN
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='Color bar'
@@ -1400,8 +1436,8 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   if N_ELEMENTS(LABELS) eq 0 then LABELS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
   
   if self.plot_params.nlevels lt 40 then begin
-    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=[0.20,0.05,0.30,0.95], $
-      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=1.
+    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=_Position, $
+      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=1.3
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
     if N_ELEMENTS(r) lt 256 then begin
@@ -1409,11 +1445,11 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
      g = congrid(g,256) 
      b = congrid(b,256)       
     end
-    cgColorbar, PALETTE= [[r],[g],[b]], Position=[0.20,0.05,0.30,0.95], CHARSIZE=1.,$
-      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val, WINDOW=cgWIN
+    cgColorbar, PALETTE= [[r],[g],[b]], Position=_Position, CHARSIZE=1.3,$
+      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), WINDOW=cgWIN
   endelse
   
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
+  if KEYWORD_SET(RESIZABLE) and ~KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title='Map Plot'

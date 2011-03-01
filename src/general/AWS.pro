@@ -201,6 +201,52 @@ function AWS_crop_struct, struct, t0 = t0, t1 = t1
   
 end
 
+
+;+
+; :Description:
+;    This function merges two strucutres into one.
+;
+; :Params:
+;    struct1: in, required
+;            first AWS structure to merge
+;    struct1: in, required
+;            second AWS structure to merge
+;
+; :Keywords:
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+function AWS_merge_struct, struct1, struct2
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  n = n_tags(struct1)
+  if N_TAGS(struct2) ne n then message, 'The two structures do not match.'
+  names = tag_names(struct1)
+  names2 = tag_names(struct2)
+  if TOTAL(str_equiv(names[sort(names)]) eq str_equiv(names2[sort(names2)])) ne n then message, 'The two structures do not match.'
+    
+  for i=0,n-1 do begin ; Go threw all infos
+  
+    if str_equiv(names[i]) eq 'NT' then continue
+    j = where(str_equiv(names2) eq str_equiv(names[i]), cnt)
+    if cnt ne 1 then message, 'Problem.'
+    
+    ;create new structure/ add entry to existing structure
+    if n_elements(ostr) eq 0 then ostr = create_struct(names[i], [struct1.(i), struct2.(j)]) $
+    else  ostr = create_struct(ostr,names[i],[struct1.(i), struct2.(j)])
+    
+  ; End of Loop
+  endfor
+  
+  return, create_struct(ostr,'nt', N_ELEMENTS(ostr.time))
+  
+end
+
 ;+
 ; :Description:
 ;    Computes the angle of the mast, in degrees (0° = perfectly vertical)
@@ -257,6 +303,10 @@ end
 ;              the associated Time serie (possibly non-regular)
 ;
 ; :Keywords:
+;    NO_TEMP_COR: in
+;                 set this keyword if you do not want to perform temperature correction
+;    NO_ANGLE_COR: in
+;                 set this keyword if you do not want to perform mast angle correction
 ;    CORRECTED_NAN: out
 ;                   the corrected sr50 Time serie (same size as input) with NANs where the quality was not good
 ;    CORRECTED_INTERP: out
@@ -270,7 +320,7 @@ end
 ;
 ;
 ;-
-pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new_time, $
+pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new_time, new_qual, NO_TEMP_COR = NO_TEMP_COR, NO_ANGLE_COR =NO_ANGLE_COR,  $
                           CORRECTED_NAN = corrected_nan, CORRECTED_INTERP = corrected_interp, CORRECTED_QUAL = corrected_qual
                          
   ; Set Up environnement
@@ -283,17 +333,18 @@ pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new
   if ~array_processing(distance, time) then Message, WAVE_Std_Message(/ARG)
   
   ; Temperature correction
-  dis_tcorr = distance * SQRT((273.15D + airtemp) / 273.15D)
+  if ~ KEYWORD_SET(NO_TEMP_COR) then dis_tcorr = distance * SQRT((273.15D + airtemp) / 273.15D) else dis_tcorr = distance
   
   ; Angle correction
   angle  = AWS_MAST_ANGLE(x,y)      
-  dis_acorr = dis_tcorr * cos(angle * !pi / 180d)
+  if ~ KEYWORD_SET(NO_ANGLE_COR) then dis_acorr = dis_tcorr * cos(angle * !pi / 180d) else dis_acorr = dis_tcorr
   
   ; Top filter 
   pqual_210  = where(quality gt 0 and quality le 210, cqual) 
 
   corrected = dis_acorr[pqual_210]   
   new_time = ttime[pqual_210]
+  new_qual = quality[pqual_210]
   
     
   CORRECTED_NAN = TS_FILL_MISSING(corrected, new_time, ttime, INDEXES = indexes)

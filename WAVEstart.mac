@@ -49,8 +49,6 @@ pushd, root
 ; Plots
 .run w_map__define.pro
 .run w_quickplot.pro
-;.run w_timelineplot.pro
-;.run w_scatterplot.pro
 
 resolve_all, /QUIET
 
