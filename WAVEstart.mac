@@ -49,6 +49,7 @@ pushd, root
 ; Plots
 .run w_map__define.pro
 .run w_quickplot.pro
+.run w_std_2d_plots.pro
 
 resolve_all, /QUIET
 

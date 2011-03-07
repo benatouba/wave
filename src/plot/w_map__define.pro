@@ -82,8 +82,8 @@ PRO w_Map__Define
   ; This is for the Lon-Lat/UTM contours drawing
   struct = {MAP_PARAMS                     , $
             type           : ''            , $ ; LONLAT or UTM
-            xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
-            yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
+            xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis
+            yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis
             xtickvalues    : PTR_new()     , $ ; value of the ticks on the Xaxis
             ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
@@ -99,8 +99,8 @@ PRO w_Map__Define
             type           : ''            , $ ; currently VECTORS
             velx           : PTR_new()     , $ ; x velocities
             vely           : PTR_new()     , $ ; y velocities
-            posx           : PTR_new()     , $ ; coordinates in the device
-            posy           : PTR_new()     , $ ; coordinates in the device
+            posx           : PTR_new()     , $ ; coordinates in data device
+            posy           : PTR_new()     , $ ; coordinates in data device
             color          : ''            , $ ; color of the arrows
             thick          : 0D            , $ ; thickness of the arrows
             length         : 0D              $ ; lenght of the arrows
@@ -330,15 +330,15 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   if ARG_PRESENT(levels) then levels = *self.plot_params.levels
   if ARG_PRESENT(colors) then colors = *self.plot_params.colors
   if ARG_PRESENT(tnt_c) then self.grid->getProperty, TNT_C = tnt_c
-  if ARG_PRESENT(MAP_PARAMS) then begin
-    pokX = where(*self.map_params.xticks gt 0. and *self.map_params.xticks lt 1.)
-    pokY = where(*self.map_params.yticks gt 0. and *self.map_params.yticks lt 1.)
-    MAP_PARAMS = {xticks  : (*self.map_params.xticks)[pokX] , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
-                  yticks  : (*self.map_params.yticks)[pokY] , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
-                  xlevels : (*self.map_params.xtickvalues)[pokX], $ ; values of the plotted contours in Xcoordinates
-                  ylevels : (*self.map_params.ytickvalues)[pokY]  $ ; values of the plotted contours in Ycoordinates
-                  }
-  end
+;  if ARG_PRESENT(MAP_PARAMS) then begin
+;    pokX = where(*self.map_params.xticks gt 0. and *self.map_params.xticks lt 1.)
+;    pokY = where(*self.map_params.yticks gt 0. and *self.map_params.yticks lt 1.)
+;    MAP_PARAMS = {xticks  : (*self.map_params.xticks)[pokX] , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
+;                  yticks  : (*self.map_params.yticks)[pokY] , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
+;                  xlevels : (*self.map_params.xtickvalues)[pokX], $ ; values of the plotted contours in Xcoordinates
+;                  ylevels : (*self.map_params.ytickvalues)[pokY]  $ ; values of the plotted contours in Ycoordinates
+;                  }
+;  end
      
 end
 
@@ -377,12 +377,15 @@ end
 ;          
 ;    INVERTCOLORS: in, optional, type = boolean
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
+;                  
+;    NEUTRAL_COLOR: in, optional, type = color
+;                   the color of the missing data on the plot
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN = val_min, VAL_MAX = val_max , $
-                                    COLORS = colors, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color
+function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = colors, CMIN=cmin, CMAX=cmax, $
+                                  INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color
          
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -396,9 +399,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
-  
-  self->DestroyPlotParams
-   
+     
   is_Levels = N_ELEMENTS(levels) ne 0 
   is_Colors = N_ELEMENTS(colors) ne 0
   
@@ -406,7 +407,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   
   ; Give a value to nlevels   
   IF N_Elements(n_levels) EQ 0 THEN BEGIN
-     IF ~is_Levels and ~is_Colors THEN nlevels = 256 $
+     IF ~is_Levels and ~is_Colors THEN nlevels = 255 $
      ELSE begin
        if is_colors then nlevels = N_Elements(colors[*,0])
        if is_Levels then nlevels = N_Elements(levels)              
@@ -421,19 +422,22 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, VAL_MIN =
   ; Colors
   if is_Colors then _colors = utils_color_convert(COLORS = colors) $
    else _colors = utils_color_convert(NCOLORS = nlevels, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors)
-  if KEYWORD_SET(NEUTRAL_COLOR) then _neutral = utils_color_convert(COLORS = NEUTRAL_COLOR) else $
-     _neutral = cgColor('white')
+     if KEYWORD_SET(NEUTRAL_COLOR) then _neutral = utils_color_convert(COLORS = NEUTRAL_COLOR) else $
+       _neutral = cgColor('white')
 
   ; Levels
-  if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN(*self.data) else self.plot_params.type = 'USER'
-  if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX(*self.data) else self.plot_params.type = 'USER'
   if is_Levels then begin 
    _levels = levels 
    val_min = min(levels)
    val_max = max(levels)   
-  endif else _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
-   
+  endif else begin
+   val_min = self.plot_params.min_val
+   val_max = self.plot_params.max_val
+   _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+  endelse
+    
   ; Fill up
+  self->DestroyPlotParams
   self.plot_params.nlevels  = nlevels
   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
   self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
@@ -543,8 +547,8 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
           
     self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
     self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY) 
-    self.map_params.xticks = PTR_NEW(xticks/double(self.Xsize), /NO_COPY)
-    self.map_params.yticks = PTR_NEW(yticks/double(self.Ysize), /NO_COPY) 
+    self.map_params.xticks = PTR_NEW(xticks, /NO_COPY)
+    self.map_params.yticks = PTR_NEW(yticks, /NO_COPY) 
     self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
     self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY) 
             
@@ -998,12 +1002,14 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
   
-   ; Levels
-  if self.plot_params.type eq 'AUTO' and ~ KEYWORD_SET(KEEP_LEVELS) then begin
+  to_redef = N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 or ~KEYWORD_SET(KEEP_LEVELS) or self.plot_params.type eq 'AUTO'
+     
+  ; Levels
+  if to_redef then begin
     pfin = where(finite(*self.data) eq 1, cntfin)  
     if cntfin eq 0 then MESSAGE, '$data has no finite element.'
-    if N_ELEMENTS(VAL_MIN) eq 0 then val_min = MIN((*self.data)[pfin])
-    if N_ELEMENTS(VAL_MAX) eq 0 then val_max = MAX((*self.data)[pfin])
+    if N_ELEMENTS(VAL_MIN) eq 0 then _val_min = MIN((*self.data)[pfin]) else _val_min = VAL_MIN
+    if N_ELEMENTS(VAL_MAX) eq 0 then _val_max = MAX((*self.data)[pfin]) else _val_max = VAL_MAX
     if MISS then begin
       dataTypeName = Size(*self.data, /TNAME)
       CASE dataTypeName OF
@@ -1019,16 +1025,14 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
           indices = Where(*self.data ne missing, count)
         END
       ENDCASE
-      if count ne 0 then begin
-        val_min = MIN((*self.data)[indices])
-        val_max = MAX((*self.data)[indices])
-      endif
+      if count ne 0 and N_ELEMENTS(VAL_MIN) eq 0 then _val_min = MIN((*self.data)[indices])
+      if count ne 0 and N_ELEMENTS(VAL_MAX) eq 0 then _val_max = MAX((*self.data)[indices])
     endif    
-    _levels = (double(val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
+    _levels = (double(_val_max - _val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + _val_min
     ptr_free, self.plot_params.levels
     self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
-    self.plot_params.min_val = val_min
-    self.plot_params.max_val = val_max
+    self.plot_params.min_val = _val_min
+    self.plot_params.max_val = _val_max
   endif
 
   return, self->set_img()
@@ -1113,7 +1117,11 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   x = xi * c.dx + c.x0
   y = yi * c.dy + c.y1
   utils_1d_to_2d, x, y, x, y  
-  self.grid->transform_XY, x, y, c.proj, posX, posY, /NEAREST
+  self.grid->transform_XY, x, y, c.proj, posX, posY
+  posX += 0.5
+  posy += 0.5  
+  pok = where(posX ge 0 and posX le self.Xsize and posY ge 0 and posY le self.Ysize, cnt)
+  if cnt eq 0 then Message, 'Wind grid not compatible.'
   
   utils_1d_to_2d, xi, yi, xi, yi
   velx = ud[xi,yi]
@@ -1124,10 +1132,10 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   self.wind_params.length = length
   self.wind_params.thick = thick
   self.wind_params.color = color
-  self.wind_params.velx = PTR_NEW(velx, /NO_COPY)
-  self.wind_params.vely = PTR_NEW(vely, /NO_COPY)
-  self.wind_params.posx = PTR_NEW(posx, /NO_COPY)
-  self.wind_params.posy = PTR_NEW(posy, /NO_COPY)
+  self.wind_params.velx = PTR_NEW(velx[pok], /NO_COPY)
+  self.wind_params.vely = PTR_NEW(vely[pok], /NO_COPY)
+  self.wind_params.posx = PTR_NEW(posx[pok], /NO_COPY)
+  self.wind_params.posy = PTR_NEW(posy[pok], /NO_COPY)
   self.is_Winded = TRUE
   
   return, 1
@@ -1231,21 +1239,51 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::draw_map, WINDOW = window  
+function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
   
   if self.map_params.type eq 'LONLAT' then begin
   
     self.grid->get_Lonlat, lon, lat
     
-    cgContour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE,  $
+    cgContour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DATA,  $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
       
-    cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DEVICE, $
+    cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DATA, $
       COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
       
   endif
+  
+  ; Draw a frame
+  xf = [0, self.xsize, self.xsize, 0, 0]
+  yf = [0, 0, self.ysize, self.ysize, 0]
+  cgPlotS, xf, yf, WINDOW = window, /DATA
+   
+  xts = *self.map_params.xticks
+  yts = *self.map_params.yticks
+  xls = *self.map_params.xlevels
+  yls = *self.map_params.ylevels
+  
+  ddy = - 0.026 * self.ysize
+  ddx = - 0.008 * self.xsize
+   
+  ; Tick labels
+  charsize = 1
+  NO_TICK_LABEL = KEYWORD_SET(NO_TICK_LABEL)
+  if ~ NO_TICK_LABEL then begin
+    format = '(I4)'
+    for i=0,N_ELEMENTS(xts)-1 do begin
+      label = string(abs(xls[i]),FORMAT=format)
+      if xls[i] lt 0 then label += 'W' else label += 'E'
+      cgText, xts[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, CHARSIZE = charsize, WINDOW=window, /DATA
+    endfor
+    for i=0,N_ELEMENTS(yts)-1 do begin
+      label = string(abs(yls[i]),FORMAT=format)
+      if yls[i] lt 0 then label += 'S' else label += 'N'
+      cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, /DATA
+    endfor    
+  end
   
   return, 1
   
@@ -1266,19 +1304,13 @@ function w_Map::draw_shapes, WINDOW = window
     
   for i = 0, self.nshapes-1 do begin
     sh = shapes[i]
-    conn = *(sh.conn)
-    coord = *(sh.coord)
-    
     index = 0
-    while index lt N_ELEMENTS(conn) do begin    
-      nbElperConn = conn[index]      
-      idx = conn[index+1:index+nbElperConn]      
+    while index lt N_ELEMENTS((*sh.conn)) do begin    
+      nbElperConn = (*sh.conn)[index]      
+      idx = (*sh.conn)[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
-      _coord = coord[*,idx]      
-      x = _coord[0,*]  / double(self.Xsize)
-      y = _coord[1,*]  / double(self.Ysize)   
-      cgPlots, x, y, /NORMAL,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, WINDOW = window
-      
+      _coord = (*sh.coord) [*,idx]      
+      cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
     endwhile  
   endfor
   
@@ -1303,17 +1335,14 @@ function w_Map::draw_wind, WINDOW = window
   compile_opt idl2
   @WAVE.inc
   
-  x = *self.wind_params.posx  / double(self.Xsize)
-  y = *self.wind_params.posy / double(self.Ysize)   
-  
   w_partvelvec, *self.wind_params.velx, $
                 *self.wind_params.vely, $
-                x, $
-                y, $
+                *self.wind_params.posx, $
+                *self.wind_params.posy, $
                 VECCOLORS=cgColor(self.wind_params.color), $
                 LENGTH = self.wind_params.length, $
-                thick = self.wind_params.thick, $              
-                /OVER,  /NORMAL, WINDOW = window
+                thick = self.wind_params.thick, /OVER, $              
+                /DATA,  /NORMAL, WINDOW = window, NOCLIP = 0
   
   return, 1
   
@@ -1321,7 +1350,7 @@ end
 
 ;+
 ; :Description:
-;    Show the image.
+;    Simple function to have a look at the plot.
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -1330,7 +1359,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid, TITLE = title
+pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, PNG = png
 
   ;--------------------------
   ; Set up environment
@@ -1350,45 +1379,37 @@ pro w_Map::show_img, RESIZABLE = resizable, PIXMAP = pixmap, WID = wid, TITLE = 
     cgControl, EXECUTE=0
     cgWIN = true
   endif else begin
-    undefine, cgWIN
     cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
     xwin = !D.WINDOW
   endelse
-
-  if self.is_Shaded then img = self->shading() else img = self->img_to_rgb()
-      
-  cgImage, img, WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1] ;, /Erase/KEEP_ASPECT_RATIO,
+  
+  if self.is_Shaded then begin
+   cgImage, self->shading(), WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1], /KEEP_ASPECT_RATIO
+  endif else begin
+   utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
+   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1], /KEEP_ASPECT_RATIO
+  endelse
 
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = cgWIN) 
   if self.is_Mapped then ok = self->draw_map(WINDOW = cgWIN)
   if self.is_Winded then ok = self->draw_wind(WINDOW = cgWIN)
   
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
+  if KEYWORD_SET(PNG) then PIXMAP = true  
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~KEYWORD_SET(PIXMAP) then begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
     cgDisplay, self.Xsize, self.Ysize, /FREE, Title=title
     cgImage, img
  endif
-  !ORDER = pp
-  
-end
-
-function w_Map::get_img, XSIZE = xsize, YSIZE = ysize
-
-  self->show_img, /PIXMAP
-  xwin = !D.WINDOW
-  XSIZE = !D.X_SIZE
-  YSIZE = !D.Y_SIZE
-  img = Transpose(tvrd(/TRUE), [1,2,0])
-  WDELETE, xwin
-  
-  return, img
+ if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE), /VERBOSE
+ 
+ !ORDER = pp
   
 end
 
 ;+
 ; :Description:
-;    To show a color bar. 
+;    Simple function to have a look at the color bar.
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
@@ -1397,7 +1418,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position
+pro w_Map::show_color_bar, RESIZABLE = resizable, TITLE=title, LABELS=labels
 
   ;--------------------------
   ; Set up environment
@@ -1408,8 +1429,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   pp = !ORDER ;To restore later
   !ORDER = 0
   
-  DEVICE, RETAIN=2, DECOMPOSED=1  
-  
+  DEVICE, RETAIN=2, DECOMPOSED=1    
   xs = self.Ysize * 0.2
   ys = self.Ysize * 0.75  
   _Position=[0.20,0.05,0.30,0.95]
@@ -1417,18 +1437,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle='Color bar'
     cgControl, EXECUTE=0
     cgWIN = true
-  endif else if KEYWORD_SET(WINDOW) or KEYWORD_SET(POSITION) then begin
-    undefine, cgWIN
-    if KEYWORD_SET(POSITION) then begin
-     _Position = POSITION
-     PIXMAP = TRUE
-    end
-    if KEYWORD_SET(WINDOW) then begin
-      cgWIN = window
-      RESIZABLE = TRUE
-    endif else xwin = !D.WINDOW
   endif else begin
-    undefine, cgWIN
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='Color bar'
     xwin = !D.WINDOW
   endelse
@@ -1441,20 +1450,93 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, PIXMAP = pixmap, TITLE=title, 
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
     if N_ELEMENTS(r) lt 256 then begin
+     r = congrid(r,256, /CENTER) 
+     g = congrid(g,256, /CENTER) 
+     b = congrid(b,256, /CENTER)       
+    end
+    cgColorbar, PALETTE= [[r],[g],[b]], Position=_Position, CHARSIZE=1.3,$
+      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, $
+       MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), WINDOW=cgWIN
+  endelse
+  
+  if KEYWORD_SET(PNG) then PIXMAP = true  
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~KEYWORD_SET(PIXMAP) then begin 
+    img = Transpose(tvrd(/TRUE), [1,2,0])
+    WDELETE, xwin
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title='Color bar'
+    cgImage, img
+ endif
+ if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE), /VERBOSE
+  
+end
+
+
+;+
+; :Description:
+;    Adds the image to an existing plot
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;-   
+pro w_Map::add_img, POSITION = position, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+  
+  if self.is_Shaded then begin
+   cgImage, self->shading(), WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO
+  endif else begin
+   utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
+   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO
+  endelse
+   
+  if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
+  if self.is_Mapped then ok = self->draw_map(WINDOW = window)
+  if self.is_Winded then ok = self->draw_wind(WINDOW = window)
+  
+end
+
+;+
+; :Description:
+;    To draw a color bar on an existing plot. 
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;-   
+pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position, CHARSIZE=charsize, _REF_EXTRA=extra
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+      
+  if N_ELEMENTS(LABELS) eq 0 then LABELS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
+  
+  if self.plot_params.nlevels lt 40 then begin
+    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
+      TITLE=title, ADDCMD=window, CHARSIZE=charsize, _EXTRA=extra
+  endif else begin
+    utils_color_rgb, *(self.plot_params.colors), r,g,b    
+    if N_ELEMENTS(r) lt 256 then begin
      r = congrid(r,256) 
      g = congrid(g,256) 
      b = congrid(b,256)       
     end
-    cgColorbar, PALETTE= [[r],[g],[b]], Position=_Position, CHARSIZE=1.3,$
-      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), WINDOW=cgWIN
+    cgColorbar, PALETTE= [[r],[g],[b]], Position=Position, _EXTRA=extra, $
+        TITLE=title,  MINRANGE=self.plot_params.min_val, CHARSIZE=charsize, $
+        MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), ADDCMD=window
   endelse
-  
-  if KEYWORD_SET(RESIZABLE) and ~KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 else if ~ KEYWORD_SET(PIXMAP) then begin 
-    img = Transpose(tvrd(/TRUE), [1,2,0])
-    WDELETE, xwin
-    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title='Map Plot'
-    cgImage, img
-  endif
-  !ORDER = pp
   
 end

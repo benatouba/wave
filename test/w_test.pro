@@ -1771,9 +1771,9 @@ pro TEST_MODIS
     d = map->set_shading_params(RELIEF_FACTOR=1.)
     d = map->set_map_params(INTERVAL=5)
     d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24)
     CTLOAD, 13
-    d=map->set_Plot_Params(N_LEVELS=126,VAL_MIN=-24)
+    d=map->set_Plot_Params(N_LEVELS=126)
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
@@ -2352,29 +2352,29 @@ pro TEST_MOSAIC
   OBJ_DESTROY, dom1  
   
   CTLOAD, 13
-  ok = map->set_plot_params(N_LEVELS=255, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_plot_params(N_LEVELS=255)
   
   ; Modiss
   !QUIET = 1
   h25v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v05.005.2008299202523.hdf', SUBSET_LL=[89.,33.,96.,28.])
   h25v05->getProperty, tnt_c = c
   data1 = BYTARR(c.nx, c.ny) + 20B
-  ok = map->set_data(data1, h25v05, MISSING=0)
+  ok = map->set_data(data1, h25v05, MISSING=0, VAL_MAX=240, VAL_MIN=1)
   map->show_img, /RESIZABLE, TITLE= 'h25v05'
   h25v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v06.005.2008299213852.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h25v06->getProperty, tnt_c = c
   data2 = BYTARR(c.nx, c.ny) + 80B
-  ok = map->set_data(data2, h25v06, MISSING=0)
+  ok = map->set_data(data2, h25v06, MISSING=0, VAL_MAX=240, VAL_MIN=1)
   map->show_img , /RESIZABLE, TITLE= 'h25v06' 
   h26v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v05.005.2008299222304.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v05->getProperty, tnt_c = c
   data3 = BYTARR(c.nx, c.ny) + 160
-  ok = map->set_data(data3, h26v05, MISSING=0)
+  ok = map->set_data(data3, h26v05, MISSING=0, VAL_MAX=240, VAL_MIN=1)
   map->show_img , /RESIZABLE, TITLE= 'h26v05' 
   h26v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v06.005.2008299220621.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v06->getProperty, tnt_c = c
   data4 = BYTARR(c.nx, c.ny) + 240B
-  ok = map->set_data(data4, h26v06, MISSING=0)
+  ok = map->set_data(data4, h26v06, MISSING=0, VAL_MAX=240, VAL_MIN=1)
   map->show_img  , /RESIZABLE, TITLE= 'h26v05'
   !QUIET = 0  
   
@@ -2389,7 +2389,7 @@ pro TEST_MOSAIC
   p = where(modata eq 0, cnt)
   if cnt ne 0 then error+=1
   
-  ok = map->set_data(modata, mosaic, MISSING=0)
+  ok = map->set_data(modata, mosaic, MISSING=0, VAL_MAX=240, VAL_MIN=1)
   map->show_img, /RESIZABLE, TITLE= 'Mosaic'    
   
   ok = DIALOG_MESSAGE('Do you see nice mosaic?', /QUESTION)
