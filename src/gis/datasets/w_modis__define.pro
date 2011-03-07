@@ -434,6 +434,8 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   if PROJCODE ne 16 then message, 'EOS Projection code currently not supported. (' + str_equiv(PROJCODE) + ')
   res = EOS_GD_GRIDINFO(gridID, xdimsize, ydimsize, upleft, lowright)
   if res eq -1 then message, WAVE_Std_Message(/FILE)  
+  status = EOS_GD_DETACH(gridID) 
+  
   status = EOS_GD_CLOSE(eosgdfid)
   
   ; EOS closed. Now make the GIS structures

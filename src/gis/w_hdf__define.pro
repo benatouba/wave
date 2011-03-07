@@ -300,6 +300,8 @@ pro w_HDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       ENDFOR      
     endif
     
+    HDF_SD_ENDACCESS, sdID
+        
     if N_ELEMENTS(varunits) lt N_ELEMENTS(varnames) then varunits = [varunits, '']
     if N_ELEMENTS(vardescriptions) lt N_ELEMENTS(varnames) then vardescriptions = [vardescriptions, '']
     
@@ -390,6 +392,8 @@ function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a prev
   
   HDF_SD_GETDATA, sdID, Data, COUNT=COUNT, NOREVERSE=NOREVERSE, START=START, STRIDE=STRIDE
   IF calData.cal NE 0 and ~KEYWORD_SET(NO_CALIB) THEN data = calData.cal * (Temporary(data) - calData.offset)
+  
+  HDF_SD_ENDACCESS, sdID
   
   return, data
   
@@ -485,7 +489,8 @@ function w_HDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
           then units = theAttribute
     endfor
   endif  
-      
+  HDF_SD_ENDACCESS, sdID
+  
   return, TRUE
   
 end
@@ -635,6 +640,7 @@ PRO w_HDF::dump, FILE = file, NO_GATTS = no_gatts, NO_VARIABLES = no_variables, 
         text = '               ' + str_equiv(attribute_datatype) + ':' + str_equiv(attribute_name) + ' = ' + theAttribute
         printf, lu, text
       ENDFOR
+      HDF_SD_ENDACCESS, sdID
       
       ; Add the calibration data ?
       text = '                 Is calibrated? '
