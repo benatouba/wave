@@ -20,9 +20,9 @@ pro standard_2d_plot, plot_map, TITLE = title, BAR_TITLE = BAR_TITLE, BAR_TAGS =
   if N_ELEMENTS(str_format) eq 0 then str_format = '(F5.1)'
   if N_ELEMENTS(bar_tags) eq 0 then bar_tags = STRING(levels, FORMAT = str_format)
   
-  xs = xsize + 170
+  xs = xsize + 180
   ys = ysize + 70  
-  pos = [40d/xs,30d/ys,(1d - 130d/xs),(1d - 40d/ys)]
+  pos = [45d/xs,30d/ys,(1d - 125d/xs),(1d - 40d/ys)]
   
   ;Trick because no output keyword
   cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='WAVE Plot'
