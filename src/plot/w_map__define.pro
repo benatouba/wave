@@ -79,6 +79,28 @@ PRO w_Map__Define
             conn           : PTR_NEW()       $ ; connivence info (private)          
             }
   
+  ; This is the information for one polygon to draw
+  struct = {MAP_POLYGON                    , $ 
+            thick          : 0D            , $ ; thickness or the line for the plot
+            style          : 0D            , $ ; style or the line for the plot
+            color          : ''            , $ ; color or the line for the plot
+            n_coord        : 0L            , $ ; number of coordinates in the polygon (private)
+            coord          : PTR_NEW()       $ ; coordinates of the polygon points (private)        
+            }
+  
+  ; This is the information for one point to draw
+  struct = {MAP_POINT                      , $ 
+            thick          : 0D            , $ ; thickness or the point
+            psym           : 0L            , $ ; style or the point
+            symsize        : 0D            , $ ; style or the point
+            color          : ''            , $ ; color or the point
+            text           : ''            , $ ; point annotation
+            charsize       : 0D            , $ ; point annotation size
+            align          : 0D            , $ ; annotation alignement
+            dpText         : [0D,0D]       , $ ; delta pos of the text with respect to the point
+            coord          : [0D,0D]         $ ; coordinates of the point       
+            }
+  
   ; This is for the Lon-Lat/UTM contours drawing
   struct = {MAP_PARAMS                     , $
             type           : ''            , $ ; LONLAT or UTM
@@ -116,11 +138,17 @@ PRO w_Map__Define
              relief_factor : 0D            , $ ; strenght of the shading (default: 0.7)
              nshapes       : 0L            , $ ; number of active shape files to plot                  
              shapes        : PTR_NEW()     , $ ; array of nshapes {MAP_SHAPE} structures                               
+             npolygons     : 0L            , $ ; number of active polygons to plot                  
+             polygons      : PTR_NEW()     , $ ; array of npolygons {MAP_POLYGON} structures                               
+             npoints       : 0L            , $ ; number of points to plot                  
+             points        : PTR_NEW()     , $ ; array of npointss {MAP_POINT} structures                               
              map_params    : {MAP_PARAMS}  , $ ; the mapping params for contours
              plot_params   : {PLOT_PARAMS} , $ ; the plotting params          
              wind_params   : {WIND_PARAMS} , $ ; the wind params          
              is_Shaped     : FALSE         , $ ; is there at least one shape to draw?
              is_Shaded     : FALSE         , $ ; did the user specify a DEM for shading?
+             is_Polygoned  : FALSE         , $ ; did the user specify a polygon to draw?
+             is_Pointed    : FALSE         , $ ; did the user specify a point to draw?
              is_Mapped     : FALSE         , $ ; did the user specify a contour to draw for mapping?         
              is_Winded     : FALSE           $ ; did the user specify wind flows ?         
              }
@@ -282,6 +310,49 @@ end
 
 ;+
 ; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+pro w_Map::DestroyPolygons
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  if PTR_VALID(self.polygons) then begin  
+    polygons = *self.polygons
+    for i = 0, N_ELEMENTS(polygons) - 1 do ptr_free, (polygons[i]).coord
+  endif
+  
+  ptr_free, self.polygons
+  self.npolygons = 0L
+  self.is_Polygoned = FALSE
+  
+end
+
+;+
+; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+pro w_Map::DestroyPoints
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  ptr_free, self.points
+  self.npoints = 0L
+  self.is_Pointed = FALSE
+  
+end
+
+;+
+; :Description:
 ;    Destroy function. 
 ;
 ; :History:
@@ -302,6 +373,8 @@ pro w_Map::Cleanup
   self->DestroyMapParams       
   self->DestroyPlotParams     
   self->DestroyWindParams     
+  self->DestroyPolygons     
+  self->DestroyPoints   
   
 END
 
@@ -403,8 +476,6 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
   is_Levels = N_ELEMENTS(levels) ne 0 
   is_Colors = N_ELEMENTS(colors) ne 0
   
-  if is_Levels then self.plot_params.type = 'USER' else self.plot_params.type = 'AUTO'
-  
   ; Give a value to nlevels   
   IF N_Elements(n_levels) EQ 0 THEN BEGIN
      IF ~is_Levels and ~is_Colors THEN nlevels = 255 $
@@ -438,6 +509,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
     
   ; Fill up
   self->DestroyPlotParams
+  if is_Levels then self.plot_params.type = 'USER' else self.plot_params.type = 'AUTO'
   self.plot_params.nlevels  = nlevels
   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
   self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
@@ -820,7 +892,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
     
     self.grid->transform, x, y, x, y, SRC = shp_src
     if n_elements(coord) eq 0 then coord = [1#x,1#y] else coord = [[coord],[[1#x,1#y]]]
-
+        
     parts = *ent.parts
     for k=0L, ent.n_parts-1 do begin
       if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
@@ -838,6 +910,8 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
     shpmodel->IDLffShape::DestroyEntity, ent 
 
   endfor
+  
+  coord = coord + 0.5 ; Because Center point of the pixel is not the true coord 
 
   ; clean unused objects
   obj_destroy, shpModel
@@ -869,13 +943,237 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    self.shapes = PTR_NEW(sh, /NO_COPY)
   endif else begin
    temp = *self.shapes
-   PTR_FREE, self.shapes
+   nshapes = self.nshapes
+   ptr_free, self.shapes
    temp = [temp, sh]
    self.shapes = PTR_NEW(temp, /NO_COPY)
-   self.nshapes = self.nshapes + 1
+   self.nshapes = nshapes + 1
   endelse
     
   self.is_Shaped = TRUE
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Set a polygon to draw on the map.
+;    
+;
+; :Keywords:
+;    x: in, required
+;       the x coordinates of the polygon to draw (at least 3 points)
+;    
+;    y: in, required
+;       the y coordinates of the polygon to draw (at least 3 points)
+;    
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;    
+;    COLOR: in, optional, type = string
+;           the color of the polygon lines
+;    
+;    THICK:in, optional, type = float
+;           the thickness of the polygon lines
+;    
+;    STYLE:in, optional, type = float
+;          the style of the the polygon lines
+;    
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYLE = style
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyPolygons
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  ;******************
+  ; Check arguments *
+  ;******************
+  if N_PARAMS() ne 2 then begin
+   self->DestroyPolygons
+   return, 1
+  endif
+    
+  if ~KEYWORD_SET(src) then GIS_make_datum, ret, src, NAME = 'WGS-84'
+
+  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+
+  if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
+  n_coord = N_ELEMENTS(_x)
+  if n_coord lt 3 then  Message, WAVE_Std_Message('X', NELEMENTS=3)
+     
+   self.grid->transform, _x, _y, _x, _y, SRC = src
+   coord = [1#_x,1#_y]  + 0.5 ; Because Center point of the pixel is not the true coord 
+
+  _color = 'black'
+  _style = 0.
+  _thick = 1.5  
+  if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
+  if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
+  if N_ELEMENTS(THICK) eq 1 then _thick = THICK
+  
+  poly = {MAP_POLYGON}
+  poly.color = _color
+  poly.style = _style
+  poly.thick = _thick  
+  poly.coord = PTR_NEW(coord, /NO_COPY)
+  poly.n_coord = n_coord
+  
+  if self.npolygons eq 0 then begin
+   self.npolygons = 1
+   self.polygons = PTR_NEW(poly, /NO_COPY)
+  endif else begin
+   temp = *self.polygons
+   npolygons = self.npolygons
+   ptr_free, self.polygons
+   temp = [temp, poly]
+   self.polygons = PTR_NEW(temp, /NO_COPY)
+   self.npolygons = npolygons + 1
+  endelse
+    
+  self.is_Polygoned = TRUE
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Set a point or an array of points to draw on the map.
+;    
+;
+; :Keywords:
+;    x: in, required
+;       the x coordinates of the point(s) to draw
+;    
+;    y: in, required
+;       the y coordinates of the point(s) to draw 
+;    
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;    
+;    COLOR: in, optional, type = string
+;           the color of the points
+;    
+;    THICK:in, optional, type = float
+;           the thickness of the points
+;          
+;    PSYM:in, optional, type = int, default = 5
+;          the style of the the points
+;          
+;    SYMSIZE:in, optional, type = float
+;            the size of the the points
+;            
+;    FILLED:in, optional, type = boolean
+;           if the points must be filled
+;           
+;    TEXT:in, optional, type = float
+;          points annotation
+;          
+;    DELTA_TEXT:in, optional, type = [float,float]
+;               a delta in relative img coordinates where to put the annotation
+;               
+;    ALIGN:in, optional, type = float
+;          the allignment of the annotation
+;    
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM = psym, SYMSIZE = symsize, $
+                                  TEXT = text, DELTA_TEXT =  Delta_Text, ALIGN = align, CHARSIZE = charsize
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyPoints
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  ;******************
+  ; Check arguments *
+  ;******************
+  if N_PARAMS() ne 2 then begin
+   self->DestroyPoints
+   return, 1
+  endif
+    
+  if ~KEYWORD_SET(src) then GIS_make_datum, ret, src, NAME = 'WGS-84'
+  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+
+  if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
+  n_coord = N_ELEMENTS(_x)
+  self.grid->transform, _x, _y, _x, _y, SRC = src
+  coord = [1#_x,1#_y]  + 0.5 ; Because Center point of the pixel is not the true coord 
+  
+  if KEYWORD_SET(TEXT) then begin
+    if ~ arg_okay(TEXT, TYPE=IDL_STRING) then Message, WAVE_Std_Message('TEXT', /ARG)
+    if N_ELEMENTS(TEXT) eq 1 then _TEXT = REPLICATE(TEXT, n_coord) $
+     else if N_ELEMENTS(TEXT) eq n_coord then  _TEXT = text $
+      else  Message, WAVE_Std_Message('TEXT', /ARG)    
+  endif else _TEXT = REPLICATE('', n_coord)
+  
+  _color = 'black'
+  _psym = 5.
+  _symsize = 1.
+  _thick = 1.  
+  _align = 0.
+  _dpText = [0.005,0.005]
+  _CHARSIZE = 1.
+  if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
+  if N_ELEMENTS(PSYM) eq 1 then _psym = PSYM
+  if N_ELEMENTS(SYMSIZE) eq 1 then _symsize = SYMSIZE
+  if N_ELEMENTS(THICK) eq 1 then _thick = THICK
+  if N_ELEMENTS(DELTA_TEXT) eq 2 then _dpText = DELTA_TEXT
+  if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
+  if KEYWORD_SET(CHARSIZE) then _charsize = CHARSIZE
+  
+  point = REPLICATE({MAP_POINT}, n_coord)  
+  for i = 0, n_coord -1 do begin
+    point[i].thick = _thick
+    point[i].psym = _psym
+    point[i].symsize = _symsize
+    point[i].color = _color
+    point[i].text = _text[i]
+    point[i].align = _align
+    point[i].dpText = _dpText
+    point[i].coord = [_x[i],_y[i]]
+    point[i].charsize = _charsize
+    point[i].thick = _thick    
+  endfor
+
+  if self.npoints eq 0 then begin
+   self.npoints = n_coord
+   self.points = PTR_NEW(point, /NO_COPY)
+  endif else begin
+   temp = *self.points
+   npoints = self.npoints
+   self->DestroyPoints
+   temp = [temp, point]
+   self.points = PTR_NEW(temp, /NO_COPY)
+   self.npoints = npoints + n_coord
+  endelse
+     
+  self.is_Pointed = TRUE
   return, 1
   
 end
@@ -966,7 +1264,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max, KEEP_LEVELS = keep_levels
+function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
                              
   
   ; SET UP ENVIRONNEMENT
@@ -1002,7 +1300,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
   
-  to_redef = N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 or ~KEYWORD_SET(KEEP_LEVELS) or self.plot_params.type eq 'AUTO'
+  to_redef = N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 or self.plot_params.type eq 'AUTO'
      
   ; Levels
   if to_redef then begin
@@ -1265,7 +1563,7 @@ function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
   xls = *self.map_params.xlevels
   yls = *self.map_params.ylevels
   
-  ddy = - 0.026 * self.ysize
+  ddy = - 0.035 * self.ysize
   ddx = - 0.008 * self.xsize
    
   ; Tick labels
@@ -1350,126 +1648,57 @@ end
 
 ;+
 ; :Description:
-;    Simple function to have a look at the plot.
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Adds the polygons to the device
+; 
+; :Private:
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;-   
-pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, PNG = png
+;-  
+function w_Map::draw_polygons, WINDOW = window
 
   ;--------------------------
   ; Set up environment
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
+  
+  for i = 0, self.npolygons-1 do begin
+     poly = (*self.polygons)[i]
+    _coord = *poly.coord
+    cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(poly.color), THICK=poly.thick, LINESTYLE=poly.style, NOCLIP=0, WINDOW = window
+  endfor
     
-  pp = !ORDER ;To restore later
-  !ORDER = 0
-  
-  DEVICE, RETAIN=2, DECOMPOSED=1  
-  
-  if NOT KEYWORD_SET(title) then title = 'Map Plot'
-  
-  if KEYWORD_SET(RESIZABLE) then begin
-    cgWindow, WXSIZE=self.Xsize, WYSIZE=self.Ysize, WTitle=title
-    cgControl, EXECUTE=0
-    cgWIN = true
-  endif else begin
-    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
-    xwin = !D.WINDOW
-  endelse
-  
-  if self.is_Shaded then begin
-   cgImage, self->shading(), WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1], /KEEP_ASPECT_RATIO
-  endif else begin
-   utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
-   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = cgWIN,  /SAVE, /NORMAL, POSITION = [0,0,1,1], /KEEP_ASPECT_RATIO
-  endelse
-
-  if self.is_Shaped then ok = self->draw_shapes(WINDOW = cgWIN) 
-  if self.is_Mapped then ok = self->draw_map(WINDOW = cgWIN)
-  if self.is_Winded then ok = self->draw_wind(WINDOW = cgWIN)
-  
-  if KEYWORD_SET(PNG) then PIXMAP = true  
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~KEYWORD_SET(PIXMAP) then begin 
-    img = Transpose(tvrd(/TRUE), [1,2,0])
-    WDELETE, xwin
-    cgDisplay, self.Xsize, self.Ysize, /FREE, Title=title
-    cgImage, img
- endif
- if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE), /VERBOSE
- 
- !ORDER = pp
+  return, 1
   
 end
 
 ;+
 ; :Description:
-;    Simple function to have a look at the color bar.
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Adds the points to the device
+; 
+; :Private:
 ;
 ; :History:
 ;     Written by FaM, 2011.
-;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, TITLE=title, LABELS=labels
+;-  
+function w_Map::draw_points, WINDOW = window
 
   ;--------------------------
   ; Set up environment
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
-    
-  pp = !ORDER ;To restore later
-  !ORDER = 0
+
+  for i = 0, self.npoints-1 do begin
+     p = (*self.points)[i]
+    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, /DATA
+  endfor
   
-  DEVICE, RETAIN=2, DECOMPOSED=1    
-  xs = self.Ysize * 0.2
-  ys = self.Ysize * 0.75  
-  _Position=[0.20,0.05,0.30,0.95]
-  if KEYWORD_SET(RESIZABLE) then begin
-    cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle='Color bar'
-    cgControl, EXECUTE=0
-    cgWIN = true
-  endif else begin
-    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title='Color bar'
-    xwin = !D.WINDOW
-  endelse
-  
-  if N_ELEMENTS(LABELS) eq 0 then LABELS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
-  
-  if self.plot_params.nlevels lt 40 then begin
-    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=_Position, $
-      TITLE=title, /VERTICAL, WINDOW=cgWIN, CHARSIZE=1.3
-  endif else begin
-    utils_color_rgb, *(self.plot_params.colors), r,g,b    
-    if N_ELEMENTS(r) lt 256 then begin
-     r = congrid(r,256, /CENTER) 
-     g = congrid(g,256, /CENTER) 
-     b = congrid(b,256, /CENTER)       
-    end
-    cgColorbar, PALETTE= [[r],[g],[b]], Position=_Position, CHARSIZE=1.3,$
-      TITLE=title, /VERTICAL, /RIGHT, MINRANGE=self.plot_params.min_val, $
-       MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), WINDOW=cgWIN
-  endelse
-  
-  if KEYWORD_SET(PNG) then PIXMAP = true  
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else if ~KEYWORD_SET(PIXMAP) then begin 
-    img = Transpose(tvrd(/TRUE), [1,2,0])
-    WDELETE, xwin
-    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title='Color bar'
-    cgImage, img
- endif
- if KEYWORD_SET(PNG) then WRITE_PNG, png, tvrd(/TRUE), /VERBOSE
+  return, 1
   
 end
-
 
 ;+
 ; :Description:
@@ -1482,7 +1711,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_img, POSITION = position, WINDOW = window
+pro w_Map::add_img, POSITION = position, WINDOW = window, NO_TICK_LABEL=no_tick_label, MULTIMARGIN=multimargin
 
   ;--------------------------
   ; Set up environment
@@ -1491,15 +1720,17 @@ pro w_Map::add_img, POSITION = position, WINDOW = window
   @WAVE.inc
   
   if self.is_Shaded then begin
-   cgImage, self->shading(), WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO
+   cgImage, self->shading(), WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE = 0
   endif else begin
    utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
-   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO
+   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE = 0
   endelse
    
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
-  if self.is_Mapped then ok = self->draw_map(WINDOW = window)
+  if self.is_Mapped then ok = self->draw_map(WINDOW = window, NO_TICK_LABEL=no_tick_label)
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
+  if self.is_Polygoned then ok = self->draw_polygons(WINDOW = cgWIN)
+  if self.is_Pointed then ok = self->draw_points(WINDOW = cgWIN)
   
 end
 
@@ -1538,5 +1769,105 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION 
         TITLE=title,  MINRANGE=self.plot_params.min_val, CHARSIZE=charsize, $
         MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), ADDCMD=window
   endelse
+  
+end
+
+;+
+; :Description:
+;    Simple function to have a look at the plot.
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;-   
+pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, MARGIN = margin
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+    
+  pp = !ORDER ;To restore later
+  !ORDER = 0
+  
+  DEVICE, RETAIN=2, DECOMPOSED=1  
+  
+  if NOT KEYWORD_SET(title) then title = 'Map Plot'
+  if NOT KEYWORD_SET(margin) then margin = 0.07
+  
+  xs = self.Xsize * (1.+2.*margin)
+  ys = self.Ysize * (1.+2.*margin)
+  
+  if KEYWORD_SET(RESIZABLE) then begin
+    cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
+    cgControl, EXECUTE=0
+    cgWIN = true
+  endif else begin
+    cgDisplay, Xs, Ys, /FREE, /PIXMAP
+    xwin = !D.WINDOW
+  endelse
+  
+  self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=cgWIN
+  
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
+    img = Transpose(tvrd(/TRUE), [1,2,0])
+    WDELETE, xwin
+    cgDisplay, Xs, Ys, /FREE, Title=title
+    cgImage, img
+ endelse
+ 
+ !ORDER = pp
+  
+end
+
+;+
+; :Description:
+;    Simple function to have a look at the color bar.
+;
+; :Author: Fabien Maussion::
+;            FG Klimatologie
+;            TU Berlin
+;
+; :History:
+;     Written by FaM, 2011.
+;-   
+pro w_Map::show_color_bar, RESIZABLE = resizable, LABELS=labels
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+    
+  pp = !ORDER ;To restore later
+  !ORDER = 0
+  
+  DEVICE, RETAIN=2, DECOMPOSED=1    
+  xs = self.Ysize * 0.2
+  ys = self.Ysize * 0.75  
+  _Position=[0.20,0.05,0.30,0.95]
+  if NOT KEYWORD_SET(title) then title = 'Color bar'
+  
+  if KEYWORD_SET(RESIZABLE) then begin
+    cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
+    cgControl, EXECUTE=0
+    cgWIN = true
+  endif else begin
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title=title
+    xwin = !D.WINDOW
+  endelse
+  
+  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, /VERTICAL
+  
+  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
+    img = Transpose(tvrd(/TRUE), [1,2,0])
+    WDELETE, xwin
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title=title
+    cgImage, img
+ endelse
   
 end

@@ -38,7 +38,7 @@ pro standard_2d_plot, plot_map, TITLE = title, BAR_TITLE = BAR_TITLE, BAR_TAGS =
     cgControl, EXECUTE=0
     cgWIN = true
   endif else begin
-    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric  $
+    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1 $
     else if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1 $
     else if KEYWORD_SET(JPEG) then PS_START, FILENAME= jpeg, Decomposed=1
   endelse

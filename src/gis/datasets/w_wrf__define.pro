@@ -202,11 +202,30 @@ function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
         nest_pos = self->w_NCDF::get_Var('NEST_POS')
         nest_pos = nest_pos[*,*,0]
         npos = where(nest_pos ne 0, cnt)
-        if cnt eq 0 then Message, 'You sure the domain has a nest?'
-        inds = ARRAY_INDICES(NEST_POS, npos)
-        mx = min(inds[0,*]) - 1
-        my = min(inds[1,*]) - 1
-        isubs = [mx,max(inds[0,*])-mx+2,my,max(inds[1,*])-my+2]
+        if cnt ne 0 then begin
+          inds = ARRAY_INDICES(NEST_POS, npos)
+          mx = min(inds[0,*]) - 1
+          my = min(inds[1,*]) - 1
+          isubs = [mx,max(inds[0,*])-mx+2,my,max(inds[1,*])-my+2]
+        endif else begin
+          ; we have to check if there is the child file here
+          file1 = self.path
+          GEN_str_subst, ret, file1,'d0'+str_equiv(self.dom),'d0'+str_equiv(self.dom+1),file2
+          if ~NCDF_IsValidFile(file2) then Message, 'could not find NEST_POS or the child domains file for cropping.'
+          cdfid = NCDF_OPEN(file2, /NOWRITE)
+          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
+          NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
+          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
+          NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
+          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
+          NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
+          NCDF_ATTGET, Cdfid , 'WEST-EAST_GRID_DIMENSION', ni, /GLOBAL
+          NCDF_ATTGET, Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', nj, /GLOBAL
+          NCDF_close, cdfid
+          neli = LONG(DOUBLE(ni)/DOUBLE(ratio))
+          nelj = LONG(DOUBLE(nj)/DOUBLE(ratio))
+          isubs = [iPar-1, neli,jPar-1,nelj]
+        endelse        
       endif else begin
         ; we have to check if there is the child file here
         file1 = self.path
@@ -813,7 +832,7 @@ function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NO
   
   if KEYWORD_SET(CONVECTIVE) then pcp = self->get_Var('RAINC', times, nt, t0 = t0, t1 = t1) $
     else if KEYWORD_SET(NONCONVECTIVE) then pcp = self->get_Var('RAINNC',times, nt, t0 = t0, t1 = t1) $
-      else pcp = self->get_Var('RAINNC', times, nt, t0 = t0, t1 = t1) + self->get_Var('RAINC')    
+      else pcp = self->get_Var('RAINNC', times, nt, t0 = t0, t1 = t1) + self->get_Var('RAINC', t0 = t0, t1 = t1)    
   
   if KEYWORD_SET(STEP_WIZE) then pcp = utils_ACC_TO_STEP(pcp)
   

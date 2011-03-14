@@ -1771,7 +1771,7 @@ pro TEST_MODIS
     d = map->set_shading_params(RELIEF_FACTOR=1.)
     d = map->set_map_params(INTERVAL=5)
     d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24)
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24, val_max = val_m)
     CTLOAD, 13
     d=map->set_Plot_Params(N_LEVELS=126)
     map->show_img, /RESIZABLE
@@ -1780,7 +1780,7 @@ pro TEST_MODIS
     if ok eq 'No' then error += 1
     
     ok =  lst->define_subset(SUBSET_LL= [90, 31.8, 91, 30.1])
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, /KEEP_LEVELS)
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24, val_max = val_m)
     
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
@@ -1931,8 +1931,33 @@ pro TEST_W_MAP
     ok = DIALOG_MESSAGE('Do you see a temperature plot without wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
+    OBJ_DESTROY, map  
+    
+    ok = wrf->define_subset(CROPBORDER=70) 
+    map =  OBJ_NEW('w_map', wrf, YSIZE=400)
+    d = map->set_shading_params(RELIEF_FACTOR=1)
+    
+    T2 = (wrf->get_Var('T2'))[*,*,8]
+    CTLOAD, 13   
+    ok = map->set_plot_params(N_LEVELS=125)
+    if not ok then error +=1
+    ok = map->set_data(t2, wrf, MISSING = -999.)
+    if not ok then error +=1
+    u = TOTAL(wrf->get_Var('U10', time, nt), 3)
+    v = TOTAL(wrf->get_Var('V10'), 3)
+    u = u / nt
+    v = v / nt
+    ok = map->set_wind(u, v, wrf, density = 1)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    if not ok then error +=1
+    
+    map->show_img, /RESIZABLE
+    ok = DIALOG_MESSAGE('Do you see a ZOOMED temperature plot with wind vectors?', /QUESTION)
+    if ok eq 'No' then error += 1
+    cgDelete, /ALL
+    
     OBJ_DESTROY, wrf     
-    OBJ_DESTROY, map     
+  
     if error ne 0 then message, '% TEST_W_MAP NOT passed', /CONTINUE else print, 'TEST_W_MAP passed'
         
 end
@@ -2297,6 +2322,48 @@ pro TEST_WRF_AGG_MASSGRID
         
 end
 
+
+pro TEST_REGRID
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26', /CROPCHILD)
+    dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26')    
+    reg = dom1->reGrid(FACTOR=3)
+   
+    reg->get_LonLat, rlon, rlat, rnx, rny
+    dom2->get_LonLat, lon, lat, nx, ny
+    
+    if rnx ne nx then error +=1
+    if rny ne ny then error +=1
+    if max(abs(lon - rlon)) gt 0.0001 then error +=1
+    if max(abs(lat - rlat)) gt 0.0001 then error +=1
+    
+    
+    luN = (dom2->get_Var('LU_INDEX'))[*,*,0]
+    OBJ_DESTROY, reg
+    
+    reg = dom2->reGrid(FACTOR=5)
+    reg->GetProperty, TNT_C=c
+    
+    luN_congrid = congrid(luN, c.nx, c.ny, /CENTER)
+    luN_trans = reg->map_gridded_data(luN, dom2)
+    
+    if TOTAL(ABS(luN_congrid-luN_trans)) ne 0 then error +=1
+
+    OBJ_DESTROY, dom1     
+    OBJ_DESTROY, dom2     
+    OBJ_DESTROY, reg     
+    
+    if error ne 0 then message, '% TEST_REGRID NOT passed', /CONTINUE else print, 'TEST_REGRID passed'
+        
+end
+
 pro TEST_NEIREST_NEIGHBOR
 
   @WAVE.inc
@@ -2438,6 +2505,7 @@ pro TEST_UTILS
   TEST_WRF_AGG_MASSGRID
   TEST_NEIREST_NEIGHBOR
   TEST_MOSAIC
+  TEST_REGRID
 end
 
 pro TEST_POST, REDO = redo
