@@ -385,7 +385,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   
   ddy = 0.1 ; Delta between Tag n and Tag n+1
   
-  ppos = [0.1,0.1,0.67,0.90] ; Plot position
+  ppos = [0.1,0.15,0.67,0.90] ; Plot position
      
   jd = TIME_to_JD(time[p1:p2])  
   
