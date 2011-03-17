@@ -229,7 +229,7 @@
 ;       Added BACKGROUND_COLOR keyword  W. Landsman February 2011
 ;       Incorporate Coyote graphics  W. Landsman  February 2011
 ;-
-pro al_legend, items, BOTTOM_LEGEND=bottom, BOX = box, CENTER_LEGEND=center, $
+pro w_legend, items, BOTTOM_LEGEND=bottom, BOX = box, CENTER_LEGEND=center, $
     CHARTHICK=charthick, CHARSIZE = charsize, CLEAR = clear, COLORS = colorsi, $
     CORNERS = corners, DATA=data, DELIMITER=delimiter, DEVICE=device, $
     FILL=fill, HELP = help, HORIZONTAL=horizontal,LEFT_LEGEND=left, $
@@ -238,7 +238,7 @@ pro al_legend, items, BOTTOM_LEGEND=bottom, BOX = box, CENTER_LEGEND=center, $
     SPACING=spacing, SYMSIZE=symsize, TEXTCOLORS=textcolorsi, THICK=thicki, $
     TOP_LEGEND=top, USERSYM=usersym,  VECTORFONT=vectorfonti, $
     VERTICAL=vertical,OUTLINE_COLOR = outline_color, FONT = font, $
-    BTHICK=thick, background_color = bgcolor, WINDOW=window
+    BTHICK=thick, background_color = bgcolor, WINDOW=window, LINELENGTH = LINELENGTH
 ;
 ;       =====>> HELP
 ;
@@ -331,12 +331,14 @@ if n_elements(horizontal) eq 0 then $              ; D=VERTICAL
  fill = keyword_set(fill)
 if n_elements(usersym) eq 1 then usersym = 2*[[0,0],[0,1],[1,1],[1,0],[0,0]]-1
 
+if N_ELEMENTS(LINELENGTH) ne 1 then LINELENGTH = 1.
+
 ;
 ;       =====>> INITIALIZE SPACING
 ;
 setdefaultvalue, spacing, 1.2*charsize
 setdefaultvalue, pspacing , 3*charsize
-xspacing = !d.x_ch_size/float(!d.x_size) * (spacing > charsize)
+xspacing = !d.x_ch_size/float(!d.x_size) * (spacing > charsize) * LINELENGTH
 yspacing = !d.y_ch_size/float(!d.y_size) * (spacing > charsize)
 ltor = 1                                        ; flag for left-to-right
 if n_elements(left) eq 1 then ltor = left eq 1
@@ -502,6 +504,7 @@ for iclr = 0,clear do begin
         return
  endelse
 endfor
+
 cgquery,execute=1
 
 end
