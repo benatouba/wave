@@ -1560,8 +1560,8 @@ function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
    
   xts = *self.map_params.xticks
   yts = *self.map_params.yticks
-  xls = *self.map_params.xlevels
-  yls = *self.map_params.ylevels
+  xls = *self.map_params.xtickvalues
+  yls = *self.map_params.ytickvalues
   
   ddy = - 0.035 * self.ysize
   ddx = - 0.008 * self.xsize
