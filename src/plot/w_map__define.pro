@@ -1563,11 +1563,11 @@ function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
   xls = *self.map_params.xtickvalues
   yls = *self.map_params.ytickvalues
   
-  ddy = - 0.035 * self.ysize
+  ddy = - 0.043 * self.ysize
   ddx = - 0.008 * self.xsize
    
   ; Tick labels
-  charsize = 1
+  charsize = 0.8
   NO_TICK_LABEL = KEYWORD_SET(NO_TICK_LABEL)
   if ~ NO_TICK_LABEL then begin
     format = '(I4)'
@@ -1691,9 +1691,11 @@ function w_Map::draw_points, WINDOW = window
   @WAVE.inc
 
   for i = 0, self.npoints-1 do begin
-     p = (*self.points)[i]
+    p = (*self.points)[i]
+    if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
+    if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
     cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, /DATA
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
   endfor
   
   return, 1
@@ -1729,8 +1731,8 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, NO_TICK_LABEL=no_tick_
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
   if self.is_Mapped then ok = self->draw_map(WINDOW = window, NO_TICK_LABEL=no_tick_label)
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
-  if self.is_Polygoned then ok = self->draw_polygons(WINDOW = cgWIN)
-  if self.is_Pointed then ok = self->draw_points(WINDOW = cgWIN)
+  if self.is_Polygoned then ok = self->draw_polygons(WINDOW = window)
+  if self.is_Pointed then ok = self->draw_points(WINDOW = window)
   
 end
 
