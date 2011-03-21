@@ -110,6 +110,7 @@ PRO w_Map__Define
             ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
+            t_Charsize     : 0D            , $ ; Ticks charsizes
             color          : ''            , $ ; color of the contour lines
             labeled        : 0L            , $ ; if the contours have to labelled
             thick          : 0D            , $ ; thickness of the contour lines
@@ -549,7 +550,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, LABEL = label
+function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, LABEL = label, NO_TICK_LABELS = no_tick_labels
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -571,6 +572,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   _style = 2.
   _color = 'Dark Grey'
   _label = 0
+  _tick_labels = TRUE
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
@@ -578,6 +580,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
   if N_ELEMENTS(LABEL) eq 1 then _label = LABEL
+  if KEYWORD_SET(NO_TICK_LABELS) eq 1 then _tick_labels = FALSE
   
   self.map_params.type = _type
   self.map_params.thick = _thick
@@ -601,29 +604,34 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
     if cnt gt 0 then lonlevels = levels[p]
     p = where(levels le floor(max(Lat)) and levels ge ceil(min(Lat)), cnt)
     if cnt gt 0 then latlevels = levels[p]
-   
-    for i=0,N_ELEMENTS(lonlevels)-1 do begin
-      p = where(Lon[*,0] le lonlevels[i] ,cnt)
-      if cnt gt 1 and cnt lt nx then begin
-        if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
-        if N_ELEMENTS(xtickValues) eq 0 then xtickValues =  lonlevels[i] else xtickValues = [xtickValues, lonlevels[i]]
-      endif
-    endfor
-    for i=0,N_ELEMENTS(latlevels)-1 do begin
-      p = where(Lat[0,*] le latlevels[i] ,cnt)
-      if cnt gt 1 and cnt lt ny then begin
-        if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
-        if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  latlevels[i] else ytickValues = [ytickValues, latlevels[i]]
-      endif
-    endfor
-          
+    
+    if _tick_labels then begin
+    
+      for i=0,N_ELEMENTS(lonlevels)-1 do begin
+        p = where(Lon[*,0] le lonlevels[i] ,cnt)
+        if cnt gt 1 and cnt lt nx then begin
+          if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
+          if N_ELEMENTS(xtickValues) eq 0 then xtickValues =  lonlevels[i] else xtickValues = [xtickValues, lonlevels[i]]
+        endif
+      endfor
+      for i=0,N_ELEMENTS(latlevels)-1 do begin
+        p = where(Lat[0,*] le latlevels[i] ,cnt)
+        if cnt gt 1 and cnt lt ny then begin
+          if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
+          if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  latlevels[i] else ytickValues = [ytickValues, latlevels[i]]
+        endif
+        
+      endfor
+      
+    endif
+    
     self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
-    self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY) 
+    self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY)
     self.map_params.xticks = PTR_NEW(xticks, /NO_COPY)
-    self.map_params.yticks = PTR_NEW(yticks, /NO_COPY) 
+    self.map_params.yticks = PTR_NEW(yticks, /NO_COPY)
     self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
-    self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY) 
-            
+    self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY)
+    
   endif else Message, 'Currently only LONLAT type is supported'
   
   return, 1
@@ -1537,7 +1545,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
+function w_Map::draw_map, WINDOW = window
   
   if self.map_params.type eq 'LONLAT' then begin
   
@@ -1563,13 +1571,17 @@ function w_Map::draw_map, WINDOW = window, NO_TICK_LABEL = no_tick_label
   xls = *self.map_params.xtickvalues
   yls = *self.map_params.ytickvalues
   
-  ddy = - 0.043 * self.ysize
-  ddx = - 0.008 * self.xsize
+  spacing = 1.
+;  chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
+;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
+  
+  ddy = - 0.038 * spacing * self.ysize
+  ddx = - 0.008 * spacing * self.xsize
    
   ; Tick labels
   charsize = 0.8
-  NO_TICK_LABEL = KEYWORD_SET(NO_TICK_LABEL)
-  if ~ NO_TICK_LABEL then begin
+  TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
+  if TICK_LABEL then begin
     format = '(I4)'
     for i=0,N_ELEMENTS(xts)-1 do begin
       label = string(abs(xls[i]),FORMAT=format)
@@ -1713,7 +1725,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_img, POSITION = position, WINDOW = window, NO_TICK_LABEL=no_tick_label, MULTIMARGIN=multimargin
+pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargin
 
   ;--------------------------
   ; Set up environment
@@ -1722,14 +1734,14 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, NO_TICK_LABEL=no_tick_
   @WAVE.inc
   
   if self.is_Shaded then begin
-   cgImage, self->shading(), WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE = 0
+   cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position
   endif else begin
    utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
-   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE = 0
+   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0
   endelse
    
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
-  if self.is_Mapped then ok = self->draw_map(WINDOW = window, NO_TICK_LABEL=no_tick_label)
+  if self.is_Mapped then ok = self->draw_map(WINDOW = window)
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
   if self.is_Polygoned then ok = self->draw_polygons(WINDOW = window)
   if self.is_Pointed then ok = self->draw_points(WINDOW = window)
