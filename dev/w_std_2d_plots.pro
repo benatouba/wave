@@ -71,7 +71,7 @@ pro standard_2d_plot, plot_map, TITLE = title, BAR_TITLE = BAR_TITLE, BAR_TAGS =
     if KEYWORD_SET(JPEG) then PS_END, /JPEG, resize = 50
     if KEYWORD_SET(EPS) then PS_END, /PS_ENCAPSULATED, /PS_METRIC
     if KEYWORD_SET(STD_PNG) then  WRITE_PNG, STD_PNG, tvrd(/TRUE)
-    WDELETE, xwin
+    if xwin ne -1 then WDELETE, xwin
   endelse
     
   !ORDER = pp

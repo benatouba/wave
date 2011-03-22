@@ -1565,23 +1565,23 @@ function w_Map::draw_map, WINDOW = window
   xf = [0, self.xsize, self.xsize, 0, 0]
   yf = [0, 0, self.ysize, self.ysize, 0]
   cgPlotS, xf, yf, WINDOW = window, /DATA
-   
-  xts = *self.map_params.xticks
-  yts = *self.map_params.yticks
-  xls = *self.map_params.xtickvalues
-  yls = *self.map_params.ytickvalues
   
-  spacing = 1.
-;  chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
-;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
-  
-  ddy = - 0.038 * spacing * self.ysize
-  ddx = - 0.008 * spacing * self.xsize
-   
-  ; Tick labels
-  charsize = 0.8
-  TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
+ TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
   if TICK_LABEL then begin
+  
+    xts = *self.map_params.xticks
+    yts = *self.map_params.yticks
+    xls = *self.map_params.xtickvalues
+    yls = *self.map_params.ytickvalues
+    
+    spacing = 1.
+    ;  chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
+    ;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))    
+    ddy = - 0.023 * spacing * self.ysize
+    ddx = - 0.008 * spacing * self.xsize
+    
+    ; Tick labels
+    charsize = 0.8    
     format = '(I4)'
     for i=0,N_ELEMENTS(xts)-1 do begin
       label = string(abs(xls[i]),FORMAT=format)
@@ -1592,7 +1592,7 @@ function w_Map::draw_map, WINDOW = window
       label = string(abs(yls[i]),FORMAT=format)
       if yls[i] lt 0 then label += 'S' else label += 'N'
       cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, /DATA
-    endfor    
+    endfor
   end
   
   return, 1
@@ -1725,7 +1725,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargin
+pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargin, NOERASE =noerase
 
   ;--------------------------
   ; Set up environment
@@ -1734,10 +1734,10 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   @WAVE.inc
   
   if self.is_Shaded then begin
-   cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position
+   cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
   endif else begin
    utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
-   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0
+   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE =noerase
   endelse
    
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 

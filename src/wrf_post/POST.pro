@@ -735,7 +735,7 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+;  ON_ERROR, 2
   
   nvars = vartokeep.n_vars  
   nfiles = N_ELEMENTS(filelist)
@@ -936,21 +936,21 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    if N_ELEMENTS(unit) ne 0 then begin
-      printf, unit, ' '
-      printf, unit, ' '
-      printf, unit, '* ERROR : ' + !Error_State.Msg
-      printf, unit, ' '
-      printf, unit, ' '
-      close, unit
-      free_lun, Unit
-    endif
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF 
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    if N_ELEMENTS(unit) ne 0 then begin
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      printf, unit, '* ERROR : ' + !Error_State.Msg
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      close, unit
+;      free_lun, Unit
+;    endif
+;    ok = WAVE_Error_Message(!Error_State.Msg)
+;    RETURN
+;  ENDIF 
   
   ; ---------------
   ; Check the input
@@ -1054,6 +1054,9 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   printf, unit, ' '  
 
   ;Go threw the dimensions.
+  t_dim_names = ''
+  t_dim_ids = 0
+  t_s_dim_ids = 0
   for i =0, inq.ndims-1 do begin  
     NCDF_DIMINQ, sid, i, sName, sSize     
     if N_ELEMENTS(s_dim_names) eq 0 then s_dim_names = sName else s_dim_names=[s_dim_names,sName]       
@@ -1063,10 +1066,16 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
     endif else begin
       if str_equiv(sName) eq 'TIME' then ssize = nt ; No more "infinite dimension"
       if (str_equiv(sName) eq 'TIME') and i ne 0 then MESSAGE, 'Time HAS to be the dimension 0.'      
-      tdimid  = NCDF_DIMDEF(tid, sName, ssize)           
+      tdimid  = NCDF_DIMDEF(tid, sName, ssize)         
+      t_dim_ids = [t_dim_ids, tdimid]
+      t_dim_names = [t_dim_names, sName]
+      t_s_dim_ids = [t_s_dim_ids, i]
       printf, unit, '  +:', sName, ': ', STR_equiv(sSize)
     endelse
   endfor ; Dimensions OK
+  t_dim_names = t_dim_names[1:*]
+  t_dim_ids = t_dim_ids[1:*]
+  t_s_dim_ids = t_s_dim_ids[1:*]
   
   printf, unit, ' '
   printf, unit, ' '
@@ -1189,9 +1198,16 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       dimsIds = dimsIds[s]
       addInfo = '+D3TOD2+'
     endif
+    
+    myDimIds = dimsIds
+    for d = 0, N_ELEMENTS(dimsIds) - 1 do begin
+      pdim = where(t_s_dim_ids eq dimsIds[d], cntd)
+      if cntd eq 0 then message, 'Dimension of variable ' + s_var_info.name + ' not found'
+      myDimIds[d] = t_dim_ids[pdim]
+    end
         
     ; Define the variable.
-    TvID = NCDF_VarDef(tid, s_var_info.name, dimsIds, $
+    TvID = NCDF_VarDef(tid, s_var_info.name, myDimIds, $
       BYTE=tbyte, $
       CHAR=tchar, $
       DOUBLE=tdouble, $
@@ -1200,9 +1216,9 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       SHORT=tshort)
       
     text = '  +:' + STRLOWCASE(s_var_info.DATATYPE) + '  ' + str_equiv(s_var_info.name) + '(' 
-    for i =0, N_ELEMENTS(dimsIds) - 1 do begin
-      text += STRLOWCASE(str_equiv(s_dim_names[dimsIds[i]]))
-      if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','      
+    for i =0, N_ELEMENTS(myDimIds) - 1 do begin
+      text += STRLOWCASE(str_equiv(t_dim_names[myDimIds[i]]))
+      if i ne N_ELEMENTS(myDimIds) - 1 then  text += ','      
     endfor
     text += ') ' + addInfo + ' ; '
     printf, unit, text
@@ -1429,22 +1445,22 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    if N_ELEMENTS(unit) ne 0 then begin
-      printf, unit, ' '
-      printf, unit, ' '
-      printf, unit, '* ERROR : ' + !Error_State.Msg
-      printf, unit, ' '
-      printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
-      printf, unit, ' '
-      close, unit
-      free_lun, Unit
-    endif
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    if N_ELEMENTS(unit) ne 0 then begin
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      printf, unit, '* ERROR : ' + !Error_State.Msg
+;      printf, unit, ' '
+;      printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+;      printf, unit, ' '
+;      close, unit
+;      free_lun, Unit
+;    endif
+;    ok = WAVE_Error_Message(!Error_State.Msg)
+;    RETURN
+;  ENDIF
   
   ; ---------------
   ; Check the input
