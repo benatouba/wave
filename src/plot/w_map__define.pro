@@ -404,15 +404,6 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   if ARG_PRESENT(levels) then levels = *self.plot_params.levels
   if ARG_PRESENT(colors) then colors = *self.plot_params.colors
   if ARG_PRESENT(tnt_c) then self.grid->getProperty, TNT_C = tnt_c
-;  if ARG_PRESENT(MAP_PARAMS) then begin
-;    pokX = where(*self.map_params.xticks gt 0. and *self.map_params.xticks lt 1.)
-;    pokY = where(*self.map_params.yticks gt 0. and *self.map_params.yticks lt 1.)
-;    MAP_PARAMS = {xticks  : (*self.map_params.xticks)[pokX] , $ ; where to find the ticks on the Xaxis (in relative coordinates from 0 to 1)
-;                  yticks  : (*self.map_params.yticks)[pokY] , $ ; where to find the ticks on the Yaxis (in relative coordinates from 0 to 1)
-;                  xlevels : (*self.map_params.xtickvalues)[pokX], $ ; values of the plotted contours in Xcoordinates
-;                  ylevels : (*self.map_params.ytickvalues)[pokY]  $ ; values of the plotted contours in Ycoordinates
-;                  }
-;  end
      
 end
 
@@ -1759,18 +1750,19 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position, CHARSIZE=charsize, _REF_EXTRA=extra
+pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position, CHARSIZE=charsize, BAR_FORMAT = bar_format, _REF_EXTRA=extra
 
   ;--------------------------
   ; Set up environment
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
-      
-  if N_ELEMENTS(LABELS) eq 0 then LABELS = STRING(*(self.plot_params.levels), FORMAT = '(F5.1)')
+  
+  if n_elements(bar_format) eq 0 then bar_format = '(F5.1)'
+  if n_elements(labels) eq 0 then labels = string(*(self.plot_params.levels), FORMAT=bar_format)
   
   if self.plot_params.nlevels lt 40 then begin
-    cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
+    w_cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
       TITLE=title, ADDCMD=window, CHARSIZE=charsize, _EXTRA=extra
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
@@ -1849,7 +1841,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, LABELS=labels
+pro w_Map::show_color_bar, RESIZABLE = resizable, VERTICAL = vertical, _REF_EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -1861,10 +1853,17 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, LABELS=labels
   !ORDER = 0
   
   DEVICE, RETAIN=2, DECOMPOSED=1    
-  xs = self.Ysize * 0.2
-  ys = self.Ysize * 0.75  
-  _Position=[0.20,0.05,0.30,0.95]
-  if NOT KEYWORD_SET(title) then title = 'Color bar'
+  title = 'Color bar'
+  
+  if KEYWORD_SET(VERTICAL) then begin
+    xs = self.Ysize * 0.2
+    ys = self.Ysize * 0.75  
+    _Position=[0.20,0.05,0.30,0.95]
+  endif else begin
+    xs = self.Xsize * 0.75
+    ys = self.Xsize * 0.2  
+    _Position=[0.10,0.4,0.90,0.6]
+  endelse
   
   if KEYWORD_SET(RESIZABLE) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
@@ -1875,7 +1874,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, LABELS=labels
     xwin = !D.WINDOW
   endelse
   
-  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, /VERTICAL
+  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, VERTICAL = vertical, _EXTRA=extra
   
   if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
