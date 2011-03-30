@@ -1750,7 +1750,8 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION = position, CHARSIZE=charsize, BAR_FORMAT = bar_format, _REF_EXTRA=extra
+pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=position, CHARSIZE=charsize, $
+                          BAR_OPEN=bar_open, BAR_FORMAT=bar_format, _REF_EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -1763,7 +1764,7 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW = window, POSITION 
   
   if self.plot_params.nlevels lt 40 then begin
     w_cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
-      TITLE=title, ADDCMD=window, CHARSIZE=charsize, _EXTRA=extra
+      TITLE=title, ADDCMD=window, CHARSIZE=charsize, BAR_OPEN=bar_open, _EXTRA=extra
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
     if N_ELEMENTS(r) lt 256 then begin

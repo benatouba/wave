@@ -77,15 +77,15 @@ pro w_standard_2d_plot, map, TITLE=title,$
                            BAR_TITLE=bar_title,  $
                            BAR_TAGS=bar_tags, $
                            BAR_FORMAT=bar_format, $
-                           BAR_ARROWS = BAR_arrows,  $
-                           BAR_SPACING = BAR_spacing,  $
+                           BAR_OPEN=bar_open,  $
+                           BAR_SPACING=BAR_spacing,  $
                            PIXMAP=pixmap,  $
-                           LEGEND_INFO = legend_info , $
+                           SOURCE_INFO=source_info, $
                            RESIZABLE=resizable, $
                            PNG=png, JPEG=jpeg, EPS=eps, STD_PNG=std_png, STD_JPEG=std_jpeg, $
                            DISP_IMG=disp_img, $
-                           WTITLE = WTITLE, $                        
-                           IM_RESIZE = im_resize
+                           WTITLE=WTITLE, $                        
+                           IM_RESIZE=im_resize
    
   ;--------------------------
   ; Set up environment
@@ -110,9 +110,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
   if n_elements(WTITLE) eq 0 then WTITLE = 'WAVE standard plot'
   if n_elements(BAR_TITLE) eq 0 then BAR_TITLE = 'Data levels'
    
-  xs = xsize + 180
-  ys = ysize + 110 
-  pos = [45d/xs,70d/ys,(1d - 125d/xs),(1d - 40d/ys)]
+  xs = xsize + 200
+  ys = ysize + 120 
+  
+  pos = [45d/xs,80d/ys,(1d - 145d/xs),(1d - 40d/ys)]
   
   ; Trick because no output keyword
   cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE
@@ -146,7 +147,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
   ; Bar
   pbar = [pos[2] + 40d/xs, pos[1]+0.05, pos[2] + 60d/xs, pos[3]-0.05]
   map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, $
-                      CHARSIZE=1., ARROWS = bar_arrows, SPACING = BAR_spacing
+                      CHARSIZE=1., BAR_OPEN=bar_open, SPACING=BAR_spacing
 
   ; Title bar
   cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
@@ -162,20 +163,20 @@ pro w_standard_2d_plot, map, TITLE=title,$
     unit = ' km'
   endif
   xLegend = pos[0] + [0., xSize_bar_device]
-  yLegend = pos[1] / 4. + [0.,0.]
+  yLegend = pos[1] / 5. + [0.,0.]
   cgPlotS, xLegend, yLegend, COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
   cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
   cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
   cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_equiv(LONG(xSize_map_bar)) + unit, ALIGNMENT=0.5, CHARSIZE=1., /NORMAL, WINDOW=cgWIN
   
-  ; Projection
-  proj_name = 'Projection : ' + tnt_c.proj.name
-  cgText, xLegend[1] + 0.05,  yLegend + 0.025, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
-  proj_name = 'Datum : ' + tnt_c.proj.datum.name
-  cgText, xLegend[1] + 0.05,  yLegend - 0.01, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  ; Projection  
+  proj_name = 'Projection: ' + tnt_c.proj.name
+  cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  proj_name = 'Datum: ' + tnt_c.proj.datum.name
+  cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
   
   ; Legend info
-  if arg_okay(LEGEND_INFO, TYPE=IDL_STRING) then cgText, 1 - 0.3,  yLegend + 0.025, LEGEND_INFO, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8, /NORMAL, WINDOW=cgWIN
    
   ; Output
   if visible then begin

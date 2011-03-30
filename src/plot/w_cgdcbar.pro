@@ -193,7 +193,7 @@ PRO w_cgDCBar, colors, $
       TCHARSIZE=tcharsize, $
       VERTICAL=vertical, $
       NEUTRAL_COLOR=neutral_color, $
-      ARROWS = ARROWS, $
+      BAR_OPEN=bar_open, $
       WINDOW=window
 
     ; Standard error handling.
@@ -225,7 +225,7 @@ PRO w_cgDCBar, colors, $
             TITLE=title, $
             TCHARSIZE=tcharsize, $
             NEUTRAL_COLOR=neutral_color, $
-            ARROWS = ARROWS, $
+            BAR_OPEN=bar_open, $
             VERTICAL=vertical, $
             REPLACECMD=Keyword_Set(window), $
             ADDCMD=Keyword_Set(addcmd)
@@ -278,7 +278,7 @@ PRO w_cgDCBar, colors, $
         ENDELSE
     ENDIF
     if N_ELEMENTS(neutral_color) ne 1 then neutral_color = cgColor('white')
-    do_arrows = KEYWORD_SET(ARROWS)
+    do_arrows = KEYWORD_SET(bar_open)
     
     ; Save the orginal color table so it can be restored later.
     TVLCT, rr, gg, bb, /Get
