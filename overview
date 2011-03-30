@@ -83,6 +83,9 @@ General format of WAVE ".pro" files:
       scatter plots (`w_scatterplot`) and more in the future, but also to plot
       georeferenced datasets on a self-generated map (`w_map`), which is all the 
       WAVE development is about.
+   
+   src/plot/astron
+      Some routines "borrowed" from the IDL astron library
       
       
    src/wrf_post

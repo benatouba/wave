@@ -277,7 +277,7 @@ PRO w_cgDCBar, colors, $
            position = [0.1, 0.88, 0.9, 0.93]
         ENDELSE
     ENDIF
-    if N_ELEMENTS(neutral_color) ne 1 then neutral_color = cgColor('white')
+    
     do_arrows = KEYWORD_SET(bar_open)
     
     ; Save the orginal color table so it can be restored later.
@@ -398,16 +398,28 @@ PRO w_cgDCBar, colors, $
     
     ENDELSE
     
+   
+    if N_ELEMENTS(neutral_color) ne 1 then neutral_color = cgColor('white', DECOMPOSED=1)
+    
     ; Draw horizontal color bar.
     IF ~vertical THEN BEGIN
     
         ; Calculate positions for the rectangles of the bar.
         x0 = position[0]
-        if do_arrows then step = (position[2]-position[0])/(ncolors-0.5) $
-         else step = (position[2]-position[0])/ncolors
+        step = (position[2]-position[0])/ncolors
         x1 = x0 + step
         y0 = position[1]
-        y1 = position[3]        
+        y1 = position[3]    
+        if do_arrows then begin 
+            dx2 =  (x1 - x0)/2.       
+            dy2 =  (y1 - y0)/2.       
+            x = [x0, x1-dx2, x1-dx2, x0]
+            y = [y0+dy2, y1, y0, y0+dy2]
+            Polyfill, x, y, /NORMAL, Color=neutral_color
+            PlotS, x, y, /NORMAL, COLOR=cgColor(BARCOLOR, FILE=file)
+            x0 = x1-dx2
+            x1 = x0 + step
+        endif    
         
         ; Draw each rectangle.        
         FOR j=0,ncolors-1 DO BEGIN
@@ -430,7 +442,7 @@ PRO w_cgDCBar, colors, $
         chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
             ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
         IF !D.Name EQ 'PS' THEN chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * (0.75 * spacing)
-        if do_arrows then x = position[0] else x = position[0] + step/2.
+        x = position[0] + step/2.
         y = y0 - (chardist * ((rotate NE 0) ? 1 : 2))
         CASE 1 OF
            (rotate EQ 0): alignment = 0.5
@@ -451,10 +463,20 @@ PRO w_cgDCBar, colors, $
         ; Draw each rectangle.
         x0 = position[0]
         x1 = position[2]
-        if do_arrows then step = (position[3]-position[1])/(ncolors-0.5) $
-         else step = (position[3]-position[1])/ncolors
+        step = (position[3]-position[1])/(ncolors)         
         y0 = position[1]
-        y1 = y0 + step
+        y1 = y0 + step             
+        if do_arrows then begin 
+            dx2 =  (x1 - x0)/2.       
+            dy2 =  (y1 - y0)/2.       
+            x = [x0+dx2, x1, x0, x0+dx2]
+            y = [y0, y1-dy2, y1-dy2, y0]
+            Polyfill, x, y, /NORMAL, Color=neutral_color
+            PlotS, x, y, /NORMAL, COLOR=cgColor(BARCOLOR, FILE=file)
+            y0 = y1-dy2
+            y1 = y0 + step    
+        endif
+                
         FOR j=0,ncolors-1 DO BEGIN
           if j eq ncolors-1 and do_arrows then begin
             dx2 = (x1 - x0) / 2.
@@ -474,8 +496,7 @@ PRO w_cgDCBar, colors, $
         ; Add the annotations of the bar.
         chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
             ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.75 * spacing) : (1.25 * spacing))
-        if do_arrows then y = position[1] - (!D.Y_CH_Size / Float(!D.Y_Size) * 0.5) $
-        else y = position[1] + step/2. - (!D.Y_CH_Size / Float(!D.Y_Size) * 0.5)
+        y = position[1] + step/2. - (!D.Y_CH_Size / Float(!D.Y_Size) * 0.5)
         CASE 1 OF
            (rotate EQ 0): x = x1 + chardist*1
            (rotate GT 0): x = x1 + chardist*1.5

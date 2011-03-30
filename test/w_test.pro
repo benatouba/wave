@@ -1909,7 +1909,7 @@ pro TEST_W_MAP
     if not ok then error +=1
     
     T2 = (wrf->get_Var('T2'))[*,*,8]
-    CTLOAD, 13   
+    cgLoadCT, 13   
     ok = map->set_plot_params(N_LEVELS=125)
     if not ok then error +=1
     ok = map->set_data(t2, wrf, MISSING = -999.)
@@ -1938,7 +1938,7 @@ pro TEST_W_MAP
     d = map->set_shading_params(RELIEF_FACTOR=1)
     
     T2 = (wrf->get_Var('T2'))[*,*,8]
-    CTLOAD, 13   
+    cgLoadCT, 13   
     ok = map->set_plot_params(N_LEVELS=125)
     if not ok then error +=1
     ok = map->set_data(t2, wrf, MISSING = -999.)
@@ -1957,8 +1957,96 @@ pro TEST_W_MAP
     cgDelete, /ALL
     
     OBJ_DESTROY, wrf     
-  
+    OBJ_DESTROY, map  
+    
     if error ne 0 then message, '% TEST_W_MAP NOT passed', /CONTINUE else print, 'TEST_W_MAP passed'
+        
+end
+
+pro TEST_W_STANDARD_PLOT
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+        
+    wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    
+    map =  OBJ_NEW('w_map', wrf, YSIZE=400)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1)
+       
+    T2 = (wrf->get_Var('T2'))[*,*,8] - 273.15
+    
+    cgLoadCT, 13   
+    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    if not ok then error +=1
+    
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='pink')
+    if not ok then error +=1
+    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             /RESIZABLE,  $
+                             PNG='test_400.png', $
+                            IM_RESIZE = 75
+                            
+    OBJ_DESTROY, map
+    
+    map =  OBJ_NEW('w_map', wrf, YSIZE=600)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1)    
+    cgLoadCT, 13   
+    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    if not ok then error +=1    
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    if not ok then error +=1    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             /RESIZABLE,  $
+                             PNG='test_600.png', $
+                            IM_RESIZE = 75                            
+    OBJ_DESTROY, map
+    
+    map =  OBJ_NEW('w_map', wrf, YSIZE=800)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1)    
+    cgLoadCT, 13   
+    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    if not ok then error +=1    
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    if not ok then error +=1    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             /RESIZABLE,  $
+                             PNG='test_800.png', $
+                            IM_RESIZE = 75                            
+    OBJ_DESTROY, map
+    
+    map =  OBJ_NEW('w_map', wrf, YSIZE=1000)
+    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_shading_params(RELIEF_FACTOR=1)    
+    cgLoadCT, 13   
+    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    if not ok then error +=1    
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    if not ok then error +=1    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             /RESIZABLE,  $
+                             PNG='test_1000.png', $
+                            IM_RESIZE = 75                            
+    OBJ_DESTROY, map
+    
+    
+    OBJ_DESTROY, wrf     
+
         
 end
 

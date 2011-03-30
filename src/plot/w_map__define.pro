@@ -423,12 +423,6 @@ end
 ;    
 ;    N_LEVELS: in, optional, type = long, default = 256
 ;              number of data levels (ignored if levels is set)
-;    
-;    VAL_MIN: in, optional, type = numeric, default=MIN(data)
-;             the minimun data value to level (ignored if levels is set)
-;    
-;    VAL_MAX: in, optional, type = numeric, default=MAX(data)
-;             the maximum data value to level (ignored if levels is set)
 ;             
 ;    COLORS: in, optional, type = any
 ;            the colors palette (array of nlevels). If not set, colors are chosen
@@ -959,13 +953,16 @@ end
 ;    Set a polygon to draw on the map.
 ;    
 ;
-; :Keywords:
+; :Params:
+;  
 ;    x: in, required
 ;       the x coordinates of the polygon to draw (at least 3 points)
 ;    
 ;    y: in, required
 ;       the y coordinates of the polygon to draw (at least 3 points)
-;    
+;       
+; :Keywords: 
+; 
 ;    SRC: in, optional
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
 ;    
@@ -1052,13 +1049,15 @@ end
 ; :Description:
 ;    Set a point or an array of points to draw on the map.
 ;    
-;
-; :Keywords:
+;  :Params:
+;    
 ;    x: in, required
 ;       the x coordinates of the point(s) to draw
 ;    
 ;    y: in, required
 ;       the y coordinates of the point(s) to draw 
+;       
+; :Keywords:
 ;    
 ;    SRC: in, optional
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
@@ -1074,15 +1073,12 @@ end
 ;          
 ;    SYMSIZE:in, optional, type = float
 ;            the size of the the points
-;            
-;    FILLED:in, optional, type = boolean
-;           if the points must be filled
 ;           
 ;    TEXT:in, optional, type = float
 ;          points annotation
 ;          
-;    DELTA_TEXT:in, optional, type = [float,float]
-;               a delta in relative img coordinates where to put the annotation
+;    DELTA_TEXT:in, optional, type = float
+;               a delta in relative img coordinates where to put the annotation (2 elements vector)
 ;               
 ;    ALIGN:in, optional, type = float
 ;          the allignment of the annotation
@@ -1255,9 +1251,6 @@ end
 ;    VAL_MAX: in, optional, type = numeric, default=MAX(data)
 ;             the maximum data value to level (ignored if levels is set using 'set_plot_params')
 ;
-;    KEEP_LEVELS: in, optional, type = BOOLEAN
-;                 default behavior is that if the user didnt specified data levels explicitely before,
-;                 the levels are always chosen dynamicaly. Set this keyword to keep the previous data level settings
 ;
 ;
 ; :History:
@@ -1763,8 +1756,9 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=po
   if n_elements(labels) eq 0 then labels = string(*(self.plot_params.levels), FORMAT=bar_format)
   
   if self.plot_params.nlevels lt 40 then begin
+    cn = self.plot_params.neutral
     w_cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
-      TITLE=title, ADDCMD=window, CHARSIZE=charsize, BAR_OPEN=bar_open, _EXTRA=extra
+      TITLE=title, ADDCMD=window, CHARSIZE=charsize, BAR_OPEN=bar_open, NEUTRAL_COLOR=cn, _EXTRA=extra
   endif else begin
     utils_color_rgb, *(self.plot_params.colors), r,g,b    
     if N_ELEMENTS(r) lt 256 then begin

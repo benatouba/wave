@@ -1,3 +1,4 @@
+; docformat = 'rst'
 ;+
 ; :Description:
 ;    This routine is a template for generating figures from a 
@@ -33,7 +34,7 @@
 ;    BAR_FORMAT: in, optional, type = string, default = '(F5.1)'
 ;                if `BAR_TAGS` is not set, the tags will be generated automatically from the data levels.
 ;                set this keyword to a format accepted by the IDL `STRING()` function to format the tags. 
-;    BAR_ARROWS: in, optional, type = boolean
+;    BAR_OPEN: in, optional, type = boolean
 ;                set this keyword to skip to the "ncl style" way to display a color bar
 ;    BAR_SPACING: in, optional, type = float
 ;                 This keyword gives the user some control over the location of the tags
@@ -44,7 +45,7 @@
 ;                 To move the labels a little closer, use a number less than 1 (e.g, 0.75).
 ;    PIXMAP: in, optional, type = boolean
 ;            set this keyword to plot everything in the pixmap buffer (usefull for automatic output generation)
-;    LEGEND_INFO: in, optional, type = string, default = ''
+;    SOURCE_INFO: in, optional, type = string, default = ''
 ;                 A subtitile to the plot. To generate multiple lines, use the '!C' symbol 
 ;                 (e.g: LEGEND_INFO = 'line1 blabla' + '!C' + 'line2 blabla')
 ;    RESIZABLE: in, optional, type = boolean
@@ -59,8 +60,8 @@
 ;             set to a filename to generate a standard png output (without image magick)
 ;    STD_JPEG: in, optional, type = string
 ;              set to a filename to generate a standard jpeg output (without image magick)
-;    DISP_IMG: out, type = array(x,y,3)
-;              the plot image in RGB colours  
+;    DISP_IMG: out, type = byte array
+;              the plot image in RGB colours (dimensions: [x,y,3])
 ;    WTITLE: in, optional, type = string, default = 'WAVE standard plot'
 ;            The title of the plot window (not very important)
 ;    IM_RESIZE: in, optional, type=integer, default=25
@@ -110,10 +111,13 @@ pro w_standard_2d_plot, map, TITLE=title,$
   if n_elements(WTITLE) eq 0 then WTITLE = 'WAVE standard plot'
   if n_elements(BAR_TITLE) eq 0 then BAR_TITLE = 'Data levels'
    
-  xs = xsize + 200
-  ys = ysize + 120 
-  
-  pos = [45d/xs,80d/ys,(1d - 145d/xs),(1d - 40d/ys)]
+  xs = FLOOR(xsize * 1.26d)
+  ys = FLOOR(ysize * 1.16d)
+  imgX = xsize/double(xs)
+  imgY = ysize/double(ys)
+  imx0 = 0.04
+  imy0 = 0.08  
+  pos = [imx0,imy0,imx0+imgX,imy0+imgY]
   
   ; Trick because no output keyword
   cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE
@@ -141,11 +145,11 @@ pro w_standard_2d_plot, map, TITLE=title,$
   map->add_img, POSITION=pos, WINDOW=cgWIN   
 
   ; Title  
-  cgText, (pos[0]+pos[2])/2., pos[3] + 15d/xs, title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
+  cgText, (pos[0]+pos[2])/2., pos[3] + 0.015, title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
           WINDOW=cgWIN, /NORMAL, CHARSIZE=1.5  
 
   ; Bar
-  pbar = [pos[2] + 40d/xs, pos[1]+0.05, pos[2] + 60d/xs, pos[3]-0.05]
+  pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, $
                       CHARSIZE=1., BAR_OPEN=bar_open, SPACING=BAR_spacing
 

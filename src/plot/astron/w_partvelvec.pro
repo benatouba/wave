@@ -1,3 +1,4 @@
+; docformat = 'idl'
 ;+
 ; NAME:
 ;      PARTVELVEC

@@ -2,7 +2,6 @@
 ;+
 ;
 ;  w_WRF is the basis class for WRF datasets.
-;  TODO: DOC: describe the file
 ;  
 ;  
 ; :Properties:
@@ -87,17 +86,33 @@ END
 
 ;+
 ; :Description:
-;    TODO: DOC: Describe the procedure.
+;    Redefine the WRF subset.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;    SUBSET_LL
-;    SUBSET_IJ
-;    LL_DATUM
-;    CROPCHILD
-;    CROPBORDER
+;       SUBSET_LL : in, optional, type = float vector 
+;                   set it to the desired subset corners to automatically subset the data.
+;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
+;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
+;       SUBSET_IJ : in, type = long vector
+;                   Four elements array::              
+;                   first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
+;                   second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
+;                   third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
+;                   fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
+;                   Unless you know what you do, it should not be set manually but 
+;                   retrieved using the 'define_subset' method.
+;                   
+;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
+;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
+;                   
+;       CROPCHILD: in, optional
+;                  set this keyword to crop the grid to the area covered by its child domain (if any)
+;                  
+;       CROPBORDER: in, optional
+;                  set this keyword to crop the grid of CROPBORDER elements on each side
 ;    
 ; :History:
 ;     Written by FaM, 2010.
@@ -328,35 +343,14 @@ function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
   return, 1
     
 end
-
+   
 ;+
 ; :Description:
 ;    Build function.
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
-;
-; :Keywords:
-;    FILE
-;    SUBSET_LL
-;    SUBSET_IJ
-;    LL_DATUM
-;    CROPCHILD
-;    CROPBORDER
-;    
-; :History:
-;     Written by FaM, 2010.
-;-   
-   
-;+
-; :Description:
-;    TODO: DOC: Describe the procedure.
-;
-;
-;
 ; :Keywords:
 ;       FILE      : in, optional, type = string
-;                   the path to the TRMM file. If not set, a dialog window will open
+;                   the path to the WRF file. If not set, a dialog window will open
 ;       SUBSET_LL : in, optional, type = float vector 
 ;                   set it to the desired subset corners to automatically subset the data.
 ;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
@@ -372,22 +366,26 @@ end
 ;                   
 ;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
 ;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
-;       CROPCHILD:
-;       CROPBORDER:
-;TODO: DOC: describe keywords
+;                   
+;       CROPCHILD: in, optional
+;                  set this keyword to crop the grid to the area covered by its child domain (if any)
+;                  
+;       CROPBORDER: in, optional
+;                  set this keyword to crop the grid of CROPBORDER elements on each side
 ;
 ; :Returns:
+; 
 ;    1 if the object is created successfully. 
 ;    
 ; :History:
 ;     Written by FaM, 2010.
 ;-
 Function w_WRF::Init, FILE       = file     ,  $
-                        SUBSET_LL  = subset_ll,  $
-                        SUBSET_IJ  = subset_ij,  $
-                        LL_DATUM   = ll_datum ,  $
-                        CROPCHILD  = cropchild   ,  $
-                        CROPBORDER = cropborder
+                      SUBSET_LL  = subset_ll,  $
+                      SUBSET_IJ  = subset_ij,  $
+                      LL_DATUM   = ll_datum ,  $
+                      CROPCHILD  = cropchild   ,  $
+                      CROPBORDER = cropborder
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -553,14 +551,14 @@ END
 ;+
 ; :Description:
 ;    Get access to some params. 
-; TODO: DOC: describe keywords
+;    
 ; :Categories:
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
 ;
-;    cropped:
-;    
+;    cropped: out
+;             type of the cropping    
 ;    type: out, type = string
 ;          type of active file: AGG, WRF, GEO, MET or INP
 ;    version: out, type = string
@@ -578,7 +576,8 @@ END
 ;    parent_grid_ratio: out, type = long
 ;                       ratio to parent
 ;    
-;    _Ref_Extra:
+;    _Ref_Extra: out
+;                all parent classed property
 ;    
 ; :History:
 ;     Written by FaM, 2010.
@@ -624,9 +623,9 @@ end
 ;+
 ; :Description:
 ;    This function reads a variable from the file but only
-;    at a specific location.
-;    
-;    TODO: DOC: describe keywords
+;    at a specific location. The output is a vector of 
+;    nt elements, where nt is the nnumber of times in the 
+;    time serie.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -635,9 +634,9 @@ end
 ;    varid: in, required, type = string/integer
 ;           the variable ID (string or integer) to retrieve
 ;    x: in, required, type = long
-;       the X index (within the subset) where to get the variable
+;       the X index where to get the variable (if SRC is not specified, it is an index within the Grid)
 ;    y: in, required, type = long
-;       the Y index (within the subset) where to get the variable
+;       the Y index where to get the variable (if SRC is not specified, it is an index within the Grid)
 ;    time:  out, type = qms
 ;           the variable times
 ;    nt: out, type = long
@@ -648,11 +647,16 @@ end
 ;        if set, it defines the first time of the variable timeserie
 ;    t1: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the last time of the variable timeserie
-;    src
-;    point_i
-;    point_j
-;    point_lon
-;    point_lat
+;    src: in, optional
+;         the coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
+;    point_i: out, optional
+;             the i index in the grid where the nearest point was found
+;    point_j: out, optional
+;             the j index in the grid where the nearest point was found
+;    point_lon: out, optional
+;              the longitude of the nearest grid point
+;    point_lat: out, optional
+;              the latitude of the nearest grid point
 ;    varinfo: out, type = struct
 ;             structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;    units: out, type = string
@@ -669,21 +673,21 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-      
-function w_WRF::get_TimeSerie, varid, x, y, $
+function w_WRF::get_TimeSerie,varid, x, y, $
                               time, nt, $
-                              t0 = t0, t1 = t1, $
-                              src = src, $
-                              K = K, $
-                              point_i = point_i, $
-                              point_j = point_j, $
-                              point_lon = point_lon, $
-                              point_lat = point_lat , $
-                          varinfo = varinfo , $ ; 
-                          units = units, $
-                          description = description, $
-                          varname = varname , $ ; 
-                          dims = dims, $ ;
-                          dimnames = dimnames 
+                              T0=t0, T1=t1, $
+                              SRC=src, $
+                              K=K, $
+                              POINT_I=point_i, $
+                              POINT_J=point_j, $
+                              POINT_LON=point_lon, $
+                              POINT_LAT=point_lat , $
+                              VARINFO=varinfo , $ ; 
+                              UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ ; 
+                              DIMS=dims, $ ;
+                              DIMNAMES=dimnames 
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -725,17 +729,22 @@ end
 ;         WAVE/OBJ_GIS 
 ;
 ; :Params:
-;    varid : in, required, type = integer/ string
-;            The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
-;    x
-;    y
-; TODO: DOC: describe params/keywords
+;    varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;           
+;    x: in, required, type = long
+;       the X index where to get the variable (if SRC is not specified, it is an index within the Grid)
+;       
+;    y: in, required, type = long
+;       the Y index where to get the variable (if SRC is not specified, it is an index within the Grid)
+;
 ; :Keywords:
 ;    t0: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the first time of the variable timeserie
 ;    t1: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the last time of the variable timeserie
-;    src
+;    src: in, optional
+;         the coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
 ;
 ; :History:
 ;     Written by FaM, 2010.
@@ -793,8 +802,7 @@ end
 
 ;+
 ; :Description:
-;    Retrieve PRCP info.
-;    TODO:DOC: describe keywords
+;    Retrieve precipitation from the WRF output (CONVECTIVE + GRID SCALE or a selection).
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS 
@@ -810,9 +818,12 @@ end
 ;        if set, it defines the first time of the variable timeserie
 ;    t1: in, optional, type = qms/{ABS_DATE}
 ;        if set, it defines the last time of the variable timeserie
-;    STEP_WIZE
-;    NONCONVECTIVE
-;    CONVECTIVE
+;    STEP_WIZE: in, optional
+;               if set, the precipitation is returned "step-wize" and not accumulated
+;    NONCONVECTIVE: in, optional
+;                   if set, only the grid-scale precipitation is returned
+;    CONVECTIVE: in, optional
+;                if set, only the cumulus precipitation is returned
 ;    
 ; :History:
 ;     Written by FaM, 2010.
@@ -839,53 +850,3 @@ function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NO
   return, pcp
     
 end
-
-;function w_WRF::get_T, time0 = time0, time1 = time1, times, nt, units = units
-;
-;  ; SET UP ENVIRONNEMENT
-;  @WAVE.inc
-;  COMPILE_OPT IDL2
-;    
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /Cancel
-;    ok = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF 
-;  
-;  p = self->get_Var('P')
-;  pb = self->get_Var('PB')
-;  T = self->get_Var('T') + 300.
-;  
-;  P1000MB=100000D
-;  R_D=287D
-;  CP=7*R_D/2.
-; 
-;  PI = (P / P1000MB) ^ (R_D/CP)
-;  TK = PI*T
-;  
-;  times = *self.time
-;  
-;  n = self.nt
-;  p1 = 0
-;  p2 = n - 1
-;  
-;  units = 'K'
-;  
-;  if arg_okay(time0, STRUCT={ABS_DATE}) then begin 
-;     v = 0 > VALUE_LOCATE(times.qms, time0.qms) < (n-1)
-;     p1 = v[0]
-;  endif 
-;  if arg_okay(time1, STRUCT={ABS_DATE}) then begin 
-;     v = 0 > VALUE_LOCATE(times.qms, time1.qms) < (n-1)
-;     p2 = v[0] 
-;  endif
-;  
-;  nt = p2 - p1 + 1 
-;  times = times[p1:p2]
-;  TK = TK[*,*,p1:p2]
-;  
-;  
-;  return, tk
-;    
-;end
