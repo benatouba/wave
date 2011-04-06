@@ -179,6 +179,10 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    map->show_img, RESIZABLE = resizable
    map->show_color_bar, RESIZABLE = resizable, TITLE='Celsius', LABELS = my_tags
    
+   ; Other color Bars
+   map->show_color_bar, RESIZABLE = resizable, TITLE='Celsius', LABELS = my_tags, spacing = 1.4, CHARSIZE = 2.
+   map->show_color_bar, RESIZABLE = resizable, TITLE='Celsius', LABELS = my_tags, spacing = 1.4, CHARSIZE = 2., /BAR_OPEN
+   
     ok = DIALOG_MESSAGE('Do you want to close all windows?', /QUESTION) ;else ok = 'no'
     if ok eq 'Yes' then begin
       cgDelete, /All

@@ -15,7 +15,7 @@
 ;     Written by FaM, 2010.
 ;
 ;       Modified::
-;          09-Dec-2010 FaM
+;          06-Apr-2011 FaM
 ;          Documentation for upgrade to WAVE 0.1
 ;
 ;-      
@@ -624,7 +624,7 @@ end
 ; :Description:
 ;    This function reads a variable from the file but only
 ;    at a specific location. The output is a vector of 
-;    nt elements, where nt is the nnumber of times in the 
+;    nt elements, where nt is the number of times in the 
 ;    time serie.
 ;
 ; :Categories:
@@ -800,30 +800,404 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
     
 end
 
+
 ;+
 ; :Description:
-;    Retrieve precipitation from the WRF output (CONVECTIVE + GRID SCALE or a selection).
+;    This function reads a variable from the netcdf file and makes a
+;    subset of it if it has been previously set with 'define_subset'.
+;    
+;    There is the possibility to restrict the retrieved variable to 
+;    a given time period (keywords `T0` and `T1`)
+;    
+;    Additionaly to the "standard" variables available in the WRF file,
+;    a few diagnostic variables are computed automatically if requested.
+;    Here is a list of the diagnostic variables (more will be available 
+;    soon)::
+;              
+;             prcp: total precipitation (accumulated, unless `/ACC_TO_STEP` is set)
+;             rh2: 2m Relative Humidity [%]
+;             rh: Relative Humidity [%]
+;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. If the vertical dimension is not present, slp_b is computed)
+;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see MET_barometric for more info)
+;             ter: Model terrain height [m] (2-dimensional)
+;             lucat: Land cover category  (2-dimensional)
+;             tc: Temperature [C]
+;             t2c: 2m Temperature [C]
+;             th/theta: Potential temperature [K]
+;             tk: Temperature [K]
+; 
 ;    
 ; :Categories:
-;         WAVE/OBJ_GIS 
+;         WAVE/OBJ_GIS   
 ;
 ; :Params:
-;    times:  out, type = qms
-;            the variable time
+;    Varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;    time:  out, type = qms
+;           the variable times
 ;    nt: out, type = long
 ;        the variable number of times
 ;
 ; :Keywords:
-;    t0: in, optional, type = qms/{ABS_DATE}
-;        if set, it defines the first time of the variable timeserie
-;    t1: in, optional, type = qms/{ABS_DATE}
-;        if set, it defines the last time of the variable timeserie
-;    STEP_WIZE: in, optional
-;               if set, the precipitation is returned "step-wize" and not accumulated
-;    NONCONVECTIVE: in, optional
-;                   if set, only the grid-scale precipitation is returned
-;    CONVECTIVE: in, optional
-;                if set, only the cumulus precipitation is returned
+;   T0: in, optional, type = qms/{ABS_DATE}
+;       if set, it defines the first time of the variable timeserie
+;   T1: in, optional, type = qms/{ABS_DATE}
+;       if set, it defines the last time of the variable timeserie
+;   unstagger: in, optional
+;              if set, the variable will be automatically unstaggered
+;   acc_to_step: in, optional
+;                if set, the variable is returned "step-wize" (as a difference to previous step) and not accumulated
+;   varinfo: out, type = struct
+;            structure that contains information about the original variable in 
+;            the NCDF file. This has the form:: 
+;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
+;   description: out, type = string
+;                If available, the description of the variable
+;   units: out, type = string
+;          If available, the units of the variable
+;   varname: out, type = string
+;            the name of the variable
+;   dims: out, type = long
+;         the variable dimensions (if the variable is cropped, the dimensions are updated too)
+;   dimnames: out, type = string
+;             the dimensions names (if the variable is cropped, the dimension names are updated too)
+; 
+; :Returns:
+;         The variable
+;
+; :History:
+;      Written by FaM, 2010.
+;-
+function w_WRF::get_Var, Varid, $ 
+                            time,  $
+                            nt,  $
+                            T0=t0, $
+                            T1=t1, $
+                            UNSTAGGER=unstagger , $
+                            ACC_TO_STEP=acc_to_step , $
+                            VARINFO=varinfo , $ 
+                            UNITS=units, $
+                            DESCRIPTION=description, $
+                            VARNAME=varname , $ 
+                            DIMS=dims, $ 
+                            DIMNAMES=dimnames 
+
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+;  ON_ERROR, 2
+  
+  undefine, count, offset
+  value = -1
+  
+  ;TODO: add compatibility to MET_EM files...
+  
+  ; Check for the known variable names 
+  if str_equiv(Varid) eq 'PRCP' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('RAINNC') then Message, 'RAINNC variable not found in file.'
+      
+    if ~self->w_NCDF::get_Var_Info('RAINC') then Message, 'RAINC variable not found in file.'
+    
+    value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+      
+    description = 'Accumulated total precipitation'
+    
+  endif
+  
+  if str_equiv(Varid) eq 'TK' or str_equiv(Varid) eq 'TC' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
+        
+    T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+    P = self->get_Var('P', T0=t0, T1=t1)
+    PB = self->get_Var('PB', T0=t0, T1=t1)
+    
+    T = T + 300.
+    P = P + PB
+    value = utils_wrf_tk(P,T)    ; calculate TK
+    
+    description = 'Temperature'
+    units = 'K'
+    
+    if str_equiv(Varid) eq 'TC' then begin
+         value = value - 273.16
+         units = 'C'
+    endif
+    
+  endif
+  
+  if str_equiv(Varid) eq 'TH' or str_equiv(Varid) eq 'THETA' then begin
+    
+    ; Potential Temperature is model output T + 300K    
+    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
+        
+    value = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) + 300.
+    
+    description = 'Potential Temperature (theta)'
+    units = 'K'
+    
+  endif
+  
+  if str_equiv(Varid) eq 'T2C' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
+        
+    value = self->get_Var('T2', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) - 273.16
+  
+     units = 'C'
+    
+  endif
+  
+  if str_equiv(Varid) eq 'RH' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'    
+    
+    T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+    P = self->get_Var('P', T0=t0, T1=t1)
+    PB = self->get_Var('PB', T0=t0, T1=t1)
+    QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1)
+   
+    T = T + 300.
+    P  = P + PB
+    QVAPOR = QVAPOR > 0.000
+    tk = utils_wrf_tk(P,T)
+    value = utils_wrf_rh(QVAPOR, P, tk)
+    
+    description = 'Relative Humidity'
+    units = '%'
+    
+  endif
+  
+  if str_equiv(Varid) eq 'RH2' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PSFC') then Message, 'PSFC variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('Q2') then Message, 'Q2 variable not found in file.'
+    
+    T2 = self->get_Var('T2', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+    PSFC = self->get_Var('PSFC', T0=t0, T1=t1)
+    Q2 = self->get_Var('Q2', T0=t0, T1=t1)
+    
+    Q2 = Q2 > 0.000
+    value = utils_wrf_rh(Q2, PSFC, T2)
+        
+    description = '2m Relative Humidity'
+    units = '%'
+    
+  endif
+  
+  if str_equiv(Varid) eq 'TER' then begin
+    
+    if self.type eq 'MET' then return, self->get_Var('HGT_M', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+        
+    value = self->get_Var('HGT', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+                                 
+    dimnames = [dimnames[0],dimnames[1]]   
+    
+  endif
+  
+  if str_equiv(Varid) eq 'LUCAT' then begin
+            
+    value = self->get_Var('LU_INDEX', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+                                 
+    dimnames = [dimnames[0],dimnames[1]]   
+    
+  endif
+  
+  if str_equiv(Varid) eq 'SLP' then begin
+    
+    OK = TRUE ;check if we can use the complex version 
+    if ~self->w_NCDF::get_Var_Info('T') then OK = False   
+    if ~self->w_NCDF::get_Var_Info('P') then OK = False
+    if ~self->w_NCDF::get_Var_Info('PB') then OK = False
+    if ~self->w_NCDF::get_Var_Info('QVAPOR') then OK = False
+    if ~self->w_NCDF::get_Var_Info('PH') then  OK = False
+    if ~self->w_NCDF::get_Var_Info('PHB') then OK = False
+    
+    if OK then begin
+    
+      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+      
+      P = self->get_Var('P', T0=t0, T1=t1)
+      PB = self->get_Var('PB', T0=t0, T1=t1)
+      QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1)
+      PH = self->get_Var('PH', T0=t0, T1=t1, /UNSTAGGER)
+      PHB = self->get_Var('PHB', T0=t0, T1=t1, /UNSTAGGER)
+      
+      T = T + 300.
+      P = P + PB
+      QVAPOR = QVAPOR > 0.000
+      z = ( PH + PHB ) / 9.81
+      tk = utils_wrf_tk(P,T)    ; calculate TK
+      
+      mdims = SIZE(tk, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for t=0, nt-1 do value[*,*,t] = utils_wrf_slp(z[*,*,*,t], tk[*,*,*,t], P[*,*,*,t], QVAPOR[*,*,*,t])  ; calculate slp
+      
+      description = 'Sea level pressure'
+      units = 'hPa'
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]  
+      
+    endif else return = self->get_Var('slp_b', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+    
+       
+  endif
+  
+  if str_equiv(Varid) eq 'SLP_B' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PH') then Message, 'PH variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PHB') then Message, 'PHB variable not found in file.'
+        
+    T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+      
+    P = self->get_Var('P', T0=t0, T1=t1)
+    PB = self->get_Var('PB', T0=t0, T1=t1)
+    QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1)
+    PH = self->get_Var('PH', T0=t0, T1=t1, /UNSTAGGER)
+    PHB = self->get_Var('PHB', T0=t0, T1=t1, /UNSTAGGER)
+    
+    ps = wrf->get_Var('PSFC', times, nt, T0=t0, T1=t1) * 0.01 ; in hPa
+    T2 = wrf->get_Var('T2') - 273.15 ; in degC
+    zs = wrf->get_Var('ter') ; in m
+    
+    mdims = SIZE(t2, /DIMENSIONS)
+    value = FLTARR(mdims[0],mdims[1],nt)
+    for k=0,Nt-1 do value[*,*,k] = MET_barometric(ps[*,*,k], zs, T2[*,*,k], 0.)
+     
+    description = 'Sea level pressure'
+    units = 'hPa'
+    if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]] 
+  
+  endif
+  
+  if N_ELEMENTS(value) eq 1 and value[0] eq -1 then begin ;This is probably a standard variable
+  
+    if ~self->w_NCDF::get_Var_Info(Varid, out_id = vid) then Message, '$Varid is not a correct variable ID'
+      
+    value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames)
+      
+  endif
+  
+  if KEYWORD_SET(UNSTAGGER) then begin  
+    ndims = N_ELEMENTS(dims)
+    found = -1
+    for i=0, ndims-1 do begin
+      isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('_stag'))
+      p = WHERE(isHere ne -1, cnt)
+      if cnt eq 0 then continue
+      dimnames[i] = STRMID(dimnames[i], 0, isHere)
+      found = i
+    endfor
+    if found eq -1 then Message, 'Staggered dimension not found. You sure you want to unstagger?' 
+    value = utils_wrf_unstagger(value, found)        
+  endif
+  
+  if KEYWORD_SET(ACC_TO_STEP) then begin
+   value = utils_ACC_TO_STEP(value)
+   description += ' (de-accumulated)' 
+  endif 
+  
+  dims = SIZE(value, /DIMENSIONS)
+  if N_ELEMENTS(dims) ne N_ELEMENTS(DIMNAMES) then MESSAGE, 'Internal Warning: contact FaM.'
+  return, value
+  
+end
+
+;+
+; :Description:
+;    DEPRECATED. Use `w_WRF::get_Var("prcp")` instead.
+;    
 ;    
 ; :History:
 ;     Written by FaM, 2010.
@@ -840,6 +1214,8 @@ function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NO
     ok = WAVE_Error_Message()
     RETURN, 0
   ENDIF 
+  
+  Message, 'INFO: w_WRF::get_prcp is deprecated. You should use: result = w_WRF::get_Var("prcp") instead.', /INFORMATIONAL
   
   if KEYWORD_SET(CONVECTIVE) then pcp = self->get_Var('RAINC', times, nt, t0 = t0, t1 = t1) $
     else if KEYWORD_SET(NONCONVECTIVE) then pcp = self->get_Var('RAINNC',times, nt, t0 = t0, t1 = t1) $

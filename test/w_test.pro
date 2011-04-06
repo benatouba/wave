@@ -1771,16 +1771,16 @@ pro TEST_MODIS
     d = map->set_shading_params(RELIEF_FACTOR=1.)
     d = map->set_map_params(INTERVAL=5)
     d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24, val_max = val_m)
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
-    d=map->set_Plot_Params(N_LEVELS=126)
+    d=map->set_Plot_Params(N_LEVELS=126, MIN_VALUE=-24, MAX_VALUE = 29)
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
     if ok eq 'No' then error += 1
     
     ok =  lst->define_subset(SUBSET_LL= [90, 31.8, 91, 30.1])
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15, VAL_MIN=-24, val_max = val_m)
+    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
@@ -2390,14 +2390,14 @@ pro TEST_WRF_AGG_MASSGRID
     dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
     dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
     
-    d2pcp = (dom2->get_prcp())[*,*,36]
-    d1pcp = dom2->map_gridded_data((dom1->get_prcp())[*,*,12], dom1)
+    d2pcp = (dom2->get_var('prcp'))[*,*,36]
+    d1pcp = dom2->map_gridded_data((dom1->get_var('prcp'))[*,*,12], dom1)
     
     d2pcp = UTILS_aggregate_Grid_data(d2pcp, 3)
     d1pcp = UTILS_aggregate_Grid_data(d1pcp, 3)
     
     ok = DOM1->define_subset(/CROPCHILD)
-    orig = (DOM1->get_prcp())[*,*,12]
+    orig = (DOM1->get_var('prcp'))[*,*,12]
     
     if max(abs(d1pcp - d2pcp)) gt 0.2 then error +=1
     if max(abs(d1pcp - orig[1:48,1:48])) gt 0.001 then error +=1
@@ -2507,29 +2507,29 @@ pro TEST_MOSAIC
   OBJ_DESTROY, dom1  
   
   CTLOAD, 13
-  ok = map->set_plot_params(N_LEVELS=255)
+  ok = map->set_plot_params(N_LEVELS=255, MAX_VALUE=240, MIN_VALUE=1)
   
   ; Modiss
   !QUIET = 1
   h25v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v05.005.2008299202523.hdf', SUBSET_LL=[89.,33.,96.,28.])
   h25v05->getProperty, tnt_c = c
   data1 = BYTARR(c.nx, c.ny) + 20B
-  ok = map->set_data(data1, h25v05, MISSING=0, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_data(data1, h25v05, MISSING=0)
   map->show_img, /RESIZABLE, TITLE= 'h25v05'
   h25v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v06.005.2008299213852.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h25v06->getProperty, tnt_c = c
   data2 = BYTARR(c.nx, c.ny) + 80B
-  ok = map->set_data(data2, h25v06, MISSING=0, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_data(data2, h25v06, MISSING=0)
   map->show_img , /RESIZABLE, TITLE= 'h25v06' 
   h26v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v05.005.2008299222304.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v05->getProperty, tnt_c = c
   data3 = BYTARR(c.nx, c.ny) + 160
-  ok = map->set_data(data3, h26v05, MISSING=0, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_data(data3, h26v05, MISSING=0)
   map->show_img , /RESIZABLE, TITLE= 'h26v05' 
   h26v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v06.005.2008299220621.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v06->getProperty, tnt_c = c
   data4 = BYTARR(c.nx, c.ny) + 240B
-  ok = map->set_data(data4, h26v06, MISSING=0, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_data(data4, h26v06, MISSING=0)
   map->show_img  , /RESIZABLE, TITLE= 'h26v05'
   !QUIET = 0  
   
@@ -2544,7 +2544,7 @@ pro TEST_MOSAIC
   p = where(modata eq 0, cnt)
   if cnt ne 0 then error+=1
   
-  ok = map->set_data(modata, mosaic, MISSING=0, VAL_MAX=240, VAL_MIN=1)
+  ok = map->set_data(modata, mosaic, MISSING=0)
   map->show_img, /RESIZABLE, TITLE= 'Mosaic'    
   
   ok = DIALOG_MESSAGE('Do you see nice mosaic?', /QUESTION)
@@ -2561,6 +2561,134 @@ pro TEST_MOSAIC
   if error ne 0 then message, '% TEST_MOSAIC NOT passed', /CONTINUE else print, 'TEST_MOSAIC passed'
   
   
+end
+
+pro TEST_WRF_GETVAR
+    
+    fdir = TEST_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------    
+    wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    tk_wrf = wrf->get_Var('tk', T0 = t0, T1 = t0)
+    tk_ncl = tk_wrf * 0.    
+    tk_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/tk/tk_d1_2008-10-26_21:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1 
+    
+    
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 18)    
+    var_wrf = wrf->get_Var('rh2', T0 = t0, T1 = t0)
+    var_ncl = var_wrf * 0.    
+    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh2_d1_2008-10-26_18:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     var_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+
+    if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
+    
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    var_wrf = wrf->get_Var('rh', T0 = t0, T1 = t0)
+    var_ncl = var_wrf * 0.    
+    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh_d1_2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     var_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
+    
+    var_wrf =(wrf->get_Var('rh'))[*,*,*,8]
+    var_ncl = var_wrf * 0.    
+    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh_d1_2008-10-27_12:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     var_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
+    
+    
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_ncl = slp_wrf * 0.    
+    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-26_21:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun    
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+           
+    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_ncl = slp_wrf * 0.    
+    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-27_06:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun   
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+    
+    
+    slp_wrf = (wrf->get_Var('slp', DIMNAMES=dm))[*,*,8]
+    slp_ncl = slp_wrf * 0.    
+    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-27_12:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun   
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+    
+    OBJ_DESTROY, wrf    
+    if error ne 0 then message, '% TEST_WRF_GETVAR NOT passed', /CONTINUE else print, 'TEST_WRF_GETVAR passed'
 end
 
 pro TEST_TIME
@@ -2594,6 +2722,7 @@ pro TEST_UTILS
   TEST_NEIREST_NEIGHBOR
   TEST_MOSAIC
   TEST_REGRID
+  TEST_WRF_GETVAR
 end
 
 pro TEST_POST, REDO = redo

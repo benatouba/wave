@@ -5,6 +5,7 @@
 ;  "geolocalized" 2d plots for any kind of gridded data. The role of
 ;  this object is to create a color image (in pixels) of gridded data 
 ;  that can be used for other plots (with title, legend, etc.).  
+;  
 ;  The basic flow chart is simple. The two first actions (instancing and
 ;  mapping) are related to the map itself and the third step is 
 ;  related to the data plot.
@@ -59,7 +60,7 @@ PRO w_Map__Define
   
   ; This is for the colors and data-levels 
   struct = {PLOT_PARAMS                    , $
-            type           : ''            , $ ; USER or AUTO generated levels
+            type           : 0L            , $ ; USER or AUTO generated levels
             nlevels        : 0L            , $ ; number of data levels
             colors         : PTR_NEW()     , $ ; array of nlevels colors
             levels         : PTR_NEW()     , $ ; array of nlevels data levels
@@ -101,6 +102,14 @@ PRO w_Map__Define
             coord          : [0D,0D]         $ ; coordinates of the point       
             }
   
+  ; This is the information for one contour to draw
+  struct = {MAP_CONTOUR                    , $ 
+            keywords       : PTR_NEW()     , $ ; Keywords for cgContour 
+            data           : PTR_NEW()       $ ; data to contour 
+            }
+  
+  
+  
   ; This is for the Lon-Lat/UTM contours drawing
   struct = {MAP_PARAMS                     , $
             type           : ''            , $ ; LONLAT or UTM
@@ -135,14 +144,18 @@ PRO w_Map__Define
              Ysize         : 0L            , $ ; Y size of the image in pixels
              img           : PTR_NEW()     , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
              data          : PTR_NEW()     , $ ; active data array ([Xsize,Ysize]) of any numeric type
+             missing       : PTR_NEW()     , $ ; missing values in the data array
              sl            : PTR_NEW()     , $ ; shading layer for topography shading
+             contour_img    : FALSE         , $ ; the imaeg is generated using contour
              relief_factor : 0D            , $ ; strenght of the shading (default: 0.7)
              nshapes       : 0L            , $ ; number of active shape files to plot                  
              shapes        : PTR_NEW()     , $ ; array of nshapes {MAP_SHAPE} structures                               
              npolygons     : 0L            , $ ; number of active polygons to plot                  
              polygons      : PTR_NEW()     , $ ; array of npolygons {MAP_POLYGON} structures                               
              npoints       : 0L            , $ ; number of points to plot                  
-             points        : PTR_NEW()     , $ ; array of npointss {MAP_POINT} structures                               
+             points        : PTR_NEW()     , $ ; array of npoints {MAP_POINT} structures                               
+             ncontours     : 0L            , $ ; number of additional contours to plot                  
+             contours      : PTR_NEW()     , $ ; array of ncontours {MAP_CONTOUR} structures                               
              map_params    : {MAP_PARAMS}  , $ ; the mapping params for contours
              plot_params   : {PLOT_PARAMS} , $ ; the plotting params          
              wind_params   : {WIND_PARAMS} , $ ; the wind params          
@@ -151,7 +164,8 @@ PRO w_Map__Define
              is_Polygoned  : FALSE         , $ ; did the user specify a polygon to draw?
              is_Pointed    : FALSE         , $ ; did the user specify a point to draw?
              is_Mapped     : FALSE         , $ ; did the user specify a contour to draw for mapping?         
-             is_Winded     : FALSE           $ ; did the user specify wind flows ?         
+             is_Winded     : FALSE         , $ ; did the user specify wind flows?         
+             is_Contoured  : FALSE           $ ; did the user specify additional contour plots?      
              }
     
 END
@@ -172,8 +186,9 @@ END
 ;    FACTOR: in, optional, type = float
 ;            a factor to multiply to the grid nx and ny to obtain the window size (if set, Xsize and Ysize are ignored)
 ;    NO_COUNTRIES: in, optional, type = boolean
-;                  default behavior is to add country outlines to the map automatically. Set this keyword
-;                  to prevent this.
+;                  default behavior is to add country outlines to the map automatically. 
+;                  This can be a bit long. Set this keyword to prevent drawing countries
+;                  automatically.
 ;
 ;
 ; :History:
@@ -354,6 +369,33 @@ end
 
 ;+
 ; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+pro w_Map::DestroyContours
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  if PTR_VALID(self.contours) then begin  
+    contours = *self.contours
+    for i = 0, N_ELEMENTS(contours) - 1 do begin
+     ptr_free, (contours[i]).data
+     ptr_free, (contours[i]).keywords     
+    endfor
+  endif
+  
+  ptr_free, self.contours
+  self.ncontours= 0L
+  self.is_Contoured= FALSE
+  
+end
+
+;+
+; :Description:
 ;    Destroy function. 
 ;
 ; :History:
@@ -369,6 +411,7 @@ pro w_Map::Cleanup
   PTR_FREE, self.img 
   PTR_FREE, self.data 
   PTR_FREE, self.sl    
+  PTR_FREE, self.missing    
   
   self->DestroyShapes         
   self->DestroyMapParams       
@@ -376,6 +419,7 @@ pro w_Map::Cleanup
   self->DestroyWindParams     
   self->DestroyPolygons     
   self->DestroyPoints   
+  self->DestroyContours   
   
 END
 
@@ -438,13 +482,20 @@ end
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
 ;                  
 ;    NEUTRAL_COLOR: in, optional, type = color
-;                   the color of the missing data on the plot
+;                   the color to attribute to missing data
+;                   
+;    MIN_VALUE: in, optional, type = numeric, default=MIN(data)
+;               the smaller level (for auto generation of levels)
+;    
+;    MAX_VALUE: in, optional, type = numeric, default=MAX(data)
+;               the bigger level (for auto generation of levels)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = colors, CMIN=cmin, CMAX=cmax, $
-                                  INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color
+                                  INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color, $
+                                    MIN_VALUE = min_value, MAX_VALUE = max_value, CONTOUR = contour
          
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -483,25 +534,50 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
        _neutral = cgColor('white')
 
   ; Levels
-  if is_Levels then begin 
-   _levels = levels 
-   val_min = min(levels)
-   val_max = max(levels)   
+  if is_Levels then begin
+    _levels = levels
+    val_min = min(levels)
+    val_max = max(levels)
   endif else begin
-   val_min = self.plot_params.min_val
-   val_max = self.plot_params.max_val
-   _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+    pfin = where(finite(*self.data) eq 1, cntfin)
+    if cntfin eq 0 then MESSAGE, '$DATA has no finite element.'
+    if N_ELEMENTS(MIN_VALUE) ne 1 then val_min = MIN((*self.data)[pfin]) else val_min = MIN_VALUE
+    if N_ELEMENTS(MAX_VALUE) ne 1 then val_max = MAX((*self.data)[pfin]) else val_max = MAX_VALUE
+    missing = *(self.missing)
+    dataTypeName = Size(*self.data, /TNAME)
+    if FINITE(MISSING) then begin      
+      CASE dataTypeName OF
+        'FLOAT': indices = Where(Abs(*self.data - missing) gt (MACHAR()).eps, count)
+        'DOUBLE': indices = Where( Abs(*self.data - missing) gt (MACHAR(DOUBLE=1)).eps, count)
+        ELSE: indices = Where(*self.data ne missing, count)
+      ENDCASE
+      if count ne 0 and N_ELEMENTS(MIN_VALUE) ne 1 then val_min = MIN((*self.data)[indices])
+      if count ne 0 and N_ELEMENTS(MAX_VALUE) ne 1 then val_max = MAX((*self.data)[indices])
+    endif    
+    CASE dataTypeName OF
+        'FLOAT':  _levels = (float(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+        'DOUBLE':  _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+        ELSE:  _levels = (LONG(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
+    ENDCASE
+   
   endelse
-    
-  ; Fill up
+  
+  ;Fill up
   self->DestroyPlotParams
-  if is_Levels then self.plot_params.type = 'USER' else self.plot_params.type = 'AUTO'
+  if is_Levels then self.plot_params.type = 0 else begin
+    self.plot_params.type = 1 ; for automatic
+    if N_ELEMENTS(MIN_VALUE) ne 0 then self.plot_params.type += 2
+    if N_ELEMENTS(MAX_VALUE) ne 0 then self.plot_params.type += 3    
+  endelse
+
+  
   self.plot_params.nlevels  = nlevels
   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
   self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
   self.plot_params.min_val  = val_min
   self.plot_params.max_val  = val_max
   self.plot_params.neutral  = _neutral
+  self.contour_img  = KEYWORD_SET(CONTOUR)
   
   return, self->set_img()
 
@@ -510,19 +586,20 @@ end
 
 ;+
 ; :Description:
-;    This is to define the contours of lat lons on the map. 
+;    This is to define the lat-lon contouring on the map. 
 ;
 ; :Keywords:
 ;    TYPE: in, optional, type = string, default = 'LONLAT'
-;          currently, only 'LONLAT' accepted. If set to '', removes the map contours
+;          currently, only 'LONLAT' accepted. If set to '', removes the map contours.
+;          TODO: soon, 'UTM' will be implemented.
 ;    
-;    INTERVAL: in, optional, type = float, default =10.
+;    INTERVAL: in, optional, type = float, default = 10
 ;              interval between contours 
 ;              
-;    THICK: in, optional, type = float, default =1.
+;    THICK: in, optional, type = float, default = 1
 ;           thickness of the contour lines
 ;    
-;    STYLE: in, optional, type = float, default =2.
+;    STYLE: in, optional, type = float, default = 2
 ;           style of the contour lines
 ;           
 ;    COLOR: in, optional, type = string, default ='dark grey'
@@ -626,7 +703,7 @@ end
 ;+
 ; :Description:
 ;    Set shading params.
-;
+;    
 ;
 ; :Keywords:
 ;    RELIEF_FACTOR: in, optional, type = float, default = 0.7 
@@ -1198,22 +1275,52 @@ function w_Map::set_img
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
+  
 
-  img = INTARR(self.Xsize, self.Ysize)
+  if self.contour_img then begin
   
-  dataTypeName = Size(*self.data, /TNAME)
-  CASE dataTypeName OF
-    'FLOAT': epsilon = (MACHAR()).eps
-    'DOUBLE': epsilon = (MACHAR(DOUBLE=1)).eps    
-    ELSE: epsilon =0
-  ENDCASE
-  
-  for l=0, self.plot_params.nlevels-1 do begin
-    if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] - epsilon and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
-    else p = where((*self.data) ge (*self.plot_params.levels)[l]- epsilon, cnt)
-    if cnt gt 0 then img[p]= l + 1
-  endfor
+    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
+    xwin = !D.WINDOW
+    if FINITE(*self.missing) then begin
+      levels = [*self.missing, *self.plot_params.levels]
+      colors = [self.plot_params.neutral, *self.plot_params.colors]
+    endif else begin
+      levels = *self.plot_params.levels
+      colors = *self.plot_params.colors
+    endelse
+    n_colors = N_ELEMENTS(colors)
+    utils_color_rgb,  colors, r,g,b
+    cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=[0,0,1,1], XTICKLEN=-1,YTICKLEN=-1, label = 0, PALETTE=[[r],[g],[b]]
+    img_ = TVRD(/TRUE)
+    WDELETE, xwin
     
+    img = INTARR(self.Xsize, self.Ysize)
+    for i=0, N_ELEMENTS(colors)-1 do begin
+      test = (reform(img_[0,*,*]) eq r[i]) + (reform(img_[1,*,*]) eq g[i]) + (reform(img_[2,*,*]) eq b[i])
+      pok = where(test eq 3, cnt)
+      if cnt ne 0 then img[pok] = i + 1
+    endfor
+    undefine, img_
+    
+  endif else begin
+  
+    img = INTARR(self.Xsize, self.Ysize)
+    
+    dataTypeName = Size(*self.data, /TNAME)
+    CASE dataTypeName OF
+      'FLOAT': epsilon = (MACHAR()).eps
+      'DOUBLE': epsilon = (MACHAR(DOUBLE=1)).eps
+      ELSE: epsilon =0
+    ENDCASE
+    
+    for l=0, self.plot_params.nlevels-1 do begin
+      if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] - epsilon and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
+      else p = where((*self.data) ge (*self.plot_params.levels)[l]- epsilon, cnt)
+      if cnt gt 0 then img[p]= l + 1
+    endfor
+    
+  endelse
+      
   PTR_FREE, self.img
   SELF.img = PTR_NEW(img, /NO_COPY)
   
@@ -1244,14 +1351,6 @@ end
 ;    
 ;    MISSING: in, optional, type = numeric
 ;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
-;    
-;    VAL_MIN: in, optional, type = numeric, default=MIN(data)
-;             the minimun data value to level (ignored if levels is set using 'set_plot_params')
-;    
-;    VAL_MAX: in, optional, type = numeric, default=MAX(data)
-;             the maximum data value to level (ignored if levels is set using 'set_plot_params')
-;
-;
 ;
 ; :History:
 ;     Written by FaM, 2011.
@@ -1275,58 +1374,152 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   if N_PARAMS() eq 0 then begin
    data = BYTARR(self.Xsize, self.Ysize) 
    PTR_FREE, self.data
-   self.data = PTR_NEW(data, /NO_COPY)
+   self.data = PTR_NEW(data, /NO_COPY)  
+   PTR_FREE, self.missing
+   self.missing = PTR_NEW(!VALUES.F_NAN)
    return, self->set_img()
   endif  
   
-  if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
-  if N_ELEMENTS(missing) ne 0 then MISS = true else MISS = false
+  ;TODO: remove this when made sure than nobody uses it
+  if N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 then Message, 'VAL_MIN and VAL_MAX keywords in $w_Map::set_data are deprecated. Use $w_Map::set_plot_params instead.'
   
+  if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
+    
   if N_ELEMENTS(grid) eq 0 then begin
-     if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
-      else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
+    if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
+    else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
   endif else begin
-    _data = self.grid->map_gridded_data(data, grid, MISSING = missing, BILINEAR = bilinear)
-  endelse    
+    if N_ELEMENTS(missing) ne 0 then _missing = missing
+    _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear)
+  endelse
+  
+  if N_ELEMENTS(missing) eq 0 then begin
+    dataTypeName = Size(data, /TNAME)
+    CASE dataTypeName OF
+      'DOUBLE': missing = !VALUES.D_NAN
+      ELSE: missing = !VALUES.F_NAN
+    ENDCASE
+  endif
   
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
-  
-  to_redef = N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 or self.plot_params.type eq 'AUTO'
-     
+  PTR_FREE, self.missing
+  self.missing = PTR_NEW(missing)
+
   ; Levels
-  if to_redef then begin
-    pfin = where(finite(*self.data) eq 1, cntfin)  
-    if cntfin eq 0 then MESSAGE, '$data has no finite element.'
-    if N_ELEMENTS(VAL_MIN) eq 0 then _val_min = MIN((*self.data)[pfin]) else _val_min = VAL_MIN
-    if N_ELEMENTS(VAL_MAX) eq 0 then _val_max = MAX((*self.data)[pfin]) else _val_max = VAL_MAX
-    if MISS then begin
-      dataTypeName = Size(*self.data, /TNAME)
-      CASE dataTypeName OF
-        'FLOAT': BEGIN
-          epsilon = (MACHAR()).eps
-          indices = Where( Abs(*self.data - missing) gt epsilon, count)
-        END
-        'DOUBLE': BEGIN
-          epsilon = (MACHAR(DOUBLE=1)).eps
-          indices = Where( Abs(*self.data - missing) gt epsilon, count)
-        END
-        ELSE: BEGIN
-          indices = Where(*self.data ne missing, count)
-        END
-      ENDCASE
-      if count ne 0 and N_ELEMENTS(VAL_MIN) eq 0 then _val_min = MIN((*self.data)[indices])
-      if count ne 0 and N_ELEMENTS(VAL_MAX) eq 0 then _val_max = MAX((*self.data)[indices])
-    endif    
-    _levels = (double(_val_max - _val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + _val_min
+  if self.plot_params.type ne 0 then begin ;The levels are not user defined
+    
+    auto_min = self.plot_params.type ne 3 and self.plot_params.type ne 6 
+    auto_max = self.plot_params.type ne 4 and self.plot_params.type ne 6 
+    
+    pfin = where(finite(*self.data) eq 1, cntfin)
+    if cntfin eq 0 then MESSAGE, '$DATA has no finite element.'
+    if auto_min then val_min = MIN((*self.data)[pfin]) else val_min = self.plot_params.min_val
+    if auto_max then val_max = MAX((*self.data)[pfin]) else val_max = self.plot_params.max_val
+
+    dataTypeName = Size(*self.data, /TNAME)
+    CASE dataTypeName OF
+      'FLOAT': indices = Where(Abs(*self.data - missing) gt (MACHAR()).eps, count)
+      'DOUBLE': indices = Where( Abs(*self.data - missing) gt (MACHAR(DOUBLE=1)).eps, count)
+      ELSE: indices = Where(*self.data ne missing, count)
+    ENDCASE
+    if count ne 0 and auto_min then val_min = MIN((*self.data)[indices])
+    if count ne 0 and auto_max then val_max = MAX((*self.data)[indices])
+  
+    _levels = (double(val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
     ptr_free, self.plot_params.levels
     self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
-    self.plot_params.min_val = _val_min
-    self.plot_params.max_val = _val_max
+    self.plot_params.min_val = val_min
+    self.plot_params.max_val = val_max
+    
   endif
 
   return, self->set_img()
 
+end
+
+;+
+; :Description:
+;    Set additional data to be contoured over the original plot.
+;    This can be done as many times as needed.
+;
+; :Params:
+;    data: in, required, type = 2D array
+;          the data array to plot
+;    
+;    grid: in, optional, type = w_grid2d
+;          the grid associated to the data (see 'w_grid2d::map_gridded_data'). If not set,
+;          data is assumed to be in the same grid as the map and will be resized to the map 
+;          grid using congrid (dangerous if you do not know what you are doing, faster if you sure
+;          the data is related to the same grid)
+;
+; :Keywords:
+;    
+;    MISSING: in, optional, type = numeric
+;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
+;             
+;    _EXTRA: in, optional
+;                all the Keywords accepted by cgContour (hence by Contour, too)
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_contour, data, grid, MISSING = missing, _EXTRA = extra
+                             
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyContours
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  if N_PARAMS() eq 0 then begin
+    self->DestroyContours
+    RETURN, 1
+  endif  
+
+  if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
+    
+  if N_ELEMENTS(grid) eq 0 then begin
+    if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
+    else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, /INTERP)
+  endif else begin
+    if N_ELEMENTS(missing) ne 0 then _missing = missing
+    _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, /BILINEAR)
+  endelse
+  
+  if N_ELEMENTS(missing) eq 0 then begin
+    dataTypeName = Size(data, /TNAME)
+    CASE dataTypeName OF
+      'DOUBLE': missing = !VALUES.D_NAN
+      ELSE: missing = !VALUES.F_NAN
+    ENDCASE
+  endif  
+
+  cont = {MAP_CONTOUR}
+  cont.data = PTR_NEW(_data, /NO_COPY)
+  cont.keywords = PTR_NEW(extra)
+ 
+  if self.ncontours eq 0 then begin
+   self.ncontours = 1
+   self.contours = PTR_NEW(cont, /NO_COPY)
+  endif else begin
+   temp = *self.contours
+   ptr_free, self.contours
+   temp = [temp, cont]
+   self.contours = PTR_NEW(temp, /NO_COPY)
+   self.ncontours = self.ncontours + 1
+  endelse
+    
+  self.is_Contoured = TRUE
+  return, 1
+   
 end
 
 
@@ -1472,8 +1665,8 @@ function w_Map::shading
   if self.relief_factor eq 0 then return, self->img_to_rgb()
   nlevels = self.plot_params.nlevels + 1
   
-  if nlevels eq 0 or nlevels gt 127 then begin
-   MESSAGE, 'Shading: max number of colors is 127', /INFORMATIONAL
+  if nlevels eq 0 or nlevels gt 128 then begin
+   MESSAGE, 'Shading: max number of levels is 127 (because of the neutral color)', /INFORMATIONAL
    return, self->img_to_rgb()
   endif
 
@@ -1535,20 +1728,20 @@ function w_Map::draw_map, WINDOW = window
   
     self.grid->get_Lonlat, lon, lat
     
-    cgContour, lon, POSITION = [0,0,self.Xsize,self.Ysize], /DATA,  $
-      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
+    cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
       
-    cgContour, lat, POSITION = [0,0,self.Xsize,self.Ysize], /DATA, $
-      COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
+    cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
       
   endif
   
   ; Draw a frame
+  if ~(self.contour_img and ~self.is_Shaded) then begin
   xf = [0, self.xsize, self.xsize, 0, 0]
   yf = [0, 0, self.ysize, self.ysize, 0]
   cgPlotS, xf, yf, WINDOW = window, /DATA
+  endif 
   
  TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
   if TICK_LABEL then begin
@@ -1604,7 +1797,7 @@ function w_Map::draw_shapes, WINDOW = window
       idx = (*sh.conn)[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
       _coord = (*sh.coord) [*,idx]      
-      cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
+      cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
     endwhile  
   endfor
   
@@ -1700,6 +1893,32 @@ end
 
 ;+
 ; :Description:
+;    Adds the contours to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::draw_contours, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.ncontours-1 do begin
+    c = (*self.contours)[i]
+    cgContour, *c.data, WINDOW=window, /OVERPLOT, _EXTRA = *c.keywords
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
 ;    Adds the image to an existing plot
 ;
 ; :Author: Fabien Maussion::
@@ -1718,12 +1937,30 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   @WAVE.inc
   
   if self.is_Shaded then begin
-   cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
+    ; Build RGB image and show it
+    cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
   endif else begin
-   utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b   
-   cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE =noerase
+    if self.contour_img then begin
+      ; Make no image but just a contour of it
+      if FINITE(*self.missing) then begin
+        levels = [*self.missing, *self.plot_params.levels]
+        colors = [self.plot_params.neutral, *self.plot_params.colors]
+      endif else begin
+        levels = *self.plot_params.levels
+        colors = *self.plot_params.colors
+      endelse
+      n_colors = N_ELEMENTS(colors)
+      utils_color_rgb,  colors, r,g,b
+      cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=position, XTICKLEN=0,YTICKLEN=0, label = 0, $
+        PALETTE=[[r],[g],[b]], /NORMAL, WINDOW=window, XTICKNAME = REPLICATE(' ', 30), YTICKNAME = REPLICATE(' ', 30)
+    endif else begin
+      ; Make an indexed image and show it
+      utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b
+      cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE =noerase
+    endelse
   endelse
    
+  if self.is_Contoured then ok = self->draw_contours(WINDOW = window) 
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
   if self.is_Mapped then ok = self->draw_map(WINDOW = window)
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
@@ -1744,7 +1981,7 @@ end
 ;     Written by FaM, 2011.
 ;-   
 pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=position, CHARSIZE=charsize, $
-                          BAR_OPEN=bar_open, BAR_FORMAT=bar_format, _REF_EXTRA=extra
+                          BAR_OPEN=bar_open, BAR_FORMAT=bar_format, _EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -1813,7 +2050,7 @@ pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, MARG
   endelse
   
   self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=cgWIN
-  
+     
   if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
@@ -1856,7 +2093,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, VERTICAL = vertical, _REF_EXTR
     _Position=[0.20,0.05,0.30,0.95]
   endif else begin
     xs = self.Xsize * 0.75
-    ys = self.Xsize * 0.2  
+    ys = self.Xsize * 0.15  
     _Position=[0.10,0.4,0.90,0.6]
   endelse
   

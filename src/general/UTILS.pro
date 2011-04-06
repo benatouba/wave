@@ -12,7 +12,7 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  22-Nov-2010 FaM
+;     Last modification:  06-Apr-2011 FaM
 ;-
 
 ;+
@@ -82,6 +82,131 @@ pro utils_1d_to_2d, ax, ay, x, y
   
 end
 
+;+
+; :Description:
+; 
+;       Contract a vector or up to 25 vectors by removing specified elements.
+;       
+;       Copied from the ASTRON library!!! 
+;       
+;       If more than one element is to be removed, then HISTOGRAM is used
+;       to generate a 'keep' subscripting vector.    To minimize the length of 
+;       the subscripting vector, it is only computed between the minimum and 
+;       maximum values of the index.   Therefore, the slowest case of REMOVE
+;       is when both the first and last element are removed.
+;       
+; :Params:
+;       index: in, required
+;               scalar or vector giving the index number of elements to
+;               be removed from vectors.  Duplicate entries in index are
+;               ignored.    An error will occur if one attempts to remove
+;               all the elements of a vector.
+;
+;
+;       v1: in/out, rquired
+;           Elements specifed by INDEX will be removed from v1.  
+;           Upon return v1 will contain N fewer elements,
+;           where N is the number of distinct values in INDEX.
+;           ::
+;               v2,v3,...v25 - additional vectors containing
+;               the same number of elements as v1.  These will be
+;               contracted in the same manner as v1.
+;
+; :Examples:
+;    ::
+;       (1) If INDEX = [2,4,6,4] and V = [1,3,4,3,2,5,7,3] then after the call
+;
+;               IDL> utils_array_remove,index,v      
+;
+;       V will contain the values [1,3,3,5,3]
+;
+;       (2) Suppose one has a wavelength vector W, and three associated flux
+;       vectors F1, F2, and F3.    Remove all points where a quality vector,
+;       EPS is negative
+;
+;               IDL> bad = where( EPS LT 0, Nbad)
+;               IDL> if Nbad GT 0 then utils_array_remove, bad, w, f1, f2, f3
+;
+;
+; :History:
+;       Written W. Landsman        ST Systems Co.       April 28, 1988
+;       Cleaned up code          W. Landsman            September, 1992
+;       Major rewrite for improved speed   W. Landsman    April 2000
+;       Accept up to 25 variables, use SCOPE_VARFETCH internally
+;              W. Landsman   Feb 2010
+;       Fix occasional integer overflow problem  V. Geers  Feb 2011
+;       
+;       
+;-
+pro utils_array_remove, index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, $
+    v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25
+    
+  On_error,2
+  compile_opt idl2,strictarrsubs
+  
+  npar = N_params()
+  nvar = npar-1
+  if npar LT 2 then begin
+    print,'Syntax - remove, index, v1, [v2, v3, v4,..., v25]'
+    return
+  endif
+  vv = 'v' + strtrim(indgen(nvar)+1, 2)
+  
+  
+  npts = N_elements(v1)
+  
+  max_index = max(index, MIN = min_index)
+  
+  if ( min_index LT 0 ) || (max_index GT npts-1) then message, $
+    'ERROR - Index vector is out of range'
+    
+  if ( max_index Eq min_index ) then begin
+    Ngood = 0
+    if npts EQ 1 then message, $
+      'ERROR - Cannot delete all elements from a vector'
+  endif else begin  ;Remove only 1 element?
+  
+  
+    ;  Begin case where more than 1 element is to be removed.   Use HISTOGRAM
+    ;  to determine then indices to keep
+  
+    nhist = max_index - min_index +1
+    
+    hist = histogram( index)      ;Find unique index values to remove
+    keep = where( hist EQ 0, Ngood ) + min_index
+    
+    if ngood EQ 0 then begin
+      if ( npts LE nhist ) then message, $
+        'ERROR - Cannot delete all elements from a vector'
+    endif
+  endelse
+  
+  imin = min_index - 1
+  imax = max_index + 1
+  i0 = (min_index EQ 0) + 2*(max_index EQ npts-1)
+  case i0 of
+    3: begin
+      for i=0, nvar-1 do  $
+        (SCOPE_VARFETCH(vv[i],LEVEL=0)) = $
+        (SCOPE_VARFETCH(vv[i],LEVEL=0))[keep]
+      return
+    end
+    
+    1:  ii = Ngood EQ 0 ? imax + lindgen(npts-imax) : $
+      [keep, imax + lindgen(npts-imax) ]
+    2:  ii = Ngood EQ 0 ? lindgen(imin+1)               :  $
+      [lindgen(imin+1), keep ]
+    0:   ii = Ngood EQ 0 ? [lindgen(imin+1), imax + lindgen(npts-imax) ]  : $
+      [lindgen(imin+1), keep, imax + lindgen(npts-imax) ]
+  endcase
+  
+  for i=0,nvar-1 do  $
+    (SCOPE_VARFETCH(vv[i],LEVEL=0)) =    $
+    (SCOPE_VARFETCH(vv[i],LEVEL=0))[ii]
+    
+  return
+  
+end
 
 ;+
 ; :Description:
@@ -1083,7 +1208,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-function utils_aggregate_Grid_data, array, ratio ; TODO: Update routine: add grid update
+function utils_aggregate_grid_data, array, ratio ; TODO: Update routine: add grid update
 
   ; Set Up environnement
   @WAVE.inc
@@ -1570,7 +1695,7 @@ end
 ;
 ;
 ;-
-function utils_MOSAIC_grid, grids
+function utils_mosaic_grid, grids
 
 
   ; SET UP ENVIRONNEMENT
@@ -1611,16 +1736,19 @@ end
 
 ;+
 ; :Description:
-;    Transform ater vapor mixing ratio e.g from WRF output ([kg/kg])
-;    to relative humidity
-;
+;    Calculates relative humidity from ARW WRF model output. 
+;    You should not call it by wourself but use `w_WRF::get_Var('rh')` instead.
+;    
+;    Check out the equvalent NCL function 
+;    ‘wrf_rh <http://www.ncl.ucar.edu/Document/Functions/Built-in/wrf_rh.shtml>‘
+;    
 ; :Params:
 ;    qv: in, required
 ;        Water vapor mixing ratio in [kg/kg].
 ;    p: in, required
-;        Full pressure (perturbation + base state pressure) with the same dimension structure as qv. Units must be [Pa]. 
+;        Full pressure (perturbation + base state pressure) with the same dimension as qv. Units must be [Pa]. 
 ;    t: in, required
-;        Temperature in [K] with the same dimension structure as qv
+;        Temperature in [K] with the same dimension as qv. This variable can be calculated with `utils_wrf_tk`. 
 ;
 ;  :Returns:
 ;    Relative humidity [%]
@@ -1628,7 +1756,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-function utils_qv_to_rh, qv, p, t
+function utils_wrf_rh, qv, p, t
   
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -1641,9 +1769,7 @@ function utils_qv_to_rh, qv, p, t
   SVP3=29.65D
   SVPT0=273.15D
   
-  ;      DOUBLE PRECISION QVS,ES,PRESSURE,TEMPERATURE
-  ;      DOUBLE PRECISION EP_2,R_D,R_V
-  R_D=287.D
+  R_D=287.04D
   R_V=461.6D
   EP_2=R_D/R_V
   
@@ -1661,3 +1787,219 @@ function utils_qv_to_rh, qv, p, t
   RETURN, rh
   
 END
+
+;+
+; :Description:
+;    Calculates temperature in [K] from ARW WRF model output. 
+;    You should not call it by wourself but use `w_WRF::get_Var('tk')` instead.
+;        
+;    Check out the equvalent NCL function 
+;    ‘wrf_tk <http://www.ncl.ucar.edu/Document/Functions/Built-in/wrf_tk.shtml>‘
+;    
+; :Params:
+;    p: in, required
+;        Full pressure (perturbation + base state pressure). Units must be [Pa]. 
+;    theta: in, required
+;           Potential temperature (i.e, perturbation + reference temperature) 
+;           with the same dimension as p. Units must be [K]. 
+;
+;  :Returns:
+;    Temperature in [K]. The multi-dimensional array has the same size as p.
+;
+; :History:
+;     Written by FaM, 2010.
+;-
+function utils_wrf_tk, p, theta
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not array_processing(p, theta) then message, WAVE_Std_Message(/ARG)
+  
+  P1000MB=100000.
+  R_D=287.04
+  CP=7.*R_D/2.
+  
+  PI = (p/P1000MB)^(R_D/CP)
+  return, PI*theta
+  
+end
+
+;+
+; :Description:
+;    Calculates sea level pressure (hPa) from ARW WRF model output.
+;    You should not call it by wourself but use `w_WRF::get_Var('slp')` instead.
+;    
+;    Check out the equvalent NCL function 
+;    ‘wrf_slp <http://www.ncl.ucar.edu/Document/Functions/Built-in/wrf_slp.shtml>‘
+;    
+; :Params:
+;    Z: in, required    
+;    Geopotential height in [m] with at least 3 dimensions. It must be on the ARW WRF unstaggered grid. 
+;    
+;    T: in, required    
+;    Temperature in [K]. An array with the same dimensionality as Z. This variable can be calculated by wrf_tk.
+;    
+;    P: in, required    
+;    Full pressure (perturbation + base state pressure) in [Pa]. An array of the same dimensionality as Z.
+;    
+;    Q: in, required    
+;    Water vapor mixing ratio in [kg/kg]. An array of the same dimensionality as Z. 
+;
+;  :Returns:
+;    Sea level pressure in [hPa]. (2-dimensional surface array)
+;
+; :History:
+;     Written by FaM, 2010.
+;-
+function utils_wrf_slp, Z, T, P, Q
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not array_processing(Z, T, P, Q) then message, WAVE_Std_Message(/ARG)
+  dims = size(z, /DIMENSIONS)
+  ndims = N_ELEMENTS(dims)
+  if ndims ne 3 then message, WAVE_Std_Message(DIMARRAY = 3)
+  nx = dims[0]
+  ny = dims[1]
+  nz = dims[2]
+  
+  R=287.04
+  G=9.81
+  GAMMA=0.0065
+  TC=273.16 + 17.5
+  PCONST=10000.
+  
+  ;c  Find least zeta level that is PCONST Pa above the surface.  We
+  ;c  later use this level to extrapolate a surface pressure and
+  ;c  temperature, which is supposed to reduce the effect of the diurnal
+  ;c  heating cycle in the pressure field.
+  
+  level = INTARR(nx,ny) - 1
+  for k=0, nz-1 do begin
+    pok = where((P[*,*,k] lt (P[*,*,0] - PCONST)) and level eq -1, cnt)
+    if cnt ne 0 then level[pok] = k
+  endfor
+  
+  pnok = where(level eq -1, cnt)
+  if cnt ne 0 then message, 'Error_in_finding_100_hPa_up'
+  
+  
+  KLO = (LEVEL-1) > 0
+  KHI = (KLO+1) < (nz-1)
+  
+  pnok = where((KLO - KHI) eq 0, cnt)
+  if cnt ne 0 then message, 'Trapping levels are weird.'
+  
+  PLO = FLTARR(nx,ny)
+  PHI = FLTARR(nx,ny)
+  THI = FLTARR(nx,ny)
+  TLO = FLTARR(nx,ny)
+  QHI = FLTARR(nx,ny)
+  QLO = FLTARR(nx,ny)
+  ZHI = FLTARR(nx,ny)
+  ZLO = FLTARR(nx,ny)
+  
+  nn = nx*ny
+  inds = indgen(nn)
+  indsO = inds + klo[*] * nn
+  indsI = inds + khi[*] * nn
+  
+  PLO[*,*] = P[indsO]
+  PHI[*,*] = P[indsI]
+  
+  ZLO[*,*] = Z[indsO]
+  ZHI[*,*] = Z[indsI]
+  
+  TLO[*,*] = T[indsO]
+  THI[*,*] = T[indsI]
+  
+  QLO[*,*] = Q[indsO]
+  QHI[*,*] = Q[indsI]
+  
+  TLO = TLO* (1.+0.608*QLO)
+  THI = THI* (1.+0.608*QHI)
+  
+  P_AT_PCONST = P[*,*,0] - PCONST
+  T_AT_PCONST = THI - (THI-TLO)*ALOG(P_AT_PCONST/PHI)* ALOG(PLO/PHI)
+  Z_AT_PCONST = ZHI - (ZHI-ZLO)*ALOG(P_AT_PCONST/PHI)*ALOG(PLO/PHI)
+  T_SURF = T_AT_PCONST* (P[*,*,0]/P_AT_PCONST)^(GAMMA*R/G)
+  T_SEA_LEVEL = T_AT_PCONST + GAMMA*Z_AT_PCONST
+  
+  
+  ;c If we follow a traditional computation, there is a correction to the
+  ;c sea level temperature if both the surface and sea level
+  ;c temperatures are *too* hot.
+  
+  L1 = T_SEA_LEVEL LT TC
+  L2 = T_SURF LE TC
+  L3 = ~L1
+  T_SEA_LEVEL =  TC - 0.005 * (T_SURF-TC)^2
+  pok = where(L2 AND L3, cnt)
+  if cnt ne 0 then T_SEA_LEVEL[pok] = TC
+  
+  ;c     The grand finale: ta da!
+  ;c   z_half_lowest=zetahalf(1)/ztop*(ztop-terrain(i,j))+terrain(i,j)
+  Z_HALF_LOWEST = Z[*,*,0]
+  
+  ;C Convert to hPa in this step, by multiplying by 0.01. The original
+  ;C Fortran routine didn't do this, but the NCL script that called it
+  ;C did, so we moved it here.
+  SEA_LEVEL_PRESSURE = 0.01 * (P[*,*,0]*EXP((2.*G*Z_HALF_LOWEST)/(R* (T_SEA_LEVEL+T_SURF))))
+  
+  return, SEA_LEVEL_PRESSURE
+  
+end
+
+;+
+; :Description:
+;    Unstaggers an input variable along a specified dimension.
+;    You should not call it by wourself but use `w_WRF::get_Var('', /UNSTAGGER)` instead.  
+;
+; :Params:
+;    varin: in, required
+;          Variable that needs to be unstaggered. Must be at least a 2 dimensional variable 
+;          with the dimensions nx x ny, or a 3 dimensional variable with  
+;          dimensions nx x ny x nz.
+;          
+;    unstagDim: in, required
+;               Along which dimension must the variable be unstaggered. 
+;               Options are 0 (X), 1 (Y) or 2 (Z). 
+;
+;
+; :Returns:
+;    The unstaggered variable
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_wrf_unstagger, varin, unstagDim
+  
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not arg_okay(varin, /NUMERIC) then message, WAVE_Std_Message(/ARG)
+  if not arg_okay(unstagDim, /NUMERIC, /SCALAR) then message, WAVE_Std_Message(/ARG)
+  
+  dims = SIZE(varin, /DIMENSIONS)
+  nd = N_ELEMENTS(dims)
+  if unstagDim ge nd or unstagDim lt 0 then message, WAVE_Std_Message('unstagDim', /RANGE)
+  
+  n = dims[unstagDim]
+  case (unstagDim) of
+    0: varout = 0.5*(varin[0:n-2,*,*,*,*] + varin[1:n-1,*,*,*,*])
+    1: varout = 0.5*(varin[*,0:n-2,*,*,*] + varin[*,1:n-1,*,*,*])
+    2: varout = 0.5*(varin[*,*,0:n-2,*,*] + varin[*,*,1:n-1,*,*])    
+    else: Message, 'You sure?'       
+  endcase
+
+ return, reform(varout)
+
+end
+

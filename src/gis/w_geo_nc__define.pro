@@ -361,17 +361,19 @@ end
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
 ;   varinfo: out, type = struct
-;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;            structure that contains information about the original variable in 
+;            the NCDF file. This has the form:: 
+;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
 ;   description: out, type = string
-;               If available, the description of the variable
+;                If available, the description of the variable
 ;   units: out, type = string
 ;          If available, the units of the variable
 ;   varname: out, type = string
 ;            the name of the variable
 ;   dims: out, type = long
-;         the variable dimensions
+;         the variable dimensions (if the variable is cropped, the dimensions are updated too)
 ;   dimnames: out, type = string
-;             the dimensions names
+;             the dimensions names (if the variable is cropped, the dimension names are updated too)
 ; 
 ; :Returns:
 ;         The variable
@@ -463,7 +465,13 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   pnok = where(count lt 0, cnt)
   if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
     
-  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
+  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset, $
+                                     varinfo = varinfo , $
+                                     units = units, $
+                                     description = description, $
+                                     varname = varname , $
+                                     dims = dims, $
+                                     dimnames = dimnames)
   
   return, value
   

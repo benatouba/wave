@@ -94,7 +94,7 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
 
     text = 'Bias = ' + STRING(mb, FORMAT='(F5.2)')
     
-    if KEYWORD_SET(LEGEND_UL) then pos = [0.35, 0.80] $
+    if KEYWORD_SET(LEGEND_UL) then pos = [0.38, 0.80] $
     else  pos = [0.68, 0.17]
     cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, /WINDOW
   endif

@@ -564,19 +564,21 @@ end
 ;            An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
 ;    STRIDE: in, optional, type = integer vector
 ;            An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-;    varinfo: out, optional, type = struct
-;             structure that contains information about the variable. This  has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) } 
-;    description: out, optional, type = string
-;                 If available, the description of the variable
-;    units: out, optional, type = string
-;           If available, the units of the variable
-;    varname: out, optional, type = string
-;             the name of the variable
-;    dims : in, optional, type = long
-;           out the variable dimensions
-;    dimnames : in, optional, type = string
-;               out the dimensions names
-;
+;   varinfo: out, type = struct
+;            structure that contains information about the original variable in 
+;            the NCDF file. This has the form:: 
+;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
+;   description: out, type = string
+;                If available, the description of the variable
+;   units: out, type = string
+;          If available, the units of the variable
+;   varname: out, type = string
+;            the name of the variable
+;   dims: out, type = long
+;         the variable dimensions (if the variable is cropped, the dimensions are updated too)
+;   dimnames: out, type = string
+;             the dimensions names (if the variable is cropped, the dimension names are updated too)
+; 
 ; :Returns:
 ;    The variable
 ;       
@@ -610,7 +612,13 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                             dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
 
   
-  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride  
+  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
+  
+  if N_ELEMENTS(count) ne 0 then begin ;Check if we have to change the variable metadata
+    pr = where(count le 1, cnt)
+    if cnt eq N_ELEMENTS(dimnames) then dimnames = '' else if cnt ne 0 then utils_array_remove, pr, dimnames
+    dims = size(Value, /DIMENSIONS)
+  endif
   
   return, value
   

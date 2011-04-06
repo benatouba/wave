@@ -205,13 +205,19 @@ pro w_standard_2d_plot, map, TITLE=title,$
 
   endif else begin
 
-    disp_img = tvrd(TRUE=1)
-
     if keyword_set(eps) then PS_End
     if keyword_set(png) then PS_End, /PNG, RESIZE=im_resize
     if keyword_set(jpeg) then PS_End, /JPEG, RESIZE=im_resize
-    if keyword_set(std_png) then write_png, std_png, disp_img
-    if keyword_set(std_jpeg) then write_jpeg, std_jpeg, disp_img
+    
+    ;TODO CHECK THIS
+    if keyword_set(std_png) then begin
+      disp_img = tvrd(TRUE=1)
+      write_png, std_png, disp_img
+    endif
+    if keyword_set(std_jpeg) then begin
+      disp_img = tvrd(TRUE=1)
+      write_jpeg, std_jpeg, tvrd(TRUE=1)
+    endif
     if xwin ne -1 then wdelete, xwin
     
   endelse
