@@ -540,7 +540,7 @@ pro w_WRF::Cleanup
   PTR_FREE, self.dimNames
   PTR_FREE, self.dimSizes
   PTR_FREE, self.gattNames
-
+  
   PTR_FREE, self.time
   
   Ptr_Free, self.lon 
@@ -622,6 +622,83 @@ end
 
 ;+
 ; :Description:
+;    This function checks if a variable ID is valid and returns 1 if it is. Additionally,
+;    it tries to obtain a maximum of information about the desired variable.
+;    
+;    This function have been enhanced for `w_WRF` to include additional diagnostic variables.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    Varid: in, required, type = string/integer
+;           the variable ID (string or integer) to check
+;
+; :Keywords:
+;   out_id: out, type = long
+;           the netcdf variable ID (long)
+;   varinfo: out, type = struct
+;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
+;   description: out, type = string
+;               If available, the description of the variable
+;   units: out, type = string
+;          If available, the units of the variable
+;   varname: out, type = string
+;            the name of the variable
+;   dims: out, type = long
+;         the variable dimensions
+;   dimnames: out, type = string
+;             the dimensions names
+; 
+; :Returns:
+;         1 if the variable id is valid, 0 if not
+;
+;       :History:
+;     Written by FaM, 2010.
+;-
+function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+                              out_id = out_id, $
+                              varinfo = varinfo , $ ; 
+                              units = units, $
+                              description = description, $
+                              varname = varname , $ ; 
+                              dims = dims, $ ;
+                              dimnames = dimnames ;
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, FALSE
+  ENDIF
+  
+  if ~self->w_NCDF::get_Var_Info(Varid, $
+                                 out_id = out_id, $
+                                 varinfo = varinfo , $ ; 
+                                 units = units, $
+                                 description = description, $
+                                 varname = varname , $ ; 
+                                 dims = dims, $ ;
+                                 dimnames = dimnames) then begin
+     ;Post processed variables
+     ; TODO: variable handling in WRF files
+     post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B']              
+     p = where(post eq str_equiv(Varid), cnt)
+     if cnt eq 0 then return, FALSE                                     
+                                 
+  endif    
+  
+  return, TRUE
+  
+end
+
+;+
+; :Description:
 ;    This function reads a variable from the file but only
 ;    at a specific location. The output is a vector of 
 ;    nt elements, where nt is the number of times in the 
@@ -697,7 +774,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   
   if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
   
-  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'
   
   ; no go threw the possibilites:
   if N_ELEMENTS(src) EQ 0 then mysrc = self else mysrc = src
@@ -708,15 +785,32 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   ; This is to obtain lat and lons of the selected grid point
   self->transform, point_i, point_j, dummy1, dummy2, src=self, $
     LON_DST=point_lon, LAT_DST=point_lat
-  
-  return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+ 
+  ;Post processed variables
+  ; TODO: variable handling in WRF files
+  post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B']              
+  p = where(post eq str_equiv(Varid), cnt)
+  if cnt eq 0 then return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
                           K = K , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
                           dims = dims, $ ;
-                          dimnames = dimnames )
+                          dimnames = dimnames ) else begin
+                          
+     var = self->get_Var(varid, time, nt, t0 = t0, t1 = t1, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+     
+    if N_ELEMENTS(K) eq 0 then return, var[point_i, point_j,*,*,*] else return, var[point_i, point_j,k,*,*]
+  
+  endelse
+                          
   
 end
 
@@ -939,7 +1033,7 @@ function w_WRF::get_Var, Varid, $
     units = 'K'
     
     if str_equiv(Varid) eq 'TC' then begin
-         value = value - 273.16
+         value = value - 273.15
          units = 'C'
     endif
     
@@ -973,7 +1067,7 @@ function w_WRF::get_Var, Varid, $
       description = description, $
       varname = varname , $
       dims = dims, $
-      dimnames = dimnames) - 273.16
+      dimnames = dimnames) - 273.15
   
      units = 'C'
     
@@ -1034,7 +1128,7 @@ function w_WRF::get_Var, Varid, $
   
   if str_equiv(Varid) eq 'TER' then begin
     
-    if self.type eq 'MET' then return, self->get_Var('HGT_M', time, nt, t0 = t0, t1 = t1,  $
+    if self.type eq 'MET' then return, self->get_Var('HGT_M', time, nt, t0 = self.t0, t1 = self.t0,  $
       varinfo = varinfo , $
       units = units, $
       description = description, $
@@ -1042,7 +1136,7 @@ function w_WRF::get_Var, Varid, $
       dims = dims, $
       dimnames = dimnames)
         
-    value = self->get_Var('HGT', time, nt, t0 = t0, t1 = t1,  $
+    value = self->get_Var('HGT', time, nt, t0 = self.t0, t1 = self.t0,  $
       varinfo = varinfo , $
       units = units, $
       description = description, $
@@ -1056,7 +1150,7 @@ function w_WRF::get_Var, Varid, $
   
   if str_equiv(Varid) eq 'LUCAT' then begin
             
-    value = self->get_Var('LU_INDEX', time, nt, t0 = t0, t1 = t1,  $
+    value = self->get_Var('LU_INDEX', time, nt, t0 = self.t0, t1 = self.t0,  $
       varinfo = varinfo , $
       units = units, $
       description = description, $
@@ -1121,30 +1215,19 @@ function w_WRF::get_Var, Varid, $
   
   if str_equiv(Varid) eq 'SLP_B' then begin
   
-    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'      
-    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('PH') then Message, 'PH variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('PHB') then Message, 'PHB variable not found in file.'
-        
-    T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+    if ~self->w_NCDF::get_Var_Info('PSFC') then Message, 'PSFC variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
+    if ~self->get_Var_Info('TER') then Message, 'TER variable not found in file.'
+            
+    ps = self->get_Var('PSFC', times, nt, T0=t0, T1=t1,  $
       varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
       dims = dims, $
-      dimnames = dimnames)
-      
-    P = self->get_Var('P', T0=t0, T1=t1)
-    PB = self->get_Var('PB', T0=t0, T1=t1)
-    QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1)
-    PH = self->get_Var('PH', T0=t0, T1=t1, /UNSTAGGER)
-    PHB = self->get_Var('PHB', T0=t0, T1=t1, /UNSTAGGER)
-    
-    ps = wrf->get_Var('PSFC', times, nt, T0=t0, T1=t1) * 0.01 ; in hPa
-    T2 = wrf->get_Var('T2') - 273.15 ; in degC
-    zs = wrf->get_Var('ter') ; in m
+      dimnames = dimnames) * 0.01 ; in hPa
+    T2 = self->get_Var('T2') - 273.15 ; in degC
+    zs = self->get_Var('TER') ; in m
     
     mdims = SIZE(t2, /DIMENSIONS)
     value = FLTARR(mdims[0],mdims[1],nt)
@@ -1152,7 +1235,7 @@ function w_WRF::get_Var, Varid, $
      
     description = 'Sea level pressure'
     units = 'hPa'
-    if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]] 
+    if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
   
   endif
   

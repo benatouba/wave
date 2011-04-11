@@ -2687,6 +2687,17 @@ pro TEST_WRF_GETVAR
     FREE_LUN, lun   
     if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
     
+    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_wrf_b = wrf->get_Var('slp_b', T0 = t0, T1 = t0)
+    if mean(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 1e-2 then error +=1 
+    if max(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 0.06 then error +=1
+    
+    t2 =  wrf->get_TimeSerie('t2', 54, 75) - 273.15
+    t2c =  wrf->get_TimeSerie('t2c', 54, 75)
+    if total(t2-t2c) ne 0 then  error +=1
+    
+
     OBJ_DESTROY, wrf    
     if error ne 0 then message, '% TEST_WRF_GETVAR NOT passed', /CONTINUE else print, 'TEST_WRF_GETVAR passed'
 end
