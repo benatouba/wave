@@ -817,8 +817,9 @@ end
 ;             prcp: total precipitation (accumulated, unless `/ACC_TO_STEP` is set)
 ;             rh2: 2m Relative Humidity [%]
 ;             rh: Relative Humidity [%]
-;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. If the vertical dimension is not present, slp_b is computed)
-;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see MET_barometric for more info)
+;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. See `utils_wrf_slp` 
+;                  (If the vertical dimension is not present in the file, slp_b is computed automatically instead)
+;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see `MET_barometric` for more info)
 ;             ter: Model terrain height [m] (2-dimensional)
 ;             lucat: Land cover category  (2-dimensional)
 ;             tc: Temperature [C]

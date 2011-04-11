@@ -198,10 +198,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
     endelse
     
     if keyword_set(eps) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
-    if keyword_set(png) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /RASTER_IM
-    if keyword_set(jpeg) then cgControl, CREATE_JPEG=jpeg, IM_RESIZE=im_resize, /RASTER_IM
-    if keyword_set(std_png) then cgControl, CREATE_PNG=std_png, RASTER_IM=0
-    if keyword_set(std_jpeg) then cgControl, CREATE_JPEG=std_jpeg, RASTER_IM=0
+    if keyword_set(png) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
+    if keyword_set(jpeg) then cgControl, CREATE_JPEG=jpeg, IM_RESIZE=im_resize, /IM_RASTER
+    if keyword_set(std_png) then cgControl, CREATE_PNG=std_png, IM_RASTER=0
+    if keyword_set(std_jpeg) then cgControl, CREATE_JPEG=std_jpeg, IM_RASTER=0
 
   endif else begin
 

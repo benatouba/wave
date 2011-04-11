@@ -574,7 +574,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
       cgDisplay, xsiz, ysiz, /FREE, Title='w_TimeLinePlot window'
       cgImage, img
     endelse
-    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE= 50, /RASTER_IM
+    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE= 50, /IM_RASTER
     if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   endif else begin
     if KEYWORD_SET(PNG) then PS_END, /PNG, resize = RESIZE_PNG

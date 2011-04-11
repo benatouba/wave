@@ -103,7 +103,7 @@ end
 ;               all the elements of a vector.
 ;
 ;
-;       v1: in/out, rquired
+;       v1: in, out, required
 ;           Elements specifed by INDEX will be removed from v1.  
 ;           Upon return v1 will contain N fewer elements,
 ;           where N is the number of distinct values in INDEX.
@@ -1836,16 +1836,16 @@ end
 ;    
 ; :Params:
 ;    Z: in, required    
-;    Geopotential height in [m] with at least 3 dimensions. It must be on the ARW WRF unstaggered grid. 
+;       Geopotential height in [m] with at least 3 dimensions. It must be on the ARW WRF unstaggered grid. 
 ;    
 ;    T: in, required    
-;    Temperature in [K]. An array with the same dimensionality as Z. This variable can be calculated by wrf_tk.
+;       Temperature in [K]. An array with the same dimensionality as Z. This variable can be calculated by wrf_tk.
 ;    
 ;    P: in, required    
-;    Full pressure (perturbation + base state pressure) in [Pa]. An array of the same dimensionality as Z.
+;       Full pressure (perturbation + base state pressure) in [Pa]. An array of the same dimensionality as Z.
 ;    
 ;    Q: in, required    
-;    Water vapor mixing ratio in [kg/kg]. An array of the same dimensionality as Z. 
+;        Water vapor mixing ratio in [kg/kg]. An array of the same dimensionality as Z. 
 ;
 ;  :Returns:
 ;    Sea level pressure in [hPa]. (2-dimensional surface array)
@@ -1932,8 +1932,7 @@ function utils_wrf_slp, Z, T, P, Q
   
   ;c If we follow a traditional computation, there is a correction to the
   ;c sea level temperature if both the surface and sea level
-  ;c temperatures are *too* hot.
-  
+  ;c temperatures are *too* hot.  
   L1 = T_SEA_LEVEL LT TC
   L2 = T_SURF LE TC
   L3 = ~L1
