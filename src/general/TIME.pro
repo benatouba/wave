@@ -1841,7 +1841,7 @@ function TS_RESAMPLE, data, time, $
   COMPILE_OPT idl2
   @WAVE.inc
   
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
   if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
   if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
@@ -1890,6 +1890,16 @@ function TS_RESAMPLE, data, time, $
   if N_ELEMENTS(qms2) ne N_ELEMENTS(sample) then message, 'oups'
   
   RETURN, {data:sample,time:qms2,nt:N_ELEMENTS(qms2)} 
+
+end
+
+
+function TS_wrf_to_mean, data, time
+  
+  _data = data*1.
+  d1 = TS_RESAMPLE(_data, time, /M10)
+  d2 = INTERPOL(_data, time, d1.time)
+  return, (TS_MEAN_STATISTICS(d2, d1.time, HOUR = 1)).mean
 
 end
 
