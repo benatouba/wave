@@ -678,14 +678,14 @@ pro TEST_TS_MEAN
   st = TS_MEAN_STATISTICS(data, time, /HOUR)
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 0)]   
   st = TS_MEAN_STATISTICS(data, time, /HOUR)
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6), QMS_TIME(year = 2009, day = 1, hour = 6, minute = 33)]   
@@ -693,8 +693,8 @@ pro TEST_TS_MEAN
   if st.nt ne 2 then error += 1 
   if st.mean[0] ne 3 then error += 1 
   if st.mean[1] ne 4 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 5) then error += 1 
-  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
+  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
  
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
@@ -702,29 +702,29 @@ pro TEST_TS_MEAN
   if st.nt ne 2 then error += 1 
   if st.mean[0] ne 3 then error += 1 
   if st.mean[1] ne 4 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
-  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 8) then error += 1 
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
   st = TS_MEAN_STATISTICS(data, time, NEW_TIME=[QMS_TIME(year = 2009, day = 1), QMS_TIME(year = 2009, day = 2)])
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
 
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
   st = TS_MEAN_STATISTICS(data, time, /DAY)
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
 
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
   st = TS_MEAN_STATISTICS(data, time, NEW_TIME=[QMS_TIME(year = 2009, day = 2), QMS_TIME(year = 2009, day = 3)])
   if st.nt ne 1 then error += 1 
   if FINITE(st.mean[0]) ne 0 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 3) then error += 1 
 
   data = [3.,4.,5.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 33), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 59)]   
@@ -759,7 +759,7 @@ pro TEST_TS_RESAMPLE
   
   ; Very simple tests
   data = [3.,4.]
-  time = [QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00)]   
+  time = [QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 3, hour = 0, minute = 00)]   
   st = TS_resample(data, time, /HOUR)
   if st.nt ne 48 then error += 1 
   if st.data[0] ne 3 then error += 1 
@@ -772,7 +772,7 @@ pro TEST_TS_RESAMPLE
   if st.time[47] ne QMS_TIME(year = 2009, day = 3, hour = 00) then error += 1 
   data = [3.,4.]
  
-  time = [QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00)]   
+  time = [QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00), QMS_TIME(year = 2009, day = 3, hour = 0, minute = 00)]   
   st = TS_resample(data, time, /M10)
   if st.nt ne 48*6 then error += 1 
   if st.data[0] ne 3 then error += 1 
@@ -788,8 +788,8 @@ pro TEST_TS_RESAMPLE
   if st.time[48*6-1] ne QMS_TIME(year = 2009, day = 3, hour = 00, minute = 00) then error += 1 
  
   t = TS_MEAN_STATISTICS(st.data, st.time, /DAY)
-  if t.time[0] ne  QMS_TIME(year = 2009, day = 1, hour = 0, minute = 00) then error +=1
-  if t.time[1] ne  QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00) then error +=1
+  if t.time[0] ne  QMS_TIME(year = 2009, day = 2, hour = 0, minute = 00) then error +=1
+  if t.time[1] ne  QMS_TIME(year = 2009, day = 3, hour = 0, minute = 00) then error +=1
   if t.mean[0] ne  3 then error +=1
   if t.mean[1] ne  4 then error +=1
   if t.nt ne 2 then error +=1

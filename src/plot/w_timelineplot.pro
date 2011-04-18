@@ -2,7 +2,7 @@
 ; :Description:
 ;    This is a simple routine based on the Coyote cg* commands to create a simple
 ;    plot with a time axis. Inputs are the serie to plot and time in absolute date.
-;    One can plot up to 8 time series and add a new axis, legend, etc. Therefore, 
+;    One can plot up to 9 time series and add a new axis, legend, etc. Therefore, 
 ;    the number of parameters is very high but also very repetitive (see examples).
 ;
 ; :Params:
@@ -77,6 +77,15 @@
 ;    tag8: in, optional, type = string
 ;          the tag related to data8 for the legend
 ;
+;    data9: in, optional, type = numeric
+;          the data to overplot
+;    time9: in, optional, type = qms/{ABS_DATE}
+;          the time (same size as data9)
+;    color9: in, optional, type = string
+;          the color for the overplot (string accepted by cgColor)
+;    tag9: in, optional, type = string
+;          the tag related to data9 for the legend
+;
 ; :Keywords:
 ; 
 ;    color1: in, optional, type = string, default = 'black'
@@ -86,8 +95,7 @@
 ;    psym1: in, optional, type = numeric, default = 0
 ;            the psym for the first plot
 ;    COMENT1: in, optional, type = string, default = ''
-;             a subtitle for the legend
-;             
+;             a subtitle for the legend;             
 ;    TITLE: in, optional, type = string, default = 'Data'
 ;             a title for the plot
 ;    XTITLE: in, optional, type = string, default = ''
@@ -202,7 +210,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
                     NEWAXIS = newaxis, NEWRANGE = newrange, NEWTITLE = newtitle, $ ; if a second axis is to be drawn
                     THICKNESS = thickness, PIXMAP = pixmap, $ ; line thickness
                     HORILINE = HORILINE, VERTILINE = VERTILINE, $ ; if horizontal or vertical lines have to be drawn
-                    EPS = eps, PNG = png, RESIZE_PNG= RESIZE_PNG, $ ; Control output
+                    EPS = eps, PNG = png, RESIZE_PNG=RESIZE_PNG, $ ; Control output
                     NO_RESIZE = no_resize, $ ; If resizable
                     data2, time2, color2, tag2, COMENT2 = coment2, style2 = style2, psym2 = psym2, $ 
                     data3, time3, color3, tag3, COMENT3 = coment3, style3 = style3, psym3 = psym3, $ 
@@ -210,7 +218,8 @@ pro w_TimeLinePlot, data,$  ; array to plot
                     data5, time5, color5, tag5, COMENT5 = coment5, style5 = style5, psym5 = psym5, $
                     data6, time6, color6, tag6, COMENT6 = coment6, style6 = style6, psym6 = psym6, $
                     data7, time7, color7, tag7, COMENT7 = coment7, style7 = style7, psym7 = psym7, $
-                    data8, time8, color8, tag8, COMENT8 = coment8, style8 = style8, psym8 = psym8
+                    data8, time8, color8, tag8, COMENT8 = coment8, style8 = style8, psym8 = psym8, $
+                    data9, time9, color9, tag9, COMENT9 = coment9, style9 = style9, psym9 = psym9
                      
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -224,8 +233,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
    !ORDER = 0
    
   ; Check what we want to do
-   if (KEYWORD_SET(EPS) or KEYWORD_SET(PNG)) and KEYWORD_SET(NO_RESIZE) then PIXMAP = TRUE
-  
+   if (KEYWORD_SET(EPS) or KEYWORD_SET(PNG)) and KEYWORD_SET(NO_RESIZE) then PIXMAP = TRUE  
   if KEYWORD_SET(PIXMAP) then visible = FALSE else visible = TRUE
   
   xsiz = 1000
@@ -393,22 +401,22 @@ pro w_TimeLinePlot, data,$  ; array to plot
    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = ppos, XTICK_GET=xs, YTICK_GET=ys, $
     /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW = cgWin
        
-        
-  if N_ELEMENTS(HORILINE) ne 0 then cgPlots, [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('dark grey'), LINESTYLE=5, WINDOW = cgWin
-  if N_ELEMENTS(VERTILINE) ne 0 then $
-    for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [TIME_to_JD(VERTILINE[i]),TIME_to_JD(VERTILINE[i])], $
-           range, color = cgColor('black'), LINESTYLE=5, WINDOW = cgWin
+ if N_ELEMENTS(HORILINE) ne 0 then $
+    for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd),max(jd)], [HORILINE[i],HORILINE[i]], $
+      color = cgColor('dark grey'), LINESTYLE=5, WINDOW = cgWin, NOCLIP = 0
+
   ; real plot
   if ~KEYWORD_SET(psym1) then begin
-    cgplot, jd, data[p1:p2], COLOR = cgColor(color1), THI = thickness, LINESTYLE=style, PSYM=psym, /OVERPLOT, WINDOW = cgWin
+    cgplot, jd, data[p1:p2], COLOR = cgColor(color1), THI = thickness, LINESTYLE=style, PSYM=psym1, /OVERPLOT, WINDOW = cgWin
   endif else begin
-    cgPlot, jd, data[p1:p2], COLOR = cgColor(color1), PSYM=psym, SYMSIZE=thickness, /OVERPLOT, WINDOW = cgWin
+    cgPlot, jd, data[p1:p2], COLOR = cgColor(color1), PSYM=psym1, SYMSIZE=thickness, /OVERPLOT, WINDOW = cgWin
   endelse
 
   if ~KEYWORD_SET(psym1) then begin
     cgplots, x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, LINESTYLE=style, WINDOW = cgWin
   endif else begin
-    cgplots, x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, PSYM=psym, SYMSIZE=thickness, WINDOW = cgWin
+    if psym1 eq 10 then _psym1 = 0 else _psym1 = psym1
+    cgplots, x, y,  COLOR = cgColor(color1), /NORMAL , THICK=thickness, PSYM=_psym1, SYMSIZE=thickness, WINDOW = cgWin
   endelse
   
 
@@ -564,6 +572,33 @@ pro w_TimeLinePlot, data,$  ; array to plot
     cgtext, x[1]+dx1 ,  y[0]-dy1, tag8, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, WINDOW = cgWin
     if KEYWORD_SET(coment8) then cgtext, x[1]+dx2 ,  y[0]-dy2, coment8, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, WINDOW = cgWin
   endif  
+  
+  if N_ELEMENTS(data9) ne 0 then begin    
+    ; Are the next plots on a new axis ?
+    if NEWAXIS eq 9 then begin
+      if ~KEYWORD_SET(newrange) then newrange = [MIN(data9), MAX(data9)]
+      cgAxis, YAxis=1, YTitle=NEWTITLE, /save, COLOR=cgColor('Black'), CHARSIZE=plo_siz, CHARTHICK = plo_thi, YMINOR = 10, YRANGE = newrange, WINDOW = cgWin
+      style = news
+    endif
+    if N_ELEMENTS(style9) eq 1  then style = style9 
+    y = y - ddy
+    if ~KEYWORD_SET(psym9) then begin
+      cgplot, TIME_to_JD(time9), data9, COLOR = cgColor(color9), THI =  thickness, LINESTYLE=style, /OVERPLOT, WINDOW = cgWin
+      cgplots, x, y,  COLOR = cgColor(color9), THICK=thickness, /NORMAL, LINESTYLE=style, WINDOW = cgWin
+    endif else begin
+      cgplot, [TIME_to_JD(time9)], data9, COLOR = cgColor(color9), PSYM=psym9, SYMSIZE=thickness, WINDOW = cgWin, /OVERPLOT
+      if PSYM9 eq 10 then psym9 = 0
+      cgplots, x, y,  COLOR = cgColor(color9), THICK=thickness, /NORMAL, PSYM=psym9, SYMSIZE=thickness, WINDOW = cgWin
+    endelse   
+    cgtext, x[1]+dx1 ,  y[0]-dy1, tag9, CHARSIZE=tsiz, CHARTHICK = tthi, COLOR = cgColor(color9), /NORMAL, WINDOW = cgWin
+    if KEYWORD_SET(coment9) then cgtext, x[1]+dx2 ,  y[0]-dy2, coment9, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color9), /NORMAL, WINDOW = cgWin
+  endif  
+  
+  ; Vertical lines
+  if N_ELEMENTS(VERTILINE) ne 0 then $
+    for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [TIME_to_JD(VERTILINE[i]),TIME_to_JD(VERTILINE[i])], $
+           range, color = cgColor('black'), LINESTYLE=2, WINDOW = cgWin, NOCLIP = 0
+  
   
   
   ; output  

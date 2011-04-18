@@ -201,7 +201,6 @@ function AWS_crop_struct, struct, t0 = t0, t1 = t1
   
 end
 
-
 ;+
 ; :Description:
 ;    This function merges two strucutres into one.
@@ -244,6 +243,53 @@ function AWS_merge_struct, struct1, struct2
   endfor
   
   return, create_struct(ostr,'nt', N_ELEMENTS(ostr.time))
+  
+end
+
+;+
+; :Description:
+;    This interpolates all missing data in a structure
+;
+; :Params:
+;    struct: in, required
+;            first AWS structure to repair
+;
+; :Keywords:
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+function AWS_interp_struct, struct
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  n = n_tags(struct)
+  names = tag_names(struct)
+  
+  it = struct.time
+  if check_TimeSerie(it, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing) then begin
+     MESSAGE, 'time serie is complete, nothing to do', /INFORMATIONAL
+     return, struct     
+  end
+  
+  fnt = N_ELEMENTS(FULL_TS)
+  ostr = create_struct('TIME', full_ts)
+  
+  for i=0,n-1 do begin ; Go threw all infos
+  
+    if str_equiv(names[i]) eq 'NT' then continue
+    if str_equiv(names[i]) eq 'TIME' then continue
+   
+    ;add entry to existing structure
+    ostr = create_struct(ostr,names[i], INTERPOL(struct.(i), it, full_ts))
+    
+  ; End of Loop
+  endfor
+  
+  return, create_struct(ostr,'NT', N_ELEMENTS(ostr.time))
   
 end
 
@@ -373,5 +419,57 @@ function AWS_irts, att, sb
   SEC = (0.25 / PSB )*(( ATT - HSB )^2 - KSB) ;  
 
   return, ATT - SEC
+  
+end
+
+
+function AWS_RH_campbell, rh, t  
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  ON_ERROR, 2
+  
+  if ~ array_processing(rh, t) then Message, WAVE_Std_Message(/ARG)
+  
+  ;linfit
+  a = 0.84285714d
+  b = 99.5d
+  fac = 100. / (a * t + b) 
+  
+  ;polyfit
+  x0 = 100.00000
+  x1 = 0.78000000d
+  x2 = -0.13177778d
+  x3 = -0.025666667d
+  x4 = -0.0019111111d
+  x5 = -6.1333334d-05
+  x6 = -7.1111111d-07
+  fac = 100. / (x0 + x1*t + x2*t^2 + x3*t^3 + x4*t^4 + x5*t^5 + x6*t^6) 
+  
+  p = where(t lt 0., cnt)
+  out = rh 
+  if cnt ne 0 then out[p] = rh[p] * fac[p]
+  
+  return, out
+
+end
+
+function AWS_linear_interp, top, bot, top_h, bot_h, H = h 
+  
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  ON_ERROR, 2
+  
+  if ~ array_processing(top, bot, top_h, bot_h) then Message, WAVE_Std_Message(/ARG)
+    
+  ; T = a * H + b
+  a = (top - bot) / (top_h - bot_h)
+  b = (bot * top_h  - top * bot_h) / (top_h - bot_h)
+  
+  if ~KEYWORD_SET(h) then h = 2
+  
+  return, a * double(h) + b
   
 end

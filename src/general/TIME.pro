@@ -1693,7 +1693,7 @@ end
 ;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
 ;    output time serie).
 ;    
-;    !CAREFULL: it can be confusing: The value at 13:00 is the mean value from 13:01 to 14:00 !
+;    !CAREFULL: it can be confusing: The value at 14:00 is the mean value from 13:01 to 14:00 !
 ;
 ; :Params:
 ;    data: in, required, type = array
@@ -1816,7 +1816,7 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
         endelse
       endfor
       
-      qms2 = qms2[0: nnt-2]
+      qms2 = qms2[1: nnt-1]
 
   endelse
   
@@ -1855,6 +1855,7 @@ function TS_RESAMPLE, data, time, $
  
   if ~ check_TimeSerie(qms1, its) then message, '$TIME not regular'
   iqms = its.dms  
+  qms1 = qms1 - iqms
  
   if KEYWORD_SET(hour) or KEYWORD_SET(day) or KEYWORD_SET(M10) then begin    
     if KEYWORD_SET(hour) then oqms = H_QMS $
@@ -2094,8 +2095,8 @@ function TS_7DIURNAL_MEANS, data, time, MISSING = missing
       nels[i] =  0
     endelse
   endfor
-  
-  newtime = newtime / DOUBLE(dqms) * 24.
+
+  newtime = newtime / DOUBLE(dqms) * 24.*7.
   
   RETURN, {nt: nsteps, $
     time:newtime, $
@@ -2104,8 +2105,7 @@ function TS_7DIURNAL_MEANS, data, time, MISSING = missing
     max:maxs, $
     tot:tots, $
     nel:nels,$
-    stddev:stddevs}
-    
+    stddev:stddevs}   
     
 end
 
