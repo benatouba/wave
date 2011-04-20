@@ -210,14 +210,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
     if keyword_set(jpeg) then PS_End, /JPEG, RESIZE=im_resize
     
     ;TODO CHECK THIS
-    if keyword_set(std_png) then begin
-      disp_img = tvrd(TRUE=1)
-      write_png, std_png, disp_img
-    endif
-    if keyword_set(std_jpeg) then begin
-      disp_img = tvrd(TRUE=1)
-      write_jpeg, std_jpeg, tvrd(TRUE=1)
-    endif
+    disp_img = tvrd(TRUE=1)
+    if keyword_set(std_png) then write_png, std_png, disp_img
+    if keyword_set(std_jpeg) then write_jpeg, std_jpeg, tvrd(TRUE=1)
+
     if xwin ne -1 then wdelete, xwin
     
   endelse
