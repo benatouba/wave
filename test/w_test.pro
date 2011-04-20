@@ -2607,6 +2607,10 @@ pro TEST_WRF_GETVAR
 
     if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
     
+    var_ts = wrf->get_TimeSerie('RH2', 34, 67, T0 = t0, T1 = t0)
+    if MAX(ABS(var_ts-var_wrf[34, 67])) gt 1e-3 then error +=1 
+  
+    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     var_wrf = wrf->get_Var('rh', T0 = t0, T1 = t0)
     var_ncl = var_wrf * 0.    
@@ -2622,6 +2626,13 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun
     if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
+    
+    var_ts = wrf->get_TimeSerie('RH', 34, 67, T0 = t0, T1 = t0)
+    if MAX(ABS(var_ts-var_wrf[34, 67, *])) gt 1e-3 then error +=1 
+    var_ts = wrf->get_TimeSerie('RH', 34, 67, T0 = t0, T1 = t0, K = 9)
+    if MAX(ABS(var_ts-var_wrf[34, 67, 9])) gt 1e-3 then error +=1 
+    var_ts =( wrf->get_TimeSerie('RH', 34, 67))[*,3]
+    if MAX(ABS(var_ts-var_wrf[34, 67, *])) gt 1e-3 then error +=1 
     
     var_wrf =(wrf->get_Var('rh'))[*,*,*,8]
     var_ncl = var_wrf * 0.    
@@ -2686,6 +2697,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun   
     if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+       
     
     t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
     slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)

@@ -612,6 +612,7 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
   
   ; Now check for third dimension
   IF N_ELEMENTS(k) ne 0 then begin
+    if N_ELEMENTS(k) gt 1 then Message, WAVE_Std_Message('k', /RANGE)
     case (ndims) of
       3: begin
         if pt[0] eq -1 then begin
@@ -637,9 +638,9 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
       
   ; Now fill every dimension that have not been cropped with std values
   pnok = where(offset lt 0, cnt)
-  if cnt ne 0 then for i=0, cnt-1 do offset[pnok[i]] = 0  
+  if cnt ne 0 then for r=0, cnt-1 do offset[pnok[r]] = 0  
   pnok = where(count lt 0, cnt)
-  if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
+  if cnt ne 0 then for r=0, cnt-1 do count[pnok[r]] = dims[pnok[r]]
     
   value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
   

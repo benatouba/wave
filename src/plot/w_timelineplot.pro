@@ -133,6 +133,14 @@
 ;               if one wants to draw a horizontal dashed line in the plot device (e.g HORILINE = 0)
 ;    VERTILINE: in, optional, type = qms/{abs_date}
 ;               if one wants to draw a vertical dashed line in the plot device (e.g VERTILINE = MAKE_ABS_DATE(year = 2008))
+;               
+;    PNG: in, optional, type = string
+;         set to a filename to generate a png output (uses image magick)
+;    EPS: in, optional, type = string
+;         set to a filename to generate an encapsulated postscript output
+;    IM_RESIZE: in, optional, type=integer, default=25
+;                Set this keyword to percentage that the raster image file created my ImageMagick
+;                 from PostScript output should be resized.
 ;
 ;    COMENT2: in, optional, type = string, default = ''
 ;             a subtitle for the legend of data2
@@ -208,9 +216,9 @@ pro w_TimeLinePlot, data,$  ; array to plot
                     FORCE_XAXIS = force_xAxis, $ ; force axis range
                     FORCE_YAXIS = force_yAxis, $ ; force axis range
                     NEWAXIS = newaxis, NEWRANGE = newrange, NEWTITLE = newtitle, $ ; if a second axis is to be drawn
-                    THICKNESS = thickness, PIXMAP = pixmap, $ ; line thickness
+                    THICKNESS = thickness, $ ; line thickness
                     HORILINE = HORILINE, VERTILINE = VERTILINE, $ ; if horizontal or vertical lines have to be drawn
-                    EPS = eps, PNG = png, RESIZE_PNG=RESIZE_PNG, $ ; Control output
+                    EPS = eps, PNG = png, PIXMAP = pixmap, IM_RESIZE = im_resize,  $ ; outputs
                     NO_RESIZE = no_resize, $ ; If resizable
                     data2, time2, color2, tag2, COMENT2 = coment2, style2 = style2, psym2 = psym2, $ 
                     data3, time3, color3, tag3, COMENT3 = coment3, style3 = style3, psym3 = psym3, $ 
@@ -224,32 +232,30 @@ pro w_TimeLinePlot, data,$  ; array to plot
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc            
-   ON_ERROR, 2
+  ON_ERROR, 2
+
    
-   
-   ; prepare the plot  
-   device, DECOMPOSED=1, RETAIN=2  
-   pp = !ORDER ;To restore later
-   !ORDER = 0
-   
-  ; Check what we want to do
-   if (KEYWORD_SET(EPS) or KEYWORD_SET(PNG)) and KEYWORD_SET(NO_RESIZE) then PIXMAP = TRUE  
-  if KEYWORD_SET(PIXMAP) then visible = FALSE else visible = TRUE
-  
+  ; prepare the plot 
+  device, DECOMPOSED=1, RETAIN=2
+  pp = !ORDER ;To restore later
+  !ORDER = 0  
   xsiz = 1000
   ysiz = 600
-  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='WAVE Plot'
-  xwin = !D.WINDOW
   
+  ; Check what we want to do  
+  visible = ~KEYWORD_SET(PIXMAP)   
+  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='w_ScatterPlot'
+  xwin = !D.WINDOW  
   cgWIN = FALSE    
-  if visible and ~KEYWORD_SET(NO_RESIZE) then begin
+  if visible then begin
     WDELETE, xwin
-    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_TimeLinePlot resizable window'
+    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_ScatterPlot resizable window'
     cgControl, EXECUTE=0
     cgWIN = true
   endif else begin
-    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1 $
-    else if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
+    if KEYWORD_SET(EPS) and KEYWORD_SET(PNG) then Message, 'In pixmap mode you have to choose between EPS and PNG'
+    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric
+    if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
   endelse
    
    
@@ -603,16 +609,11 @@ pro w_TimeLinePlot, data,$  ; array to plot
   
   ; output  
   if visible then begin
-    if CGWIN then cgControl, EXECUTE=1 else begin
-      img = Transpose(tvrd(/TRUE), [1,2,0])
-      WDELETE, xwin
-      cgDisplay, xsiz, ysiz, /FREE, Title='w_TimeLinePlot window'
-      cgImage, img
-    endelse
-    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE= 50, /IM_RASTER
+    cgControl, EXECUTE=1
+    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
     if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   endif else begin
-    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = RESIZE_PNG
+    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = im_resize
     if KEYWORD_SET(EPS) then PS_END
     WDELETE, xwin
   endelse

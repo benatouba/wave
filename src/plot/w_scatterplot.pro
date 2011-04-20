@@ -27,6 +27,15 @@
 ;          the psym of the points
 ;    LEGEND_UL: in, optional 
 ;               if you do not want to put the legend in the upper left corner
+;               
+;    PNG: in, optional, type = string
+;         set to a filename to generate a png output (uses image magick)
+;    EPS: in, optional, type = string
+;         set to a filename to generate an encapsulated postscript output
+;    IM_RESIZE: in, optional, type=integer, default=25
+;                Set this keyword to percentage that the raster image file created my ImageMagick
+;                 from PostScript output should be resized.
+;
 ;
 ; :Author: FaM
 ;
@@ -35,17 +44,12 @@
 ;-
 pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
                    RANGE = range, NOFIT = nofit, NOCORRELATION = nocorrelation, COLOR = color, PSYM=psym, $
-                   LEGEND_UL = LEGEND_UL, EPS = eps, PNG = png, PIXMAP = pixmap
+                   LEGEND_UL = LEGEND_UL, EPS = eps, PNG = png, PIXMAP = pixmap, IM_RESIZE = im_resize
 
   ; Set Up environnement
   COMPILE_OPT idl2
-  @WAVE.inc                   
+  @WAVE.inc                 
 
-   ; prepare the plot 
-   device, DECOMPOSED=1, RETAIN=2
-   pp = !ORDER ;To restore later
-   !ORDER = 0
-  
   ;check args
   if ~ array_processing(x, y) then message, WAVE_Std_Message(/ARG)
   
@@ -53,29 +57,32 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   if ~KEYWORD_SET(color) then color = 'black'
   if ~KEYWORD_SET(psym) then psym = 1
   
-  ; Check what we want to do
-  if (KEYWORD_SET(EPS) or KEYWORD_SET(PNG)) and KEYWORD_SET(NO_RESIZE) then PIXMAP = TRUE  
-  if KEYWORD_SET(PIXMAP) then visible = FALSE else visible = TRUE
-  
+  ; prepare the plot 
+  device, DECOMPOSED=1, RETAIN=2
+  pp = !ORDER ;To restore later
+  !ORDER = 0  
   xsiz = 600
-  ysiz = 600
-  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='WAVE Plot'
-  xwin = !D.WINDOW
+  ysiz = 600  
   
+  ; Check what we want to do  
+  visible = ~KEYWORD_SET(PIXMAP)   
+  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='w_ScatterPlot'
+  xwin = !D.WINDOW  
   cgWIN = FALSE    
-  if visible and ~KEYWORD_SET(NO_RESIZE) then begin
+  if visible then begin
     WDELETE, xwin
     cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_ScatterPlot resizable window'
     cgControl, EXECUTE=0
     cgWIN = true
   endif else begin
-    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1 $
-    else if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
+    if KEYWORD_SET(EPS) and KEYWORD_SET(PNG) then Message, 'In pixmap mode you have to choose between EPS and PNG'
+    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric
+    if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
   endelse
   
   cgPlot, x, y, title = title, CHARSIZE=1.5, /NORMAL, $
     CHARTHICK = 1, THICK=2., XTITLE = xtitle, Ytitle = Ytitle,  POSITION = [0.14,0.12,0.94,0.92], /NODATA, YSTYLE = 1, xstyle = 1, $
-       XRANGE=range, YRANGE= range, PSYM=psym, WINDOW=cgWin      
+       XRANGE=range, YRANGE=range, PSYM=psym, WINDOW=cgWin      
     
   cgplots, [range[0],range[1]], [range[0],range[1]], color = cgColor('grey'), LINESTYLE=5, WINDOW=cgWin
   
@@ -118,16 +125,11 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   
   ; output  
   if visible then begin
-    if CGWIN then cgControl, EXECUTE=1 else begin
-      img = Transpose(tvrd(/TRUE), [1,2,0])
-      WDELETE, xwin
-      cgDisplay, xsiz, ysiz, /FREE, Title='w_ScatterPlot window'
-      cgImage, img
-    endelse
-    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE= 50, /IM_RASTER
+    cgControl, EXECUTE=1
+    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
     if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   endif else begin
-    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = RESIZE_PNG
+    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = im_resize
     if KEYWORD_SET(EPS) then PS_END
     WDELETE, xwin
   endelse

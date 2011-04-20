@@ -2144,3 +2144,97 @@ function utils_wrf_unstagger, varin, unstagDim
 
 end
 
+
+;+
+; :Description:
+;    Computes the mean deviation between two datasets
+;
+; :Params:
+;    ref: in, required
+;         the reference data
+;    data: in, required
+;         the data to compare to the reference
+;
+; :Returns:
+;    The mean deviation (scalar)
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_MD, ref, data
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if ~ array_processing(ref, data) then message, 'ref and data not compatible'
+    
+  return, mean(data - ref, /NAN)
+
+end
+
+;+
+; :Description:
+;    Computes the root mean square deviation between two datasets
+;
+; :Params:
+;    ref: in, required
+;         the reference data
+;    data: in, required
+;         the data to compare to the reference
+;
+; :Returns:
+;    The  root mean square deviation (scalar)
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_RMSD, ref, data
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc  
+
+  if ~ array_processing(ref, data) then message, 'ref and data not compatible'
+    
+  diff = data - ref
+  return, SQRT(mean(diff*diff, /NAN))
+
+end
+
+;+
+; :Description:
+;    Computes the explained variance between two datasets
+;
+; :Params:
+;    ref: in, required
+;         the reference data
+;    data: in, required
+;         the data to compare to the reference
+;
+; :Returns:
+;    The explained variance (scalar)
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_R2, ref, data
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc  
+
+  if ~ array_processing(ref, data) then message, 'ref and data not compatible'
+ 
+  return, CORRELATE(ref, data)^2 
+
+end
+
+
+

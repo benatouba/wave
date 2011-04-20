@@ -785,32 +785,148 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   ; This is to obtain lat and lons of the selected grid point
   self->transform, point_i, point_j, dummy1, dummy2, src=self, $
     LON_DST=point_lon, LAT_DST=point_lat
+    
+    
+  undefine, value
  
   ;Post processed variables
-  ; TODO: variable handling in WRF files
-  post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B']              
-  p = where(post eq str_equiv(Varid), cnt)
-  if cnt eq 0 then return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
-                          K = K , $
+  if str_equiv(Varid) eq 'PRCP' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('RAINNC') then Message, 'RAINNC variable not found in file.'
+      
+    if ~self->w_NCDF::get_Var_Info('RAINC') then Message, 'RAINC variable not found in file.'
+    
+    value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
                           dims = dims, $ ;
-                          dimnames = dimnames ) else begin
-                          
-     var = self->get_Var(varid, time, nt, t0 = t0, t1 = t1, $
+                          dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      
+    description = 'Accumulated total precipitation'
+    varname = str_equiv(Varid)
+  endif
+    
+  if str_equiv(Varid) eq 'T2C' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
+        
+    value = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames) - 273.15
+  
+     units = 'C'
+     varname = str_equiv(Varid)
+  endif
+  
+  if str_equiv(Varid) eq 'RH' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'    
+    
+    T = self->w_GEO_nc::get_TimeSerie('T', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
                           varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
                           dims = dims, $ ;
                           dimnames = dimnames)
-     
-    if N_ELEMENTS(K) eq 0 then return, var[point_i, point_j,*,*,*] else return, var[point_i, point_j,k,*,*]
-  
-  endelse
                           
+    P = self->w_GEO_nc::get_TimeSerie('P', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    PB = self->w_GEO_nc::get_TimeSerie('PB', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    QVAPOR = self->w_GEO_nc::get_TimeSerie('QVAPOR', point_i, point_j, K = K, t0 = t0, t1 = t1)
+   
+    T = T + 300.
+    P  = P + PB
+    QVAPOR = QVAPOR > 0.000
+    tk = utils_wrf_tk(P,T)
+    value = utils_wrf_rh(QVAPOR, P, tk)
+    
+    description = 'Relative Humidity'
+    units = '%'
+    varname = str_equiv(Varid)
+  endif
+  
+  if str_equiv(Varid) eq 'RH2' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('PSFC') then Message, 'PSFC variable not found in file.'
+    if ~self->w_NCDF::get_Var_Info('Q2') then Message, 'Q2 variable not found in file.'
+    
+    T2 = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+                          
+    PSFC = self->w_GEO_nc::get_TimeSerie('PSFC', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    Q2 = self->w_GEO_nc::get_TimeSerie('Q2', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    
+    Q2 = Q2 > 0.000
+    value = utils_wrf_rh(Q2, PSFC, T2)
+        
+    description = '2m Relative Humidity'
+    units = '%'
+    varname = str_equiv(Varid)
+  endif
+  
+  if str_equiv(Varid) eq 'TER' then begin
+    
+    if self.type eq 'MET' then return, self->w_GEO_nc::get_TimeSerie('HGT_M', point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+                                         
+                          
+    value = self->w_GEO_nc::get_TimeSerie('HGT', point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+    varname = str_equiv(Varid)                                 
+  endif
+  
+  
+  if N_ELEMENTS(value) eq 0 then begin ;This is probably a standard variable
+  
+    ; TODO: variable handling in WRF files
+    post = ['TK','TC','TH','T2C','SLP','SLP_B']
+    p = where(post eq str_equiv(Varid), cnt)
+    if cnt eq 0 then return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+                                                           K = K , $
+                                                           varinfo = varinfo , $ ;
+                                                           units = units, $
+                                                           description = description, $
+                                                           varname = varname , $ ;
+                                                           dims = dims, $ ;
+                                                           dimnames = dimnames ) else message, 'variable currently not accepted in TS.'
+      
+      
+      
+  endif
+  
+  if KEYWORD_SET(ACC_TO_STEP) then begin
+   value = utils_ACC_TO_STEP(value)
+   description += ' (de-accumulated)' 
+  endif 
+  
+  dims = SIZE(value, /DIMENSIONS)
+  
+  return, value                         
   
 end
 
@@ -873,12 +989,12 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
                          point_j = wrf_ind_j, $
                          point_lon = wrf_lon, $
                          point_lat = wrf_lat, $
-                          varinfo = varinfo , $ ; 
-                          units = units, $
-                          description = description, $
-                          varname = varname , $ ; 
-                          dims = dims, $ ;
-                          dimnames = dimnames )
+                         varinfo = varinfo , $ ; 
+                         units = units, $
+                         description = description, $
+                         varname = varname , $ ; 
+                         dims = dims, $ ;
+                         dimnames = dimnames )
   
   ;TODO: Update routine: if var dim 2 then more than one curve 
   
@@ -1006,7 +1122,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
       
     description = 'Accumulated total precipitation'
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'TK' or str_equiv(Varid) eq 'TC' then begin
@@ -1036,7 +1152,7 @@ function w_WRF::get_Var, Varid, $
          value = value - 273.15
          units = 'C'
     endif
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'TH' or str_equiv(Varid) eq 'THETA' then begin
@@ -1054,7 +1170,7 @@ function w_WRF::get_Var, Varid, $
     
     description = 'Potential Temperature (theta)'
     units = 'K'
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'T2C' then begin
@@ -1070,7 +1186,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames) - 273.15
   
      units = 'C'
-    
+     varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'RH' then begin
@@ -1099,7 +1215,7 @@ function w_WRF::get_Var, Varid, $
     
     description = 'Relative Humidity'
     units = '%'
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'RH2' then begin
@@ -1123,7 +1239,7 @@ function w_WRF::get_Var, Varid, $
         
     description = '2m Relative Humidity'
     units = '%'
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'TER' then begin
@@ -1145,7 +1261,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames)
                                  
     dimnames = [dimnames[0],dimnames[1]]   
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'LUCAT' then begin
@@ -1159,7 +1275,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames)
                                  
     dimnames = [dimnames[0],dimnames[1]]   
-    
+    varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'SLP' then begin
@@ -1171,7 +1287,7 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('QVAPOR') then OK = False
     if ~self->w_NCDF::get_Var_Info('PH') then  OK = False
     if ~self->w_NCDF::get_Var_Info('PHB') then OK = False
-    
+    varname = str_equiv(Varid)
     if OK then begin
     
       T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
@@ -1236,7 +1352,7 @@ function w_WRF::get_Var, Varid, $
     description = 'Sea level pressure'
     units = 'hPa'
     if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
-  
+    varname = str_equiv(Varid)
   endif
   
   if N_ELEMENTS(value) eq 1 and value[0] eq -1 then begin ;This is probably a standard variable

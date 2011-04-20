@@ -115,6 +115,15 @@
 ;               if one wants to draw a horizontal dashed line in the plot device (e.g HORILINE = 0)
 ;    VERTILINE: in, optional, type = qms/{abs_date}
 ;               if one wants to draw a vertical dashed line in the plot device (e.g VERTILINE = MAKE_ABS_DATE(year = 2008))
+;               
+;    PNG: in, optional, type = string
+;         set to a filename to generate a png output (uses image magick)
+;    EPS: in, optional, type = string
+;         set to a filename to generate an encapsulated postscript output
+;    IM_RESIZE: in, optional, type=integer, default=25
+;                Set this keyword to percentage that the raster image file created my ImageMagick
+;                 from PostScript output should be resized.
+;
 ;
 ;    COMENT2: in, optional, type = string, default = ''
 ;             a subtitle for the legend of data2
@@ -185,7 +194,8 @@ pro w_diurnalPlot, data,$  ; array to plot
                     RANGE = range, $ ; Y data range
                     FORCE_AXIS = force_Axis, $ ; force axis range
                     NEWAXIS = newaxis, NEWRANGE = newrange, NEWTITLE = newtitle, $ ; if a second axis is to be drawn
-                    THICKNESS = thickness, PIXMAP = pixmap, $ ; line thickness
+                    THICKNESS = thickness, $ ; line thickness
+                    EPS = eps, PNG = png, PIXMAP = pixmap, IM_RESIZE = im_resize,  $ ; outputs
                     HORILINE = HORILINE, VERTILINE = VERTILINE, $ ; if horizontal or vertical lines have to be drawn
                     data2, time2, color2, tag2, COMENT2 = coment2, style2 = style2, psym2 = psym2, $ 
                     data3, time3, color3, tag3, COMENT3 = coment3, style3 = style3, psym3 = psym3, $ 
@@ -199,13 +209,7 @@ pro w_diurnalPlot, data,$  ; array to plot
   COMPILE_OPT idl2
   @WAVE.inc            
   ON_ERROR, 2
-   
-   
-   ; prepare the plot  
-   device, DECOMPOSED=1, RETAIN=2  
-   pp = !ORDER ;To restore later
-   !ORDER = 0
-   
+      
    ;Check args
    if ~arg_okay(time, /NUMERIC) then message, WAVE_Std_Message('time', /ARG)
    if ~arg_okay(time, NRANGE = [0,24]) then message, WAVE_Std_Message('time', /RANGE)
@@ -231,10 +235,33 @@ pro w_diurnalPlot, data,$  ; array to plot
    endif else begin
      p1 = 0
      p2 = nt - 1
-   endelse
-  
+   endelse  
   
   if ~KEYWORD_SET(range) then range = [MIN(data[p1:p2], /NAN), MAX(data[p1:p2],/NAN)]
+  
+  ; prepare the plot 
+  device, DECOMPOSED=1, RETAIN=2
+  pp = !ORDER ;To restore later
+  !ORDER = 0  
+  xsiz = 1000
+  ysiz = 600
+  
+  ; Check what we want to do  
+  visible = ~KEYWORD_SET(PIXMAP)   
+  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='w_ScatterPlot'
+  xwin = !D.WINDOW  
+  cgWIN = FALSE    
+  if visible then begin
+    WDELETE, xwin
+    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_ScatterPlot resizable window'
+    cgControl, EXECUTE=0
+    cgWIN = true
+  endif else begin
+    if KEYWORD_SET(EPS) and KEYWORD_SET(PNG) then Message, 'In pixmap mode you have to choose between EPS and PNG'
+    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric
+    if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
+  endelse
+  
   
   ; Make X AXIS
   xtitle = 'Time of day'
@@ -264,35 +291,15 @@ pro w_diurnalPlot, data,$  ; array to plot
   
   jd = time[p1:p2]
   
-   ; Check what we want to do
-  if (KEYWORD_SET(EPS) or KEYWORD_SET(PNG)) and KEYWORD_SET(NO_RESIZE) then PIXMAP = TRUE  
-  if KEYWORD_SET(PIXMAP) then visible = FALSE else visible = TRUE
-  
-  xsiz = 1000
-  ysiz = 600
-  cgDisplay, /FREE, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, Title='WAVE Plot'
-  xwin = !D.WINDOW
-  
-  cgWIN = FALSE    
-  if visible and ~KEYWORD_SET(NO_RESIZE) then begin
-    WDELETE, xwin
-    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_DiurnalPlot resizable window'
-    cgControl, EXECUTE=0
-    cgWIN = true
-  endif else begin
-    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1 $
-    else if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
-  endelse
- 
+  ; Star to plot 
   cgPlot, jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = ppos, XTICK_GET=xs, YTICK_GET=ys, $
     /NODATA, XTICKINTERVAL = HOURS, XMINOR = xminor, YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW=cgWin
        
         
-  if N_ELEMENTS(HORILINE) eq 1 then cgPlots, [min(jd),max(jd)], [HORILINE,HORILINE], color = cgColor('dark grey'), LINESTYLE=5, WINDOW=cgWin
-  if N_ELEMENTS(VERTILINE) eq 1 then $
-    for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [VERTILINE[i],VERTILINE[i]], $
-           range, color = cgColor('black'), LINESTYLE=5, WINDOW=cgWin
+  if N_ELEMENTS(HORILINE) ge 1 then for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd),max(jd)], [HORILINE[i],HORILINE[i]], $
+                                               color = cgColor('dark grey'), LINESTYLE=5, WINDOW=cgWin
+           
   ; real plot
   if ~KEYWORD_SET(psym1) then begin
     cgplot, jd, data[p1:p2], COLOR = cgColor(color1), THI = thickness, LINESTYLE=style, PSYM=psym, /OVERPLOT, WINDOW=cgWin
@@ -460,19 +467,16 @@ pro w_diurnalPlot, data,$  ; array to plot
     if KEYWORD_SET(coment8) then cgtext, x[1]+dx2 ,  y[0]-dy2, coment8, CHARSIZE=csiz, CHARTHICK = tthi, COLOR = cgColor(color8), /NORMAL, WINDOW=cgWin
   endif 
   
-   
+  if N_ELEMENTS(VERTILINE) ge 1 then for i =0, N_ELEMENTS(VERTILINE)-1 do cgPlots, [VERTILINE[i],VERTILINE[i]], $
+           range, color = cgColor('black'), LINESTYLE=5, WINDOW=cgWin
+  
   ; output  
   if visible then begin
-    if CGWIN then cgControl, EXECUTE=1 else begin
-      img = Transpose(tvrd(/TRUE), [1,2,0])
-      WDELETE, xwin
-      cgDisplay, xsiz, ysiz, /FREE, Title='w_ScatterPlot window'
-      cgImage, img
-    endelse
-    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE= 50, /IM_RASTER
+    cgControl, EXECUTE=1
+    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
     if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   endif else begin
-    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = RESIZE_PNG
+    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = im_resize
     if KEYWORD_SET(EPS) then PS_END
     WDELETE, xwin
   endelse
