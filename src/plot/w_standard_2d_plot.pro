@@ -61,7 +61,7 @@
 ;    STD_JPEG: in, optional, type = string
 ;              set to a filename to generate a standard jpeg output (without image magick)
 ;    DISP_IMG: out, type = byte array
-;              the plot image in RGB colours (dimensions: [x,y,3])
+;              the plot image in RGB colours (dimensions: [3, nx, ny])
 ;    WTITLE: in, optional, type = string, default = 'WAVE standard plot'
 ;            The title of the plot window (not very important)
 ;    IM_RESIZE: in, optional, type=integer, default=25
@@ -118,24 +118,22 @@ pro w_standard_2d_plot, map, TITLE=title,$
   imx0 = 0.04
   imy0 = 0.08  
   pos = [imx0,imy0,imx0+imgX,imy0+imgY]
-  
-  ; Trick because no output keyword
-  cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE
-  map->add_img, POSITION=pos
-  xwin = !D.WINDOW
-  
-  ; Check what we want to do
 
+  ; Check what we want to do
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE  
 
+  cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE
+  xwin = !D.WINDOW  
+  
   if visible and keyword_set(resizable) then begin
-    wdelete, xwin
+    WDELETE, xwin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTITLE=WTITLE, WOBJ=wobj
     cgControl, EXECUTE=0
     cgWIN = TRUE
     wobj->GetProperty, WID=cgWID
   endif else begin
+    if total([keyword_set(eps),keyword_set(png),keyword_set(jpeg)]) gt 1 then message, 'In /PIXMAP mode, only one image can be written at the same time.'
     if keyword_set(eps) then PS_Start, FILENAME=eps, /DECOMPOSED, /LAND $
     else if keyword_set(png) then PS_Start, FILENAME=png, /DECOMPOSED   $
     else if keyword_set(jpeg) then PS_Start, FILENAME=jpeg, /DECOMPOSED
@@ -212,7 +210,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
     ;TODO CHECK THIS
     disp_img = tvrd(TRUE=1)
     if keyword_set(std_png) then write_png, std_png, disp_img
-    if keyword_set(std_jpeg) then write_jpeg, std_jpeg, tvrd(TRUE=1)
+    if keyword_set(std_jpeg) then write_jpeg, std_jpeg, disp_img
 
     if xwin ne -1 then wdelete, xwin
     

@@ -147,7 +147,7 @@ pro utils_array_remove, index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12
   npar = N_params()
   nvar = npar-1
   if npar LT 2 then begin
-    print,'Syntax - remove, index, v1, [v2, v3, v4,..., v25]'
+    print,'Syntax - utils_array_remove, index, v1, [v2, v3, v4,..., v25]'
     return
   endif
   vv = 'v' + strtrim(indgen(nvar)+1, 2)
@@ -207,6 +207,45 @@ pro utils_array_remove, index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12
   return
   
 end
+
+;+
+; :Description:
+;    Removes a tag from a structure.
+;
+; :Params:
+;    struct: in, required
+;            the structure
+;    tagname: in, required
+;             the tag name
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+pro utils_remove_tag, struct, tagname
+
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT idl2
+  
+  if n_params() ne 2 then MESSAGE, WAVE_Std_Message(/NARG)
+  if ~ arg_okay(tagname, TYPE='IDL_STRING') then MESSAGE, WAVE_Std_Message('tagname', /STRING)
+
+  searchtag=strupcase(tagname)
+  tagnames=tag_names(struct)
+  a=[-1]
+  if n_elements(tagname) eq 1 then a=[a,where(tagnames $
+    ne searchtag)] else for i=0,n_elements(tagnames)-1 do $
+    if (where(searchtag eq tagnames[i]))[0] eq -1 then a=[a,i]
+  if n_elements(a) eq 1 then return
+  if a[1] eq -1 then return
+  newstruct=create_struct(tagnames[a[1]],struct.(a[1]))
+  if n_elements(a) gt 2 then for i=2,n_elements(a)-1 $
+    do newstruct=create_struct(newstruct,tagnames[a[i]],struct.(a[i]))
+  struct=newstruct
+  
+end
+
 
 ;+
 ;
@@ -282,16 +321,10 @@ end
 ;-
 FUNCTION utils_replace_string, text,in_string,rep_string,pos=pos,no_of_replaces=no_of_replaces,count=count_n_replace
 
-   IF N_PARAMS() LT 3 THEN BEGIN
+   IF N_PARAMS() LT 3 THEN  MESSAGE, WAVE_Std_Message(/NARG)
 
-      MESSAGE,call_help(),/cont
-      RETURN,''
-   ENDIF
-
-   If n_elements(text) eq 0 or n_elements(in_string) eq 0 or n_elements(rep_string) eq 0 then begin
-     MESSAGE,/cont, 'problem by passig parameters, please check the input data variables'
-     RETURN,''
-   endif
+   If n_elements(text) eq 0 or n_elements(in_string) eq 0 or n_elements(rep_string) eq 0 then $
+     MESSAGE, 'problem by passig parameters, please check the input data variables'
 
    counter=0
    count_n_replace=0

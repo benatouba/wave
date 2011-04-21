@@ -1977,10 +1977,10 @@ pro TEST_W_STANDARD_PLOT
     T2 = (wrf->get_Var('T2'))[*,*,8] - 273.15
     
     cgLoadCT, 13   
-    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    ok = map->set_data(t2, wrf, MISSING = -999.)
     if not ok then error +=1
     
-    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='pink')
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='pink', MIN_VALUE=-5.)
     if not ok then error +=1
     
     w_standard_2d_plot, map, TITLE='My Test',$
@@ -1997,9 +1997,9 @@ pro TEST_W_STANDARD_PLOT
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
-    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    ok = map->set_data(t2, wrf, MISSING = -999.)
     if not ok then error +=1    
-    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
@@ -2014,9 +2014,9 @@ pro TEST_W_STANDARD_PLOT
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
-    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    ok = map->set_data(t2, wrf, MISSING = -999.)
     if not ok then error +=1    
-    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
@@ -2031,9 +2031,9 @@ pro TEST_W_STANDARD_PLOT
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
-    ok = map->set_data(t2, wrf, MISSING = -999., VAL_MIN=-5.)
+    ok = map->set_data(t2, wrf, MISSING = -999.)
     if not ok then error +=1    
-    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white')
+    ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
