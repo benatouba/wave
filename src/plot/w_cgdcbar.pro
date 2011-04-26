@@ -194,6 +194,7 @@ PRO w_cgDCBar, colors, $
       VERTICAL=vertical, $
       NEUTRAL_COLOR=neutral_color, $
       BAR_OPEN=bar_open, $
+      CHARTHICK=charthick, $
       WINDOW=window
 
     ; Standard error handling.
@@ -513,12 +514,12 @@ PRO w_cgDCBar, colors, $
         ENDCASE
         FOR j=0,N_Elements(labels)-1 DO BEGIN
             XYOutS, x, y, /NORMAL, labels[j], COLOR=cgColor(color, FILE=file), $
-                ORIENTATION=rotate, ALIGNMENT=alignment, CHARSIZE=charsize, FONT=font
+                ORIENTATION=rotate, ALIGNMENT=alignment, CHARSIZE=charsize, FONT=font, CHARTHICK=charthick
             y = y + step
         ENDFOR
         XYOutS, x0 - (chardist * ((x0 LT 0.5) ? 2 : 3)), (position[3]-position[1])/2.0 + position[1], $
             title, COLOR=cgColor(color, FILE=file), /NORMAL, ALIGNMENT=0.5, $
-            ORIENTATION=(x GE 0.5) ? -90 : 90,  CHARSIZE=tcharsize, FONT=font
+            ORIENTATION=(x GE 0.5) ? -90 : 90,  CHARSIZE=tcharsize, FONT=font, CHARTHICK=charthick
     ENDELSE
     
     ; Restore the orginal color table.

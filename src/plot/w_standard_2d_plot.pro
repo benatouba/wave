@@ -64,6 +64,9 @@
 ;              the plot image in RGB colours (dimensions: [3, nx, ny])
 ;    WTITLE: in, optional, type = string, default = 'WAVE standard plot'
 ;            The title of the plot window (not very important)
+;    ANTI_ALIASING: in, optional, type = boolean
+;                   if set, an anti-aliasing is made "on the fly". 
+;                   (ignored if the `RESIZABLE`, `JPEG`, `EPS` or `PNG` keywords are set)
 ;    IM_RESIZE: in, optional, type=integer, default=25
 ;                Set this keyword to percentage that the raster image file created my ImageMagick
 ;                 from PostScript output should be resized.
@@ -86,6 +89,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
                            PNG=png, JPEG=jpeg, EPS=eps, STD_PNG=std_png, STD_JPEG=std_jpeg, $
                            DISP_IMG=disp_img, $
                            WTITLE=WTITLE, $                        
+                           ANTI_ALIASING=anti_aliasing, $                        
                            IM_RESIZE=im_resize
    
   ;--------------------------
@@ -119,6 +123,29 @@ pro w_standard_2d_plot, map, TITLE=title,$
   imy0 = 0.08  
   pos = [imx0,imy0,imx0+imgX,imy0+imgY]
 
+  sfac = 1. ; Font size factor
+    
+  ; Are we going to use the Xdisplay ?
+  if ~KEYWORD_SET(PNG) $
+     and ~KEYWORD_SET(RESIZABLE) $
+     and ~KEYWORD_SET(EPS) $
+     and ~KEYWORD_SET(JPEG) then sfac = 1.5
+  
+  ; Anti aliasing
+  do_as = FALSE
+  if KEYWORD_SET(anti_aliasing) $
+     and ~KEYWORD_SET(PNG) $
+     and ~KEYWORD_SET(RESIZABLE) $
+     and ~KEYWORD_SET(EPS) $
+     and ~KEYWORD_SET(JPEG) then begin
+    oxs = xs
+    oys = ys
+    xs = xs * 4
+    ys = ys * 4
+    sfac *= 4.
+    do_as = TRUE
+  endif
+  
   ; Check what we want to do
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE  
@@ -144,16 +171,16 @@ pro w_standard_2d_plot, map, TITLE=title,$
 
   ; Title  
   cgText, (pos[0]+pos[2])/2., pos[3] + 0.015, title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
-          WINDOW=cgWIN, /NORMAL, CHARSIZE=1.5  
+          WINDOW=cgWIN, /NORMAL, CHARSIZE=1.5*sfac, CHARTHICK = 1.*sfac
 
   ; Bar
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, $
-                      CHARSIZE=1., BAR_OPEN=bar_open, SPACING=BAR_spacing
+                      CHARSIZE=1.*sfac, BAR_OPEN=bar_open, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
 
   ; Title bar
   cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
-          WINDOW=cgWIN, /NORMAL, CHARSIZE=1.
+          WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
   
   ; Scale
   xSize_map = tnt_C.dx * tnt_C.nx
@@ -166,22 +193,24 @@ pro w_standard_2d_plot, map, TITLE=title,$
   endif
   xLegend = pos[0] + [0., xSize_bar_device]
   yLegend = pos[1] / 5. + [0.,0.]
-  cgPlotS, xLegend, yLegend, COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
-  cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
-  cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN
-  cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_equiv(LONG(xSize_map_bar)) + unit, ALIGNMENT=0.5, CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  cgPlotS, xLegend, yLegend, COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+  cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+  cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+  cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_equiv(LONG(xSize_map_bar)) + unit, ALIGNMENT=0.5, $
+             CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Projection  
   proj_name = 'Projection: ' + tnt_c.proj.name
-  cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   proj_name = 'Datum: ' + tnt_c.proj.datum.name
-  cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1., /NORMAL, WINDOW=cgWIN
+  cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Legend info
-  if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8, /NORMAL, WINDOW=cgWIN
+  if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
    
   ; Output
   if visible then begin
+  
     if cgWIN then begin
       cgControl, EXECUTE=1
       tmp = !D.window
@@ -190,6 +219,11 @@ pro w_standard_2d_plot, map, TITLE=title,$
       wset, tmp
     endif else begin
       disp_img = tvrd(TRUE=1)
+      if do_as then begin
+       disp_img = rebin(disp_img, 3, oxs, oys)
+       xs = oxs
+       ys = oys
+      endif
       wdelete, xwin
       cgDisplay, xs, ys, /FREE, Title=WTITLE
       cgImage, transpose(disp_img, [1,2,0])
@@ -207,8 +241,9 @@ pro w_standard_2d_plot, map, TITLE=title,$
     if keyword_set(png) then PS_End, /PNG, RESIZE=im_resize
     if keyword_set(jpeg) then PS_End, /JPEG, RESIZE=im_resize
     
-    ;TODO CHECK THIS
     disp_img = tvrd(TRUE=1)
+    if do_as then disp_img = rebin(disp_img, 3, oxs, oys)
+    
     if keyword_set(std_png) then write_png, std_png, disp_img
     if keyword_set(std_jpeg) then write_jpeg, std_jpeg, disp_img
 

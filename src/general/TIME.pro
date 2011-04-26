@@ -99,7 +99,7 @@ pro TIME_init
     H_QMS = M_QMS * 60LL
     D_QMS = H_QMS * 24LL
     
-    ret = WAVE_Error_Message('TIME structure definitions succesfull', /INFO)
+    ;ret = WAVE_Error_Message('TIME structure definitions successfull', /INFO)
     
 end
 

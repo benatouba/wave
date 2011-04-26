@@ -122,6 +122,7 @@ PRO w_Map__Define
             t_Charsize     : 0D            , $ ; Ticks charsizes
             color          : ''            , $ ; color of the contour lines
             labeled        : 0L            , $ ; if the contours have to labelled
+            label_size_f   : 0D            , $ ; charsize factor
             thick          : 0D            , $ ; thickness of the contour lines
             style          : 0D              $ ; style of the contour lines
             }
@@ -608,11 +609,17 @@ end
 ;    LABEL: in, optional, type=integer, default=0
 ;           A 0 means no contour levels are labelled. A 1 means all contour levels are
 ;           labelled. A 2 means label every 2nd contour level is labelled, and so on
+;           
+;    LABEL_SIZE_FACTOR: in, optional, type=double, default=1
+;                       due to the various possible displays, it makes it soetimes difficult to 
+;                       know which size must have the labels. This is a factor to apply to
+;                       the automatic size detection.
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, LABEL = label, NO_TICK_LABELS = no_tick_labels
+function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, $
+                                LABEL = label, NO_TICK_LABELS = no_tick_labels, LABEL_SIZE_FACTOR = label_size_factor
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -635,6 +642,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   _color = 'Dark Grey'
   _label = 0
   _tick_labels = TRUE
+  _label_size_factor = 1.
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
@@ -642,13 +650,15 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
   if N_ELEMENTS(LABEL) eq 1 then _label = LABEL
+  if N_ELEMENTS(LABEL_SIZE_FACTOR) eq 1 then _label_size_factor = LABEL_SIZE_FACTOR
   if KEYWORD_SET(NO_TICK_LABELS) eq 1 then _tick_labels = FALSE
-  
+   
   self.map_params.type = _type
   self.map_params.thick = _thick
   self.map_params.style = _style
   self.map_params.color = _color
   self.map_params.labeled = _label
+  self.map_params.label_size_f = _label_size_factor
                            
   self.is_Mapped = _type ne ''
   
@@ -1758,17 +1768,18 @@ function w_Map::draw_map, WINDOW = window
     ddx = - 0.008 * spacing * self.xsize
     
     ; Tick labels
-    charsize = 0.8    
+    charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
+    charthick = charsize
     format = '(I4)'
     for i=0,N_ELEMENTS(xts)-1 do begin
       label = string(abs(xls[i]),FORMAT=format)
       if xls[i] lt 0 then label += 'W' else label += 'E'
-      cgText, xts[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, CHARSIZE = charsize, WINDOW=window, /DATA
+      cgText, xts[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
     endfor
     for i=0,N_ELEMENTS(yts)-1 do begin
       label = string(abs(yls[i]),FORMAT=format)
       if yls[i] lt 0 then label += 'S' else label += 'N'
-      cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, /DATA
+      cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
   

@@ -1983,16 +1983,35 @@ pro TEST_W_STANDARD_PLOT
     ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='pink', MIN_VALUE=-5.)
     if not ok then error +=1
     
+    u = TOTAL(wrf->get_Var('U10', time, nt), 3)
+    v = TOTAL(wrf->get_Var('V10'), 3)
+    u = u / nt
+    v = v / nt
+    ok = map->set_wind(u, v, wrf, density = 3)
+    if not ok then error +=1
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
                              /BAR_OPEN,  $
                              SOURCE_INFO='(c) FG Klimatologie', $
                              /RESIZABLE,  $
                              PNG='test_400.png', $
-                            IM_RESIZE = 75
+                            IM_RESIZE = 75               
+                            
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_400_as.png', /ANTI_ALIASING, /PIXMAP
+    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_400_nas.png', /PIXMAP
+        
                             
     OBJ_DESTROY, map
-    
+
     map =  OBJ_NEW('w_map', wrf, YSIZE=600)
     d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
@@ -2001,13 +2020,27 @@ pro TEST_W_STANDARD_PLOT
     if not ok then error +=1    
     ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
+    ok = map->set_wind(u, v, wrf, density = 3)
+    if not ok then error +=1
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
                              /BAR_OPEN,  $
                              SOURCE_INFO='(c) FG Klimatologie', $
                              /RESIZABLE,  $
                              PNG='test_600.png', $
-                            IM_RESIZE = 75                            
+                            IM_RESIZE = 75                
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_600_as.png', /ANTI_ALIASING, /PIXMAP
+    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_600_nas.png', /PIXMAP
+                                         
     OBJ_DESTROY, map
     
     map =  OBJ_NEW('w_map', wrf, YSIZE=800)
@@ -2018,13 +2051,27 @@ pro TEST_W_STANDARD_PLOT
     if not ok then error +=1    
     ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
+    ok = map->set_wind(u, v, wrf, density = 3)
+    if not ok then error +=1
+    
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
                              /BAR_OPEN,  $
                              SOURCE_INFO='(c) FG Klimatologie', $
                              /RESIZABLE,  $
                              PNG='test_800.png', $
-                            IM_RESIZE = 75                            
+                            IM_RESIZE = 75       
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_800_as.png', /ANTI_ALIASING, /PIXMAP
+    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_800_nas.png', /PIXMAP                  
     OBJ_DESTROY, map
     
     map =  OBJ_NEW('w_map', wrf, YSIZE=1000)
@@ -2035,16 +2082,28 @@ pro TEST_W_STANDARD_PLOT
     if not ok then error +=1    
     ok = map->set_plot_params(N_LEVELS=10, NEUTRAL_COLOR='white', MIN_VALUE=-5.)
     if not ok then error +=1    
+    ok = map->set_wind(u, v, wrf, density = 3)
+    if not ok then error +=1
+    
     w_standard_2d_plot, map, TITLE='My Test',$
                              BAR_TITLE='DegC',  $
                              /BAR_OPEN,  $
                              SOURCE_INFO='(c) FG Klimatologie', $
                              /RESIZABLE,  $
                              PNG='test_1000.png', $
-                            IM_RESIZE = 75                            
-    OBJ_DESTROY, map
+                            IM_RESIZE = 75       
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_1000_as.png', /ANTI_ALIASING, /PIXMAP
     
-    
+    w_standard_2d_plot, map, TITLE='My Test',$
+                             BAR_TITLE='DegC',  $
+                             /BAR_OPEN,  $
+                             SOURCE_INFO='(c) FG Klimatologie', $
+                             STD_PNG='test_1000_nas.png', /PIXMAP                 
+    OBJ_DESTROY, map    
     OBJ_DESTROY, wrf     
 
         
