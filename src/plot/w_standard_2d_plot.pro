@@ -126,10 +126,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
   sfac = 1. ; Font size factor
     
   ; Are we going to use the Xdisplay ?
-  if ~KEYWORD_SET(PNG) $
-     and ~KEYWORD_SET(RESIZABLE) $
-     and ~KEYWORD_SET(EPS) $
-     and ~KEYWORD_SET(JPEG) then sfac = 1.5
+;  if ~KEYWORD_SET(PNG) $
+;     and ~KEYWORD_SET(RESIZABLE) $
+;     and ~KEYWORD_SET(EPS) $
+;     and ~KEYWORD_SET(JPEG) then sfac = 1.
   
   ; Anti aliasing
   do_as = FALSE
