@@ -522,7 +522,7 @@ function NCDC_DAILY_DATA, DIR_PATH = dir, START_TIME = startT, END_TIME = endT
   if KEYWORD_SET(startT) then begin
     time = MAKE_ENDED_TIME_SERIE(startT, endT, TIMESTEP= step) ; the time array. Daily values
   endif else begin
-    time = MAKE_ENDED_TIME_SERIE(MAKE_ABS_DATE(YEAR=2000, MONTH=01, DAY=01), $
+    time = MAKE_ENDED_TIME_SERIE(MAKE_ABS_DATE(YEAR=2001, MONTH=01, DAY=01), $
       MAKE_ABS_DATE(YEAR=2009, MONTH=12, DAY=31), TIMESTEP= step) ; the time array. Daily values
   endelse  
   

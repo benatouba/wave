@@ -39,8 +39,10 @@ function AWS_parse_time, stimes
   
   if ~arg_okay(stimes, TYPE = IDL_SRING) then Message, WAVE_Std_Message('stimes', /STRING)
   
-  return, QMS_TIME(YEAR=STRMID(stimes,1,5), MONTH=STRMID(stimes,6,2),DAY=STRMID(stimes,9,2), $
-    HOUR=STRMID(stimes,12,2),MINUTE=STRMID(stimes,15,2),SECOND=STRMID(stimes,18,2))
+  _stimes = utils_replace_string(stimes, '"', '')
+  
+  return, QMS_TIME(YEAR=STRMID(_stimes,0,4), MONTH=STRMID(_stimes,5,2),DAY=STRMID(_stimes,8,2), $
+    HOUR=STRMID(_stimes,11,2),MINUTE=STRMID(_stimes,14,2),SECOND=STRMID(_stimes,17,2))
 
 end
 

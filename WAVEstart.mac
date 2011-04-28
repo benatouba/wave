@@ -30,6 +30,7 @@ pushd, root
 .run WAVE.pro
 .run TIME.pro
 .run UTILS.pro
+.run NCDC.pro
 .run POST.pro
 .run AWS.pro
 

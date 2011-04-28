@@ -1899,7 +1899,9 @@ function TS_wrf_to_mean, data, time
   _data = data*1.
   d1 = TS_RESAMPLE(_data, time, /M10)
   d2 = INTERPOL(_data, time, d1.time)
-  return, (TS_MEAN_STATISTICS(d2, d1.time, HOUR = 1)).mean
+  out = (TS_MEAN_STATISTICS(d2, d1.time, HOUR = 1)).mean
+  out[0] = data[0]
+  return, out
 
 end
 
