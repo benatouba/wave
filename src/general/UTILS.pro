@@ -643,9 +643,11 @@ end
 ;    END_TIME: in, optional, type=time, default=last available time in directory
 ;             ending time in the aggregated output file.
 ;    OUTFILE: in, optional, type=string, default= directory+'/3B42_agg.'+date+'.nc'
-;             path tto the output file. TO BE WAVE compliant, the file MUST BEGIN with "3B42_agg"
+;             path tto the output file. To be WAVE compliant, the file MUST BEGIN with "3B42_agg"
 ;    NOSHIFT: in, optional
-;             if set, aggregat the files using their original timestamp.
+;             if set, aggregate the files using their original timestamp. 
+;             default is to set values every 3 hours as the summ of half the 
+;             previous and half of the next file (see stupid TRMM conventions)
 ;    SUBSET_IJ: in, optional
 ;              set to aggregate only a subset of the file (see 'w_TRMM')
 ;    SUBSET_LL: in, optional
@@ -711,13 +713,13 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
     if ~check_WTIME(START_TIME, OUT_QMS=t0) then Message, WAVE_Std_Message('START_TIME', /ARG)
     p0 = where(time eq t0, cnt)
     if cnt ne 1 then Message, 'Your start time (' + TIME_to_STR(t0) + $
-      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+').'
+      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+'). Taking yours.', /INFORMATIONAL
   endif
   if KEYWORD_SET(END_TIME) then begin
     if ~check_WTIME(END_TIME, OUT_QMS=t1) then Message, WAVE_Std_Message('END_TIME', /ARG)
     p1 = where(time eq t1, cnt)
     if cnt ne 1 then Message, 'Your end time (' + TIME_to_STR(t1) + $
-      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+').'
+      ') do not match in my TS: (' + TIME_to_STR(time[0]) + '->'+ TIME_to_STR(time[nt-1])+'). Taking yours.', /INFORMATIONAL
   endif
   
   time = time[p0:p1]
