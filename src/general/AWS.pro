@@ -39,10 +39,11 @@ function AWS_parse_time, stimes
   
   if ~arg_okay(stimes, TYPE = IDL_SRING) then Message, WAVE_Std_Message('stimes', /STRING)
   
-  _stimes = utils_replace_string(stimes, '"', '')
-  
-  return, QMS_TIME(YEAR=STRMID(_stimes,0,4), MONTH=STRMID(_stimes,5,2),DAY=STRMID(_stimes,8,2), $
-    HOUR=STRMID(_stimes,11,2),MINUTE=STRMID(_stimes,14,2),SECOND=STRMID(_stimes,17,2))
+  isthere=WHERE(BYTE(stimes[0]) EQ ((BYTE('"'))[0]), count)
+  if count eq 0 then s = 0 else s = 1
+    
+  return, QMS_TIME(YEAR=STRMID(stimes,0+s,4), MONTH=STRMID(stimes,5+s,2),DAY=STRMID(stimes,8+s,2), $
+    HOUR=STRMID(stimes,11+s,2),MINUTE=STRMID(stimes,14+s,2),SECOND=STRMID(stimes,17+s,2))
 
 end
 
@@ -349,6 +350,8 @@ end
 ;               the corrected sr50 Time serie (possibly non-regular)
 ;    new_time: out
 ;              the associated Time serie (possibly non-regular)
+;    out_qual: out
+;              the associated quality (possibly non-regular)
 ;
 ; :Keywords:
 ;    NO_TEMP_COR: in
@@ -358,9 +361,9 @@ end
 ;    CORRECTED_NAN: out
 ;                   the corrected sr50 Time serie (same size as input) with NANs where the quality was not good
 ;    CORRECTED_INTERP: out
-;                      the corrected sr50 Time serie (same size as input) interpolated where the quality was not good
+;                   the corrected sr50 Time serie (same size as input) interpolated where the quality was not good
 ;    CORRECTED_QUAL: out
-;                    the associated quality flag (same size as input) set to 0 where the quality was not good
+;                   the associated quality flag (same size as input) set to 0 where the quality was not good
 ;
 ;
 ; :History:
@@ -368,7 +371,7 @@ end
 ;
 ;
 ;-
-pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new_time, new_qual, NO_TEMP_COR = NO_TEMP_COR, NO_ANGLE_COR =NO_ANGLE_COR,  $
+pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new_time, out_qual, NO_TEMP_COR = NO_TEMP_COR, NO_ANGLE_COR =NO_ANGLE_COR,  $
                           CORRECTED_NAN = corrected_nan, CORRECTED_INTERP = corrected_interp, CORRECTED_QUAL = corrected_qual
                          
   ; Set Up environnement
@@ -392,7 +395,7 @@ pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new
 
   corrected = dis_acorr[pqual_210]   
   new_time = ttime[pqual_210]
-  new_qual = quality[pqual_210]
+  out_qual = quality[pqual_210]
   
     
   CORRECTED_NAN = TS_FILL_MISSING(corrected, new_time, ttime, INDEXES = indexes)
