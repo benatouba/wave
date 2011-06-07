@@ -81,9 +81,9 @@ PRO w_NCDF__Define
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {w_NCDF                      ,  $
+  struct = {w_NCDF                    ,  $
             path:               ''    ,  $ ; complete path of the active ncdf file
-            cdfid:              0LL   ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
+            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
             fname:              ''    ,  $ ; name of the active ncdf file
             directory:          ''    ,  $ ; directory of the active ncdf file
             Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
@@ -142,11 +142,6 @@ Function w_NCDF::Init, FILE = file
   ;******************
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select NCDF file to read', /MUST_EXIST)
   IF file EQ '' THEN MESSAGE, WAVE_Std_Message(/FILE)
-  
-  ;*****************
-  ; Check validity *
-  ;***************** 
-  if not NCDF_IsValidFile(file) then message, WAVE_Std_Message(/FILE)
   
   ;*****************
   ; Check filename *
