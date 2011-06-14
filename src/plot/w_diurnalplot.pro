@@ -295,10 +295,9 @@ pro w_diurnalPlot, data,$  ; array to plot
   cgPlot, jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = ppos, XTICK_GET=xs, YTICK_GET=ys, $
     /NODATA, XTICKINTERVAL = HOURS, XMINOR = xminor, YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW=cgWin
-       
         
   if N_ELEMENTS(HORILINE) ge 1 then for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd),max(jd)], [HORILINE[i],HORILINE[i]], $
-                                               color = cgColor('dark grey'), LINESTYLE=5, WINDOW=cgWin
+                                               color = cgColor('dark grey'), LINESTYLE=5, WINDOW=cgWin, NOCLIP = 0
            
   ; real plot
   if ~KEYWORD_SET(psym1) then begin

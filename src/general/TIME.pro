@@ -278,7 +278,7 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
     
     epsilon = 1d-8
     jt = julday(month,day,year,hour,minute,second)
-    qt = floor(jt) + epsilon*round((jt mod 1d)/epsilon) ;TODO: understand this  
+    qt = floor(jt) + epsilon*round((jt mod 1d)/epsilon) 
     qt -= 2415018.5        
     my_time = LONG64(qt)* D_QMS + LONG64(hour)* H_QMS + LONG64(minute)* M_QMS + LONG64(second)* S_QMS + LONG64(millisecond) 
     

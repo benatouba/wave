@@ -711,9 +711,9 @@ end
 ;    varid: in, required, type = string/integer
 ;           the variable ID (string or integer) to retrieve
 ;    x: in, required, type = long
-;       the X index where to get the variable (if SRC is not specified, it is an index within the Grid)
+;       the X coordinate of the point where to get the variable (if SRC is not specified, it is an index within the Grid)
 ;    y: in, required, type = long
-;       the Y index where to get the variable (if SRC is not specified, it is an index within the Grid)
+;       the Y coordinate of the point where to get the variable (if SRC is not specified, it is an index within the Grid)
 ;    time:  out, type = qms
 ;           the variable times
 ;    nt: out, type = long
@@ -734,6 +734,10 @@ end
 ;              the longitude of the nearest grid point
 ;    point_lat: out, optional
 ;              the latitude of the nearest grid point
+;    dist_x: out, optional
+;            the easting difference between the (x,y) point and the nearest grid point 
+;    dist_y: out, optional
+;            the northing difference between the (x,y) point and the nearest grid point 
 ;    varinfo: out, type = struct
 ;             structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;    units: out, type = string
@@ -758,7 +762,9 @@ function w_WRF::get_TimeSerie,varid, x, y, $
                               POINT_I=point_i, $
                               POINT_J=point_j, $
                               POINT_LON=point_lon, $
-                              POINT_LAT=point_lat , $
+                              POINT_LAT=point_lat, $
+                              DIST_X = dist_x, $
+                              DIST_Y = dist_y, $
                               VARINFO=varinfo , $ ; 
                               UNITS=units, $
                               DESCRIPTION=description, $
@@ -780,12 +786,15 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if N_ELEMENTS(src) EQ 0 then mysrc = self else mysrc = src
   
   ; This is to obtain the indexes in the grid
-  self->transform,  x, y, point_i, point_j, SRC = mysrc, /NEAREST
+  self->transform,  x, y, point_i, point_j, SRC = mysrc, /NEAREST, E_DST=_x, N_DST=_y
   
   ; This is to obtain lat and lons of the selected grid point
-  self->transform, point_i, point_j, dummy1, dummy2, src=self, $
-    LON_DST=point_lon, LAT_DST=point_lat
+  self->transform, point_i, point_j, dummy, dummy, src=self, $
+    LON_DST=point_lon, LAT_DST=point_lat, E_DST=point_x, N_DST=point_y
     
+  dist_x = _x - point_x
+  dist_y = _y - point_y
+   
     
   undefine, value
  

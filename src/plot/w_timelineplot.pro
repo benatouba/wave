@@ -408,7 +408,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
     /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW = cgWin
        
  if N_ELEMENTS(HORILINE) ne 0 then $
-    for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd),max(jd)], [HORILINE[i],HORILINE[i]], $
+    for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd)-max(jd),max(jd)+max(jd)], [HORILINE[i],HORILINE[i]], $ ;TODO: make this beautiful
       color = cgColor('dark grey'), LINESTYLE=5, WINDOW = cgWin, NOCLIP = 0
 
   ; real plot
