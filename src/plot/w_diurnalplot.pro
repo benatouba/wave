@@ -212,7 +212,7 @@ pro w_diurnalPlot, data,$  ; array to plot
       
    ;Check args
    if ~arg_okay(time, /NUMERIC) then message, WAVE_Std_Message('time', /ARG)
-   if ~arg_okay(time, NRANGE = [0,24]) then message, WAVE_Std_Message('time', /RANGE)
+;   if ~arg_okay(time, NRANGE = [0,24]) then message, WAVE_Std_Message('time', /RANGE)
    nt = N_ELEMENTS(time)
    if N_ELEMENTS(data) ne nt then message, WAVE_Std_Message('data', /ARG)
    
@@ -264,7 +264,7 @@ pro w_diurnalPlot, data,$  ; array to plot
   
   
   ; Make X AXIS
-  xtitle = 'Time of day'
+  IF N_ELEMENTS(xtitle) eq 0 then xtitle = 'Time of day'
   if NOT KEYWORD_SET(hours) then hours = 4
   xminor = hours
   

@@ -909,6 +909,50 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     varname = str_equiv(Varid)                                 
   endif
   
+  if str_equiv(Varid) eq 'WS10' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('U10') then Message, 'U10 variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
+            
+    u10 = self->w_GEO_nc::get_TimeSerie('U10', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+    v10 = self->w_GEO_nc::get_TimeSerie('V10', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+         
+    description = '10 m wind speed'
+    units = 'm.s-1'
+    varname = str_equiv(Varid)
+    
+  endif
+  
+  if str_equiv(Varid) eq 'WD10' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('U10') then Message, 'U10 variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
+            
+    u10 = self->w_GEO_nc::get_TimeSerie('U10', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+                          varinfo = varinfo , $ ; 
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames)
+    v10 = self->w_GEO_nc::get_TimeSerie('V10', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+         
+    description = '10 m wind direction'
+    units = 'degrees'
+    varname = str_equiv(Varid)
+    
+  endif
+  
   
   if N_ELEMENTS(value) eq 0 then begin ;This is probably a standard variable
   
@@ -1045,6 +1089,8 @@ end
 ;             t2c: 2m Temperature [C]
 ;             th/theta: Potential temperature [K]
 ;             tk: Temperature [K]
+;             ws10: wind speed at 10m [m.s-1]
+;             wd10: wind direction [degrees]
 ; 
 ;    
 ; :Categories:
@@ -1362,6 +1408,52 @@ function w_WRF::get_Var, Varid, $
     units = 'hPa'
     if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
     varname = str_equiv(Varid)
+  endif
+  
+  if str_equiv(Varid) eq 'WS10' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('U10') then Message, 'U10 variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
+            
+    u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) 
+    v10 = self->get_Var('V10')
+    
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+         
+    description = '10 m wind speed'
+    units = 'm.s-1'
+    if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
+    varname = str_equiv(Varid)
+    
+  endif
+  
+  if str_equiv(Varid) eq 'WD10' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('U10') then Message, 'U10 variable not found in file.'      
+    if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
+            
+    u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
+      varinfo = varinfo , $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) 
+    v10 = self->get_Var('V10')
+    
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+         
+    description = '10 m wind direction'
+    units = 'degrees'
+    if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
+    varname = str_equiv(Varid)
+    
   endif
   
   if N_ELEMENTS(value) eq 1 and value[0] eq -1 then begin ;This is probably a standard variable

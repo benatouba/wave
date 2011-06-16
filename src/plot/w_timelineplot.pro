@@ -208,7 +208,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
                     MONTHS = months,$ ; X tick lenght in months
                     DAYS = days, $; X tick lenght in days 
                     YEARS = years,$ ; X tick lenght in years 
-                    MONYEAR = monyear, $ ; X tick lenght in month + years 
+                    MONTHYEARS = monthyears, $ ; X tick lenght in month + years 
                     HOURS = hours,$ ; X tick lenght in hours 
                     ZOOM=zoom, $ ; format [{abs_date}1,{abs_date}2]
                     YTITLE = Ytitle,$ ; title of the y axis
@@ -290,95 +290,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   if ~KEYWORD_SET(range) then range = [MIN(data[p1:p2], /NAN), MAX(data[p1:p2],/NAN)]
   
   ; Make X AXIS
-  if KEYWORD_SET(hours) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Hours'
-    xtinter = hours 
-  ENDIF else if KEYWORD_SET(monYEAR) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M','%Y'])
-    XTICKFORMAT = ['LABEL_DATE','LABEL_DATE']
-    xtunits = ['Months','Year']
-    xtinter = monYEAR 
-  ENDIF else if KEYWORD_SET(months) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = months 
-  ENDIF else if KEYWORD_SET(years) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Years'
-    xtinter = years 
-  ENDIF else if KEYWORD_SET(Days) then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis 
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Days'
-    xtinter = days 
-  endif else begin ;TODO: Update routine: meliorate the automatic time AXIS definition
-    s = MAKE_TIME_STEP(DMS=tqms[p2] - tqms[p1])
-    if s.day gt 900 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 6
-    endif else if s.day gt 600 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 4
-    endif else if s.day gt 300 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 3
-    endif else if s.day gt 150 then begin
-    dummy = LABEL_DATE(DATE_FORMAT=['%M'])
-    XTICKFORMAT = ['LABEL_DATE']
-    xtunits = 'Months'
-    xtinter = 1
-    endif else if s.day gt 90 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 30
-    endif else if s.day gt 60 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 15
-    endif else if s.day gt 45 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 15
-    endif else if s.day gt 30 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 7
-    endif else if s.day gt 12 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 3
-    endif else if s.day gt 1 then begin
-      dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) ; For the time axis
-      XTICKFORMAT = ['LABEL_DATE']
-      xtunits = 'Days'
-      xtinter = 1
-    endif else if s.hour gt 6 then begin
-     dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-     XTICKFORMAT = ['LABEL_DATE']
-     xtunits = 'Hours'
-     xtinter = 12
-    endif else begin
-     dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
-     XTICKFORMAT = ['LABEL_DATE']
-     xtunits = 'Hours'
-     xtinter = 6
-    endelse
-  endelse 
+  w_date_tickformat, xtickformat, xtickunits, xtickinterval, TIME = tqms, HOURS = hours, DAYS = days, MONTHS = months, YEARS = years, MONTHYEARS = monthyears
 
   ; Legend    
   x = [0.75, 0.79] ; Line for legend 1
@@ -405,7 +317,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   
   cgPlot, jd, data[p1:p2], title = title,  CHARSIZE=plo_siz, /NORMAL, $
    CHARTHICK = plo_thi, XTITLE = xtitle, Ytitle = Ytitle, YRANGe = range,  POSITION = ppos, XTICK_GET=xs, YTICK_GET=ys, $
-    /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtunits, XTICKINTERVAL = [xtinter], YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW = cgWin
+    /NODATA, XTICKFORMAT= XTICKFORMAT, XTICKUNITS=xtickunits, XTICKINTERVAL = [xtickinterval], YSTYLE = YSTYLE, xstyle = xstyle, PSYM=psym, WINDOW = cgWin
        
  if N_ELEMENTS(HORILINE) ne 0 then $
     for i =0, N_ELEMENTS(HORILINE)-1 do cgPlots, [min(jd)-max(jd),max(jd)+max(jd)], [HORILINE[i],HORILINE[i]], $ ;TODO: make this beautiful

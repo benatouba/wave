@@ -47,10 +47,11 @@ pushd, root
 .run w_modis__define.pro
 .run w_dem__define.pro
 
-; Plots
+; Graphics
 .run w_map__define.pro
 .run w_quickplot.pro
 .run w_standard_2d_plot.pro
+.run w_make_gdata.pro
 
 resolve_all, /QUIET
 
