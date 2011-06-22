@@ -75,7 +75,6 @@ pro WAVE_init
   ;****************************
   print, ''
   TIME_init
-  w_graphics_init
   !ORDER = 0 
   window, /FREE, /PIXMAP
   if !D.WINDOW ge 0 then wdelete, !D.WINDOW
