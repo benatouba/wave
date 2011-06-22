@@ -936,6 +936,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
+  
 ;  Catch, theError
 ;  IF theError NE 0 THEN BEGIN
 ;    Catch, /Cancel
@@ -1159,6 +1160,11 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       printf, unit, text
       continue ;Nothing to be done
     endif
+    if cnt gt 1 then begin
+      Message, 'Variable ' + str_equiv(s_var_info.name) + ' defined two times in VARTOKEEP file. Ignoring one.', /INFORMATIONAL
+      p = p[0]
+    endif
+    
     VARTOKEEP.found[p] = TRUE
     
     ; Check the data type
@@ -1445,6 +1451,7 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
+  
 ;  Catch, theError
 ;  IF theError NE 0 THEN BEGIN
 ;    Catch, /Cancel
