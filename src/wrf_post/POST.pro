@@ -843,7 +843,8 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
   pcert = WHERE(cert ne pnvars, cnt)
   if cnt ne 0 then begin
    
-   message, 'The desired time serie is not complete: files are missing in the parsed directory.', /INFORMATIONAL
+   message, 'The desired time serie is not complete: files are missing in the parsed directory: ', /INFORMATIONAL
+   for i=0, cnt-1 do print, '  ', TIME_to_STR(ts[pcert[i]])
    printf, unit, ''
    printf, unit, '!!! Caution !!!'
    printf, unit, 'Times missing in the Time Serie: '
