@@ -1023,6 +1023,106 @@ end
 
 ;+
 ; :Description:
+;    This routine resamples a any other grid into the object grid. This is very
+;    usefull to gather any kind of informations (see example).
+;       
+; :Categories:
+;         WAVE/OBJ_GIS
+;
+; :Params:
+;    src_grid: in,  type = w_Grid2D
+;              the data grid (w_Grid2D Object)
+;
+; :Keywords:
+;
+; :Returns:
+;    An array of pointers, of the same dimensions of the object grid. Each valid pointer contains 
+;    an array of indices into the argument data grid (an empty pointer means no element was found0)
+;    
+; :Examples:
+; 
+;    Open data sets:: 
+;      lst = OBJ_NEW('w_MODIS', FILE=TEST_file_directory() + 'MODIS/'+'MOD11A2.A2008297.h25v05.005.2008311141349.hdf') ; MODIS grid
+;      wrf = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12); WRF grid
+;    
+;    Get the array of pointers:: 
+;      dd = wrf->resample_grid(lst) ; array of pointers into the modis grid
+;      siz = SIZE(dd, /DIMENSIONS)
+;    
+;    This is to obtain the number of pixels under each grid point::
+;      nels = LONARR(siz[0], siz[1])         
+;      for i = 0, N_ELEMENTS(dd) - 1 do if PTR_VALID(dd[i]) then nels[i] = N_ELEMENTS(*(dd[i]))
+;      w_QuickPlot, nels
+;      
+;    This is to obtain the mean temperature of all the pixels under each grid point::
+;      lst_temp =  lst->get_var('LST_Day_1km')-273.15
+;      pnok = where(lst_temp le 0, cnt)
+;      if cnt ne 0 then lst_temp[pnok] = !VALUES.F_NAN
+;      meantemp = fltARR(siz[0], siz[1]) 
+;      for i = 0, N_ELEMENTS(dd) - 1 do if PTR_VALID(dd[i]) then meantemp[i] = MEAN(lst_temp[*(dd[i])], /NAN)
+;      w_QuickPlot, MEANTEMP, COLORTABLE = 13
+;    
+;    This is to free the memory after using all this::
+;      for i = 0, N_ELEMENTS(dd) - 1 do if PTR_free, dd[i]
+;    
+; :History:
+;      Written by FaM, 2011.
+;-
+function w_Grid2D::resample_grid, src_grid
+     
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, -1
+  ENDIF
+  
+  if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
+  
+  src_grid->getProperty, tnt_c = src_c  
+  utils_1d_to_2d, INDGEN(src_c.nx, /LONG), -INDGEN(src_c.ny, /LONG) + src_c.ny - 1, xi, yi
+  
+  ;***********************************************
+  ; If the array is too big, subset the problem  *
+  ;***********************************************
+  finished = FALSE
+  ind = 0L
+  nxi = N_ELEMENTS(xi)
+  while not finished do begin
+    p1 = ind
+    p2 = ind + 4000000L ;2000*2000 is the limit
+    if p2 ge (nxi-1) then begin
+      p2 = nxi-1
+      finished = TRUE
+    endif
+    GIS_coord_trafo, ret, xi[p1:p2], yi[p1:p2], ti_dst, tj_dst, SRC=src_c, DST=self.tnt_c, /NEAREST
+    if N_ELEMENTS(i_dst) eq 0 then i_dst = TEMPORARY(ti_dst) else i_dst = [i_dst , TEMPORARY(ti_dst)]
+    if N_ELEMENTS(j_dst) eq 0 then j_dst = TEMPORARY(tj_dst) else j_dst = [j_dst , TEMPORARY(tj_dst)]
+    ind = p2 + 1
+  endwhile
+  undefine, ind, p1, p2
+  j_dst = self.tnt_c.ny - j_dst - 1
+  pok = where((i_dst ge 0) and (j_dst ge 0) and (i_dst lt self.tnt_c.nx) and (j_dst lt self.tnt_c.ny), cnt_ok)  ; in the range
+  
+  out=REPLICATE(PTR_NEW(), self.tnt_c.nx, self.tnt_c.ny)
+  
+  if cnt_ok ne 0 then begin ; we found pixels  
+    o_inds = xi[pok] + src_c.nx * yi[pok]
+    inds = self.tnt_c.nx * j_dst[pok] + i_dst[pok]
+    avail_inds = (inds[UNIQ(inds, SORT(inds))]) ; some optimisation (not very nice)    
+    for i=0, N_ELEMENTS(avail_inds) - 1 do out[avail_inds[i]] = PTR_NEW(o_inds[where(inds eq avail_inds[i])])
+  endif
+  
+  return, out
+     
+end
+
+;+
+; :Description:
 ;    Generic routine to resample the object grid.
 ;    
 ; :Categories:

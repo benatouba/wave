@@ -1780,17 +1780,35 @@ pro TEST_MODIS
     if ok eq 'No' then error += 1
     
     ok =  lst->define_subset(SUBSET_LL= [90, 31.8, 91, 30.1])
-    d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
+    vv = lst->get_var('LST_Day_1km')-273.15
+    d = map->set_data(vv, lst, missing = -273.15)
     
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
+
+    dd = dom2->resample_grid(lst)
+    nels = LONARR(126,126)        
+    for i = 0, N_ELEMENTS(dd) - 1 do if PTR_VALID(dd[i]) then nels[i] = N_ELEMENTS(*(dd[i]))
+    
+    d = map->set_Plot_Params(N_LEVELS=126)
+    d = map->set_data(nels, dom2, MISSING=0)
+    map->show_img, /RESIZABLE
+    map->show_color_bar, /RESIZABLE
+    ok = DIALOG_MESSAGE('Do you now see a map containing the number of pixels per grid point?', /QUESTION)
+    if ok eq 'No' then error += 1
+    
     cgDelete, /ALL
+    
+    ;================
+    ; Try Composites
+    ;================
+      
     
     OBJ_DESTROY, lst     
     OBJ_DESTROY, map 
-    OBJ_DESTROY,  dom2  
+    OBJ_DESTROY, dom2  
     
     ;====================
     ; MARCO file

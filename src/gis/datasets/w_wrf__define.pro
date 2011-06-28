@@ -687,7 +687,7 @@ function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
                                  dimnames = dimnames) then begin
      ;Post processed variables
      ; TODO: variable handling in WRF files
-     post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B']              
+     post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B','WS10','WD10']              
      p = where(post eq str_equiv(Varid), cnt)
      if cnt eq 0 then return, FALSE                                     
                                  
@@ -923,7 +923,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
                           dimnames = dimnames)
     v10 = self->w_GEO_nc::get_TimeSerie('V10', point_i, point_j, K = K, t0 = t0, t1 = t1)
     
-    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = value
          
     description = '10 m wind speed'
     units = 'm.s-1'
@@ -945,7 +945,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
                           dimnames = dimnames)
     v10 = self->w_GEO_nc::get_TimeSerie('V10', point_i, point_j, K = K, t0 = t0, t1 = t1)
     
-    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+    MET_u_v_to_ws_wd, ret, u10, v10, wd = value
          
     description = '10 m wind direction'
     units = 'degrees'
@@ -1424,7 +1424,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames) 
     v10 = self->get_Var('V10')
     
-    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+    MET_u_v_to_ws_wd, ret, u10, v10, ws = value
          
     description = '10 m wind speed'
     units = 'm.s-1'
@@ -1447,7 +1447,7 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames) 
     v10 = self->get_Var('V10')
     
-    MET_u_v_to_ws_wd, ret, u10, v10, ws = ws10, wd = wd10
+    MET_u_v_to_ws_wd, ret, u10, v10, wd = value
          
     description = '10 m wind direction'
     units = 'degrees'
