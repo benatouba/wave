@@ -19,16 +19,14 @@
 ;  2. Mapping: the user may add mapping options to the plot such as country 
 ;  outlines, any kind of shape file, relief shading, lat-lon grid contour
 ;  lines... This has to be done only once since it sometimes requires 
-;  computing time, and can be undone. Afterwards, this information 
-;  is stored for all the plots that will be further on generated.
+;  computing time, and it can be undone. Afterwards, this information 
+;  is stored for all the plots that will be generated further on.
 ;  
 ;  3. Set plot: the two last steps can be repeated in any order for all
 ;  the future plots on the map. The data to be plotted has to be set, 
 ;  as well as the plotting params (colors, levels)
 ;  
-;  4. Get Img: the generated plot can be shown on an external window or 
-;  recovered for larger plots.
-;  
+;  4. add Img: the generated plot can be shown on an external window
 ; 
 ; :Categories:
 ;         WAVE/OBJ_PLOT 

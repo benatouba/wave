@@ -182,6 +182,9 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    ; Other color Bar
    map->show_color_bar, RESIZABLE = resizable, TITLE='Celsius', LABELS = my_tags, spacing = 0.8, CHARSIZE = 1., /BAR_OPEN
    
+   ; Full plot
+   w_standard_2d_plot, map, /ANTI_ALIASING, TITLE='MODIS LST', BAR_TITLE='C'
+   
     ok = DIALOG_MESSAGE('Do you want to close all windows?', /QUESTION) ;else ok = 'no'
     if ok eq 'Yes' then begin
       cgDelete, /All

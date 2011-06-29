@@ -35,8 +35,15 @@
 ;    IM_RESIZE: in, optional, type=integer, default=25
 ;                Set this keyword to percentage that the raster image file created my ImageMagick
 ;                 from PostScript output should be resized.
-;
-;
+;    
+;    CONST: out, optional
+;           Set this keyword to a named variable that will contain the constant term of the fit. 
+;    CORRELATION: out, optional
+;                 Set this keyword to a named variable that will contain the linear correlation coefficient. 
+;    SIGMA: out, optional
+;           Set this keyword to a named variable that will contain the 1-sigma uncertainty estimates 
+;           for the returned parameters
+;           
 ; :Author: FaM
 ;
 ; :History:
@@ -44,7 +51,8 @@
 ;-
 pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
                    RANGE = range, NOFIT = nofit, NOCORRELATION = nocorrelation, COLOR = color, PSYM=psym, $
-                   LEGEND_UL = LEGEND_UL, EPS = eps, PNG = png, PIXMAP = pixmap, IM_RESIZE = im_resize
+                   LEGEND_UL = LEGEND_UL, EPS = eps, PNG = png, PIXMAP = pixmap, IM_RESIZE = im_resize, $
+                   CONST=const, CORRELATION=correlation, SIGMA=sigma, YFIT=yfit, GAIN=gain
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -87,15 +95,17 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   cgplots, [range[0],range[1]], [range[0],range[1]], color = cgColor('grey'), LINESTYLE=5, WINDOW=cgWin
   
   cgplot, x, y,  COLOR=cgColor(color), PSYM=psym, /OVERPLOT, WINDOW=cgWin
-    
+  
+  gain = regress(x, y, CONST=const, CORRELATION=correlation, SIGMA=sigma, YFIT=yfit)
+
   if ~KEYWORD_SET(NOFIT) then begin  
-    l = LINFIT(x, y, /DOUBLE)    
-    cgPlots, range, l[0] + l[1] * range, color = cgColor('dark grey'), NOCLIP = 0, WINDOW=cgWin    
+
+    cgPlots, range, const[0] + gain[0] * range, color = cgColor('dark grey'), NOCLIP = 0, WINDOW=cgWin    
     
-    if l[0] lt 0 then sign = '- ' else sign = '+ ' 
+    if const lt 0 then sign = '- ' else sign = '+ ' 
     sq_sign = String(108B)
        
-    text = 'y = ' + STRING(l[1], FORMAT='(F5.2)') + ' x ' + sign + STRING(abs(l[0]), FORMAT='(F6.2)')        
+    text = 'y = ' + STRING(gain, FORMAT='(F5.2)') + ' x ' + sign + STRING(abs(const), FORMAT='(F6.2)')        
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.85] $
     else  pos = [0.5, 0.22]
     
@@ -104,23 +114,23 @@ pro w_ScatterPlot, x, y, XTITLE=xtitle, YTITLE=ytitle, TITLE= title,  $
   endif
   
   if ~KEYWORD_SET(NOCORRELATION) then begin
-    r2 = CORRELATE(x,y)
-    r2 = r2*r2
-    text = 'r'+ STRING(178B) +' = ' + STRING(r2, FORMAT='(F5.2)')
-    
+  
+    r2 = correlation*correlation
+    text = 'r'+ STRING(178B) +' = ' + STRING(r2, FORMAT='(F5.2)')    
     if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.80] $
     else  pos = [0.5, 0.17]
     cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, WINDOW=cgWin
+    
   endif
   
   if ~KEYWORD_SET(NOBIAS) then begin
+  
     mb = mean(y - x)
-
-    text = 'Bias = ' + STRING(mb, FORMAT='(F5.2)')
-    
+    text = 'Bias = ' + STRING(mb, FORMAT='(F5.2)')    
     if KEYWORD_SET(LEGEND_UL) then pos = [0.38, 0.80] $
     else  pos = [0.68, 0.17]
     cgtext, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, WINDOW=cgWin
+    
   endif
   
   ; output  

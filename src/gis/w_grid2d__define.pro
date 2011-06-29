@@ -1063,7 +1063,7 @@ end
 ;      w_QuickPlot, MEANTEMP, COLORTABLE = 13
 ;    
 ;    This is to free the memory after using all this::
-;      for i = 0, N_ELEMENTS(dd) - 1 do if PTR_free, dd[i]
+;      for i = 0, N_ELEMENTS(dd) - 1 do PTR_free, dd[i]
 ;    
 ; :History:
 ;      Written by FaM, 2011.
@@ -1084,28 +1084,10 @@ function w_Grid2D::resample_grid, src_grid
   if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   
   src_grid->getProperty, tnt_c = src_c  
-  utils_1d_to_2d, INDGEN(src_c.nx, /LONG), -INDGEN(src_c.ny, /LONG) + src_c.ny - 1, xi, yi
+  utils_1d_to_2d, INDGEN(src_c.nx, /LONG), INDGEN(src_c.ny, /LONG), xi, yi  
+   
+  self->transform_IJ, xi, yi, src_grid, i_dst, j_dst, /NEAREST
   
-  ;***********************************************
-  ; If the array is too big, subset the problem  *
-  ;***********************************************
-  finished = FALSE
-  ind = 0L
-  nxi = N_ELEMENTS(xi)
-  while not finished do begin
-    p1 = ind
-    p2 = ind + 4000000L ;2000*2000 is the limit
-    if p2 ge (nxi-1) then begin
-      p2 = nxi-1
-      finished = TRUE
-    endif
-    GIS_coord_trafo, ret, xi[p1:p2], yi[p1:p2], ti_dst, tj_dst, SRC=src_c, DST=self.tnt_c, /NEAREST
-    if N_ELEMENTS(i_dst) eq 0 then i_dst = TEMPORARY(ti_dst) else i_dst = [i_dst , TEMPORARY(ti_dst)]
-    if N_ELEMENTS(j_dst) eq 0 then j_dst = TEMPORARY(tj_dst) else j_dst = [j_dst , TEMPORARY(tj_dst)]
-    ind = p2 + 1
-  endwhile
-  undefine, ind, p1, p2
-  j_dst = self.tnt_c.ny - j_dst - 1
   pok = where((i_dst ge 0) and (j_dst ge 0) and (i_dst lt self.tnt_c.nx) and (j_dst lt self.tnt_c.ny), cnt_ok)  ; in the range
   
   out=REPLICATE(PTR_NEW(), self.tnt_c.nx, self.tnt_c.ny)

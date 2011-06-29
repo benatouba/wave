@@ -124,12 +124,6 @@ pro w_standard_2d_plot, map, TITLE=title,$
   pos = [imx0,imy0,imx0+imgX,imy0+imgY]
 
   sfac = 1. ; Font size factor
-    
-  ; Are we going to use the Xdisplay ?
-;  if ~KEYWORD_SET(PNG) $
-;     and ~KEYWORD_SET(RESIZABLE) $
-;     and ~KEYWORD_SET(EPS) $
-;     and ~KEYWORD_SET(JPEG) then sfac = 1.
   
   ; Anti aliasing
   do_as = FALSE
@@ -185,7 +179,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
   ; Scale
   xSize_map = tnt_C.dx * tnt_C.nx
   xSize_map_bar =  nicenumber(xSize_map/5.)
-  unit = ' m'
+  if tnt_c.proj.name eq 'Geographic (WGS-84)' then unit = ' deg' else unit = ' m'
   xSize_bar_device =  xSize_map_bar / xSize_map * (pos[2] - pos[0])
   if xSize_map_bar ge 1000. then begin
     xSize_map_bar =  xSize_map_bar / 1000.

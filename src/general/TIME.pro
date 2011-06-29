@@ -1106,8 +1106,6 @@ end
 ;           The timestep in number of years (if set, `TIMESTEP` is ignored)
 ;    MONTH: in, optional, type=integer, default=0
 ;           The timestep in number of months (if set, `TIMESTEP` is ignored)
-;    QMSTIME: in, optional, type=boolean, default=0
-;           If the output is to be written in qms instead of {ABS_DATE} (better)
 ;
 ; :Returns:
 ;    A nsteps elements array of qms or {ABS_DATE}
@@ -1140,7 +1138,7 @@ end
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=year, MONTH=month, QMSTIME = qmstime
+function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=year, MONTH=month
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1148,17 +1146,11 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if N_ELEMENTS(startTime) ne 1 then  Message, WAVE_Std_Message('startTime', /SCALAR)
   if N_ELEMENTS(nsteps) ne 1 then nsteps = 1
   
-  if ~check_WTIME(startTime, OUT_QMS=t) then Message, WAVE_Std_Message('startTime', /ARG)
+  if ~check_WTIME(startTime, OUT_QMS=t, WAS_ABSDATE=was_absdate) then Message, WAVE_Std_Message('startTime', /ARG)
   
   ;KEYWORDS Handling
   mode = 0
@@ -1184,8 +1176,8 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
       if not arg_okay(nsteps, /NUMERIC) then Message, WAVE_Std_Message('nsteps', /NUMERIC)     
       if nsteps lt 1 then Message,'nsteps should be greater than zero.'
       
-      qms = INDGEN(nsteps, /L64) * TIMESTEP.dms + t  
-      if KEYWORD_SET(QMSTIME) then serie = qms else serie = MAKE_ABS_DATE(qms = qms)
+      serie = INDGEN(nsteps, /L64) * TIMESTEP.dms + t
+      if WAS_ABSDATE then serie = MAKE_ABS_DATE(QMS = serie)     
       
     end
     
@@ -1195,9 +1187,8 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
       if nsteps lt 1 then Message,'nsteps should be greater than zero.'
       
       serie = MAKE_ABS_DATE(REFDATE = t, YEAR=INDGEN(nsteps) * LONG(YEAR))
+      if ~ WAS_ABSDATE then serie = serie.QMS     
       
-      if KEYWORD_SET(QMSTIME) then serie = serie.qms
-
     end
     
     3: begin ; MONTHLY STEP
@@ -1206,13 +1197,12 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
       if nsteps lt 1 then Message,'nsteps should be greater than zero.'
       
       serie = MAKE_ABS_DATE(REFDATE = t, MONTH=INDGEN(nsteps) * LONG(month))
-      
-      if KEYWORD_SET(QMSTIME) then serie = serie.qms
+      if ~ WAS_ABSDATE then serie = serie.QMS  
       
     end
     
   ENDCASE
-  
+
   return, serie
   
 end
@@ -1595,7 +1585,9 @@ end
 ;         the index(es) where the time has been found (-1 if not found)
 ;    cnt: out
 ;         the number of index(es) found
-;
+; :Returns:
+;    TRUE if the time was found, FALSE if not.
+;     
 ; :History:
 ;     Written by FaM, 2011.
 ;-
@@ -1893,6 +1885,81 @@ function TS_RESAMPLE, data, time, $
 
 end
 
+
+function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+    
+  ; Standard error handling.
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /CANCEL
+    RETURN, FALSE
+  ENDIF  
+  
+  if N_PARAMS() ne 4 then Message, WAVE_Std_Message(/NARG)
+  
+  if ~ check_WTIME(time1, OUT_QMS = qms1, WAS_ABSDATE=wasad1) then Message, 'Time1 is not ok'
+  if ~ check_WTIME(time2, OUT_QMS = qms2, WAS_ABSDATE=wasad2) then Message, 'Time2 is not ok'
+  
+  if ~ check_TimeSerie(qms1, step1) then Message, 'Timeserie 1 is not regular'
+  if ~ check_TimeSerie(qms2, step2) then Message, 'Timeserie 2 is not regular'
+  if ~ array_processing(data1, time1, REP_A0=_data1) then Message, 'Data1 and time1 not matching'
+  if ~ array_processing(data2, time2, REP_A0=_data2) then Message, 'Data2 and time2 not matching'
+  
+  dataTypeName = Size(_data1, /TNAME)
+  dataTypeName_ = Size(_data2, /TNAME)
+  if dataTypeName ne dataTypeName_ then message, 'The two datasets must be of the same type.'
+  
+  if step1.dms gt step2.dms then begin
+  
+    mts = [qms1[0] - step1.dms, qms1]
+    stat = TS_MEAN_STATISTICS(_data2, qms2, NEW_TIME=mts)
+    tel = MAX(stat.nel)
+    if tel eq 0 then return, FALSE
+    
+    pok = where(stat.nel eq tel)
+    if KEYWORD_SET(CUMUL) then _data2 = stat.total[pok] else _data2 = stat.mean[pok]
+    qms2 = stat.time[pok]
+   
+    if ~ check_TimeSerie(qms2) then Message, 'Mean values not regular'
+    
+  endif else if step1.dms lt step2.dms then begin
+  
+    mts = [qms2[0] - step2.dms, qms2]
+    stat = TS_MEAN_STATISTICS(_data1, qms1, NEW_TIME=mts)
+    tel = MAX(stat.nel)
+    if tel eq 0 then return, FALSE
+    
+    pok = where(stat.nel eq tel)
+    if KEYWORD_SET(CUMUL) then _data1 = stat.total[pok] else _data1 = stat.mean[pok]
+    qms1 = stat.time[pok]
+    
+    if ~ check_TimeSerie(qms1) then Message, 'Mean values not regular'
+    
+  endif
+  
+  mt0 = MIN(qms2) > MIN(qms1)
+  mt1 = MAX(qms2) < MAX(qms1)
+  
+  p0 = where(qms1 eq mt0)
+  p1 = where(qms1 eq mt1)
+  data1 = _data1[p0:p1]
+  time1 = qms1[p0:p1]
+  p0 = where(qms2 eq mt0)
+  p1 = where(qms2 eq mt1)
+  data2 = _data2[p0:p1]
+  time2 = qms2[p0:p1]
+  
+  if wasad1 then time1 = MAKE_ABS_DATE(qms=time1)
+  if wasad2 then time2 = MAKE_ABS_DATE(QMS=time2)
+  
+  return, 1
+  
+  
+end
 
 function TS_wrf_to_mean, data, time
   

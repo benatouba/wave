@@ -574,7 +574,7 @@ pro TEST_MAKE_ENDED_TIME_SERIE
   
 end
 
-pro TEST_check_TimeSerie
+pro TEST_CHECK_TIMESERIE
 
   @WAVE.inc
 
@@ -830,6 +830,45 @@ pro TEST_TS_DIURNAL_MEANS
   if error ne 0 then message, '% TEST_TS_DIURNAL_MEANS NOT passed', /CONTINUE else print, 'TEST_TS_DIURNAL_MEANS passed'
   
 end
+
+pro TEST_TS_FIT_SERIES
+  
+   ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc   
+
+  error = 0  
+    
+  
+  data1 = [3.,4.,5.]
+  time1 = QMS_TIME(year = 2009, day = 1, hour = 6, minute = [32,33,34])   
+  
+  data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
+  time2 =  MAKE_TIME_SERIE(MAKE_ABS_DATE(year = 2009, day = 1, hour = 6, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
+  
+  ok = TS_fit_series(data1, time1,  data2, time2)
+  if not ok then error+=1
+  if total(abs(data1 - [3.,4.,5.])) ne 0 then error+=1 
+  if total(abs(data2 - [3.,1.,1.])) ne 0 then error+=1 
+  if total(abs(time1 - time2.qms)) ne 0 then error+=1 
+  
+  data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
+  time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 2, hour = 6, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
+  ok = TS_fit_series(data1, time1,  data2, time2)
+  if ok then error+=1
+  data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
+  time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 2, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
+  ok = TS_fit_series(data1, time1,  data2, time2)
+  if ok then error+=1
+  
+  
+  
+ 
+  if error ne 0 then message, '% TEST_TS_FIT_SERIES NOT passed', /CONTINUE else print, 'TEST_TS_FIT_SERIES passed'
+  
+end
+
+
 
 pro time_bug
 
@@ -1787,6 +1826,11 @@ pro TEST_MODIS
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
+    
+        
+    ;================
+    ; Try resample
+    ;================
 
     dd = dom2->resample_grid(lst)
     nels = LONARR(126,126)        
@@ -1799,12 +1843,9 @@ pro TEST_MODIS
     ok = DIALOG_MESSAGE('Do you now see a map containing the number of pixels per grid point?', /QUESTION)
     if ok eq 'No' then error += 1
     
-    cgDelete, /ALL
+    for i = 0, N_ELEMENTS(dd) - 1 do PTR_free, dd[i]
     
-    ;================
-    ; Try Composites
-    ;================
-      
+    cgDelete, /ALL
     
     OBJ_DESTROY, lst     
     OBJ_DESTROY, map 
@@ -2799,11 +2840,12 @@ pro TEST_TIME
   TEST_MAKE_TIME_STEP
   TEST_MAKE_TIME_SERIE
   TEST_MAKE_ENDED_TIME_SERIE
-  TEST_check_TimeSerie
+  TEST_CHECK_TIMESERIE
   TEST_TS_FILL_MISSING
   TEST_TS_MEAN
   TEST_TS_RESAMPLE
   TEST_TS_DIURNAL_MEANS  
+  TEST_TS_FIT_SERIES
 end
 
 pro TEST_DATASETS, NCDF = ncdf
