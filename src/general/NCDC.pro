@@ -510,11 +510,11 @@ function NCDC_DAILY_DATA, DIR_PATH = dir, START_TIME = startT, END_TIME = endT
   
   ; RETRIEVE files and templates
   if KEYWORD_SET(dir) then $
-    file_list = FILE_SEARCH(dir, '*.dat', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT) $
+    file_list = FILE_SEARCH(dir, '*.dat', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, COUNT = nb_stat) $
   else $
     file_list = DIALOG_PICKFILE(FILTER='*.dat', TITLE='Please select data file(s) to parse', /MULTIPLE_FILES, /FIX_FILTER, /MUST_EXIST)
     
-  if N_ELEMENTS(file_list) eq 0 then message, 'no *.dat files encountered'
+  if nb_stat eq 0 then message, 'No *.dat files found'
   
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc.tpl'
   
@@ -522,11 +522,10 @@ function NCDC_DAILY_DATA, DIR_PATH = dir, START_TIME = startT, END_TIME = endT
   if KEYWORD_SET(startT) then begin
     time = MAKE_ENDED_TIME_SERIE(startT, endT, TIMESTEP= step) ; the time array. Daily values
   endif else begin
-    time = MAKE_ENDED_TIME_SERIE(MAKE_ABS_DATE(YEAR=2001, MONTH=01, DAY=01), $
+    time = MAKE_ENDED_TIME_SERIE(MAKE_ABS_DATE(YEAR=2000, MONTH=01, DAY=01), $
       MAKE_ABS_DATE(YEAR=2009, MONTH=12, DAY=31), TIMESTEP= step) ; the time array. Daily values
   endelse  
-  
-  nb_stat = N_ELEMENTS(file_list)
+
   nb_days = N_ELEMENTS(time)
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_hist.sav'
   

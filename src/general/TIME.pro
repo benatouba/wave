@@ -1823,6 +1823,184 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
 
 end
 
+;+
+; :Description:
+;    Computes interval mean values and other statistics from a gridded time serie. 
+;    Both input and output time series can be irregular. You can compute hourly 
+;    means by e.g. setting the `HOUR` keyword to 1, the first and last time
+;    being computed automatically, or by setting the desired output
+;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
+;    output time serie).
+;    
+;    The last dimension of the variable (usually 3 or 4) will be understood as the time dimension.
+;    
+;    !CAREFULL: it can be confusing: The value at 14:00 is the mean value from 13:01 to 14:00 !
+;
+; :Params:
+;    data: in, required, type = array
+;          the data
+;    time: in, required, type = {ABS_DATE}/qms
+;          the associated time (same size as the last dimension of data)
+;
+; :Keywords:
+;    MISSING: in, optional, default = NaN
+;             if no value is found within an interval, the missing
+;             value is assigned the the statistics
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored i `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded) 
+; 
+; :Returns:
+;     A structure of the form::
+;     
+;        {nt: number of elements in the time serie
+;         time: the time in qms
+;         mean: the mean value for each time interval
+;         min: the min value for each time interval
+;         max: the max value for each time interval
+;         tot: the sum of all values for each time interval
+;         nel: the number of elements found in each interval
+;         stddev: the standard deviation of the data within the intervals
+;         }
+;
+; :History:
+;     Written by FaM, 2011.
+;-
+function TS_GRID_STATISTICS, data, time, MISSING = missing, $
+           DAY = day, HOUR = hour, NEW_TIME = new_time
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+;  ON_ERROR, 2
+  
+  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /ARG)
+  if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
+ 
+  n = n_elements(qms1)
+  siz = SIZE(data)
+  ndims = siz[0]
+  if ndims lt 2 and ndims gt 4 then message, WAVE_Std_Message('data', /DIMARRAY)
+  if ndims eq 2 then begin
+   if N_ELEMENTS(qms1) ne 1 then message, '$DATA and $TIME arrays do not match' 
+  endif else if N_ELEMENTS(qms1) ne siz[ndims] then message, '$DATA and $TIME arrays do not match'
+  
+  sor = SORT(qms1)
+  qms1 = qms1[sor]
+  if ndims eq 3 then _data = data[*,*,sor] else data = data[*,*,*,sor]
+    
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin  
+  
+    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
+     else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY) 
+    
+    qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
+    qmsend = CEIL(qms1[n-1] / double(qms)) * qms
+    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms   
+    
+    regular = TRUE
+    
+  endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
+    
+    if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
+    qms2 = qms2[sort(qms2)]
+    
+    regular = check_TimeSerie(qms2)
+    
+  endif else message, 'One of the positionnal keywords must be set.'  
+  
+  if not KEYWORD_SET(MISSING) then begin
+    dataTypeName = Size(data, /TNAME)
+    CASE dataTypeName OF
+        'FLOAT': MISSING = !VALUES.F_NAN
+        'DOUBLE': MISSING = !VALUES.D_NAN
+         else: missing = -999
+    endcase
+  endif
+  
+  regular = false ;TODO: Update routine: implement regular with histogram
+  
+  if regular then begin
+  
+  endif else begin
+  
+    s = VALUE_LOCATE(qms1, qms2)
+        
+    nnt = N_ELEMENTS(qms2)
+    if ndims eq 3 then means = REPLICATE(data[0], siz[1], siz[2], nnt-1) * 0 $
+    else means = REPLICATE(data[0], siz[1], siz[2], siz[3],nnt-1) * 0
+    maxs = means & mins = means
+    tots = means & nels = LONG(means) & stddevs = means
+    
+    for i = 0,  N_ELEMENTS(s) - 2 do begin
+      a = s[i]+1
+      b = s[i+1]
+      
+      if ndims eq 3 then begin
+      
+        if a le b then begin
+          tdata = data[*,*,a:b]
+          tots[*,*,i] = TOTAL(tdata, 3, /NAN)
+          nels[*,*,i] = TOTAL(FINITE(tdata), 3)
+          means[*,*,i] = tots[*,*,i]/nels[*,*,i]
+          mins[*,*,i] = MIN(tdata, MAX=m, DIMENSION=3, /NAN)
+          maxs[*,*,i] = m
+          stddevs[*,*,i] = utils_SIG_ARRAY(tdata, 3)          
+        endif else begin
+          means[*,*,i] =  missing
+          mins[*,*,i] =  missing
+          maxs[*,*,i] =  missing
+          tots[*,*,i] =  missing
+          stddevs[*,*,i] =  missing
+          nels[*,*,i] =  0
+        endelse
+        
+      endif else begin
+
+        if a le b then begin
+          tdata = data[*,*,*,a:b]
+          tots[*,*,*,i] = TOTAL(tdata, 4, /NAN)
+          nels[*,*,*,i] = TOTAL(FINITE(tdata), 4)
+          means[*,*,*,i] = tots[*,*,*,i]/nels[*,*,*,i]
+          mins[*,*,*,i] = MIN(tdata, MAX=m, DIMENSION=4, /NAN)
+          maxs[*,*,*,i] = m
+          stddevs[*,*,*,i] = utils_SIG_ARRAY(tdata, 4)          
+        endif else begin
+          means[*,*,*,i] =  missing
+          mins[*,*,*,i] =  missing
+          maxs[*,*,*,i] =  missing
+          tots[*,*,*,i] =  missing
+          stddevs[*,*,*,i] =  missing
+          nels[*,*,*,i] =  0
+        endelse
+     
+      endelse
+    endfor
+    
+    qms2 = qms2[1: nnt-1]
+    
+  endelse
+
+  RETURN, {nt: N_ELEMENTS(qms2), $
+           time:qms2, $
+           mean:means, $
+           min:mins, $
+           max:maxs, $
+           tot:tots, $
+           nel:nels,$ 
+           stddev:stddevs}
+
+end
+
 
 
 function TS_RESAMPLE, data, time, $

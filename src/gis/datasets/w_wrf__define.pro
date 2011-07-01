@@ -1154,7 +1154,7 @@ function w_WRF::get_Var, Varid, $
   @WAVE.inc
   COMPILE_OPT IDL2
   
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
   undefine, count, offset
   value = -1

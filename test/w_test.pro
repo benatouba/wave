@@ -837,8 +837,7 @@ pro TEST_TS_FIT_SERIES
   COMPILE_OPT idl2
   @WAVE.inc   
 
-  error = 0  
-    
+  error = 0     
   
   data1 = [3.,4.,5.]
   time1 = QMS_TIME(year = 2009, day = 1, hour = 6, minute = [32,33,34])   
@@ -860,9 +859,19 @@ pro TEST_TS_FIT_SERIES
   time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 2, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
   ok = TS_fit_series(data1, time1,  data2, time2)
   if ok then error+=1
+
   
+  data1 = [3.,4.,5.]
+  time1 = MAKE_ABS_DATE(year = 2009, day = 1, hour = [1,2,3])   
   
-  
+  data2 = [1.,1.,1.,1.,1.,1.,2.,2.,2.,2.,2.,2.]
+  time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 1, minute = 10), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=10))
+   
+  ok = TS_fit_series(data1, time1,  data2, time2)
+  if not ok then error+=1
+  if total(abs(data1 - [4.,5.])) ne 0 then error+=1 
+  if total(abs(data2 - [1.,2.])) ne 0 then error+=1 
+  if total(abs(time1.qms - time2)) ne 0 then error+=1 
  
   if error ne 0 then message, '% TEST_TS_FIT_SERIES NOT passed', /CONTINUE else print, 'TEST_TS_FIT_SERIES passed'
   
@@ -2293,10 +2302,203 @@ pro TEST_POST_COPY_CROP, REDO = redo
     OBJ_DESTROY, orig
     OBJ_DESTROY, out
     
+    ;----------------
+    ; NCO
+    ;----------------    
+    INPUT_DIR= fdir + '/WRF_POST/d1/'
+    OUTPUT_DIR= fdir + '/WRF_CPY_CROP/NCO_TEST/'
+    
+    if ~ KEYWORD_SET(REDO) then redo = false    
+    if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
+    if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false    
+    if redo then begin
+      FILE_MKDIR, OUTPUT_DIR
+      CD, INPUT_DIR, CURRENT = _D
+      spawn, INPUT_DIR + '/nco_time_crop.pl 12'
+      FILE_MOVE, INPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop', OUTPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop'
+      FILE_MOVE, INPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop', OUTPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop'
+      CD, _D      
+    endif
+    
+    ; Dom 1  
+    my = OBJ_NEW('w_WRF', FILE=fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc')
+    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop')
+    
+    my->get_time, to, nto, to0, to1
+    nco->get_time, ta, nta, ta0, ta1    
+    if nta ne 9 then error += 1
+    if to1 ne ta1 then error += 1
+    if total(abs(to - ta)) ne 0 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09) then error += 1
+    if ta1 ne QMS_TIME(year = 2009, day = 14, month = 09) then error += 1
+    
+    my->get_Varlist, oid, onames
+    nco->get_Varlist, aid, anames
+    
+    onames = onames[sort(onames)]
+    anames = anames[sort(anames)]
+    
+    if TOTAL(oid - aid) ne 0 then error += 1
+    for i = 0, N_ELEMENTS(onames) - 1 do if onames[i] ne anames[i] then error += 1 
+
+    t2o = my->get_Var('t2')
+    t2a = nco->get_Var('t2')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = my->get_Var('U')
+    t2a = nco->get_Var('U')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1  
+ 
+    OBJ_DESTROY, my
+    OBJ_DESTROY, nco      
+        
+    ; Dom 3  
+    my = OBJ_NEW('w_WRF', FILE=fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d03_2009-09-13_00_00_00_24h.nc')
+    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop')
+    
+    my->get_time, to, nto, to0, to1
+    nco->get_time, ta, nta, ta0, ta1    
+    if nta ne 25 then error += 1
+    if to1 ne ta1 then error += 1
+    if total(abs(to - ta)) ne 0 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09) then error += 1
+    if ta1 ne QMS_TIME(year = 2009, day = 14, month = 09) then error += 1
+    
+    my->get_Varlist, oid, onames
+    nco->get_Varlist, aid, anames
+    
+    onames = onames[sort(onames)]
+    anames = anames[sort(anames)]
+    
+    if TOTAL(oid - aid) ne 0 then error += 1
+    for i = 0, N_ELEMENTS(onames) - 1 do if onames[i] ne anames[i] then error += 1 
+
+    t2o = my->get_Var('t2')
+    t2a = nco->get_Var('t2')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = my->get_Var('U')
+    t2a = nco->get_Var('U')    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1  
+ 
+    OBJ_DESTROY, my
+    OBJ_DESTROY, nco      
+        
     if error ne 0 then message, '% TEST_POST_COPY_CROP NOT passed', /CONTINUE else print, 'TEST_POST_COPY_CROP passed'
     
 end
 
+pro TEST_3D_STATS
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    @WAVE.inc
+    
+    INPUT_DIR= fdir + '/WRF_POST/'
+    CROP_DIR= fdir + '/WRF_CPY_CROP/'
+    
+    fd1 = INPUT_DIR + '/d1/wrfout_d01_2009-09-12_12_00_00'
+    fd3 = INPUT_DIR + '/d1/wrfout_d03_2009-09-12_12_00_00'
+    fd1c = CROP_DIR + '/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    fd3c = CROP_DIR + '/2009.09.13/wrfout_d03_2009-09-13_00_00_00_24h.nc'
+    
+    ; Dom1    
+    d1 = OBJ_NEW('w_WRF', FILE=fd1) 
+    d1c = OBJ_NEW('w_WRF', FILE=fd1c)    
+    t2 = d1->get_Var('T2', time)    
+    t2c = d1c->get_Var('T2', timec) 
+    
+    mt2 = TS_GRID_STATISTICS(t2, time, DAY = 1)
+    if mt2.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if mt2.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
+    if mt2.nt ne 2 then error += 1
+    
+    if min(mt2.nel[*,*,1]) ne 8 then error += 1
+    if max(mt2.nel[*,*,1]) ne 8 then error += 1
+    if min(mt2.nel[*,*,0]) ne 5 then error += 1
+    if max(mt2.nel[*,*,0]) ne 5 then error += 1
+    
+    mt2ref = utils_AVERAGE(t2c[*,*,1:*], 3)
+    mt2ref2 = TOTAL(t2c[*,*,1:*], 3) / (N_ELEMENTS(timec)-1)    
+    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref)) ne 0 then error += 1
+    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref2)) ne 0 then error += 1
+    if TOTAL(ABS(mt2ref-mt2ref2)) ne 0 then error += 1
+    
+    if TOTAL(ABS(mt2.tot[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.max[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.min[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.stddev[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+    ss = size(t2c)
+    
+    ; Dom3    
+    d3 = OBJ_NEW('w_WRF', FILE=fd3) 
+    d3c = OBJ_NEW('w_WRF', FILE=fd3c)    
+    t2 = d3->get_Var('T2', time)    
+    t2c = d3c->get_Var('T2', timec) 
+    
+    mt2 = TS_GRID_STATISTICS(t2, time, DAY = 1)
+    if mt2.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if mt2.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
+    if mt2.nt ne 2 then error += 1
+    
+    if min(mt2.nel[*,*,1]) ne 24 then error += 1
+    if max(mt2.nel[*,*,1]) ne 24 then error += 1
+    if min(mt2.nel[*,*,0]) ne 13 then error += 1
+    if max(mt2.nel[*,*,0]) ne 13 then error += 1
+    
+    mt2ref = utils_AVERAGE(t2c[*,*,1:*], 3)
+    mt2ref2 = TOTAL(t2c[*,*,1:*], 3) / (N_ELEMENTS(timec)-1)    
+    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref)) ne 0 then error += 1
+    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref2)) ne 0 then error += 1
+    if TOTAL(ABS(mt2ref-mt2ref2)) ne 0 then error += 1
+    
+    if TOTAL(ABS(mt2.tot[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.max[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.min[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    if TOTAL(ABS(mt2.stddev[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+    
+    ; 3D    
+    tt = d1->get_Var('TSLB', time)    
+    ttc = d1c->get_Var('TSLB', timec)   
+    
+    mtt = TS_GRID_STATISTICS(tt, time, DAY = 1)
+    if mtt.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if mtt.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
+    if mtt.nt ne 2 then error += 1
+    
+    snel = SIZE(mtt.nel)
+    if snel[0] ne 4 then error += 1
+    if snel[4] ne 2 then error += 1
+    if snel[3] ne 4 then error += 1
+    if snel[1] ne ss[1] then error += 1
+    if snel[2] ne ss[2] then error += 1
+    
+    if min(mtt.nel[*,*,*,1]) ne 8 then error += 1
+    if max(mtt.nel[*,*,*,1]) ne 8 then error += 1
+    if min(mtt.nel[*,*,*,0]) ne 5 then error += 1
+    if max(mtt.nel[*,*,*,0]) ne 5 then error += 1
+    
+    mttref = utils_AVERAGE(ttc[*,*,*,1:*], 4)
+    mttref2 = utils_AVERAGE(reform(ttc[*,*,0,1:*]), 3)
+    
+    if TOTAL(ABS(mtt.mean[*,*,*,1]-mttref)) ne 0 then error += 1
+    if TOTAL(ABS(mtt.mean[*,*,0,1]-mttref2)) ne 0 then error += 1
+
+    
+    if TOTAL(ABS(mtt.tot[*,*,*,1]-TOTAL(ttc[*,*,*,1:*], 4))) ne 0 then error += 1
+    if TOTAL(ABS(mtt.max[*,*,*,1]-max(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
+    if TOTAL(ABS(mtt.min[*,*,*,1]-min(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
+    if TOTAL(ABS(mtt.stddev[*,*,*,1]-utils_SIG_ARRAY(ttc[*,*,*,1:*], 4))) ne 0 then error += 1  
+        
+    OBJ_DESTROY,  d1
+    OBJ_DESTROY,  d1c
+    OBJ_DESTROY,  d3
+    OBJ_DESTROY,  d3c
+    
+    if error ne 0 then message, '% TEST_3D_STATS NOT passed', /CONTINUE else print, 'TEST_3D_STATS passed'
+    
+end
 
 pro TEST_POST_AGG, REDO = redo
    
@@ -2871,6 +3073,7 @@ pro TEST_POST, REDO = redo
   TEST_POST_COPY_CROP, REDO = redo
   TEST_POST_AGG, REDO = redo
   TEST_POST_AGG_CROPPED, REDO = redo
+  TEST_3D_STATS
 end
 
 pro w_TEST, NCDF = ncdf,  REDO = redo
