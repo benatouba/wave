@@ -17,6 +17,103 @@
 
 
 ;+
+; :Description:   
+;    This is to initialise the two named structures {W_VAR} and {W_AWS}.
+;   
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+pro AWS_Init
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  struct = {W_VAR, $
+           varname: '', $
+           nt: 0L, $
+           time: PTR_NEW(), $
+           data: PTR_NEW(), $
+           unit: '', $
+           type: 0L, $
+           regular: FALSE, $
+           cumul: FALSE, $
+           mean: FALSE, $
+           missing: PTR_NEW() $
+           }
+           
+  struct = {W_AWS, $
+           station_name: '', $
+           nt  : 0LL, $
+           loc_x : 0D, $
+           loc_y : 0D, $
+           src: PTR_NEW(), $
+           time: PTR_NEW(), $
+           nvar: 0L, $
+           varnames: PTR_NEW(), $
+           variables: PTR_NEW() $
+           }    
+
+end
+
+;+
+; :Description:   
+;    This is to clean the named structure {W_VAR}
+;   
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+pro AWS_clean_w_Var, struct
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if ~ arg_okay(struct, STRUCT={W_VAR}) then return ; nothing to do
+  
+  for i = 0, N_ELEMENTS(struct) do begin
+    temp = struct[i]
+    PTR_FREE, temp.data
+    PTR_FREE, temp.time
+    PTR_FREE, temp.missing
+  endfor
+  
+end
+
+;+
+; :Description:   
+;    This is to clean the named structure {W_AWS} (and all contained {W_VAR} structures, too)
+;   
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+pro AWS_clean_w_AWS, struct
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if ~ arg_okay(struct, STRUCT={W_AWS}) then return ; nothing to do
+  
+  for i = 0, N_ELEMENTS(struct) do begin
+    temp = struct[i]
+    PTR_FREE, temp.src
+    PTR_FREE, temp.time
+    PTR_FREE, temp.varnames
+    variables = *temp.variables
+    for j=0, N_ELEMENTS(variables)-1 do AWS_clean_w_Var, variables[i]
+    PTR_FREE, temp.variables
+  endfor
+  
+end
+
+;+
 ; :Description:
 ;    Reads the timestamp field from an AWS ascii file and turns it into a QMS time.
 ;       It also works with vectors, it can last a few seconds if the time serie is long.
@@ -104,6 +201,189 @@ function AWS_parse_file, FILE_PATH = file_path, TPL_path = TPL_PATH, DELTA_QMS =
     case size(ascii_data.(i),/TYPE) of
     ; check for strings
     7 : begin ; If this is a string, it must be time. Otherwize, we don't now how to handle it.
+          
+          if str_equiv(names[i]) eq 'TIMESTAMP' then begin
+          
+            time = AWS_PARSE_TIME(ascii_data.(i))
+            nt = N_ELEMENTS(time)
+            
+            if KEYWORD_SET(delta_qms) then time = time + delta_qms
+
+            ;create new structure/ add entry to existing structure
+            if n_elements(ostr) eq 0 then ostr = create_struct('time',time,'nt',nt) $
+            else  ostr = create_struct(ostr,'time',time,'nt',nt)
+            
+            foundtimes = TRUE
+            
+          endif
+          
+        end
+        
+    ; check for all other data types
+    else: begin
+            ;create new structure/ add entry to existing structure
+            if n_elements(ostr) eq 0 then ostr = create_struct(names[i],ascii_data.(i)) $
+            else  ostr = create_struct(ostr,names[i],ascii_data.(i))
+          end
+    endcase
+
+  ; End of Loop
+  endfor
+  
+  if foundtimes eq FALSE then message, 'The given structure did not contain a TIMESTAMP field. I would be happy to find one'
+  
+  return, ostr
+
+end
+
+
+;+
+; :Description:
+; 
+;    Similiar to IDL's ASCII_TEMPLATE, but automatic. The AWS file must have a specific format.
+;    Commented lines start with a %. The first line is allways ignored.
+;    All the other lines are required, in this order: varnames, units, type. 
+;    If type is not understood, the default FLOAT is used.The field "TIMESTAMP" 
+;    is required, all the other fields are flexible. Here an example::
+;    
+;        % AWS1, corrected. File created with IDL. See metadata for more info. Careful:  Careful: time in Beijing time (UTC+8).
+;        "TIMESTAMP","SR50","SR50_QUAL","TEMP_2M"
+;        "-","cm","-","C"
+;        "string","float","long","float"
+;        "2009-04-27 00:10:00",107.565,172,-8.762
+;        "2009-04-27 00:20:00",107.559,168,-8.861
+;        ....
+;        
+;        
+;    or a second example::
+;        
+;        "TOA5","AWS1","CR1000","22314","CR1000.Std.16","CPU:ECS1_VCDef.CR1","10680","Control"
+;        "TIMESTAMP","RECORD","Bat12V","Panels","CaseT"
+;        "TS","RN","V","V","DegC"
+;        "","","Smp","Smp","Smp"
+;        "2009-09-30 07:50:00",0,12.95,0,18.23
+;        "2009-09-30 08:00:00",1,12.94,0,15.39
+;        
+; :Keywords:
+;    FILE_PATH: the file to template (*.dat)
+;
+; :Returns:
+;    an IDL ASCII template 
+;    
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function AWS_auto_template, FILE_PATH = file_path
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ; Data file first
+  if ~KEYWORD_SET(file_path) then file_path = DIALOG_PICKFILE(FILTER='*.dat', TITLE='Please select data file to template', /FIX_FILTER, /MUST_EXIST)
+  
+  OPENR, lun, file_path, /GET_LUN
+  line = ''
+  k = 0LL
+  m = 0LL
+  stop_header = FALSE
+  readf, lun, line ; ignore the first line
+  while ~stop_header do begin
+     readf, lun, line
+     k += 1 
+     if (BYTE(line))[0] eq BYTE('%') then continue
+     els = utils_replace_string(STRSPLIT(line, ',' ,/EXTRACT, /PRESERVE_NULL), '"', '')     
+     if m eq 0 then var_names = els
+     if m eq 1 then var_units = els
+     if m eq 2 then var_type = els
+     if m ge 3 then stop_header = TRUE
+     m += 1 
+  endwhile
+  CLOSE, lun
+
+  nf = N_ELEMENTS(var_names)
+  if nf ne N_ELEMENTS(var_units) then message, 'Units and variables do not match.'
+  if nf ne N_ELEMENTS(var_type) then message, 'Types and variables do not match.'
+  types = LONARR(nf)  
+  for i = 0, nf-1 do begin
+     strs = [''        , 'string'  ,'long'  ,'float'  ,'int'   ,'integer','double']
+     idlt = [IDL_STRING,IDL_STRING,IDL_LONG,IDL_FLOAT,IDL_LONG,IDL_LONG ,IDL_DOUBLE]
+     p = where(str_equiv(strs) eq str_equiv(var_type[i]), cnt)
+     if cnt eq 1 then  types[i] = idlt[p] else types[i] = IDL_FLOAT  
+  endfor
+  
+  field_locations = lonarr(nf)
+  fpos = 0L
+
+  bline = [byte(line), 32b]
+  nptr = where(bline eq (byte(','))[0], ncount)
+  if (ncount eq 0) then fptr = [-1, n_elements(bline)] else fptr = [-1, nptr, n_elements(bline)]
+  add = [1,1]
+  for j=0, nf-1 do field_locations[j] = fptr[j] + add[0]
+  
+  template = { $
+    version:            1.0, $
+    dataStart:          k, $
+    delimiter:          44B, $
+    missingValue:       !VALUES.F_NAN, $
+    commentSymbol:      '', $
+    fieldCount:         nf, $
+    fieldTypes:         types, $
+    fieldNames:         str_equiv(var_names), $
+    fieldUnits:         str_equiv(var_units), $
+    fieldLocations:     field_locations, $
+    fieldGroups:        LINDGEN(nf) $
+   }
+     
+  return, template
+  
+end
+
+;+
+; :Description:
+; 
+;    This function reads an AWS ascii file and returns a structure containing
+;    the parsed data. The structure contains the new tags: "time" and "nt". 
+;    The other fields are simply read from the file header (see #AWS_auto_template).
+;
+;
+; :Keywords:
+;    FILE_PATH: in, optional, type = string
+;               the file to parse (if not set, dialog window)
+;    DELTA_QMS: in, optional, type = qms
+;               the delta in qms to apply to the read time (for example, 
+;               for UTC+8: DELTA_QMS = (MAKE_TIME_STEP(HOUR = 8)).dms)
+;
+;
+; :History:
+;     Written by FaM, 2010.
+;
+;-
+function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ; Data file first
+  if ~KEYWORD_SET(file_path) then file_path = DIALOG_PICKFILE(FILTER='*.dat', TITLE='Please select data file to read', /FIX_FILTER, /MUST_EXIST)
+  
+  template = AWS_auto_template(FILE_PATH = file_path)
+  
+  ascii_data = READ_ASCII(file_path, TEMPLATE=template)
+  
+  n = n_tags(ascii_data)
+  names = tag_names(ascii_data)
+  
+  foundtimes = FALSE
+  
+  for i=0,n-1 do begin ; Go threw all infos
+  
+    case size(ascii_data.(i),/TYPE) of
+    ; check for strings
+    7 : begin ; If this is a string, it must be time. Otherwise, we don't now how to handle it.
           
           if str_equiv(names[i]) eq 'TIMESTAMP' then begin
           
@@ -414,7 +694,7 @@ function AWS_irts, att, sb
   COMPILE_OPT idl2
   @WAVE.inc
   ON_ERROR, 2
-  
+
   if ~ array_processing(att, sb) then Message, WAVE_Std_Message(/ARG)
 
   PSB = 49.9092 + 0.59237 * SB + 0.00558 * SB * SB

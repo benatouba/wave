@@ -101,7 +101,7 @@ end
 ;
 ;
 ;-
-function UTILS_bit_extract, number, index
+function utils_bit_extract, number, index
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -116,6 +116,60 @@ function UTILS_bit_extract, number, index
   
   return,dummy mod 2
 
+end
+
+
+;+
+; :Description:
+;    This function cleans a path string (removes multiple separators)
+;
+; :Params:
+;    path: in, required, string
+;          string or array of strings to clean
+; 
+; :Keywords:
+;    MARK_DIRECTORY: in, optional
+;                    Set this keyword to include a directory separator character at 
+;                    the end of the returned directory name string.
+;          
+; 
+; :Returns:
+;          string or array of strings, clean
+; 
+; :Examples:
+;    Very simple::
+;    
+;      IDL> path = '/home//fab/tmp/'
+;      IDL> print, utils_clean_path(path)
+;      /home/fab/tmp
+;                
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function utils_clean_path, path, MARK_DIRECTORY = mark_directory
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  on_error, 2
+  
+  if ~ arg_okay(path, TYPE=IDL_STRING) then Message, WAVE_Std_Message('path', /ARG)  
+  
+  n = N_ELEMENTS(path)
+  out = path
+  
+  for i = 0, n-1 do begin
+    split = STRSPLIT(path[i], PATH_SEP(), /EXTRACT, COUNT = cnt)
+    out[i] = ''
+    for j=0, cnt-1 do out[i] += PATH_SEP() + split[j]    
+    if KEYWORD_SET(MARK_DIRECTORY) then out[i] += PATH_SEP()
+  endfor
+      
+  return, out
+  
 end
 
 
