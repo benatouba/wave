@@ -831,7 +831,7 @@ pro TEST_TS_DIURNAL_MEANS
   
 end
 
-pro TEST_TS_FIT_SERIES
+pro TEST_TS_FIT_SERIES, VERBOSE = VERBOSE
   
    ; Set Up environnement
   COMPILE_OPT idl2
@@ -845,7 +845,7 @@ pro TEST_TS_FIT_SERIES
   data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
   time2 =  MAKE_TIME_SERIE(MAKE_ABS_DATE(year = 2009, day = 1, hour = 6, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
   
-  ok = TS_fit_series(data1, time1,  data2, time2)
+  ok = TS_fit_series(data1, time1,  data2, time2, VERBOSE = VERBOSE)
   if not ok then error+=1
   if total(abs(data1 - [3.,4.,5.])) ne 0 then error+=1 
   if total(abs(data2 - [3.,1.,1.])) ne 0 then error+=1 
@@ -853,11 +853,11 @@ pro TEST_TS_FIT_SERIES
   
   data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
   time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 2, hour = 6, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
-  ok = TS_fit_series(data1, time1,  data2, time2)
+  ok = TS_fit_series(data1, time1,  data2, time2, VERBOSE = VERBOSE)
   if ok then error+=1
   data2 = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
   time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 2, minute = 24), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=1))
-  ok = TS_fit_series(data1, time1,  data2, time2)
+  ok = TS_fit_series(data1, time1,  data2, time2, VERBOSE = VERBOSE)
   if ok then error+=1
 
   
@@ -867,11 +867,23 @@ pro TEST_TS_FIT_SERIES
   data2 = [1.,1.,1.,1.,1.,1.,2.,2.,2.,2.,2.,2.]
   time2 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 1, minute = 10), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=10))
    
-  ok = TS_fit_series(data1, time1,  data2, time2)
+  ok = TS_fit_series(data1, time1,  data2, time2, VERBOSE = VERBOSE)
   if not ok then error+=1
   if total(abs(data1 - [4.,5.])) ne 0 then error+=1 
   if total(abs(data2 - [1.,2.])) ne 0 then error+=1 
   if total(abs(time1.qms - time2)) ne 0 then error+=1 
+ 
+  data2 = [3.,4.,5.]
+  time2 = MAKE_ABS_DATE(year = 2009, day = 1, hour = [1,2,3])   
+  
+  data1 = [1.,1.,1.,1.,1.,1.,2.,2.,2.,2.,2.,2.]
+  time1 =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 1, minute = 10), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=10))
+   
+  ok = TS_fit_series(data1, time1,  data2, time2, VERBOSE = VERBOSE)
+  if not ok then error+=1
+  if total(abs(data2 - [4.,5.])) ne 0 then error+=1 
+  if total(abs(data1 - [1.,2.])) ne 0 then error+=1 
+  if total(abs(time2.qms - time1)) ne 0 then error+=1 
  
   if error ne 0 then message, '% TEST_TS_FIT_SERIES NOT passed', /CONTINUE else print, 'TEST_TS_FIT_SERIES passed'
   

@@ -2064,7 +2064,36 @@ function TS_RESAMPLE, data, time, $
 end
 
 
-function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
+;+
+; :Description:
+;    This function fits two time series together. If needed, mean values are built,
+;    and time periods are selected to match to two together. Timeseries must be 
+;    regular. 
+;    Carefull: the function modifies the input variables and doesn't throw any error.
+;    It returns 1 if the fitting was successfull (or if no fitting was needed), and 
+;    0 if something prevented the fitting. Set the verbose keword if you want to know 
+;    why it didn't work.
+;     
+;
+; :Params:
+;    data1: the data of the ts 1 (may be modified by the function!)
+;    time1: the time of the ts 1 (may be modified by the function!)
+;    data2: the data of the ts 2 (may be modified by the function!)
+;    time2: the time of the ts 2 (may be modified by the function!)
+;
+; :Keywords:
+;    CUMUL: set this keyword if cumulated values have to be calculated instead of means
+;    VERBOSE: set this keyword so that the function tells you what it does
+;    
+; :Returns:
+;     1 if the fitting was successful, 0 if not
+;     
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul, VERBOSE = verbose
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2074,6 +2103,7 @@ function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /CANCEL
+    if KEYWORD_SET(VERBOSE) then print, 'TS_fit_series: could not fit the series: ' + !Error_State.Msg
     RETURN, FALSE
   ENDIF  
   
@@ -2101,9 +2131,12 @@ function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
     pok = where(stat.nel eq tel)
     if KEYWORD_SET(CUMUL) then _data2 = stat.total[pok] else _data2 = stat.mean[pok]
     qms2 = stat.time[pok]
-   
+      
     if ~ check_TimeSerie(qms2) then Message, 'Mean values not regular'
-    
+    if KEYWORD_SET(VERBOSE) then begin
+      sst = '{Day: ' + str_equiv(step1.day) + '. Hour: ' + str_equiv(step1.hour) + '. Minute: ' + str_equiv(step1.minute) +'}'  
+      print, 'TS_fit_series: TS1 was of greater time step than TS2. TS2 was adapted the the step: ' + sst
+    endif  
   endif else if step1.dms lt step2.dms then begin
   
     mts = [qms2[0] - step2.dms, qms2]
@@ -2116,7 +2149,10 @@ function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
     qms1 = stat.time[pok]
     
     if ~ check_TimeSerie(qms1) then Message, 'Mean values not regular'
-    
+    if KEYWORD_SET(VERBOSE) then begin
+      sst = '{Day: ' + str_equiv(step2.day) + '. Hour: ' + str_equiv(step2.hour) + '. Minute: ' + str_equiv(step2.minute) +'}' 
+      print, 'TS_fit_series: TS2 was of greater time step than TS1. TS1 was adapted the the step: ' + sst
+    endif  
   endif
   
   mt0 = MIN(qms2) > MIN(qms1)
@@ -2133,6 +2169,8 @@ function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul
   
   if wasad1 then time1 = MAKE_ABS_DATE(qms=time1)
   if wasad2 then time2 = MAKE_ABS_DATE(QMS=time2)
+  
+  if KEYWORD_SET(VERBOSE) then print, 'TS_fit_series: success! available times: ' + TIME_to_STR(time1[0]) + ' - ' +TIME_to_STR(time1[N_ELEMENTS(time1)-1])
   
   return, 1
   
