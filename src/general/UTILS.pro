@@ -760,7 +760,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
       Catch, /Cancel
       ok = WAVE_Error_Message(!Error_State.Msg) + ' Will not aggregate...'
       if arg_okay(outfile, TYPE = IDL_STRING) then if FILE_TEST(outfile) then FILE_DELETE, outfile
-      close, 1
+      if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
       RETURN
     ENDIF
   
@@ -827,18 +827,18 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   if ~KEYWORD_SET(OUTFILE) then outfile = DIRECTORY + '/3B42_agg.' + str + '.nc'
   if STRMID(FILE_BASENAME(OUTFILE),0,8) ne '3B42_agg' then Message, 'The output file MUST have the suffix 3B42_agg'
   
-  OPENW, 1, DIRECTORY + '/trmm_agg_'+ str + '.log'
+  OPENW, lun, DIRECTORY + '/trmm_agg_'+ str + '.log', /GET_LUN
   
-  printf, 1, 'TRMM 3B42 aggregation'
-  printf, 1, ''
-  printf, 1, 'Number of files: ' + str_equiv(cfiles)  
-  printf, 1, 'Start date : ' + TIME_to_STR(time[0])
-  printf, 1, 'End   date : ' + TIME_to_STR(time[nt-1])
+  printf, lun, 'TRMM 3B42 aggregation'
+  printf, lun, ''
+  printf, lun, 'Number of files: ' + str_equiv(cfiles)  
+  printf, lun, 'Start date : ' + TIME_to_STR(time[0])
+  printf, lun, 'End   date : ' + TIME_to_STR(time[nt-1])
   
   ; Open the file you just created and copy the information in it to another file.
-  printf, 1, ''
+  printf, lun, ''
   text = 'Destination file : ' + outfile
-  printf, 1, text
+  printf, lun, text
   
   ; ---------------------------
   ; Read the Netcdf template file
@@ -885,8 +885,8 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   NCDF_AttPut, tid, 'subset', 'subset = ['+ str_equiv(subset[0]) +', '+ str_equiv(subset[1]) +', '+ str_equiv(subset[2]) +', '+ str_equiv(subset[3]) +']', /GLOBAL, /CHAR
   NCDF_CONTROL, tid, /ENDEF ; Switch to normal Fill mode
   
-  printf, 1,  'Destination file defined.'
-  printf, 1, 'Now starting to fill... '
+  printf, lun,  'Destination file defined.'
+  printf, lun, 'Now starting to fill... '
     
   hours = INDGEN(nt, /LONG) * 3L
   NCDF_VARPUT, tid, Timeid, hours
@@ -916,12 +916,12 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
       endif      
     endelse
     OBJ_DESTROY, t_obj
-    printf, 1,  '  ' + fileLIST[i] + ' processed.'
+    printf, lun,  '  ' + fileLIST[i] + ' processed.'
     
   endfor
   
-  printf, 1,  'DONE!'
-  CLOSE, 1
+  printf, lun,  'DONE!'
+  FREE_LUN, lun
   NCDF_CLOSE, tid
   
 end

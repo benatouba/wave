@@ -50,6 +50,8 @@ pro AWS_Init
            loc_x : 0D, $
            loc_y : 0D, $
            src: PTR_NEW(), $
+           step_info: '', $
+           missing: PTR_NEW(), $
            time: PTR_NEW(), $
            nvar: 0L, $
            varnames: PTR_NEW(), $
@@ -106,6 +108,7 @@ pro AWS_clean_w_AWS, struct
     PTR_FREE, temp.src
     PTR_FREE, temp.time
     PTR_FREE, temp.varnames
+    PTR_FREE, temp.missing
     variables = *temp.variables
     for j=0, N_ELEMENTS(variables)-1 do AWS_clean_w_Var, variables[i]
     PTR_FREE, temp.variables
@@ -412,8 +415,10 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
 
   ; End of Loop
   endfor
-  
+ 
   if foundtimes eq FALSE then message, 'The given structure did not contain a TIMESTAMP field. I would be happy to find one'
+  
+  ostr = create_struct(ostr,'unit', template.fieldUnits)
   
   return, ostr
 

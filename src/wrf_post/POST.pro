@@ -571,7 +571,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
   if not FILE_TEST(output_dir, /DIRECTORY) then FILE_MKDIR, output_dir
   
   input_dir =  utils_clean_path(input_dir)
-  output_dir =  utils_clean_path(output_dir, '//', '/')
+  output_dir =  utils_clean_path(output_dir)
       
   fileList = FILE_SEARCH(input_dir, 'wrfout*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT)
   GEN_str_subst, ret, fileList, input_dir, '', arbo
