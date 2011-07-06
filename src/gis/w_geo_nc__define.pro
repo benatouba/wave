@@ -154,8 +154,8 @@ Function w_GEO_nc::Init, FILE = file, SUBSET = subset
   ;*****************************
   ; Check  dimensions validity *
   ;*****************************
-  xp = ['west_east','lon','longitude','lon','longitudes','lons','xlong','xlong_m', 'dimlon','x']
-  yp = ['south_north','lat','latitude' ,'lat','latitudes' ,'lats','xlat' ,'xlat_m', 'dimlat','y']
+  xp = ['west_east','lon','longitude','longitudes','lons','xlong','xlong_m', 'dimlon','x']
+  yp = ['south_north','lat','latitude' ,'latitudes' ,'lats','xlat' ,'xlat_m', 'dimlat','y']
   tp = ['time','times','xtime']
   
   foundX = -1

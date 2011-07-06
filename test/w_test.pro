@@ -2327,14 +2327,14 @@ pro TEST_POST_COPY_CROP, REDO = redo
       FILE_MKDIR, OUTPUT_DIR
       CD, INPUT_DIR, CURRENT = _D
       spawn, INPUT_DIR + '/nco_time_crop.pl 12'
-      FILE_MOVE, INPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop', OUTPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop'
-      FILE_MOVE, INPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop', OUTPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop'
+      FILE_MOVE, INPUT_DIR + '/wrfout_d01_2009-09-13_00-00-00_24h.nc', OUTPUT_DIR + '/wrfout_d01_2009-09-13_00-00-00_24h.nc'
+      FILE_MOVE, INPUT_DIR + '/wrfout_d03_2009-09-13_00-00-00_24h.nc', OUTPUT_DIR + '/wrfout_d03_2009-09-13_00-00-00_24h.nc'
       CD, _D      
     endif
     
     ; Dom 1  
     my = OBJ_NEW('w_WRF', FILE=fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc')
-    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d01_2009-09-12_12_00_00_crop')
+    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d01_2009-09-13_00-00-00_24h.nc')
     
     my->get_time, to, nto, to0, to1
     nco->get_time, ta, nta, ta0, ta1    
@@ -2366,7 +2366,7 @@ pro TEST_POST_COPY_CROP, REDO = redo
         
     ; Dom 3  
     my = OBJ_NEW('w_WRF', FILE=fdir + '/WRF_CPY_CROP/2009.09.13/wrfout_d03_2009-09-13_00_00_00_24h.nc')
-    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d03_2009-09-12_12_00_00_crop')
+    nco = OBJ_NEW('w_WRF', FILE=OUTPUT_DIR + '/wrfout_d03_2009-09-13_00-00-00_24h.nc')
     
     my->get_time, to, nto, to0, to1
     nco->get_time, ta, nta, ta0, ta1    

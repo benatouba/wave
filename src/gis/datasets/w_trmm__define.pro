@@ -541,7 +541,7 @@ function w_TRMM::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL
   endcase
   
   if FIRSTCALL then begin
-    IF NOT self->w_Grid2D::Init(   nx = nx                , $
+    IF NOT self->w_Grid2D::Init( nx = nx                , $
                                  ny = ny                , $
                                  dx = 0.25D             , $
                                  dy = 0.25D             , $

@@ -772,16 +772,20 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   if not FILE_TEST(directory, /DIRECTORY) then message, 'Directory is not a directory'
   
   fileList = FILE_SEARCH(directory, '3B42.*', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, count = cfiles)
-  fileList = fileList[SORT(fileList)]
   if cfiles eq 0 then Message, '$directory is not set properly.'
   
+  fnames = FILE_BASENAME(fileList)
+  so = SORT(fnames)
+  if N_ELEMENTS(fnames[UNIQ(fnames, so)]) ne cfiles then Message, 'TRMM files not unique.'
+  fileList = fileList[so]
+    
   step = MAKE_TIME_STEP(hour=3)
   
   ; ---------------------
   ; Create the time serie
   ; ---------------------
-  ;Parse names for available times wrfout_d01_2008-10-26_12:00:00
-  fname = FILE_BASENAME(fileLIST)
+  ;Parse names for available times
+  fname = FILE_BASENAME(filelist)
   for i=0, cfiles-1 do begin
     tsp = STRSPLIT(fname[i], '.',/EXTRACT)
     tsd = tsp[1]
@@ -827,7 +831,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   if ~KEYWORD_SET(OUTFILE) then outfile = DIRECTORY + '/3B42_agg.' + str + '.nc'
   if STRMID(FILE_BASENAME(OUTFILE),0,8) ne '3B42_agg' then Message, 'The output file MUST have the suffix 3B42_agg'
   
-  OPENW, lun, DIRECTORY + '/trmm_agg_'+ str + '.log', /GET_LUN
+  OPENW, lun, FILE_DIRNAME(outfile) + '/trmm_agg_'+ str + '.log', /GET_LUN
   
   printf, lun, 'TRMM 3B42 aggregation'
   printf, lun, ''
@@ -873,6 +877,9 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   pcpid = NCDF_VarDef(tid, 'precipitation', [dimLonid, dimLatid, dimTimeid], /FLOAT)
   NCDF_AttPut, tid, pcpid, 'units', 'mm 3hrs-1', /CHAR
   
+  chkid = NCDF_VarDef(tid, 'check', dimTimeid, /LONG)
+  NCDF_AttPut, tid, chkid, 'units', 'nb file per step', /CHAR
+  
   ; Add global attributes to the file.
   NCDF_AttPut, tid, 'creation_date', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
   NCDF_AttPut, tid, 'conventions', 'COARDS', /GLOBAL, /CHAR
@@ -893,6 +900,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   NCDF_VARPUT, tid, Lonid, REFORM(lon[*,0])
   NCDF_VARPUT, tid, Latid, REFORM(lat[0,*])
   if ~KEYWORD_SET(NOSHIFT) then NCDF_VARPUT, tid, pcpid, FLTARR(nx,ny,nt)
+  NCDF_VARPUT, tid, chkid, LONARR(nt)
   
   for i = 0, cfiles-1 do begin
   
@@ -900,19 +908,30 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
 
     pcp = (t_obj->get_prcp(t) > 0) * 3
     
+    undefine, chk
     if KEYWORD_SET(NOSHIFT) then begin
       idx = where(time eq t, cnt)
-      if cnt eq 1 then NCDF_VARPUT, tid, pcpid, pcp, OFFSET = [0,0,idx]
+      if cnt eq 1 then begin 
+       NCDF_VARPUT, tid, pcpid, pcp, OFFSET = [0,0,idx]
+       NCDF_VARGET, tid, chkid, chk, OFFSET = idx, count = 1
+       NCDF_VARPUT, tid, chkid, chk + 1, OFFSET = idx
+       undefine, chk
+      endif
     endif else begin
       idx = where(time eq t, cnt)
       if cnt eq 1 then begin
         NCDF_VARGET, tid, pcpid, pcpold, OFFSET = [0,0,idx], count = [nx,ny,1]
         NCDF_VARPUT, tid, pcpid, pcpold + pcp/2., OFFSET = [0,0,idx]
-      endif      
+        NCDF_VARGET, tid, chkid, chk, OFFSET = idx, count = 1
+        NCDF_VARPUT, tid, chkid, chk + 1, OFFSET = idx
+      endif     
+      undefine, chk
       idx = where(time eq t + 3LL*H_QMS, cnt)
       if cnt eq 1 then begin
         NCDF_VARGET, tid, pcpid, pcpold, OFFSET = [0,0,idx], count = [nx,ny,1]
         NCDF_VARPUT, tid, pcpid, pcpold + pcp/2., OFFSET = [0,0,idx]
+        NCDF_VARGET, tid, chkid, chk, OFFSET = idx, count = 1
+        NCDF_VARPUT, tid, chkid, chk + 1, OFFSET = idx
       endif      
     endelse
     OBJ_DESTROY, t_obj
@@ -920,6 +939,12 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
     
   endfor
   
+  NCDF_VARGET, tid, chkid, chk
+  if KEYWORD_SET(NOSHIFT) then should = 1 else should = 2
+  p = where(chk ne should, cnt)
+  if cnt ne 0 then Message, 'Problem with check', /INFORMATIONAL
+  if cnt ne 0 then printf, lun,  'Problem with check'
+   
   printf, lun,  'DONE!'
   FREE_LUN, lun
   NCDF_CLOSE, tid
@@ -1219,8 +1244,8 @@ function utils_nc_LonLat, cdfid, lon_id, lat_id
     RETURN, FALSE
   ENDIF  
   
-  lon_list = ['lon','longitude','lon','longitudes','lons','xlong','xlong_m']
-  lat_list = ['lat','latitude' ,'lat','latitudes' ,'lats','xlat' ,'xlat_m']
+  lon_list = ['west_east','lon','longitude','longitudes','lons','xlong','xlong_m', 'dimlon','x']
+  lat_list = ['south_north','lat','latitude','latitudes' ,'lats','xlat' ,'xlat_m', 'dimlat','y']
   
   inq = NCDF_INQUIRE(Cdfid)
   
