@@ -185,12 +185,6 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   mytime = 0LL
   
@@ -380,12 +374,6 @@ function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, 
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if N_ELEMENTS(refTime) eq 0 then refTime = QMS_TIME()
   
@@ -535,12 +523,6 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if KEYWORD_SET(qms) then begin ; Make an absolute date from QMS
   
@@ -697,12 +679,6 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if N_ELEMENTS(refDate) eq 0 then refDate = MAKE_ABS_DATE()
   
@@ -851,12 +827,6 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if N_ELEMENTS(time) eq 0 then mytime = MAKE_ABS_DATE()
   
@@ -937,12 +907,6 @@ function TIME_to_JD, time
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
  
   if N_ELEMENTS(time) eq 0 then TIME = QMS_TIME()
   
@@ -1032,12 +996,6 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
     
   tstep = {TIME_STEP}
   
@@ -1277,13 +1235,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
   
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
-  
+
   if ~check_WTIME(startTime, OUT_QMS=t1) then Message, WAVE_Std_Message('startTime', /ARG)
   if ~check_WTIME(endTime, OUT_QMS=t2) then Message, WAVE_Std_Message('endTime', /ARG)
       
@@ -1448,12 +1400,6 @@ function check_TimeSerie, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_mis
     
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   if N_PARAMS() lt 1 then Message, WAVE_Std_Message(/NARG)
   if N_ELEMENTS(ts) lt 2 then Message, WAVE_Std_Message(/NARG)
@@ -1538,12 +1484,6 @@ function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_AB
   COMPILE_OPT IDL2
   ; Standard error handling.
   ON_ERROR, 2
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /CANCEL
-;    void = WAVE_Error_Message()
-;    RETURN, 0
-;  ENDIF  
   
   was_qms = FALSE
   was_absdate = FALSE
@@ -1678,6 +1618,10 @@ end
 
 ;+
 ; :Description:
+; 
+;    !DEPRECIATED! This function will not be further develloped. Use `TS_AGG`
+;    instead.
+;    
 ;    Computes interval mean values and other statistics from a time serie. 
 ;    Both input and output time series can be irregular. You can compute hourly 
 ;    means by e.g. setting the `HOUR` keyword to 1, the first and last time
@@ -1685,7 +1629,9 @@ end
 ;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
 ;    output time serie).
 ;    
-;    !CAREFULL: it can be confusing: The value at 14:00 is the mean value from 13:01 to 14:00 !
+;    !CAREFULL: it can be confusing. For e.g. HOUR=1, the value at 14:00 is 
+;    the mean value from 13:01 to 14:00 !
+;    
 ;
 ; :Params:
 ;    data: in, required, type = array
@@ -1725,126 +1671,157 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function TS_MEAN_STATISTICS, data, time, MISSING = missing, $
-           DAY = day, HOUR = hour, NEW_TIME = new_time
-
-
+function TS_MEAN_STATISTICS, data, time, MISSING = missing, AGG_METHOD = agg_method, $
+    DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE=double
+    
+    
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
   
   ON_ERROR, 2
   
+  ; Check Arguments
   if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
   if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
- 
+  
   n = n_elements(qms1)
   if ~ array_processing(qms1, data, REP_A1=_data) then message, '$DATA and $TIME arrays must have same number of elements'
+  if KEYWORD_SET(DOUBLE) then _data = double(_data)
   
+  ; Sort the TS
   sor = SORT(qms1)
   qms1 = qms1[sor]
   _data = _data[sor]
-    
-  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin  
+  
+  ; Automatic aggregation
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
   
     if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
-     else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY) 
+    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
     
     qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
     qmsend = CEIL(qms1[n-1] / double(qms)) * qms
-    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms   
+    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms
     
     regular = TRUE
     
   endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
-    
+  
     if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
     qms2 = qms2[sort(qms2)]
     
     regular = check_TimeSerie(qms2)
     
-  endif else message, 'One of the positionnal keywords must be set.'  
+  endif else message, 'One of the positionnal keywords must be set.'
   
-  if not KEYWORD_SET(MISSING) then begin
-    dataTypeName = Size(data, /TNAME)
-    CASE dataTypeName OF
-        'FLOAT': MISSING = !VALUES.F_NAN
-        'DOUBLE': MISSING = !VALUES.D_NAN
-         else: missing = -999
-    endcase
-  endif
+  dataTypeName = Size(_data, /TNAME)
+  _missing = KEYWORD_SET(MISSING)
+  CASE dataTypeName OF
+    'FLOAT': begin
+      if _missing then miss = float(missing) else miss = !VALUES.F_NAN
+      epsilon = (MACHAR()).eps
+    end
+    'DOUBLE': begin
+      if _missing then miss = double(missing) else miss = !VALUES.D_NAN
+    end
+    else: begin
+      if _missing then miss = fix(missing) else miss = -9999
+      epsilon = 0
+    end
+  endcase
   
+  if FINITE(miss) then pok = where(ABS(_data-miss) gt epsilon, cntok) $
+  else pok = where(FINITE(_data) eq 1, cntok)
+  if cntok eq 0 then Message, 'No valid values in data!'
+  _data = _data[pok]
+  qms1 = qms1[pok]
+    
   regular = false ;TODO: Update routine: implement regular with hitogram
   
-  if regular then begin
+  s = VALUE_LOCATE(qms1, qms2)
   
-  endif else begin
-      
-      s = VALUE_LOCATE(qms1, qms2)
-      
-      nnt = N_ELEMENTS(qms2)
-      means = REPLICATE(data[0], nnt-1) * 0
-      maxs = means & mins = means
-      tots = means & nels = LONG(means) & stddevs = means
-      
-      for i = 0,  N_ELEMENTS(s) - 2 do begin
-        a = s[i]+1
-        b = s[i+1]
-        if a le b then begin
-          means[i] = MEAN(data[a:b] , /NAN)
-          mins[i] = MIN(data[a:b], MAX=m, /NAN)
-          maxs[i] = m
-          tots[i] = TOTAL(data[a:b], /NAN)
-          stddevs[i] = stddev(data[a:b], /NAN)
-          dumm = where(FINITE(data[a:b]) eq 1, cnt)
-          nels[i] = cnt
-        endif else begin
-          means[i] =  missing
-          mins[i] =  missing
-          maxs[i] =  missing
-          tots[i] =  missing
-          stddevs[i] =  missing
-          nels[i] =  0
-        endelse
-      endfor
-      
-      qms2 = qms2[1: nnt-1]
-
-  endelse
+  nnt = N_ELEMENTS(qms2)
+  means = REPLICATE(_data[0], nnt-1) * 0
+  maxs = means & mins = means
+  tots = means & nels = LONG(means) & stddevs = means
+  
+  for i = 0,  N_ELEMENTS(s) - 2 do begin
+    a = s[i]+1
+    b = s[i+1]
+    if a le b then begin
+      tp = _data[a:b]
+      means[i] = MEAN(tp, /NAN, DOUBLE=double)
+      mins[i] = MIN(tp, MAX=m, /NAN)
+      maxs[i] = m
+      tots[i] = TOTAL(tp, /NAN, DOUBLE=double)
+      stddevs[i] = stddev(tp, /NAN, DOUBLE=double)
+      nels[i] = b-a+1
+    endif else begin
+      means[i] =  miss
+      mins[i] =  miss
+      maxs[i] =  miss
+      tots[i] =  miss
+      stddevs[i] =  miss
+      nels[i] =  0
+    endelse
+  endfor
+  
+  qms2 = qms2[1: nnt-1]
   
   RETURN, {nt: N_ELEMENTS(qms2), $
-           time:qms2, $
-           mean:means, $
-           min:mins, $
-           max:maxs, $
-           tot:tots, $
-           nel:nels,$ 
-           stddev:stddevs}
-
+    time:qms2, $
+    mean:means, $
+    min:mins, $
+    max:maxs, $
+    tot:tots, $
+    nel:nels,$
+    stddev:stddevs}
+    
 end
 
 ;+
 ; :Description:
-;    Computes interval mean values and other statistics from a gridded time serie. 
+; 
+;    Computes interval mean values and other statistics from a time serie. 
 ;    Both input and output time series can be irregular. You can compute hourly 
 ;    means by e.g. setting the `HOUR` keyword to 1, the first and last time
 ;    being computed automatically, or by setting the desired output
 ;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
 ;    output time serie).
 ;    
-;    The last dimension of the variable (usually 3 or 4) will be understood as the time dimension.
+;    !CAREFULL: it can be confusing. For e.g. HOUR=1, the value at 14:00 is 
+;    the mean value from 13:01 to 14:00 !
 ;    
-;    !CAREFULL: it can be confusing: The value at 14:00 is the mean value from 13:01 to 14:00 !
+;    Available statistics are inspired from the TNT CAL library::
+;       'RANGE'
+;       'MASK'
+;       'MIN'
+;       'MAX'
+;       'MEAN' or 'AVG'
+;       'MEDIAN'
+;       'MODE'
+;       'SUM' or 'ADD'
+;       'FREQ'
+;       'N_SIG'
+;       'SIGMA' or 'STDDEV'
+;    
 ;
 ; :Params:
 ;    data: in, required, type = array
-;          the data
+;          the data serie to analyse
 ;    time: in, required, type = {ABS_DATE}/qms
-;          the associated time (same size as the last dimension of data)
+;          the associated time (same size as data)
+;    agg:  out, type = array
+;          the aggregated data
+;    agg_time: out, type = {ABS_DATE}/qms
+;              the associated time (same size as agg)
 ;
 ; :Keywords:
+;    AGG_METHOD: in, optional, type=string, default = 'MEAN'
+;                aggregation method
 ;    MISSING: in, optional, default = NaN
-;             if no value is found within an interval, the missing
+;             if no valid value is found within an interval, the missing
 ;             value is assigned the the statistics
 ;    DAY: in, optional, default = none
 ;         set to an day interval (e.g: 1, or 7) to compute 
@@ -1853,152 +1830,331 @@ end
 ;         set to an hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
 ;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
-;              ignored i `DAY` or `HOUR` are set. set this value to 
+;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
 ;              n elements of the statistics for each interval [t, t+1]
-;              (t excluded) 
+;              (t excluded)
+;    DOUBLE: in, optional
+;            set this keyword to compute in double precision
 ; 
-; :Returns:
-;     A structure of the form::
-;     
-;        {nt: number of elements in the time serie
-;         time: the time in qms
-;         mean: the mean value for each time interval
-;         min: the min value for each time interval
-;         max: the max value for each time interval
-;         tot: the sum of all values for each time interval
-;         nel: the number of elements found in each interval
-;         stddev: the standard deviation of the data within the intervals
-;         }
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function TS_GRID_STATISTICS, data, time, MISSING = missing, $
-           DAY = day, HOUR = hour, NEW_TIME = new_time
-
+pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_method, $
+    DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+    
+    
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
   
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
-  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /ARG)
+  ; Check Arguments
+  if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
   if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
- 
-  n = n_elements(qms1)
-  siz = SIZE(data)
-  ndims = siz[0]
-  if ndims lt 2 and ndims gt 4 then message, WAVE_Std_Message('data', /DIMARRAY)
-  if ndims eq 2 then begin
-   if N_ELEMENTS(qms1) ne 1 then message, '$DATA and $TIME arrays do not match' 
-  endif else if N_ELEMENTS(qms1) ne siz[ndims] then message, '$DATA and $TIME arrays do not match'
   
+  n = n_elements(qms1)
+  if ~ array_processing(qms1, data, REP_A1=_data) then message, '$DATA and $TIME arrays must have same number of elements'
+  if KEYWORD_SET(DOUBLE) then _data = double(_data)
+  
+  am = CAL_agg_method(AGG_METHOD)
+  
+  ; Sort the TS
   sor = SORT(qms1)
   qms1 = qms1[sor]
-  if ndims eq 3 then _data = data[*,*,sor] else data = data[*,*,*,sor]
-    
-  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin  
+  _data = _data[sor]
+  
+  ; Automatic aggregation
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
   
     if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
-     else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY) 
+    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
     
     qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
     qmsend = CEIL(qms1[n-1] / double(qms)) * qms
-    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms   
+    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms
     
     regular = TRUE
     
   endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
-    
+  
     if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
     qms2 = qms2[sort(qms2)]
     
     regular = check_TimeSerie(qms2)
     
-  endif else message, 'One of the positionnal keywords must be set.'  
+  endif else message, 'One of the positionnal keywords must be set.'
   
-  if not KEYWORD_SET(MISSING) then begin
-    dataTypeName = Size(data, /TNAME)
-    CASE dataTypeName OF
-        'FLOAT': MISSING = !VALUES.F_NAN
-        'DOUBLE': MISSING = !VALUES.D_NAN
-         else: missing = -999
-    endcase
-  endif
+  dataTypeName = Size(_data, /TNAME)
+  _missing = KEYWORD_SET(MISSING)
+  CASE dataTypeName OF
+    'FLOAT': begin
+      if _missing then miss = float(missing) else miss = !VALUES.F_NAN
+      epsilon = (MACHAR()).eps
+    end
+    'DOUBLE': begin
+      if _missing then miss = double(missing) else miss = !VALUES.D_NAN
+    end
+    else: begin
+      if _missing then miss = fix(missing) else miss = -9999
+      epsilon = 0
+    end
+  endcase
+  
+  if FINITE(miss) then pok = where(ABS(_data-miss) gt epsilon, cntok) $
+  else pok = where(FINITE(_data) eq 1, cntok)
+  if cntok eq 0 then Message, 'No valid values in data!'
+  _data = _data[pok]
+  qms1 = qms1[pok]
   
   regular = false ;TODO: Update routine: implement regular with histogram
   
-  if regular then begin
+  s = VALUE_LOCATE(qms1, qms2)
   
-  endif else begin
+  nnt = N_ELEMENTS(qms2)
+  if am eq 'N_SIG' then agg = LONARR(nnt-1) $
+  else agg = REPLICATE(_data[0], nnt-1) * 0
   
-    s = VALUE_LOCATE(qms1, qms2)
-        
-    nnt = N_ELEMENTS(qms2)
-    if ndims eq 3 then means = REPLICATE(data[0], siz[1], siz[2], nnt-1) * 0 $
-    else means = REPLICATE(data[0], siz[1], siz[2], siz[3],nnt-1) * 0
-    maxs = means & mins = means
-    tots = means & nels = LONG(means) & stddevs = means
+  for i = 0,  N_ELEMENTS(s) - 2 do begin
+    a = s[i]+1
+    b = s[i+1]
+    if a le b then begin
+      tp = _data[a:b]
+      n_y = b-a+1
+      case str_equiv(am) of
+        'NONE': agg[i] = tp[n_y-1]
+        'MIN': agg[i] = min(tp, /NAN)
+        'MAX': agg[i] = max(tp, /NAN)
+        'MEAN': agg[i] = MEAN(tp, /NAN, DOUBLE=double)
+        'MEDIAN': agg[i] = median(tp, DOUBLE=double)
+        'SUM': agg[i] = total(tp, /NAN, DOUBLE=double)
+        'SIGMA': agg[i] = stddev(tp)
+        'RANGE': agg[i] = max(tp, /NAN) - min(tp, /NAN)
+        'N_SIG': agg[i] = n_y
+        'FREQ': begin
+          yrl = runlength(tp[sort(tp)],rl)
+          nrl = max(rl,mi)
+          agg[i] = rl[mi]
+        end
+        'MODE': begin
+          yrl = runlength(tp[sort(tp)],rl)
+          nrl = max(rl,mi)
+          agg[i] = yrl[mi]
+        end
+      endcase
+    endif else begin
+      if am eq 'N_SIG' then agg[i] = 0 $
+      else agg[i] = miss
+      
+    endelse
+  endfor
+  
+  agg_time = qms2[1: nnt-1]
+  if WAS_ABSDATE then agg_time = MAKE_ABS_DATE(QMS=agg_time)
+  
+end
+
+;+
+; :Description:
+;    
+;    Same as `TS_AGG` but for 2D or 3D arrays.
+;    
+;    Computes interval mean values and other statistics from a time serie. 
+;    Both input and output time series can be irregular. You can compute hourly 
+;    means by e.g. setting the `HOUR` keyword to 1, the first and last time
+;    being computed automatically, or by setting the desired output
+;    time serie using the `NEW_TIME` keyword (only way to obtain an irregular
+;    output time serie).
+;    
+;    !CAREFULL: it can be confusing. For e.g. HOUR=1, the value at 14:00 is 
+;    the mean value from 13:01 to 14:00 !
+;    
+;    Available statistics are inspired from the TNT CAL library::
+;       'RANGE'
+;       'MASK'
+;       'MIN'
+;       'MAX'
+;       'MEAN' or 'AVG'
+;       'MEDIAN'
+;       'MODE'
+;       'SUM' or 'ADD'
+;       'FREQ'
+;       'N_SIG'
+;       'SIGMA' or 'STDDEV'
+;    
+;
+; :Params:
+;    data: in, required, type = array
+;          the data serie to analyse. The last dimension is the time dimension.
+;    time: in, required, type = {ABS_DATE}/qms
+;          the associated time
+;    agg:  out, type = array
+;          the aggregated data. The last dimension is the time dimension.
+;    agg_time: out, type = {ABS_DATE}/qms
+;              the associated time
+;
+; :Keywords:
+;    AGG_METHOD: in, optional, type=string, default = 'MEAN'
+;                aggregation method
+;    MISSING: in, optional, default = NaN
+;             if no valid value is found within an interval, the missing
+;             value is assigned the the statistics
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored if `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded)
+;    DOUBLE: in, optional
+;            set this keyword to compute in double precision
+; 
+;
+; :History:
+;     Written by FaM, 2011.
+;-
+pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_method, $
+    DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
     
-    for i = 0,  N_ELEMENTS(s) - 2 do begin
-      a = s[i]+1
-      b = s[i+1]
-      
-      if ndims eq 3 then begin
-      
-        if a le b then begin
-          tdata = data[*,*,a:b]
-          tots[*,*,i] = TOTAL(tdata, 3, /NAN)
-          nels[*,*,i] = TOTAL(FINITE(tdata), 3)
-          means[*,*,i] = tots[*,*,i]/nels[*,*,i]
-          mins[*,*,i] = MIN(tdata, MAX=m, DIMENSION=3, /NAN)
-          maxs[*,*,i] = m
-          stddevs[*,*,i] = utils_SIG_ARRAY(tdata, 3)          
-        endif else begin
-          means[*,*,i] =  missing
-          mins[*,*,i] =  missing
-          maxs[*,*,i] =  missing
-          tots[*,*,i] =  missing
-          stddevs[*,*,i] =  missing
-          nels[*,*,i] =  0
-        endelse
-        
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ON_ERROR, 2
+  
+  ; CHeck arguments
+  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /ARG)
+  if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
+  
+  n = n_elements(qms1)
+  siz = SIZE(data)
+  ndims = siz[0]
+  if ndims lt 2 and ndims gt 4 then message, WAVE_Std_Message('data', /DIMARRAY)
+  if ndims eq 2 then begin
+    if N_ELEMENTS(qms1) ne 1 then message, '$DATA and $TIME arrays do not match'
+  endif else if N_ELEMENTS(qms1) ne siz[ndims] then message, '$DATA and $TIME arrays do not match'
+  
+  IF KEYWORD_SET(double) then _data = double(data) else _data = data
+  
+  sor = SORT(qms1)
+  qms1 = qms1[sor]
+  if ndims eq 3 then _data = data[*,*,sor] else data = data[*,*,*,sor]
+  
+  am = CAL_agg_method(AGG_METHOD)
+  
+  ; Automatic aggregation
+  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
+  
+    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
+    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
+    
+    qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
+    qmsend = CEIL(qms1[n-1] / double(qms)) * qms
+    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms
+    
+    regular = TRUE
+    
+  endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
+  
+    if N_ELEMENTS(new_time) lt 2 then MESSAGE, '$NEW_TIME must have at least two elements.'
+    qms2 = qms2[sort(qms2)]
+    
+    regular = check_TimeSerie(qms2)
+    
+  endif else message, 'One of the positionnal keywords must be set.'
+  
+  dataTypeName = Size(_data, /TNAME)
+  _missing = KEYWORD_SET(MISSING)
+  CASE dataTypeName OF
+    'FLOAT': begin
+      if _missing then miss = float(missing) else miss = !VALUES.F_NAN
+      epsilon = (MACHAR()).eps
+    end
+    'DOUBLE': begin
+      if _missing then miss = double(missing) else miss = !VALUES.D_NAN
+    end
+    else: begin
+      if _missing then miss = fix(missing) else miss = -9999
+      epsilon = 0
+    end
+  endcase
+  
+  if FINITE(miss) then pnok = where(ABS(_data-miss) le epsilon, cntnok) $
+  else pnok = where(FINITE(_data) eq 0, cntnok)
+  if cntnok ne 0 then _data[pnok] = miss
+  
+  s = VALUE_LOCATE(qms1, qms2)
+  nnt = N_ELEMENTS(qms2)
+  
+  if ndims eq 3 then agg = REPLICATE(_data[0], siz[1], siz[2], nnt-1) * 0 $
+  else agg = REPLICATE(_data[0], siz[1], siz[2], siz[3],nnt-1) * 0
+  
+  for i = 0,  N_ELEMENTS(s) - 2 do begin
+  
+    a = s[i]+1
+    b = s[i+1]
+    
+    if ndims eq 3 then begin
+      if a le b then begin
+        tp = _data[*,*,a:b]
+        n_y = TOTAL(FINITE(tp), 3)
+        case str_equiv(am) of
+          'NONE': agg[*,*,i] = tp[*,*,a-b+1]
+          'MIN': agg[*,*,i] = min(tp, /NAN, DIMENSION=3)
+          'MAX': agg[*,*,i] = max(tp, /NAN, DIMENSION=3)
+          'MEAN': begin
+            agg[*,*,i] = TOTAL(tp, 3, /NAN, DOUBLE=double)
+            agg[*,*,i] = agg[*,*,i] / n_y
+          end
+          'MEDIAN': agg[*,*,i] = median(tp, DOUBLE=double, dimension = 3)
+          'SUM': agg[*,*,i] = TOTAL(tp, 3, /NAN, DOUBLE=double)
+          'SIGMA': agg[*,*,i] = utils_SIG_ARRAY(tp, 3)
+          'RANGE': agg[*,*,i] = max(tp, /NAN, DIMENSION=3) - min(tp, /NAN, DIMENSION=3)
+          'N_SIG': agg[*,*,i] = n_y
+          'FREQ': Message, 'FREQ: Not yet'
+          'MODE': Message, 'MODE: Not yet'
+        endcase
       endif else begin
-
-        if a le b then begin
-          tdata = data[*,*,*,a:b]
-          tots[*,*,*,i] = TOTAL(tdata, 4, /NAN)
-          nels[*,*,*,i] = TOTAL(FINITE(tdata), 4)
-          means[*,*,*,i] = tots[*,*,*,i]/nels[*,*,*,i]
-          mins[*,*,*,i] = MIN(tdata, MAX=m, DIMENSION=4, /NAN)
-          maxs[*,*,*,i] = m
-          stddevs[*,*,*,i] = utils_SIG_ARRAY(tdata, 4)          
-        endif else begin
-          means[*,*,*,i] =  missing
-          mins[*,*,*,i] =  missing
-          maxs[*,*,*,i] =  missing
-          tots[*,*,*,i] =  missing
-          stddevs[*,*,*,i] =  missing
-          nels[*,*,*,i] =  0
-        endelse
-     
+        if am eq 'N_SIG' then agg[*,*,i] = 0 $
+        else agg[*,*,i] = miss
       endelse
-    endfor
-    
-    qms2 = qms2[1: nnt-1]
-    
-  endelse
+    endif else begin ;DIm4
+      if a le b then begin
+        tp = _data[*,*,*,a:b]
+        n_y = TOTAL(FINITE(tp), 4)
+        case str_equiv(am) of
+          'NONE': agg[*,*,*,i] = tp[*,*,*,a-b+1]
+          'MIN': agg[*,*,*,i] = min(tp, /NAN, DIMENSION=4)
+          'MAX': agg[*,*,*,i] = max(tp, /NAN, DIMENSION=4)
+          'MEAN': begin
+            agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double)
+            agg[*,*,*,i] = agg[*,*,*,i] / n_y
+          end
+          'MEDIAN': agg[*,*,*,i] = median(tp, DOUBLE=double, dimension = 4)
+          'SUM': agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double)
+          'SIGMA': agg[*,*,*,i] = utils_SIG_ARRAY(tp, 4)
+          'RANGE': agg[*,*,*,i] = max(tp, /NAN, DIMENSION=4) - min(tp, /NAN, DIMENSION=4)
+          'N_SIG': agg[*,*,*,i] = n_y
+          'FREQ': Message, 'FREQ: Not yet'
+          'MODE': Message, 'MODE: Not yet'
+        endcase
+      endif else begin
+        if am eq 'N_SIG' then agg[*,*,*,i] = 0 $
+        else agg[*,*,*,i] = miss
+      endelse
+      
+    endelse
+  endfor
 
-  RETURN, {nt: N_ELEMENTS(qms2), $
-           time:qms2, $
-           mean:means, $
-           min:mins, $
-           max:maxs, $
-           tot:tots, $
-           nel:nels,$ 
-           stddev:stddevs}
-
+  agg_time = qms2[1: nnt-1]
+  if WAS_ABSDATE then agg_time = MAKE_ABS_DATE(QMS=agg_time)
+  
 end
 
 

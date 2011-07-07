@@ -65,12 +65,14 @@ PRO w_WRF__Define
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { w_WRF                   ,  $
-            INHERITS w_Grid2D           ,  $
-            INHERITS w_GEO_nc           ,  $
+  struct = { w_WRF                    ,  $
+            INHERITS w_Grid2D         ,  $
+            INHERITS w_GEO_nc         ,  $
             type:               ''    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
             version:            ''    ,  $ ; WRF version
             hstep:         {TIME_STEP},  $ ; Time step of the file
+            ndiagvar:               0L,  $ ; Number of diagnostic variables
+            diagVars:        PTR_NEW(),  $ ; Diagnostic Variables (derived from WRF output)
             dom:                    0L,  $ ; id of the considered nested domain
             west_east:              0L,  $ ; original X dimension (unstaggered)
             south_north:            0L,  $ ; original Y dimension (unstaggered)
@@ -404,7 +406,7 @@ Function w_WRF::Init, FILE       = file     ,  $
   if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select WRF ncdf file to read', /MUST_EXIST)
   if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
   IF NOT self->w_GEO_nc::Init(file = file) THEN RETURN, 0    
-
+ 
   ;****************
   ; Read metadata *
   ;****************    
@@ -495,15 +497,18 @@ Function w_WRF::Init, FILE       = file     ,  $
                   'WRF Polar Stereographic'                             ;name
       break
     end
-    else: begin
-        print, 'Projection currently not supported'
-        stop
-    end
+    else: Message, 'Projection currently not supported.'
+
   endswitch
     
   ; Make the projection
   GIS_make_proj, ret, proj, PARAM=proj_param
   self.tnt_c.proj = proj
+  
+  ;***********************
+  ; Diagnostic variables *
+  ;***********************    
+  self->get_Varlist, /DIAGNOSTIC
     
   ;*********
   ; define *
@@ -545,6 +550,13 @@ pro w_WRF::Cleanup
   
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
+  
+  for i=0, self.ndiagvar -  1 do begin 
+   tvar = (*self.diagVars)[i]
+   PTR_FREE, tvar.dims
+   PTR_FREE, tvar.dimnames   
+  endfor
+  PTR_FREE, self.diagVars
   
 END
 
@@ -637,8 +649,6 @@ end
 ; :Keywords:
 ;   out_id: out, type = long
 ;           the netcdf variable ID (long)
-;   varinfo: out, type = struct
-;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;   description: out, type = string
 ;               If available, the description of the variable
 ;   units: out, type = string
@@ -658,7 +668,6 @@ end
 ;-
 function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                               out_id = out_id, $
-                              varinfo = varinfo , $ ; 
                               units = units, $
                               description = description, $
                               varname = varname , $ ; 
@@ -679,21 +688,226 @@ function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
   
   if ~self->w_NCDF::get_Var_Info(Varid, $
                                  out_id = out_id, $
-                                 varinfo = varinfo , $ ; 
                                  units = units, $
                                  description = description, $
                                  varname = varname , $ ; 
                                  dims = dims, $ ;
                                  dimnames = dimnames) then begin
+     
      ;Post processed variables
-     ; TODO: variable handling in WRF files
-     post = ['PRCP','TK','TC','TH','T2C', 'RH','RH2','TER','SLP','SLP_B','WS10','WD10']              
+     post = (*self.diagVars).name           
      p = where(post eq str_equiv(Varid), cnt)
-     if cnt eq 0 then return, FALSE                                     
-                                 
+     if cnt eq 0 then return, FALSE  
+            
+     dvar = (*self.diagVars)[p[0]]
+     out_id = dvar.name                   
+     varname =  dvar.name                     
+     units = dvar.unit                   
+     description = dvar.description               
+     dims = *dvar.dims 
+     dimnames = *dvar.dimnames                                  
+ 
   endif    
   
   return, TRUE
+  
+end
+
+
+;+
+; :Description:
+;    Get some informations on available variables in the NCDF file. 
+;    Redefined for WRF to print the new "diagnostic" variables 
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    varid: out, type = long
+;           NCDF var indexes
+;    varnames: out, type = string
+;              variables name
+;    varndims: out, type = long
+;              variables number of dimensions
+;    varunits: out, type = string
+;              variables units
+;    vardescriptions: out, type = string
+;                     variables description (or long name)
+;    vartypes: out, type = string
+;              variables type 
+;
+; :Keywords:
+;    PRINTVARS: in, optional
+;               to print the infos in the console
+;               
+; :History:
+;     Written by FaM, 2010.
+;-
+pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars, DIAGNOSTIC = diagnostic, ALL = all
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+    
+  if KEYWORD_SET(DIAGNOSTIC) then begin ; Computed Diagnostic variables 
+  
+    if self.ndiagvar eq 0 then begin    
+      
+      dvars = {name:'',unit:'',ndims:0L,description:'',type:'',dims:PTR_NEW(),dimnames:PTR_NEW()}
+      
+      ;PRCP
+      d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('rainc')
+      if (d1 and d2) then begin
+        var = {name:'PRCP',unit:'mm',ndims:3L,description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;PRCP_STEP
+      d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('rainc')
+      if (d1 and d2) then begin
+        var = {name:'PRCP_STEP',unit:'mm',ndims:3L,description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif else begin
+        d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
+        d2 = self->w_NCDF::get_Var_Info('rainc')
+        if (d1 and d2) then begin
+          var = {name:'PRCP_STEP',unit:'mm',ndims:3L,description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+        endif
+      endelse
+      
+      ;TK and TC
+      d1= self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('P')
+      d3 = self->w_NCDF::get_Var_Info('PB')
+      if (d1 and d2 and d3) then begin
+        var = {name:'TK',unit:'K',ndims:3L,description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'TC',unit:'C',ndims:3L,description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]        
+      endif    
+      
+      ;TH and THETA
+      if (d1) then begin
+        var = {name:'TH',unit:'K',ndims:3L,description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'THETA',unit:'K',ndims:3L,description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]    
+      endif 
+
+      ;T2C
+      d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'T2C',unit:'C',ndims:2L,description:'2 m Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;RH
+      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('P')
+      d3 = self->w_NCDF::get_Var_Info('PB')
+      d4 = self->w_NCDF::get_Var_Info('QVAPOR')
+      if (d1 and d2 and d3 and d4) then begin
+        var = {name:'RH',unit:'%',ndims:3L,description:'Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;RH2
+      d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('Q2')
+      d3 = self->w_NCDF::get_Var_Info('PSFC')
+      if (d1 and d2 and d3) then begin
+        var = {name:'RH2',unit:'%',ndims:2L,description:'2 m Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;TER      
+      if self.type eq 'MET' then d1 = self->w_NCDF::get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims) $
+       else  d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      
+      ;LUCAT      
+      d1 = self->w_NCDF::get_Var_Info('LU_INDEX', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'LUCAT',unit:'',ndims:2L,description:'Model Landuse Category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      
+      ;SLP
+      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('P')
+      d3 = self->w_NCDF::get_Var_Info('PB')
+      d4 = self->w_NCDF::get_Var_Info('QVAPOR')      
+      d5 = self->w_NCDF::get_Var_Info('PH')
+      d6 = self->w_NCDF::get_Var_Info('PHB')      
+      if (d1 and d2 and d3 and d4 and d5 and d6) then begin
+        var = {name:'SLP',unit:'hPa',ndims:2L,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+      endif
+      
+      ;SLP_B
+      d1 = self->w_NCDF::get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('T2')
+      if self.type eq 'MET' then d3 = self->w_NCDF::get_Var_Info('HGT_M') $
+       else  d3 = self->w_NCDF::get_Var_Info('HGT')
+      if (d1 and d2 and d3) then begin
+        var = {name:'SLP_B',unit:'hPa',ndims:2L,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif      
+      
+      ;WS and WD
+      d1 = self->w_NCDF::get_Var_Info('U10', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('V10') 
+      if (d1 and d2) then begin
+        var = {name:'WS10',unit:'m.s-1',ndims:2L,description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'WD10',unit:'degrees',ndims:2L,description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]        
+      endif      
+      
+      dvars = dvars[1:*]   
+      self.ndiagvar = N_ELEMENTS(dvars)
+      self.diagVars = PTR_NEW(dvars)      
+      
+    endif else dvars = *self.diagVars
+    
+    varid = LONARR(self.ndiagvar) - 1
+    varnames = dvars.name
+    varndims = dvars.ndims
+    varunits = dvars.unit
+    vardescriptions = dvars.description
+    vartypes = dvars.type
+    
+    if KEYWORD_SET(PRINTVARS) then print, 'WAVE diagnostic variables:'
+    if KEYWORD_SET(PRINTVARS) then for i = 0, self.ndiagvar-1 DO print, 'Id: ' + str_equiv(varid[i]) + $
+       '. Name: ' + varnames[i] + '. Unit: ' + varunits[i] + '. Ndims: ' + str_equiv(varndims[i])+ $
+         '. Type: ' + VARTYPES[i] + '. Description: ' + str_equiv(vardescriptions[i])
+    
+  endif else if KEYWORD_SET(ALL) then begin
+  
+    self->w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
+    self->get_Varlist, dvarid, dvarnames, dvarndims, dvarunits, dvardescriptions, dvartypes, /DIAGNOSTIC, PRINTVARS = printvars
+    varid = [varid,dvarid]
+    varnames = [varnames,dvarnames]
+    varndims = [varndims,dvarndims]
+    varunits = [varunits,dvarunits]
+    vardescriptions = [vardescriptions,dvardescriptions]
+    vartypes = [vartypes,dvartypes]
+    
+  endif else self->w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
+  
   
 end
 
@@ -738,8 +952,6 @@ end
 ;            the easting difference between the (x,y) point and the nearest grid point 
 ;    dist_y: out, optional
 ;            the northing difference between the (x,y) point and the nearest grid point 
-;    varinfo: out, type = struct
-;             structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;    units: out, type = string
 ;           If available, the units of the variable
 ;    description: out, type = string
@@ -765,7 +977,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
                               POINT_LAT=point_lat, $
                               DIST_X = dist_x, $
                               DIST_Y = dist_y, $
-                              VARINFO=varinfo , $ ; 
                               UNITS=units, $
                               DESCRIPTION=description, $
                               VARNAME=varname , $ ; 
@@ -777,6 +988,8 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   COMPILE_OPT IDL2
   
   ON_ERROR, 2
+  
+  _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
   
   if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
   
@@ -806,7 +1019,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     if ~self->w_NCDF::get_Var_Info('RAINC') then Message, 'RAINC variable not found in file.'
     
     value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -817,12 +1029,31 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     varname = str_equiv(Varid)
   endif
     
+  if str_equiv(Varid) eq 'PRCP_STEP' then begin
+  
+    if ~self->w_NCDF::get_Var_Info('RAINNC') then Message, 'RAINNC variable not found in file.'
+      
+    if ~self->w_NCDF::get_Var_Info('RAINC') then Message, 'RAINC variable not found in file.'
+    
+    value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+                          units = units, $
+                          description = description, $
+                          varname = varname , $ ; 
+                          dims = dims, $ ;
+                          dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      
+    description = 'Precipitation'
+    units = 'mm' 
+    value = utils_ACC_TO_STEP(value)
+    varname = str_equiv(Varid)
+    _acc_to_step = FALSE
+  endif
+    
   if str_equiv(Varid) eq 'T2C' then begin
   
     if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
         
     value = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -841,7 +1072,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'    
     
     T = self->w_GEO_nc::get_TimeSerie('T', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -870,7 +1100,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     if ~self->w_NCDF::get_Var_Info('Q2') then Message, 'Q2 variable not found in file.'
     
     T2 = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -891,7 +1120,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if str_equiv(Varid) eq 'TER' then begin
     
     if self.type eq 'MET' then return, self->w_GEO_nc::get_TimeSerie('HGT_M', point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -900,7 +1128,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
                                          
                           
     value = self->w_GEO_nc::get_TimeSerie('HGT', point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -915,7 +1142,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
             
     u10 = self->w_GEO_nc::get_TimeSerie('U10', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -937,7 +1163,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
             
     u10 = self->w_GEO_nc::get_TimeSerie('U10', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -961,7 +1186,6 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     p = where(post eq str_equiv(Varid), cnt)
     if cnt eq 0 then return, self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
                                                            K = K , $
-                                                           varinfo = varinfo , $ ;
                                                            units = units, $
                                                            description = description, $
                                                            varname = varname , $ ;
@@ -972,7 +1196,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
       
   endif
   
-  if KEYWORD_SET(ACC_TO_STEP) then begin
+  if _ACC_TO_STEP then begin
    value = utils_ACC_TO_STEP(value)
    description += ' (de-accumulated)' 
   endif 
@@ -1042,7 +1266,6 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
                          point_j = wrf_ind_j, $
                          point_lon = wrf_lon, $
                          point_lat = wrf_lat, $
-                         varinfo = varinfo , $ ; 
                          units = units, $
                          description = description, $
                          varname = varname , $ ; 
@@ -1074,17 +1297,19 @@ end
 ;    
 ;    Additionaly to the "standard" variables available in the WRF file,
 ;    a few diagnostic variables are computed automatically if requested.
-;    Here is a list of the diagnostic variables (more will be available 
-;    soon)::
+;    Here is a list of the diagnostic variables (only if requested WRF 
+;    output variables are present. Check the available variables with
+;    `w_WRF::get_Varlist, /DIAGNOSTIC, /PRINT`) ::
 ;              
 ;             prcp: total precipitation (accumulated, unless `/ACC_TO_STEP` is set)
-;             rh2: 2m Relative Humidity [%]
+;             prcp_step: total precipitation (step-wise)
 ;             rh: Relative Humidity [%]
+;             rh2: 2m Relative Humidity [%]
 ;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. See `utils_wrf_slp` 
 ;                  (If the vertical dimension is not present in the file, slp_b is computed automatically instead)
 ;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see `MET_barometric` for more info)
-;             ter: Model terrain height [m] (2-dimensional)
-;             lucat: Land cover category  (2-dimensional)
+;             ter: Model terrain height [m] (static: no time dimension)
+;             lucat: Model landuse category [] (static: no time dimension)
 ;             tc: Temperature [C]
 ;             t2c: 2m Temperature [C]
 ;             th/theta: Potential temperature [K]
@@ -1113,10 +1338,6 @@ end
 ;              if set, the variable will be automatically unstaggered
 ;   acc_to_step: in, optional
 ;                if set, the variable is returned "step-wize" (as a difference to previous step) and not accumulated
-;   varinfo: out, type = struct
-;            structure that contains information about the original variable in 
-;            the NCDF file. This has the form:: 
-;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
 ;   description: out, type = string
 ;                If available, the description of the variable
 ;   units: out, type = string
@@ -1141,7 +1362,6 @@ function w_WRF::get_Var, Varid, $
                             T1=t1, $
                             UNSTAGGER=unstagger , $
                             ACC_TO_STEP=acc_to_step , $
-                            VARINFO=varinfo , $ 
                             UNITS=units, $
                             DESCRIPTION=description, $
                             VARNAME=varname , $ 
@@ -1159,81 +1379,78 @@ function w_WRF::get_Var, Varid, $
   undefine, count, offset
   value = -1
   
-  ;TODO: add compatibility to MET_EM files...
-  
-  ; Check for the known variable names 
-  if str_equiv(Varid) eq 'PRCP' then begin
-  
-    if ~self->w_NCDF::get_Var_Info('RAINNC') then Message, 'RAINNC variable not found in file.'
+  ;Check if the variable is available
+  if ~self->get_Var_Info(Varid, out_id = vid, $
+      units = units, $
+      description = description, $
+      varname = varname , $
+      dims = dims, $
+      dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
       
-    if ~self->w_NCDF::get_Var_Info('RAINC') then Message, 'RAINC variable not found in file.'
-    
-    value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
-      units = units, $
-      description = description, $
-      varname = varname , $
-      dims = dims, $
-      dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
-      
-    description = 'Accumulated total precipitation'
-    varname = str_equiv(Varid)
-  endif
+  _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
   
-  if str_equiv(Varid) eq 'TK' or str_equiv(Varid) eq 'TC' then begin
+  ; Check for the known diagnostic variable names
+  case str_equiv(vid) of
   
-    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('P') then Message, 'P variable not found in file.'
-    if ~self->w_NCDF::get_Var_Info('PB') then Message, 'PB variable not found in file.'
-        
-    T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
-      units = units, $
-      description = description, $
-      varname = varname , $
-      dims = dims, $
-      dimnames = dimnames)
-    P = self->get_Var('P', T0=t0, T1=t1)
-    PB = self->get_Var('PB', T0=t0, T1=t1)
+    'PRCP': begin
+      value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1, dims=dims, dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+    end
     
-    T = T + 300.
-    P = P + PB
-    value = utils_wrf_tk(P,T)    ; calculate TK
+    'PRCP_STEP': begin
+      d1 = self->w_NCDF::get_Var_Info('RAINNC_step')
+      d2 = self->w_NCDF::get_Var_Info('RAINC_step')
+      if d1 and d2 then begin
+        value = self->get_Var('RAINNC_step', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, $
+          dimnames = dimnames) + self->get_Var('RAINC_step', t0 = t0, t1 = t1)
+        _acc_to_step = FALSE
+      endif else begin
+        d1 = self->w_NCDF::get_Var_Info('RAINNC')
+        d2 = self->w_NCDF::get_Var_Info('RAINC')
+        if d1 and d2 then begin
+          value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
+            dims = dims, $
+            dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+          _acc_to_step = TRUE
+        endif else Message, 'Precipitation variables not available'
+      endelse
+    end
     
-    description = 'Temperature'
-    units = 'K'
+    'TK': begin
+      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      P = self->get_Var('P', T0=t0, T1=t1)
+      PB = self->get_Var('PB', T0=t0, T1=t1)      
+      T = T + 300.
+      P = P + PB
+      value = utils_wrf_tk(P,T)    ; calculate TK         
+    end
     
-    if str_equiv(Varid) eq 'TC' then begin
-         value = value - 273.15
-         units = 'C'
-    endif
-    varname = str_equiv(Varid)
-  endif
-  
-  if str_equiv(Varid) eq 'TH' or str_equiv(Varid) eq 'THETA' then begin
+    'TC': begin
+      value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) - 273.15      
+    end
     
-    ; Potential Temperature is model output T + 300K    
-    if ~self->w_NCDF::get_Var_Info('T') then Message, 'T variable not found in file.'
-        
-    value = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
-      units = units, $
-      description = description, $
-      varname = varname , $
-      dims = dims, $
-      dimnames = dimnames) + 300.
+;    'TH' or 'THETA': begin
+;      value = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+;      units = units, $
+;      description = description, $
+;      varname = varname , $
+;      dims = dims, $
+;      dimnames = dimnames) + 300.    
+;    end
     
-    description = 'Potential Temperature (theta)'
-    units = 'K'
-    varname = str_equiv(Varid)
-  endif
-  
+    else: begin
+    end
+  endcase
+
   if str_equiv(Varid) eq 'T2C' then begin
   
     if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
         
     value = self->get_Var('T2', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1252,7 +1469,6 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('QVAPOR') then Message, 'QVAPOR variable not found in file.'    
     
     T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1280,7 +1496,6 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('Q2') then Message, 'Q2 variable not found in file.'
     
     T2 = self->get_Var('T2', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1300,7 +1515,6 @@ function w_WRF::get_Var, Varid, $
   if str_equiv(Varid) eq 'TER' then begin
     
     if self.type eq 'MET' then return, self->get_Var('HGT_M', time, nt, t0 = self.t0, t1 = self.t0,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1308,7 +1522,6 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames)
         
     value = self->get_Var('HGT', time, nt, t0 = self.t0, t1 = self.t0,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1318,11 +1531,10 @@ function w_WRF::get_Var, Varid, $
     dimnames = [dimnames[0],dimnames[1]]   
     varname = str_equiv(Varid)
   endif
-  
+    
   if str_equiv(Varid) eq 'LUCAT' then begin
             
     value = self->get_Var('LU_INDEX', time, nt, t0 = self.t0, t1 = self.t0,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1330,9 +1542,9 @@ function w_WRF::get_Var, Varid, $
       dimnames = dimnames)
                                  
     dimnames = [dimnames[0],dimnames[1]]   
-    varname = str_equiv(Varid)
+    varname = str_equiv(Varid)    
   endif
-  
+    
   if str_equiv(Varid) eq 'SLP' then begin
     
     OK = TRUE ;check if we can use the complex version 
@@ -1346,7 +1558,6 @@ function w_WRF::get_Var, Varid, $
     if OK then begin
     
       T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1373,15 +1584,14 @@ function w_WRF::get_Var, Varid, $
       units = 'hPa'
       if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]  
       
-    endif else return = self->get_Var('slp_b', time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
+    endif else value = self->get_Var('slp_b', time, nt, t0 = t0, t1 = t1,  $
       units = units, $
       description = description, $
       varname = varname , $
       dims = dims, $
-      dimnames = dimnames)
-    
-       
+      dimnames = dimnames)   
+      
+      varname = str_equiv(Varid)
   endif
   
   if str_equiv(Varid) eq 'SLP_B' then begin
@@ -1390,8 +1600,7 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('T2') then Message, 'T2 variable not found in file.'
     if ~self->get_Var_Info('TER') then Message, 'TER variable not found in file.'
             
-    ps = self->get_Var('PSFC', times, nt, T0=t0, T1=t1,  $
-      varinfo = varinfo , $
+    ps = self->get_Var('PSFC', time, nt, T0=t0, T1=t1,  $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1403,7 +1612,7 @@ function w_WRF::get_Var, Varid, $
     mdims = SIZE(t2, /DIMENSIONS)
     value = FLTARR(mdims[0],mdims[1],nt)
     for k=0,Nt-1 do value[*,*,k] = MET_barometric(ps[*,*,k], zs, T2[*,*,k], 0.)
-     
+    
     description = 'Sea level pressure'
     units = 'hPa'
     if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[2]] 
@@ -1416,7 +1625,6 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
             
     u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1439,7 +1647,6 @@ function w_WRF::get_Var, Varid, $
     if ~self->w_NCDF::get_Var_Info('V10') then Message, 'V10 variable not found in file.'
             
     u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1457,11 +1664,8 @@ function w_WRF::get_Var, Varid, $
   endif
   
   if N_ELEMENTS(value) eq 1 and value[0] eq -1 then begin ;This is probably a standard variable
-  
-    if ~self->w_NCDF::get_Var_Info(Varid, out_id = vid) then Message, '$Varid is not a correct variable ID'
-      
+       
     value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1,  $
-      varinfo = varinfo , $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1484,7 +1688,10 @@ function w_WRF::get_Var, Varid, $
     value = utils_wrf_unstagger(value, found)        
   endif
   
-  if KEYWORD_SET(ACC_TO_STEP) then begin
+  if _acc_to_step then begin
+   if KEYWORD_SET(t0) or KEYWORD_SET(t1) then $
+    message, 'Warning. You are using /ACC_TO_STEP with T0 -> T1 intervals, hope you know what you are doing', /INFORMATIONAL
+    if nt eq 1 then Message, 'You asked to de-accumulated only one time-step. Not possible.'
    value = utils_ACC_TO_STEP(value)
    description += ' (de-accumulated)' 
   endif 

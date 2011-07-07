@@ -31,7 +31,6 @@ FUNCTION w_QuickPlot_Aspect, aspectRatio, MARGIN=margin, WindowAspect=wAspectRat
     xend = 1.0 - margin
     yend = 0.5 + (0.5 - margin) * (aspectRatio / wAspectRatio)
   ENDIF ELSE BEGIN
-    print, 'Houston, the image is smaller in X then the Window ? How did this happen?'
     xstart = 0.5 - (0.5 - margin) * (wAspectRatio / aspectRatio)
     ystart = margin
     xend = 0.5 + (0.5 - margin) * (wAspectRatio / aspectRatio)
@@ -516,7 +515,7 @@ pro w_quickplot_delete_all
 
 end
 
-pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
+pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
                 CbarTitle = CbarTitle, $ ; The title of the color bar
                 CoordX=coordX, $ ; If available, the X coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
                 CoordY=coordY, $ ; If available, the Y coordinates of each pixel into image (2D). If set, the cursor position is indicated below the plot
@@ -541,6 +540,10 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   if ~KEYWORD_SET(daxis) then daxis = [0,1]
   
   ; Get dimensions of data.  
+  image = data
+  pnok = WHERE(FINITE(image) ne 1, cnt)
+  if cnt ne 0 then image[pnok] = -9999
+
   s = SIZE(image)
   ndim = s[0]
   truecolor = 0
@@ -556,7 +559,7 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   if N_Elements(xrange) eq 0 then xrange = [0,xsize]
   if N_Elements(yrange) eq 0 then yrange = [0,ysize]
   if N_Elements(wysize) eq 0 then wysize = 500
-  wxsize = wysize / imageAspect < 800  ;for the color bar
+  wxsize = wysize / (imageAspect*0.9) < 800  ;for the color bar
   if N_Elements(xtitle) eq 0 then xtitle = ''
   if N_Elements(ytitle) eq 0 then ytitle = ''
   if N_Elements(Title) eq 0 then Title=''
@@ -596,7 +599,7 @@ pro w_QuickPlot, image, $ ; The image to plot (2D, 3D, or 4D)
   ; my w_QuickPlot_Aspect function. Then use my FSC_Normalize function to create scaling factors for the image.
   ; Compute optimal x and y margins
   
-  relBar = 20D / wxsize
+  relBar = 15D / wxsize
   relmarg = 40D / wxsize
   relImx = DOUBLE(xsize) / wxsize
   relImy = DOUBLE(ysize) / wysize

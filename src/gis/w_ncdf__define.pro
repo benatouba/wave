@@ -559,10 +559,6 @@ end
 ;            An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
 ;    STRIDE: in, optional, type = integer vector
 ;            An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-;   varinfo: out, type = struct
-;            structure that contains information about the original variable in 
-;            the NCDF file. This has the form:: 
-;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
 ;   description: out, type = string
 ;                If available, the description of the variable
 ;   units: out, type = string
@@ -584,7 +580,6 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                         COUNT=COUNT, $ ; An optional vector containing the counts to be used in reading Value. COUNT is a 1-based vector with an element for each dimension of the data to be written.The default matches the size of the variable so that all data is written out. 
                         OFFSET=OFFSET, $ ; An optional vector containing the starting position for the read. The default start position is [0, 0, ...]. 
                         STRIDE=STRIDE, $ ; An optional vector containing the strides, or sampling intervals, between accessed values of the netCDF variable. The default stride vector is that for a contiguous read, [1, 1, ...]. 
-                        varinfo = varinfo , $ ; 
                         units = units, $
                         description = description, $
                         varname = varname , $ ; 
@@ -599,7 +594,6 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   
   if ~self->get_Var_Info (Varid, $
                             out_id = vid, $
-                            varinfo = varinfo , $  
                             units = units, $
                             description = description, $
                             varname = varname , $ 
@@ -634,8 +628,6 @@ end
 ; :Keywords:
 ;   out_id: out, type = long
 ;           the netcdf variable ID (long)
-;   varinfo: out, type = struct
-;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;   description: out, type = string
 ;               If available, the description of the variable
 ;   units: out, type = string
@@ -655,7 +647,6 @@ end
 ;-
 function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                             out_id = out_id, $
-                            varinfo = varinfo , $ ; 
                             units = units, $
                             description = description, $
                             varname = varname , $ ; 

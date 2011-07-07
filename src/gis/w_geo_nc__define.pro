@@ -360,10 +360,6 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
-;   varinfo: out, type = struct
-;            structure that contains information about the original variable in 
-;            the NCDF file. This has the form:: 
-;              { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS)}
 ;   description: out, type = string
 ;                If available, the description of the variable
 ;   units: out, type = string
@@ -386,7 +382,6 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                           nt,  $
                           t0 = t0, $
                           t1 = t1, $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -406,7 +401,6 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   
   if ~self->w_NCDF::get_Var_Info (Varid, $
     out_id = vid, $
-    varinfo = varinfo , $
     units = units, $
     description = description, $
     varname = varname , $
@@ -466,7 +460,6 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
     
   value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset, $
-                                     varinfo = varinfo , $
                                      units = units, $
                                      description = description, $
                                      varname = varname , $
@@ -505,8 +498,6 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
-;   varinfo: out, type = struct
-;            structure that contains information about the variable. This has the form: { NAME:"", DATATYPE:"", NDIMS:0L, NATTS:0L, DIM:LONARR(NDIMS) }
 ;   description: out, type = string
 ;               If available, the description of the variable
 ;   units: out, type = string
@@ -531,7 +522,6 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
                           t0 = t0, $
                           t1 = t1, $
                           k = k , $
-                          varinfo = varinfo , $ ; 
                           units = units, $
                           description = description, $
                           varname = varname , $ ; 
@@ -550,7 +540,6 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
 
   if ~self->w_NCDF::get_Var_Info (Varid, $
     out_id = vid, $
-    varinfo = varinfo , $
     units = units, $
     description = description, $
     varname = varname , $
