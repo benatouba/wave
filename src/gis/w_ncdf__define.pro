@@ -598,7 +598,7 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                             description = description, $
                             varname = varname , $ 
                             dims = dims, $ 
-                            dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
+                            dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
 
   
   NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
@@ -607,9 +607,11 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
     pr = where(count le 1, cnt)
     if cnt eq N_ELEMENTS(dimnames) then dimnames = '' else if cnt ne 0 then utils_array_remove, pr, dimnames
     dims = size(Value, /DIMENSIONS)
+    pr = where(dims le 1, cnt)
+    if cnt eq N_ELEMENTS(dims) then dims = 1 else if cnt ne 0 then utils_array_remove, pr, dims
   endif
   
-  return, value
+  return, reform(value)
   
 end
 
@@ -925,7 +927,7 @@ pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'
+  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
 
   var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
   

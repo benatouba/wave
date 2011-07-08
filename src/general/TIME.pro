@@ -1794,6 +1794,7 @@ end
 ;    the mean value from 13:01 to 14:00 !
 ;    
 ;    Available statistics are inspired from the TNT CAL library::
+;       'NONE'
 ;       'RANGE'
 ;       'MASK'
 ;       'MIN'

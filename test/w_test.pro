@@ -679,13 +679,20 @@ pro TEST_TS_MEAN
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
+  
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 0)]   
   st = TS_MEAN_STATISTICS(data, time, /HOUR)
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
-  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1
+    TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6), QMS_TIME(year = 2009, day = 1, hour = 6, minute = 33)]   
@@ -695,6 +702,9 @@ pro TEST_TS_MEAN
   if st.mean[1] ne 4 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 6) then error += 1 
   if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
  
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
@@ -704,6 +714,9 @@ pro TEST_TS_MEAN
   if st.mean[1] ne 4 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 1, hour = 7) then error += 1 
   if st.time[1] ne QMS_TIME(year = 2009, day = 1, hour = 8) then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
   
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
@@ -711,6 +724,9 @@ pro TEST_TS_MEAN
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', NEW_TIME=[QMS_TIME(year = 2009, day = 1), QMS_TIME(year = 2009, day = 2)]
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
 
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
@@ -718,13 +734,19 @@ pro TEST_TS_MEAN
   if st.nt ne 1 then error += 1 
   if st.mean[0] ne 3.5 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 2) then error += 1 
-
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /DAY
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
+  
   data = [3.,4.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 7, minute = 33)]   
   st = TS_MEAN_STATISTICS(data, time, NEW_TIME=[QMS_TIME(year = 2009, day = 2), QMS_TIME(year = 2009, day = 3)])
   if st.nt ne 1 then error += 1 
   if FINITE(st.mean[0]) ne 0 then error += 1 
   if st.time[0] ne QMS_TIME(year = 2009, day = 3) then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', NEW_TIME=[QMS_TIME(year = 2009, day = 2), QMS_TIME(year = 2009, day = 3)]
+  if FINITE(agg) ne 0 then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
 
   data = [3.,4.,5.]
   time = [QMS_TIME(year = 2009, day = 1, hour = 6, minute = 32), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 33), QMS_TIME(year = 2009, day = 1, hour = 8, minute = 59)]   
@@ -732,18 +754,34 @@ pro TEST_TS_MEAN
   if st.nt ne 3 then error += 1 
   if TOTAL(FINITE(st.mean) - [1,0,1]) ne 0 then error += 1 
   if TOTAL(ABS(st.mean - [3.,0,4.5]), /NAN) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(FINITE(agg) - [1,0,1]) then error += 1 
+  if TOTAL(ABS(st.time - agg_time)) ne 0 then error += 1 
   
   data = [1.,1.,1.,1.,1.,1.,2.,3.,3.,1.,1.,2.]
   time =  MAKE_TIME_SERIE(QMS_TIME(year = 2009, day = 1, hour = 6, minute = 10), NSTEPS=12, TIMESTEP=MAKE_TIME_STEP(MINUTE=10))
   st = TS_MEAN_STATISTICS(data, time, /HOUR)
   if st.nt ne 2 then error += 1 
-  if st.mean[0] ne 1. then error += 1 
+  if st.mean[0] ne 1. then error += 1  
   if st.mean[1] ne 2. then error += 1 
   if st.stddev[1] ne STDDEV([2.,3.,3.,1.,1.,2.]) then error += 1 
   if st.max[1] ne 3. then error += 1 
   if st.min[1] ne 1. then error += 1 
   if st.nel[1] ne 6. then error += 1 
   if st.tot[1]/st.nel[1]  ne st.mean[1] then error += 1 
+ 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'MEAN', /HOUR
+  if TOTAL(ABS(st.mean - agg)) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'SIGMA', /HOUR
+  if TOTAL(ABS(st.stddev - agg)) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'max', /HOUR
+  if TOTAL(ABS(st.max - agg)) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'min', /HOUR
+  if TOTAL(ABS(st.min - agg)) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'N_SIG', /HOUR
+  if TOTAL(ABS(st.nel - agg)) ne 0 then error += 1 
+  TS_AGG, data, time, agg, agg_time, AGG_METHOD = 'SUM', /HOUR
+  if TOTAL(ABS(st.tot - agg)) ne 0 then error += 1     
   
   if error ne 0 then message, '% TEST_TS_MEAN NOT passed', /CONTINUE else print, 'TEST_TS_MEAN passed'
   
@@ -2421,26 +2459,32 @@ pro TEST_3D_STATS
     t2 = d1->get_Var('T2', time)    
     t2c = d1c->get_Var('T2', timec) 
     
-    mt2 = TS_GRID_STATISTICS(t2, time, DAY = 1)
-    if mt2.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
-    if mt2.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
-    if mt2.nt ne 2 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='N_SIG'
+    if agg_time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if agg_time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
+    if N_ELEMENTS(agg_time) ne 2 then error += 1
     
-    if min(mt2.nel[*,*,1]) ne 8 then error += 1
-    if max(mt2.nel[*,*,1]) ne 8 then error += 1
-    if min(mt2.nel[*,*,0]) ne 5 then error += 1
-    if max(mt2.nel[*,*,0]) ne 5 then error += 1
-    
+    if min(agg[*,*,1]) ne 8 then error += 1
+    if max(agg[*,*,1]) ne 8 then error += 1
+    if min(agg[*,*,0]) ne 5 then error += 1
+    if max(agg[*,*,0]) ne 5 then error += 1
+        
     mt2ref = utils_AVERAGE(t2c[*,*,1:*], 3)
     mt2ref2 = TOTAL(t2c[*,*,1:*], 3) / (N_ELEMENTS(timec)-1)    
-    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref)) ne 0 then error += 1
-    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref2)) ne 0 then error += 1
+    
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='MEAN'
+    if TOTAL(ABS(agg[*,*,1]-mt2ref)) ne 0 then error += 1
+    if TOTAL(ABS(agg[*,*,1]-mt2ref2)) ne 0 then error += 1
     if TOTAL(ABS(mt2ref-mt2ref2)) ne 0 then error += 1
     
-    if TOTAL(ABS(mt2.tot[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.max[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.min[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.stddev[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='SUM'
+    if TOTAL(ABS(agg[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='MAX'
+    if TOTAL(ABS(agg[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='min'
+    if TOTAL(ABS(agg[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'
+    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
     ss = size(t2c)
     
     ; Dom3    
@@ -2449,59 +2493,69 @@ pro TEST_3D_STATS
     t2 = d3->get_Var('T2', time)    
     t2c = d3c->get_Var('T2', timec) 
     
-    mt2 = TS_GRID_STATISTICS(t2, time, DAY = 1)
-    if mt2.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
-    if mt2.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
-    if mt2.nt ne 2 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='N_SIG'
+    if agg_time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if agg_time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
+    if N_ELEMENTS(agg_time) ne 2 then error += 1
     
-    if min(mt2.nel[*,*,1]) ne 24 then error += 1
-    if max(mt2.nel[*,*,1]) ne 24 then error += 1
-    if min(mt2.nel[*,*,0]) ne 13 then error += 1
-    if max(mt2.nel[*,*,0]) ne 13 then error += 1
+    if min(agg[*,*,1]) ne 24 then error += 1
+    if max(agg[*,*,1]) ne 24 then error += 1
+    if min(agg[*,*,0]) ne 13 then error += 1
+    if max(agg[*,*,0]) ne 13 then error += 1
     
     mt2ref = utils_AVERAGE(t2c[*,*,1:*], 3)
-    mt2ref2 = TOTAL(t2c[*,*,1:*], 3) / (N_ELEMENTS(timec)-1)    
-    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref)) ne 0 then error += 1
-    if TOTAL(ABS(mt2.mean[*,*,1]-mt2ref2)) ne 0 then error += 1
+    mt2ref2 = TOTAL(t2c[*,*,1:*], 3) / (N_ELEMENTS(timec)-1)  
+    
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1      
+    if TOTAL(ABS(agg[*,*,1]-mt2ref)) ne 0 then error += 1
+    if TOTAL(ABS(agg[*,*,1]-mt2ref2)) ne 0 then error += 1
     if TOTAL(ABS(mt2ref-mt2ref2)) ne 0 then error += 1
     
-    if TOTAL(ABS(mt2.tot[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.max[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.min[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    if TOTAL(ABS(mt2.stddev[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sum'       
+    if TOTAL(ABS(agg[*,*,1]-TOTAL(t2c[*,*,1:*], 3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='max'       
+    if TOTAL(ABS(agg[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='min'       
+    if TOTAL(ABS(agg[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
+    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'       
+    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
     
     ; 3D    
     tt = d1->get_Var('TSLB', time)    
     ttc = d1c->get_Var('TSLB', timec)   
     
-    mtt = TS_GRID_STATISTICS(tt, time, DAY = 1)
-    if mtt.time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
-    if mtt.time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
-    if mtt.nt ne 2 then error += 1
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='N_SIG'     
+    if agg_time[0] ne QMS_TIME(year = 2009, month = 09, day = 13) then error += 1
+    if agg_time[1] ne QMS_TIME(year = 2009, month = 09, day = 14) then error += 1
     
-    snel = SIZE(mtt.nel)
+    snel = SIZE(agg)
     if snel[0] ne 4 then error += 1
     if snel[4] ne 2 then error += 1
     if snel[3] ne 4 then error += 1
     if snel[1] ne ss[1] then error += 1
     if snel[2] ne ss[2] then error += 1
     
-    if min(mtt.nel[*,*,*,1]) ne 8 then error += 1
-    if max(mtt.nel[*,*,*,1]) ne 8 then error += 1
-    if min(mtt.nel[*,*,*,0]) ne 5 then error += 1
-    if max(mtt.nel[*,*,*,0]) ne 5 then error += 1
+    if min(agg[*,*,*,1]) ne 8 then error += 1
+    if max(agg[*,*,*,1]) ne 8 then error += 1
+    if min(agg[*,*,*,0]) ne 5 then error += 1
+    if max(agg[*,*,*,0]) ne 5 then error += 1
     
     mttref = utils_AVERAGE(ttc[*,*,*,1:*], 4)
     mttref2 = utils_AVERAGE(reform(ttc[*,*,0,1:*]), 3)
     
-    if TOTAL(ABS(mtt.mean[*,*,*,1]-mttref)) ne 0 then error += 1
-    if TOTAL(ABS(mtt.mean[*,*,0,1]-mttref2)) ne 0 then error += 1
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='mean'         
+    if TOTAL(ABS(agg[*,*,*,1]-mttref)) ne 0 then error += 1
+    if TOTAL(ABS(agg[*,*,0,1]-mttref2)) ne 0 then error += 1
 
     
-    if TOTAL(ABS(mtt.tot[*,*,*,1]-TOTAL(ttc[*,*,*,1:*], 4))) ne 0 then error += 1
-    if TOTAL(ABS(mtt.max[*,*,*,1]-max(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
-    if TOTAL(ABS(mtt.min[*,*,*,1]-min(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
-    if TOTAL(ABS(mtt.stddev[*,*,*,1]-utils_SIG_ARRAY(ttc[*,*,*,1:*], 4))) ne 0 then error += 1  
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='sum'         
+    if TOTAL(ABS(agg[*,*,*,1]-TOTAL(ttc[*,*,*,1:*], 4))) ne 0 then error += 1
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='max'         
+    if TOTAL(ABS(agg[*,*,*,1]-max(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='min'         
+    if TOTAL(ABS(agg[*,*,*,1]-min(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
+    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'         
+    if TOTAL(ABS(agg[*,*,*,1]-utils_SIG_ARRAY(ttc[*,*,*,1:*], 4))) ne 0 then error += 1  
         
     OBJ_DESTROY,  d1
     OBJ_DESTROY,  d1c
@@ -2904,6 +2958,30 @@ pro TEST_WRF_GETVAR
     ; Test 3Hourly product
     ;-------------------------    
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    
+    
+    ;PRCP
+    wrf->get_time, time, nt
+    
+    rainnc_ref = wrf->w_NCDF::get_var('RAINNC')
+    rainc_ref = wrf->w_NCDF::get_var('RAINC')
+    
+    tot_ref = rainc_ref + rainnc_ref
+    step_ref = utils_acc_to_step(tot_ref)
+    
+    mytot = wrf->get_var('PRCP')
+    if TOTAL(ABS(tot_ref-mytot)) ne 0 then error += 1    
+    mystep = wrf->get_var('PRCP_STEP')
+    if TOTAL(ABS(step_ref-mystep)) ne 0 then error += 1
+    
+    mytot = wrf->get_var('PRCP', t1 = time[0])
+    if TOTAL(ABS(mytot)) ne 0 then error += 1    
+    mytot = wrf->get_var('PRCP', t0 = time[8], t1 = time[10])
+    if TOTAL(ABS(tot_ref[*,*,8:10]-mytot)) ne 0 then error += 1  
+    !QUIET = 1  
+    mystep = wrf->get_var('PRCP_STEP', t0 = time[8], t1 = time[10])
+    !QUIET = 0  
+    if TOTAL(ABS(step_ref[*,*,9:10]-mystep[*,*,1:*])) ne 0 then error += 1    
     
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     tk_wrf = wrf->get_Var('tk', T0 = t0, T1 = t0)

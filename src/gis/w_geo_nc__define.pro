@@ -405,7 +405,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
     description = description, $
     varname = varname , $
     dims = dims, $
-    dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
+    dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
     
   ndims = N_ELEMENTS(dims)
   count = LONARR(ndims) - 1
@@ -538,11 +538,7 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
   undefine, count, offset
   value = -1
 
-  if ~self->w_NCDF::get_Var_Info (Varid, $
-    out_id = vid, $
-    units = units, $
-    description = description, $
-    varname = varname , $
+  if ~self->w_NCDF::get_Var_Info (Varid, out_id = vid, $
     dims = dims, $
     dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
   
@@ -631,9 +627,14 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
   pnok = where(count lt 0, cnt)
   if cnt ne 0 then for r=0, cnt-1 do count[pnok[r]] = dims[pnok[r]]
     
-  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset)
+  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset, $
+    units = units, $
+    description = description, $
+    varname = varname , $
+    dims = dims, $
+    dimnames = dimnames)
   
-  return, reform(value)
+  return, value
   
 end
 
@@ -779,7 +780,7 @@ pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WI
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
+  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
   var = self->get_Var(Varid, time, t0 = t0, t1 = t1, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
 
 
