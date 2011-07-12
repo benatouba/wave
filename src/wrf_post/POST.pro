@@ -47,7 +47,7 @@
 ; :History:
 ;       Written by FaM, 2010 
 ;-
-function POST_list_files, domain, directory, CNT = cnt
+function POST_list_files, domain, directory, CNT = cnt, PATTERN = pattern
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -56,10 +56,13 @@ function POST_list_files, domain, directory, CNT = cnt
   
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select directory to parse', /DIRECTORY)  
   if not FILE_TEST(directory, /DIRECTORY) then message, 'Directory is not a directory'
+  if not FILE_TEST(directory, /DIRECTORY) then message, 'Directory is not a directory'
   
   if ~arg_okay(domain, /NUMERIC) then message, 'Domain is not set'
+  
+  if N_ELEMENTS(PATTERN) eq 0 then pattern = 'wrfout*'
     
-  fileList = FILE_SEARCH(directory, 'wrfout*', /EXPAND_ENVIRONMENT)
+  fileList = FILE_SEARCH(directory, PATTERN, /EXPAND_ENVIRONMENT)
    
   isHere = STRPOS(filelist, 'd0' + str_equiv(domain))
   p = WHERE(isHere ne -1, cnt)
@@ -237,31 +240,8 @@ function POST_absDate_to_wrfstr, absDate
   @WAVE.inc
   COMPILE_OPT IDL2
   ON_ERROR, 2
-  
-  n = N_ELEMENTS(absdate)    
-
-  if arg_okay(absDate, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = absDate)   $ 
-   else if arg_okay(absDate, STRUCT={ABS_DATE}) then mytime = absDate  $
-     else message, WAVE_Std_Message('ABSDATE', /ARG)
     
-  for i = 0, n-1 do begin
-  
-   if N_ELEMENTS(sout) eq 0 then sout = '' else sout = [sout , '']
-    
-    if mytime[i].day lt 10 then str = '0' + STRTRIM(mytime[i].day,1) + '-' else str = STRTRIM(mytime[i].day,1)+ '-'
-    if mytime[i].month lt 10 then str =  str + '0' + STRTRIM(mytime[i].month,1) + '-' else str = str + STRTRIM(mytime[i].month,1)+ '-'
-  
-    str = str + STRTRIM(mytime[i].year,1) + '_'
-  
-    if mytime[i].hour lt 10 then str =  str + '0' + STRTRIM(mytime[i].hour,1) + ':' else str = str + STRTRIM(mytime[i].hour,1)+ ':'
-    if mytime[i].minute lt 10 then str =  str + '0' + STRTRIM(mytime[i].minute,1) + ':' else str = str + STRTRIM(mytime[i].minute,1)+ ':'
-    if mytime[i].second lt 10 then str =  str + '0' + STRTRIM(mytime[i].second,1) else str = str + STRTRIM(mytime[i].second,1)
-  
-    sout[i] = str
-    
-  endfor
-  
-  return, sout
+  return, TIME_to_STR(absDate, MASK = 'YYYY-MM-DD_HH:TT:SS')
   
 end
 
@@ -795,14 +775,14 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
               else message, 'Impossible'
          var = utils_ACC_TO_STEP(var)
          vid += '_STEP'
-         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps]
+         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,ps]
       endif else if vartokeep.diff[v] then begin
         if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(my_spin_index-1)], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], my_e_index + 2 - my_spin_index] $
               else message, 'Impossible'         
-         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps] ; Normal variable
+         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,ps] ; Normal variable
          var = utils_ACC_TO_STEP(var)
          vid += '_DIFF'
-         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,0,ps] ; Diff variable
+         NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,ps] ; Diff variable
       endif else if vartokeep.static[v] then begin
           if f eq 0 then begin ; We need to do it just one time...
           if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], 1] $
@@ -868,6 +848,105 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
     flush, unit
   endfor
 
+  printf, unit, ''
+  printf, unit, 'Full.'
+  printf, unit, ''
+
+end
+
+
+pro POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
+  
+  ; Set Up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+;  ON_ERROR, 2
+  
+  nfiles = N_ELEMENTS(filelist)
+  nvars = N_ELEMENTS(vartokeep)  
+  nt = N_ELEMENTS(ts) - 1
+  cert = LONARR(nt) ; To check if everything is filled
+  
+
+  
+  for f=0, nfiles-1 do begin
+  
+    fid = NCDF_OPEN(filelist[f], /NOWRITE)
+    ginq = NCDF_INQUIRE(fid)
+    ;Go threw the dimensions. 
+    for i =0, ginq.ndims-1 do begin
+      NCDF_DIMINQ, fid, i, sName, sSize
+      if N_ELEMENTS(dimSizes) eq 0 then dimSizes = sSize else dimSizes=[dimSizes,sSize]
+    endfor ; Dimensions OK
+    
+    NCDF_VARGET, fid, 'Times', stimes
+    ntimes = N_ELEMENTS(stimes[0,*])
+    stimes = STRING(stimes[*,0:ntimes-1])
+    ;String format : '2008-10-26_12:00:00; length 19
+    times = QMS_TIME(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
+      HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
+    
+    montime0 = times[0] - (times[1]-times[0])
+    montime1 = times[ntimes-1]
+          
+    ps = where(ts eq montime0, cnt)
+    if cnt eq 0 then continue 
+    if ps eq N_ELEMENTS(ts)-1 then continue 
+    pe = where(ts eq montime1, cnt)    
+;    if cnt eq 0 then Message, 'OUPS'      
+    
+    for v=0, nvars - 1 do begin
+    
+      vid = vartokeep[v]
+      if vid eq 'Times' then continue
+      if vid eq 'V10' then continue
+      
+      s_var_info = NCDF_VARINQ(fid,vid)
+      ndims = s_var_info.ndims
+      dims = s_var_info.dim
+      
+      if ndims eq 2 then begin ; STATIC
+        NCDF_VARGET, fid, vid, var
+        NCDF_VARPUT, tid, vid, var
+      endif else if ndims gt 2 then begin
+        NCDF_VARGET, fid, vid, var
+        if vid eq 'U10' then begin
+          NCDF_VARGET, fid, 'V10', var2
+          MET_u_v_to_ws_wd, ret, var, var2, Ws = ws          
+          TS_AGG_GRID, ws, times, ws, NEW_TIME=ts[ps:pe], AGG_METHOD='MEAN'
+          TS_AGG_GRID, var, times, var, NEW_TIME=ts[ps:pe], AGG_METHOD='MEAN'
+          TS_AGG_GRID, var2, times, var2, NEW_TIME=ts[ps:pe], AGG_METHOD='MEAN'
+          MET_u_v_to_ws_wd, ret, var, var2, WD = wd
+          MET_ws_wd_to_u_v, ret, ws, wd, u = u10, v = v10
+          NCDF_VARPUT, tid, 'U10', u10, OFFSET=[0,0,ps]
+          NCDF_VARPUT, tid, 'V10', v10, OFFSET=[0,0,ps]
+        endif else begin
+          TS_AGG_GRID, var, times, var, NEW_TIME=ts[ps:pe], AGG_METHOD='MEAN'
+          if vid eq 'LU_INDEX' then var = round(var)
+          NCDF_VARPUT, tid, vid, var, OFFSET=[0,0,ps]
+        endelse
+      endif            
+    endfor
+    
+    ; Strange variables
+    NCDF_VARGET, fid, 'RAINNC_STEP', prcp1
+    NCDF_VARGET, fid, 'RAINC_STEP', prcp2
+    NCDF_VARGET, fid, 'SR', sr
+    prcp = prcp1 + prcp2
+    snow = prcp * sr  
+    TS_AGG_GRID, prcp, times, prcp, NEW_TIME=ts[ps:pe], AGG_METHOD='SUM'    
+    TS_AGG_GRID, snow, times, snow, time_tofill, NEW_TIME=ts[ps:pe], AGG_METHOD='SUM'    
+    
+    NCDF_VARPUT, tid, 'PRCP', prcp, OFFSET=[0,0,ps]
+    NCDF_VARPUT, tid, 'SNOWFALL', snow, OFFSET=[0,0,ps]
+    NCDF_VARPUT, tid, 'Times', byte(POST_absDate_to_wrfstr(time_tofill)), OFFSET=[0,ps]
+    
+    printf, unit, FILE_BASENAME(filelist[f]) + ' processed.'
+    flush, unit
+    NCDF_CLOSE, fid
+    
+  endfor
+  
   printf, unit, ''
   printf, unit, 'Full.'
   printf, unit, ''
@@ -1527,5 +1606,344 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
  
   close, unit ; close log file  
   free_lun, Unit
+  
+end
+
+
+;POST_mean_file, 3, '/home/mowglie/snow_drift/agg', OUTDIRECTORY='/home/mowglie/snow_drift/yearly'
+pro POST_mean_file, domain, directory, START_MONTH = start_month, END_MONTH = end_month, TIMESTEP = timestep, OUTDIRECTORY = OUTdirectory
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    if N_ELEMENTS(unit) ne 0 then begin
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      printf, unit, '* ERROR : ' + !Error_State.Msg
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      close, unit
+;      free_lun, Unit
+;    endif
+;    ok = WAVE_Error_Message(!Error_State.Msg)
+;    RETURN
+;  ENDIF 
+  
+  ; ---------------
+  ; Check the input
+  ; ---------------  
+  PATTERN = 'wrf_agg*.nc'  
+  fileLIST = POST_list_files(domain, directory, CNT = cnt, PATTERN = pattern)  
+  if cnt eq 0 then Message, 'Either $domain or $directory are not set properly.'
+    
+  if N_ELEMENTS(TIMESTEP) eq 0 then step = MAKE_TIME_STEP(day=1) $
+  else begin 
+    if ~arg_okay(TIMESTEP, STRUCT={TIME_STEP}) then Message, WAVE_Std_Message('timestep', STRUCT = {TIME_STEP}) 
+    step = TIMESTEP
+  endelse
+  str_step = ''
+  if step.day eq 1 then str_step = 'daily'
+  if step.hour eq 1 then str_step = 'hourly'
+  if step.hour eq 6 then str_step = '6hourly'
+  if step.hour eq 3 then str_step = '3hourly'
+  if str_step eq '' then message, 'You sure? Your time step is strangely chosen.'
+  
+  if N_ELEMENTS(OUTdirectory) eq 0 then OUTdirectory = DIALOG_PICKFILE(TITLE='Please select directory where to place the output', /DIRECTORY)
+  if OUTdirectory eq '' then return
+  if ~FILE_TEST(OUTdirectory, /DIRECTORY) then FILE_MKDIR, OUTdirectory
+    
+  ; ---------------------
+  ; Create the time serie
+  ; ---------------------
+    
+  ;Parse names for available times wrfout_d01_2008-10-26_12:00:00
+  fnames = FILE_BASENAME(fileLIST)
+  month = LONG(STRMID(fnames,13,2))
+  year = LONG(STRMID(fnames,8,4))
+  ds = QMS_TIME(MONTH=month, year=year, day = 01)
+  dummy = min(ds, pmin, SUBSCRIPT_MAX=pmax)  
+  myt0 = REL_TIME(ds[pmin])
+  myt1 = REL_TIME(ds[pmax])
+  
+  
+  if ~KEYWORD_SET(start_month) then t0 = myt0 else begin
+    t0 = QMS_TIME(MONTH=LONG(STRMID(start_month,5,2)), year=LONG(STRMID(start_month,0,4)), day = 01)
+    if ~check_WTIME(t0, OUT_QMS=t0) then Message, WAVE_Std_Message('START_MONTH', /ARG)
+    if myt0 ne t0 then Message, 'My start month (' + TIME_to_STR(myt0, MASK='MM.YYYY') +') and your start month (' + TIME_to_STR(t0, MASK='MM.YYYY') + $
+                                    ') do not match. Taking yours.', /INFORMATIONAL
+  endelse
+  if ~KEYWORD_SET(end_month) then t1 = myt1 else begin
+    t1 = QMS_TIME(MONTH=LONG(STRMID(end_month,5,2)), year=LONG(STRMID(end_month,0,4)), day = 01)
+    if ~check_WTIME(t1, OUT_QMS=t1) then Message, WAVE_Std_Message('START_MONTH', /ARG)
+    if myt1 ne t1 then Message, 'My end month (' + TIME_to_STR(myt1, MASK='MM.YYYY') +') and your end month (' + TIME_to_STR(t1, MASK='MM.YYYY') + $
+                                    ') do not match. Taking yours.', /INFORMATIONAL
+  endelse
+      
+  ; Ok. Lets go
+  ts = MAKE_ENDED_TIME_SERIE(t0, MAKE_REL_DATE(t1,MONTH=1), TIMESTEP=step, /QMSTIME)
+  nt = N_ELEMENTS(ts)
+  
+  ; For log purposes
+  syst = QMS_TIME()  
+  
+  ; -------------------
+  ; Create the log file
+  ; -------------------
+
+  str =  TIME_to_STR(t0, MASK='_YYYY_MM') + '_d0' + str_equiv(domain)
+  destFile= OUTdirectory + '/wrf_cpy_'+ str_step +str 
+  OPENW, unit, destFile +'.log', /GET_LUN
+  
+  text = 'WRF output aggregation'
+  printf, unit, text 
+  text = 'Start date : ' + TIME_to_STR(ts[0])
+  printf, unit, text
+  text = 'End   date : ' + TIME_to_STR(ts[nt-1])  
+  printf, unit, text 
+  
+  ; Open the file you just created and copy the information in it to another file.
+  sourceFile = fileLIST[0]
+  destFile = OUTdirectory + '/wrf_agg_'+ str_step + str + '.nc'
+  printf, unit, ''
+  text = 'Destination file : ' + destFile 
+  printf, unit, text   
+  
+  ; ---------------------------
+  ; Create the Netcdf out file
+  ; ---------------------------
+  sid = Ncdf_open(sourceFile, /NOWRITE)
+  inq = NCDF_INQUIRE(sid)
+  if FILE_TEST(destFile) then FILE_DELETE, destFile, /VERBOSE
+  tid = NCDF_CREATE(destFile, /CLOBBER, /NET)
+  NCDF_CONTROL, tid, /FILL ;We gonna define all this
+  
+  printf, unit, ''
+  printf, unit, '---------------'
+  printf, unit, '* Dimensions * ' 
+  printf, unit, '---------------'
+  printf, unit, ' '  
+
+  ;Go threw the dimensions.
+  t_dim_names = ''
+  t_dim_ids = 0
+  t_s_dim_ids = 0
+  for i =0, inq.ndims-1 do begin
+    NCDF_DIMINQ, sid, i, sName, sSize
+    if N_ELEMENTS(s_dim_names) eq 0 then s_dim_names = sName else s_dim_names=[s_dim_names,sName]
+    
+    if str_equiv(sName) eq 'TIME' then ssize = nt-1 ; No more "infinite dimension"
+    if (str_equiv(sName) eq 'TIME') and i ne 0 then MESSAGE, 'Time HAS to be the dimension 0.'
+    tdimid  = NCDF_DIMDEF(tid, sName, ssize)
+    t_dim_ids = [t_dim_ids, tdimid]
+    t_dim_names = [t_dim_names, sName]
+    t_s_dim_ids = [t_s_dim_ids, i]
+    printf, unit, '  +:', sName, ': ', STR_equiv(sSize)
+    
+  endfor ; Dimensions OK
+  t_dim_names = t_dim_names[1:*]
+  t_dim_ids = t_dim_ids[1:*]
+  t_s_dim_ids = t_s_dim_ids[1:*]
+  
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '----------------------'
+  printf, unit, '* Global attributes * ' 
+  printf, unit, '----------------------'
+  printf, unit, ' '
+  
+  ;Go threw the global Attribute. No need to change a lot but add some info  
+  removAbleAtts = ['SIMULATION_START_DATE','JULYR','JULDAY', 'CREATION_DATE', 'ORIG_FILE', 'WAVE_COMENT', 'REMOVED_INDEXES','CREATION_DATE','SPINUP_INDEX','END_INDEX']  
+  
+  for i =0, inq.Ngatts-1 do begin  
+  
+    sName = NCDF_ATTNAME(sid, i , /GLOBAL)        
+    sAtt_info = NCDF_attINQ(sid, sName, /GLOBAL)
+    NCDF_ATTGET, sid, sName, sValue, /GLOBAL
+    
+    ; go threw the atts we want to remove
+    isHere = WHERE(removAbleAtts eq str_equiv(sName), cnt)
+    if cnt ne 0 then begin
+      printf, unit, '  -:' + StrlowCase(sName) + ': ' + str_equiv(sValue), ' (ignored)'
+      continue
+    endif
+    ; go threw the atts we want to change
+    if str_equiv(sName) eq 'START_DATE' then sValue = POST_absDAte_to_wrfstr(ts[0])
+    
+    ; Set the appropriate netCDF data type keyword.
+    CASE StrUpCase(sAtt_info.DATATYPE) OF
+        'BYTE': tbyte = 1
+        'CHAR': tchar = 1
+        'DOUBLE': tdouble = 1
+        'FLOAT': tfloat = 1
+        'LONG': tlong = 1
+        'SHORT': tshort = 1      
+    ENDCASE
+
+    ; Add the attribute to the file.
+    NCDF_AttPut, tid, sName, svalue, /GLOBAL, $
+        BYTE=tbyte, $
+        CHAR=tchar, $
+        DOUBLE=tdouble, $
+        FLOAT=tfloat, $
+        LENGTH=tlength, $
+        LONG=tlong, $
+        SHORT=tshort
+
+    printf, unit, '  +:' + StrlowCase(sName) + ': ' + str_equiv(sValue)
+    undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+  endfor ; Att OK
+    
+  ; Add my own
+  NCDF_AttPut, tid, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), /GLOBAL, /CHAR
+  printf, unit, '  +:' + 'CREATION_DATE' + ': ' + TIME_to_STR(QMS_TIME()) + ' (added)'
+  NCDF_AttPut, tid, 'WAVE_COMENT', 'File generated by aggregation of WRF runs using the WAVE POST_mean routine.', /GLOBAL, /CHAR
+  printf, unit, '  +:' + 'WAVE_COMENT' + ': ' + 'File generated by aggregation of WRF runs using the WAVE POST_mean routine.' + ' (added)'
+  NCDF_AttPut, tid, 'AGG_TIMESTEP', str_step, /GLOBAL, /CHAR
+  printf, unit, '  +:' + 'AGG_TIMESTEP' + ': ' + str_step + ' (added)'
+  NCDF_AttPut, tid, 'TIMESTEP_INFO', 'The value at each time step is the mean (or accumulated) value during the PREVIOUS period.', /GLOBAL, /CHAR
+  printf, unit, '  +:' + 'TIMESTEP_INFO' + ': ' + 'The value at each time step is the mean (or accumulated) value during the PREVIOUS period.' + ' (added)'
+  
+  
+  vartokeep = ['Times','LU_INDEX','W','T','Q2','T2','PSFC','SEAICE','HGT','GLW','XLAT','XLONG','ALBEDO','UST','HFX','LH','U10', 'V10']
+  
+  Vartoadd = ['PRCP', 'SNOWFALL']
+  Vartoaddinfo = ['TOTAL PRECIPITATION', 'FROZEN PRECIPITATION']
+  Vartoaddcopy = ['RAINNC', 'RAINC']  
+  
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '--------------'
+  printf, unit, '* Variables * ' 
+  printf, unit, '--------------'
+  printf, unit, ' '
+ 
+  for svid =0, inq.NVARS-1 do begin
+  
+    s_var_info = NCDF_VARINQ(sid,svid)
+    dimsIds = s_var_info.dim
+    p = where(str_equiv([vartokeep,Vartoaddcopy]) eq str_equiv(s_var_info.name), cnt)
+    if cnt eq 0 then begin
+      text = '  -:' + STRLOWCASE(s_var_info.DATATYPE) + '  ' + str_equiv(s_var_info.name) + '('
+      for i =0, N_ELEMENTS(dimsIds) - 1 do begin
+        text += STRLOWCASE(str_equiv(s_dim_names[dimsIds[i]]))
+        if i ne N_ELEMENTS(dimsIds) - 1 then  text += ','
+      endfor
+      text += ')  ; (ignored)'
+      printf, unit, text
+      continue ;Nothing to be done
+    endif
+    
+    ; Check the data type
+    CASE StrUpCase(s_var_info.datatype) OF
+      'BYTE': tbyte = 1
+      'CHAR': tchar = 1
+      'DOUBLE': tdouble = 1
+      'FLOAT': tfloat = 1
+      'LONG': tlong = 1
+      'SHORT': tshort = 1
+    ENDCASE
+    
+    ; Chek if this is just to copy the info
+    pcpy =  where(str_equiv(Vartoaddcopy) eq str_equiv(s_var_info.name), cntcpy)
+    if cntcpy eq 1 then begin
+      _vname = reform(str_equiv(Vartoadd[pcpy]))
+      _vinfo = reform(Vartoaddinfo[pcpy])
+    endif else begin
+      _vname = s_var_info.name
+      _vinfo = ''
+    endelse
+    
+    myDimIds = dimsIds
+    for d = 0, N_ELEMENTS(dimsIds) - 1 do begin
+      pdim = where(t_s_dim_ids eq dimsIds[d], cntd)
+      if cntd eq 0 then message, 'Dimension of variable ' + _vname + ' not found'
+      myDimIds[d] = t_dim_ids[pdim]
+    end
+    
+    ; Define the variable.
+    TvID = NCDF_VarDef(tid, _vname[0], myDimIds, $
+      BYTE=tbyte, $
+      CHAR=tchar, $
+      DOUBLE=tdouble, $
+      FLOAT=tfloat, $
+      LONG=tlong, $
+      SHORT=tshort)
+      
+    text = '  +:' + STRLOWCASE(s_var_info.DATATYPE) + '  ' + str_equiv(_vname) + '('
+    for i =0, N_ELEMENTS(myDimIds) - 1 do begin
+      text += STRLOWCASE(str_equiv(t_dim_names[myDimIds[i]]))
+      if i ne N_ELEMENTS(myDimIds) - 1 then  text += ','
+    endfor
+    text += ') ; '
+    printf, unit, text
+    undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+    
+    if s_var_info.natts eq 0 then continue ; no need to continue (just for time actually)
+    
+    ; Copy the variable attributes
+    for sattid = 0, s_var_info.NATTS - 1 do begin
+    
+      sName = NCDF_ATTNAME(sid, svid, sattid)
+      sAtt_info = NCDF_attINQ(sid, svid, sName)
+      NCDF_ATTGET, sid, svid, sName, sValue
+      
+      ; Set the appropriate netCDF data type keyword.
+      CASE StrUpCase(sAtt_info.DATATYPE) OF
+        'BYTE': tbyte = 1
+        'CHAR': tchar = 1
+        'DOUBLE': tdouble = 1
+        'FLOAT': tfloat = 1
+        'LONG': tlong = 1
+        'SHORT': tshort = 1
+      ENDCASE
+      
+      if str_equiv(sName) eq 'DESCRIPTION' and _vinfo ne '' then sValue = _vinfo
+      
+      
+      ; Add the attribute to the file.
+      NCDF_AttPut, tid, TvID, sName, sValue,  $
+        BYTE=tbyte, $
+        CHAR=tchar, $
+        DOUBLE=tdouble, $
+        FLOAT=tfloat, $
+        LENGTH=tlength, $
+        LONG=tlong, $
+        SHORT=tshort
+        
+      text = '      ' + sName + ': ' + STRLOWCASE(str_equiv(sValue))
+      printf, unit, text
+      undefine, tbyte,tchar,tdouble,tfloat,tlength,tlong,tshort
+    endfor
+    
+  endfor
+  
+  NCDF_CONTROL, tid, /ENDEF ; Switch to normal Fill mode
+  NCDF_CLOSE, sid ; Close source file
+  
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '-------------'
+  printf, unit, '* Fill now * ' 
+  printf, unit, '-------------'
+  printf, unit, ' '
+  
+  POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
+  
+  printf, unit, ' '
+  printf, unit, ' '
+  printf, unit, '------------'
+  printf, unit, '* SUCCESS * ' 
+  printf, unit, '------------'
+  printf, unit, ' '
+  tott = MAKE_TIME_STEP(DMS=(QMS_TIME()-syst))
+  printf, unit, 'Total time: ' + str_equiv(tott.hour) + ' hrs, ' + str_equiv(tott.minute) + ' mns, ' + str_equiv(tott.second) + ' secs.' 
+  
+  close, unit ; close log file  
+  free_lun, Unit
+  NCDF_CLOSE, tid ; Close file
   
 end
