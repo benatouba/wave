@@ -776,14 +776,28 @@ end
 
 ;+
 ; :Description:
-; This function makes a string from a time.
-;    
-; Currently, the format is fixed to either::
+; This function makes a string from a time. The default format is::    
+; 
 ;   22.11.2010 16:46:13
-; Or::
+; 
+; Or, using the `YMD` keyword::
+; 
 ;   2010.11.22 16:46:13
-; But more formats will be implemented soon.
-;       
+;   
+; With the `MASK` keyword, you can define any kind of string output. 
+; The routine seeks for the standard patterns in the mask and replaces 
+; them with the time value (see examples below). The mask is specified with 
+; following standard patterns:: 
+; 
+;       'YYYY'     Gregorian year with four digits (e.g. 1998)
+;       'YY'       Gregorian year with two digits (e.g. 98)
+;       'MMM'      Gregorian month in three letter abbreviation (e.g. AUG)
+;       'MM'       Gregorian month (e.g. 08 for August)
+;       'DD'       Gregorian day
+;       'HH'       Hour of day
+;       'TT'       Minute of hour
+;       'SS'       Second of minute
+;
 ; :Categories:
 ;    General/Time
 ; 
@@ -798,6 +812,8 @@ end
 ;             Set this keyword to prevent printing the time
 ;    YMD: in, optional, type=boolean, default=0
 ;             Set this keyword to use the Year-Month-Day format
+;    MASK: in, optional, type=string
+;             Set this keyword to use a user-defined format (slower)
 ;
 ; :Returns:
 ;    The time as a string or array of strings
@@ -815,11 +831,19 @@ end
 ;   2010.11.22 16:46:13
 ;   IDL> print, TIME_to_STR(time)
 ;   22.11.2010 16:46:13
+;   IDL> print, TIME_to_STR(time, MASK = "HHmTTs DD.MM.YY")
+;   05m12s 01.08.08;   
+;   IDL> time = QMS_TIME(year = 2008, Month =[07,08,09], day = 1, hour = [5,6,7])
+;   IDL> str = TIME_to_STR(time, MASK = 'On year YYYY in MMM, the Sun came at HH:TT')
+;   IDL> for i=0, N_ELEMENTS(str) -1 do print, str[i]
+;   On year 2008 in JUL, the Sun came at 05:00
+;   On year 2008 in AUG, the Sun came at 06:00
+;   On year 2008 in SEP, the Sun came at 07:00 
 ;   
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
+function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd, MASK = mask
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -844,43 +868,114 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd
   min = mytime.minute
   s = mytime.second
   
-  date = replicate('',n)
-  timestr = date
-
-  if not nodate then begin
-    if KEYWORD_SET(YMD) then begin
-    date = string(y,format='(I4)')   + '.' + $
-           string(mon,format='(I2)') + '.' + $
-           string(d,format='(I2)')   
+  if N_ELEMENTS(MASK) eq 0 then begin ; Standard print
+  
+    date = replicate('',n)
+    timestr = date
+    if not nodate then begin
+      if KEYWORD_SET(YMD) then begin
+        date = string(y,format='(I4)')   + '.' + $
+          string(mon,format='(I2)') + '.' + $
+          string(d,format='(I2)')
+      endif else begin
+        date = string(d,format='(I2)')   + '.' + $
+          string(mon,format='(I2)') + '.' + $
+          string(y,format='(I4)')
+      endelse
+      
+      date = byte(date)
+      i = where(date eq 32b,cnt)
+      if cnt gt 0 then date[i] = 48b
+      date = string(date)
+    endif
+    if not notime then begin
+      timestr = string(h,format='(I2)')   + ':' + $
+        string(min,format='(I2)') + ':' + $
+        string(s,format='(I2)')
+        
+      timestr = byte(timestr)
+      i = where(timestr eq 32b,cnt)
+      if cnt gt 0 then timestr[i] = 48b
+      timestr = string(timestr)
+    endif
+    
+    str = strtrim(date+replicate(' ',n)+timestr,2)
+    
+  endif else begin 
+  
+    if ~ arg_okay(mask, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('MASK', /ARG)
+    msk = mask
+    msk = byte(msk)
+    i = where(msk eq 32b,cnt)
+    if cnt gt 0 then msk[i] = 255B ; dummy
+    msk = string(msk)
+    smsk = str_equiv(mask)
+    
+    str = replicate('',n)
+       
+    ; Year
+    p_y = strpos(smsk,'YYYY')
+    if p_y ne -1 then begin
+      str_y = string(y,format='(I4)')
     endif else begin
-    date = string(d,format='(I2)')   + '.' + $
-           string(mon,format='(I2)') + '.' + $
-           string(y,format='(I4)')
+      p_y = strpos(smsk,'YY')
+      if p_y ne - 1 then begin
+        str_y = STRMID(string(y,format='(I4)'),2,2)
+      endif
     endelse
     
-    date = byte(date)
-    i = where(date eq 32b,cnt)
-    if cnt gt 0 then date[i] = 48b
-    date = string(date)
-  endif
+    ; Month
+    p_m = strpos(smsk,'MMM')
+    if p_m ne -1 then begin
+      str_m = GEN_month_str(mon)
+    endif else begin
+      p_m = strpos(smsk,'MM')
+      if p_m ne - 1 then begin
+        str_m = string(mon,format='(I2)')
+      endif
+    endelse
 
-  if not notime then begin
-    timestr = string(h,format='(I2)')   + ':' + $
-           string(min,format='(I2)') + ':' + $
-           string(s,format='(I2)')
+    ; Day
+    p_d = strpos(smsk,'DD')
+    if p_d ne -1 then str_d = string(d,format='(I2)') 
 
-    timestr = byte(timestr)
-    i = where(timestr eq 32b,cnt)
-    if cnt gt 0 then timestr[i] = 48b
-    timestr = string(timestr)
-  endif
+    ; Hour
+    p_h = strpos(smsk,'HH')
+    if p_h ne -1 then str_h = string(h,format='(I2)') 
 
-  str = strtrim(date+replicate(' ',n)+timestr,2)
-
+    ; Minute
+    p_min = strpos(smsk,'TT')
+    if p_h ne -1 then str_min = string(min,format='(I2)') 
+    
+    ; Second
+    p_s = strpos(smsk,'SS')
+    if p_s ne -1 then str_s = string(s,format='(I2)')
+    
+    ; Bad loop (no better idea right now)
+    for i=0, n-1 do begin
+      _str = msk
+      if p_y ne -1 then STRPUT, _str, str_y[i],  p_y
+      if p_m ne -1 then STRPUT, _str, str_m[i],  p_m
+      if p_d ne -1 then STRPUT, _str, str_d[i],  p_d
+      if p_h ne -1 then STRPUT, _str, str_h[i],  p_h
+      if p_min ne -1 then STRPUT, _str, str_min[i],  p_min
+      if p_s ne -1 then STRPUT, _str, str_s[i],  p_s
+      str[i] = _str
+    endfor
+    
+    str = byte(str)
+    i = where(str eq 32b,cnt)
+    if cnt gt 0 then str[i] = 48b
+    i = where(str eq 255b,cnt)
+    if cnt gt 0 then str[i] = 32b    
+    str = string(str)
+    
+  endelse
+  
   if n eq 1 then str = str[0]
-
+  
   return, str
-
+  
 end
 
 ;+
@@ -2103,10 +2198,10 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
     
     if ndims eq 3 then begin
       if a le b then begin
-        tp = _data[*,*,a:b]
-        n_y = TOTAL(FINITE(tp), 3)
+        tp = reform(_data[*,*,a:b], siz[1], siz[2], b-a+1)
+        if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 3)
         case str_equiv(am) of
-          'NONE': agg[*,*,i] = tp[*,*,a-b+1]
+          'NONE': agg[*,*,i] = tp[*,*,b-a+1]
           'MIN': agg[*,*,i] = min(tp, /NAN, DIMENSION=3)
           'MAX': agg[*,*,i] = max(tp, /NAN, DIMENSION=3)
           'MEAN': begin
@@ -2127,8 +2222,8 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
       endelse
     endif else begin ;DIm4
       if a le b then begin
-        tp = _data[*,*,*,a:b]
-        n_y = TOTAL(FINITE(tp), 4)
+        tp = reform(_data[*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
+        if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 4)
         case str_equiv(am) of
           'NONE': agg[*,*,*,i] = tp[*,*,*,a-b+1]
           'MIN': agg[*,*,*,i] = min(tp, /NAN, DIMENSION=4)
