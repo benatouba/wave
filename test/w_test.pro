@@ -2356,7 +2356,7 @@ pro TEST_POST_COPY_CROP, REDO = redo
     ; NCO
     ;----------------    
     INPUT_DIR= fdir + '/WRF_POST/d1/'
-    OUTPUT_DIR= fdir + '/WRF_CPY_CROP/NCO_TEST/'
+    OUTPUT_DIR= fdir + '/NCO_TEST/'
     
     if ~ KEYWORD_SET(REDO) then redo = false    
     if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
@@ -2672,7 +2672,7 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     INPUT_DIR= fdir + '/WRF_CPY_CROP/'
     OUTPUT_DIR= fdir + '/WRF_AGG_CROPPED/'
     
-    if ~FILE_TEST(INPUT_DIR) then TEST_POST_COPY_CROP
+    if ~FILE_TEST(INPUT_DIR) then TEST_POST_COPY_CROP, /REDO
     
     if ~ KEYWORD_SET(REDO) then redo = false    
     if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 

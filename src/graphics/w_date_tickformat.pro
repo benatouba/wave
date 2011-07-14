@@ -66,7 +66,17 @@ pro w_date_tickformat, xtickformat, xtickunits, xtickinterval, HOURS = hours, DA
     if ~ check_WTIME(time, OUT_QMS=tqms) then message, WAVE_Std_Message('time', /ARG)
     s = MAKE_TIME_STEP(DMS=MAX(tqms)-MIN(tqms))
    
-    if s.day gt 900 then begin
+    if s.day gt 1800 then begin
+      dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
+      xtickformat = ['LABEL_DATE']
+      xtickunits = 'years'
+      xtickinterval = 2
+    endif else if s.day gt 1200 then begin
+      dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
+      xtickformat = ['LABEL_DATE']
+      xtickunits = 'years'
+      xtickinterval = 1
+    endif else if s.day gt 900 then begin
       dummy = LABEL_DATE(DATE_FORMAT=['%M%Y'])
       xtickformat = ['LABEL_DATE']
       xtickunits = 'Months'
@@ -111,7 +121,7 @@ pro w_date_tickformat, xtickformat, xtickunits, xtickinterval, HOURS = hours, DA
       xtickformat = ['LABEL_DATE']
       xtickunits = 'Days'
       xtickinterval = 3
-    endif else if s.day gt 1 then begin
+    endif else if s.day ge 2 then begin
       dummy = LABEL_DATE(DATE_FORMAT=['%D%M']) 
       xtickformat = ['LABEL_DATE']
       xtickunits = 'Days'

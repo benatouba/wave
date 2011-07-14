@@ -114,9 +114,16 @@ pro w_standard_2d_plot, map, TITLE=title,$
   if n_elements(title) eq 0 then title = ''
   if n_elements(WTITLE) eq 0 then WTITLE = 'WAVE standard plot'
   if n_elements(BAR_TITLE) eq 0 then BAR_TITLE = 'Data levels'
-   
-  xs = FLOOR(xsize * 1.26d)
-  ys = FLOOR(ysize * 1.16d)
+  
+  ar =  float(xsize) / ysize
+  if ar ge 1 then begin
+    xs = FLOOR(xsize * 1.26d)
+    ys = FLOOR(ysize * 1.16d)
+  endif else begin
+    xs = FLOOR(xsize * 1.34d)
+    ys = FLOOR(ysize * 1.14d)
+  endelse
+  
   imgX = xsize/double(xs)
   imgY = ysize/double(ys)
   imx0 = 0.04
@@ -141,6 +148,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
   endif
   
   ; Check what we want to do
+  if keyword_set(eps) or keyword_set(png) or keyword_set(jpeg) and ~KEYWORD_SET(RESIZABLE) then begin
+    if ~KEYWORD_SET(PIXMAP) then Message, 'With the PNG, JPEG and EPS keyword and without resizable windows, the window cannot be visible. Im setting PIXMAP.', /INFORMATIONAL
+    PIXMAP = true
+  endif
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE  
 
@@ -169,7 +180,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
 
   ; Bar
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
-  map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, $
+  map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, BAR_FORMAT=bar_format, $
                       CHARSIZE=1.*sfac, BAR_OPEN=bar_open, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
 
   ; Title bar
@@ -200,6 +211,10 @@ pro w_standard_2d_plot, map, TITLE=title,$
   cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Legend info
+  if ~KEYWORD_SET(SOURCE_INFO) then begin
+    copyright = '!4' +STRING("251B) +  '!X'
+    source_info = copyright + ' 2011 TU Berlin!C!CChair of Climatology'
+  endif
   if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
    
   ; Output
@@ -226,8 +241,8 @@ pro w_standard_2d_plot, map, TITLE=title,$
     if keyword_set(eps) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
     if keyword_set(png) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
     if keyword_set(jpeg) then cgControl, CREATE_JPEG=jpeg, IM_RESIZE=im_resize, /IM_RASTER
-    if keyword_set(std_png) then cgControl, CREATE_PNG=std_png, IM_RASTER=0
-    if keyword_set(std_jpeg) then cgControl, CREATE_JPEG=std_jpeg, IM_RASTER=0
+    if keyword_set(std_png) then if cgWin then cgControl, CREATE_PNG=std_png, IM_RASTER=0 else write_png, std_png, disp_img
+    if keyword_set(std_jpeg) then if cgWin then cgControl, CREATE_JPEG=std_jpeg, IM_RASTER=0 else write_jpeg, std_jpeg, disp_img
 
   endif else begin
 

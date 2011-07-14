@@ -2222,7 +2222,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
       endelse
     endif else begin ;DIm4
       if a le b then begin
-        tp = reform(_data[*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
+        tp = reform(_data[*,*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
         if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 4)
         case str_equiv(am) of
           'NONE': agg[*,*,*,i] = tp[*,*,*,a-b+1]

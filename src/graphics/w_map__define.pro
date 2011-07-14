@@ -819,7 +819,7 @@ function w_Map::set_topography, GRDFILE = grdfile
   free_lun, lun
   
   z = topo[ilon,ilat-rmin]
-  p = where(z eq -9999, cnt)
+  p = where(z le -9999, cnt)
   if cnt gt 0 then z[p] = 0
   z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
   
@@ -1359,11 +1359,15 @@ end
 ;    
 ;    MISSING: in, optional, type = numeric
 ;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
+;             
+;    OVERPLOT: in, optional
+;              if set, the data will just replace the old data on the concerned pixels
+;              (ignored if no grid is given as argument)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max
+function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max, OVERPLOT = overplot
                              
   
   ; SET UP ENVIRONNEMENT
@@ -1392,13 +1396,16 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   if N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 then Message, 'VAL_MIN and VAL_MAX keywords in $w_Map::set_data are deprecated. Use $w_Map::set_plot_params instead.'
   
   if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
+  
+  _oplot = KEYWORD_SET(OVERPLOT)
     
   if N_ELEMENTS(grid) eq 0 then begin
     if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
     else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
   endif else begin
     if N_ELEMENTS(missing) ne 0 then _missing = missing
-    _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear)
+    if _oplot then _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear, DATA_DST = *self.data) $
+     else _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear)
   endelse
   
   if N_ELEMENTS(missing) eq 0 then begin
@@ -1766,7 +1773,7 @@ function w_Map::draw_map, WINDOW = window
     ddx = - 0.008 * spacing * self.xsize
     
     ; Tick labels
-    charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
+    if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
     charthick = charsize
     format = '(I4)'
     for i=0,N_ELEMENTS(xts)-1 do begin
@@ -1777,6 +1784,7 @@ function w_Map::draw_map, WINDOW = window
     for i=0,N_ELEMENTS(yts)-1 do begin
       label = string(abs(yls[i]),FORMAT=format)
       if yls[i] lt 0 then label += 'S' else label += 'N'
+      if yls[i] eq 0 then label = 'Eq.'
       cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
@@ -2024,7 +2032,7 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=po
      g = congrid(g,256) 
      b = congrid(b,256)       
     end
-    cgColorbar, PALETTE= [[r],[g],[b]], Position=Position, _EXTRA=extra, $
+    cgColorbar, PALETTE= [[r],[g],[b]], Position=Position, _EXTRA=extra, FORMAT=BAR_FORMAT, $
         TITLE=title,  MINRANGE=self.plot_params.min_val, CHARSIZE=charsize, $
         MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), ADDCMD=window
   endelse

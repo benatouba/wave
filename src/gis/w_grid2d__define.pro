@@ -925,6 +925,11 @@ end
 ;             value to set to missing values in the final grid. NaN or 0 are default values depending on the data type
 ;    BILINEAR: in, optional
 ;             set to use bilinear interpolation instead of NN
+;    DATA_DST: in, optional
+;              if given, this array will be filled with the new mapped data. 
+;              Only the concerned indexes will be overwritten. (usefull for mosaiking 
+;              or overplotting, for example). This data must have the same X and Y dimensions
+;              as the grid, and same z dimension as data 
 ;
 ; :Returns:
 ;    The remaped data array, of the same dimensions of the object grid, with an eventual 3rd dim (time/Z)
