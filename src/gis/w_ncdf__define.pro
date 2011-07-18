@@ -428,6 +428,7 @@ pro w_NCDF::get_dimList, dimIds, dimNames, dimSizes, PRINTDIMS = printdims
   ENDIF
     
     ;Go threw the dimensions. 
+  UNDEFINE, dimIds, dimNames, dimSizes
   for i =0, self.ndims-1 do begin
     NCDF_DIMINQ, self.cdfid, i, sName, sSize
     if N_ELEMENTS(dimNames) eq 0 then dimNames = sName else dimNames=[dimNames,sName]
@@ -474,6 +475,7 @@ pro w_NCDF::get_gattsList, gattsIds, gattNames, PRINTGATTS = printgatts
   ENDIF
     
   ;Go threw the dimensions. 
+  UNDEFINE, gattsIds, gattNames
   for i =0, self.Ngatts-1 do begin
     sName = NCDF_ATTNAME(self.cdfid, i , /GLOBAL)        
     if N_ELEMENTS(gattNames) eq 0 then gattNames = sName else gattNames=[gattNames,sName]
@@ -527,6 +529,7 @@ pro w_NCDF::get_VattsList, varid, vattsIds, vattNames, PRINTVATTS = printvatts
   if s_var_info.natts eq 0 then return ; no need to continue
  
   ; Copy the variable attributes
+  UNDEFINE, vattsIds, vattNames
   for sattid = 0, s_var_info.NATTS - 1 do begin
     
     sName = NCDF_ATTNAME(self.cdfid, out_id, sattid)

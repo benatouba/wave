@@ -386,7 +386,7 @@ endif
        status= 0b
        for i=0,n_elements(tn)-1 do begin
         if size(str.(i),/TNAME) eq 'STRUCT' then $
-                status=tag_exist(str.(i),tag,index=index)
+                status=utils_tag_exist(str.(i),tag,index=index)
         if status then return,1b
       endfor
     return,0b
@@ -2848,6 +2848,27 @@ FUNCTION utils_RandPerm, numberOfElements, SEED=seed
   x = Lindgen(numberOfElements)
   RETURN, x[Sort(Randomu(seed, numberOfElements))]
 END
+
+function utils_chunk_sum_d3, x
+
+  compile_opt idl2
+  forward_function utils_chunk_sum_d3
+  
+  np = 50
+  siz = size(x)
+  if siz[0] ne 3 then message, 'Dim 3 !'
+  nt = siz[3]
+  nchunk = nt / np
+  
+  sums = dblarr(siz[1],siz[2], nchunk+1)
+  for j=0, nchunk-1 do sums[*,*,j] = total(x[*,*,j*np:(j+1)*np-1], 3, /double)
+  left = nt - nchunk * np
+  if left gt 0 then sums[*,*,nchunk] = total(x[*,*,nchunk*np, *], 3, /double)
+  if nchunk gt np then s=utils_chunk_sum_d3(sums) else s=total(sums, 3)
+  
+  return, s
+  
+end
 
 
 
