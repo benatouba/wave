@@ -2516,73 +2516,8 @@ function utils_is_dir, path
   
 end
 
-;+
-; Project     : SOHO - CDS
-;
-; Name        :
-; AVERAGE()
-; Purpose     :
-; Averages an array over one or all of its dimensions.
-; Explanation :
-; Calculates the average value of an array, or calculates the average
-; value over one dimension of an array as a function of all the other
-; dimensions.
-; Use         :
-; Result = AVERAGE( ARRAY )
-; Result = AVERAGE( ARRAY, DIMENSION )
-; Inputs      :
-; ARRAY   = Input array.  May be any type except string or structure.
-; Opt. Inputs :
-; DIMENSION = Optional dimension to do average over.  Valid inputs are 1
-;       through the total number of dimensions of ARRAY.
-; Outputs     :
-; The average value of the array when called with one parameter.
-;
-; If DIMENSION is passed, then the result is an array with all the
-; dimensions of the input array except for the dimension specified,
-; each element of which is the average of the corresponding vector
-; in the input array.
-;
-; For example, if A is an array with dimensions of (3,4,5), then the
-; command B = AVERAGE(A,2) is equivalent to
-;
-;     B = FLTARR(3,5)
-;     FOR J = 0,4 DO BEGIN
-;       FOR I = 0,2 DO BEGIN
-;         B(I,J) = TOTAL( A(I,*,J) ) / 4.
-;       ENDFOR
-;     ENDFOR
-;
-; Opt. Outputs:
-; None.
-; Keywords    :
-; MISSING = Value signifying missing pixels.  Any pixels with this value
-;     are not included in the average.  If there are no non-missing
-;     pixels, then MISSING is returned.
-; Calls       :
-; None.
-; Common      :
-; None.
-; Restrictions:
-; The dimension specified must be valid for the array passed.
-; Side effects:
-; None.
-; Category    :
-; Utilities, Arrays.
-; Prev. Hist. :
-; Taken from an earlier routine by W. Thompson called AVG, but the
-; definition of the DIMENSION parameter is different to be consistent
-; with current usage in IDL.
-; Written     :
-; William Thompson, GSFC, 9 April 1993.
-; Modified    :
-; Version 1, William Thompson, GSFC, 9 April 1993.
-; Version 2, William Thompson, GSFC, 3 February 1996
-;   Added missing keyword.
-; Version     :
-; Version 2, 3 February 1996
-;-
-FUNCTION utils_AVERAGE, ARRAY, DIMENSION, MISSING=MISSING
+
+FUNCTION utils_AVERAGE, ARRAY, DIMENSION, MISSING=MISSING, DOUBLE=double, NSIG = nsig
 
   ON_ERROR,2
   ;
@@ -2600,9 +2535,17 @@ FUNCTION utils_AVERAGE, ARRAY, DIMENSION, MISSING=MISSING
   IF N_PARAMS(0) EQ 1 THEN BEGIN
     IF N_ELEMENTS(MISSING) EQ 1 THEN BEGIN
       W = WHERE(ARRAY NE MISSING, COUNT)
-      IF COUNT GT 0 THEN AVER = TOTAL(ARRAY(W)) / COUNT ELSE  $
+      IF COUNT GT 0 THEN BEGIN
+        AVER = TOTAL(ARRAY(W), DOUBLE=double) / COUNT
+        NSIG = COUNT
+      ENDIF ELSE BEGIN
         AVER = MISSING
-    END ELSE AVER = TOTAL(ARRAY) / N_ELEMENTS(ARRAY)
+        NSIG = 0
+      ENDELSE        
+    END ELSE BEGIN
+     AVER = TOTAL(ARRAY, DOUBLE=double) / N_ELEMENTS(ARRAY)
+     NSIG = N_ELEMENTS(ARRAY)
+    ENDELSE
   ;
   ;  Dimension passed.  Check DIMENSION, and make sure that ARRAY is an array.
   ;
@@ -2627,26 +2570,32 @@ FUNCTION utils_AVERAGE, ARRAY, DIMENSION, MISSING=MISSING
         AVER = ARRAY
         W = WHERE(ARRAY EQ MISSING, COUNT)
         IF COUNT GT 0 THEN AVER(W) = 0
-        AVER  = TOTAL(AVER, DIMENSION)
+        AVER  = TOTAL(AVER, DIMENSION, DOUBLE=double)
         ;
         ;  Next calculate the denominator as the total number of points which are good.
         ;  Substitute the MISSING pixel value where-ever there are no good pixels to
         ;  average together.
         ;
-        DENOM = TOTAL(ARRAY NE MISSING, DIMENSION)
+        DENOM = TOTAL(ARRAY NE MISSING, DIMENSION, DOUBLE=double)
         AVER = TEMPORARY(AVER) / (DENOM > 1)
         W = WHERE(DENOM EQ 0, COUNT)
         IF COUNT GT 0 THEN AVER(W) = MISSING
+        NSIG = LONG(TEMPORARY(DENOM))
+        
       ;
       ;  Otherwise, simply divide the total by the number of pixels along that
       ;  dimension.
       ;
-      END ELSE AVER = TOTAL(ARRAY,DIMENSION) / S(DIMENSION)
+      END ELSE BEGIN 
+       AVER = TOTAL(ARRAY,DIMENSION, DOUBLE=double) / S(DIMENSION)
+       NSIG = AVER * 0 + S(DIMENSION)
+      ENDELSE
     END ELSE BEGIN
       MESSAGE,'Dimension out of range'
     ENDELSE
   ENDELSE
   ;
+
   RETURN, AVER
 END
 
@@ -2863,7 +2812,7 @@ function utils_chunk_sum_d3, x
   sums = dblarr(siz[1],siz[2], nchunk+1)
   for j=0, nchunk-1 do sums[*,*,j] = total(x[*,*,j*np:(j+1)*np-1], 3, /double)
   left = nt - nchunk * np
-  if left gt 0 then sums[*,*,nchunk] = total(x[*,*,nchunk*np, *], 3, /double)
+  if left gt 0 then sums[*,*,nchunk] = total(x[*,*,nchunk*np:*], 3, /double)
   if nchunk gt np then s=utils_chunk_sum_d3(sums) else s=total(sums, 3)
   
   return, s

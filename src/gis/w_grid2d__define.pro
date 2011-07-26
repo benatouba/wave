@@ -1095,7 +1095,7 @@ function w_Grid2D::resample_grid, src_grid
   
   pok = where((i_dst ge 0) and (j_dst ge 0) and (i_dst lt self.tnt_c.nx) and (j_dst lt self.tnt_c.ny), cnt_ok)  ; in the range
   
-  out=REPLICATE(PTR_NEW(), self.tnt_c.nx, self.tnt_c.ny)
+  out=ptrarr(self.tnt_c.nx, self.tnt_c.ny)
   
   if cnt_ok ne 0 then begin ; we found pixels  
     o_inds = xi[pok] + src_c.nx * yi[pok]
