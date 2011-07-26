@@ -116,7 +116,11 @@ pro w_standard_2d_plot, map, TITLE=title,$
   if n_elements(BAR_TITLE) eq 0 then BAR_TITLE = 'Data levels'
   
   ar =  float(xsize) / ysize
-  if ar ge 1 then begin
+;  if ar ge 1.4 then begin
+;    xs = FLOOR(xsize * 1.26d)
+;    ys = FLOOR(ysize * 1.25d)
+;  endif else 
+  if ar ge 1. then begin
     xs = FLOOR(xsize * 1.26d)
     ys = FLOOR(ysize * 1.16d)
   endif else begin

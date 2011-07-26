@@ -304,7 +304,7 @@ function AWS_auto_template, FILE_PATH = file_path
      if m ge 3 then stop_header = TRUE
      m += 1 
   endwhile
-  CLOSE, lun
+  FREE_LUN, lun
 
   nf = N_ELEMENTS(var_names)
   if nf ne N_ELEMENTS(var_units) then message, 'Units and variables do not match.'
