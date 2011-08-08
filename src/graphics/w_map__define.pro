@@ -57,7 +57,7 @@ PRO w_Map__Define
   COMPILE_OPT IDL2
   
   ; This is for the colors and data-levels 
-  struct = {PLOT_PARAMS                    , $
+  struct = {w_Map_PLOT_PARAMS              , $
             type           : 0L            , $ ; USER or AUTO generated levels
             nlevels        : 0L            , $ ; number of data levels
             colors         : PTR_NEW()     , $ ; array of nlevels colors
@@ -68,7 +68,7 @@ PRO w_Map__Define
             }
   
   ; This is the information for one shape file
-  struct = {MAP_SHAPE                      , $ 
+  struct = {w_Map_SHAPE                    , $ 
             shape_file     : ''            , $ ; path to the shape file
             thick          : 0D            , $ ; thickness or the shape line for the plot
             style          : 0D            , $ ; style or the shape line for the plot
@@ -79,7 +79,7 @@ PRO w_Map__Define
             }
   
   ; This is the information for one polygon to draw
-  struct = {MAP_POLYGON                    , $ 
+  struct = {w_Map_POLYGON                  , $ 
             thick          : 0D            , $ ; thickness or the line for the plot
             style          : 0D            , $ ; style or the line for the plot
             color          : ''            , $ ; color or the line for the plot
@@ -88,7 +88,7 @@ PRO w_Map__Define
             }
   
   ; This is the information for one point to draw
-  struct = {MAP_POINT                      , $ 
+  struct = {w_Map_POINT                    , $ 
             thick          : 0D            , $ ; thickness or the point
             psym           : 0L            , $ ; style or the point
             symsize        : 0D            , $ ; style or the point
@@ -101,15 +101,19 @@ PRO w_Map__Define
             }
   
   ; This is the information for one contour to draw
-  struct = {MAP_CONTOUR                    , $ 
+  struct = {w_Map_CONTOUR                  , $ 
             keywords       : PTR_NEW()     , $ ; Keywords for cgContour 
             data           : PTR_NEW()       $ ; data to contour 
             }
   
-  
+  ; This is a mask structure
+  struct = {w_Map_MASK                     , $
+            mask           : PTR_new()     , $ ; the mask
+            color          : 0L              $ 
+            } 
   
   ; This is for the Lon-Lat/UTM contours drawing
-  struct = {MAP_PARAMS                     , $
+  struct = {w_Map_MAP_PARAMS               , $
             type           : ''            , $ ; LONLAT or UTM
             xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis
             yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis
@@ -126,7 +130,7 @@ PRO w_Map__Define
             }
 
   ; This is for the wind vectors 
-  struct = {WIND_PARAMS                    , $
+  struct = {w_Map_WIND_PARAMS              , $
             type           : ''            , $ ; currently VECTORS
             velx           : PTR_new()     , $ ; x velocities
             vely           : PTR_new()     , $ ; y velocities
@@ -136,35 +140,39 @@ PRO w_Map__Define
             thick          : 0D            , $ ; thickness of the arrows
             length         : 0D              $ ; lenght of the arrows
             }
-     
-  struct = { w_Map                         , $
-             grid          : OBJ_NEW()     , $ ; the grid object (nx = Xsize, ny = Ysize)
-             Xsize         : 0L            , $ ; X size of the image in pixels
-             Ysize         : 0L            , $ ; Y size of the image in pixels
-             img           : PTR_NEW()     , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
-             data          : PTR_NEW()     , $ ; active data array ([Xsize,Ysize]) of any numeric type
-             missing       : PTR_NEW()     , $ ; missing values in the data array
-             sl            : PTR_NEW()     , $ ; shading layer for topography shading
-             contour_img    : FALSE         , $ ; the imaeg is generated using contour
-             relief_factor : 0D            , $ ; strenght of the shading (default: 0.7)
-             nshapes       : 0L            , $ ; number of active shape files to plot                  
-             shapes        : PTR_NEW()     , $ ; array of nshapes {MAP_SHAPE} structures                               
-             npolygons     : 0L            , $ ; number of active polygons to plot                  
-             polygons      : PTR_NEW()     , $ ; array of npolygons {MAP_POLYGON} structures                               
-             npoints       : 0L            , $ ; number of points to plot                  
-             points        : PTR_NEW()     , $ ; array of npoints {MAP_POINT} structures                               
-             ncontours     : 0L            , $ ; number of additional contours to plot                  
-             contours      : PTR_NEW()     , $ ; array of ncontours {MAP_CONTOUR} structures                               
-             map_params    : {MAP_PARAMS}  , $ ; the mapping params for contours
-             plot_params   : {PLOT_PARAMS} , $ ; the plotting params          
-             wind_params   : {WIND_PARAMS} , $ ; the wind params          
-             is_Shaped     : FALSE         , $ ; is there at least one shape to draw?
-             is_Shaded     : FALSE         , $ ; did the user specify a DEM for shading?
-             is_Polygoned  : FALSE         , $ ; did the user specify a polygon to draw?
-             is_Pointed    : FALSE         , $ ; did the user specify a point to draw?
-             is_Mapped     : FALSE         , $ ; did the user specify a contour to draw for mapping?         
-             is_Winded     : FALSE         , $ ; did the user specify wind flows?         
-             is_Contoured  : FALSE           $ ; did the user specify additional contour plots?      
+  
+  ; Finaly, this is the object
+  struct = { w_Map                               , $
+             grid          : OBJ_NEW()           , $ ; the grid object (nx = Xsize, ny = Ysize)
+             Xsize         : 0L                  , $ ; X size of the image in pixels
+             Ysize         : 0L                  , $ ; Y size of the image in pixels
+             img           : PTR_NEW()           , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
+             data          : PTR_NEW()           , $ ; active data array ([Xsize,Ysize]) of any numeric type
+             missing       : PTR_NEW()           , $ ; missing values in the data array
+             sl            : PTR_NEW()           , $ ; shading layer for topography shading
+             contour_img   : FALSE               , $ ; the imaeg is generated using contour
+             relief_factor : 0D                  , $ ; strenght of the shading (default: 0.7)
+             nshapes       : 0L                  , $ ; number of active shape files to plot                  
+             shapes        : PTR_NEW()           , $ ; array of nshapes {w_Map_SHAPE} structures                               
+             npolygons     : 0L                  , $ ; number of active polygons to plot                  
+             polygons      : PTR_NEW()           , $ ; array of npolygons {w_Map_POLYGON} structures                               
+             npoints       : 0L                  , $ ; number of points to plot                  
+             points        : PTR_NEW()           , $ ; array of npoints {w_Map_POINT} structures                               
+             ncontours     : 0L                  , $ ; number of additional contours to plot                  
+             contours      : PTR_NEW()           , $ ; array of ncontours {w_Map_CONTOUR} structures                               
+             nmasks        : 0L                  , $ ; number of masks                  
+             masks         : PTR_NEW()           , $ ; array of namsks {w_Map_MASK} structures                               
+             map_params    : {w_Map_MAP_PARAMS}  , $ ; the mapping params for contours
+             plot_params   : {w_Map_PLOT_PARAMS} , $ ; the plotting params          
+             wind_params   : {w_Map_WIND_PARAMS} , $ ; the wind params          
+             is_Shaped     : FALSE               , $ ; is there at least one shape to draw?
+             is_Shaded     : FALSE               , $ ; did the user specify a DEM for shading?
+             is_Polygoned  : FALSE               , $ ; did the user specify a polygon to draw?
+             is_Pointed    : FALSE               , $ ; did the user specify a point to draw?
+             is_Mapped     : FALSE               , $ ; did the user specify a contour to draw for mapping?         
+             is_Winded     : FALSE               , $ ; did the user specify wind flows?         
+             is_Contoured  : FALSE               , $ ; did the user specify additional contour plots?      
+             is_Masked     : FALSE                 $ ; did the user specify masks to overplot?      
              }
     
 END
@@ -243,7 +251,7 @@ pro w_Map::DestroyPlotParams
   
   ptr_free, self.plot_params.colors
   ptr_free, self.plot_params.levels
-  self.plot_params = {PLOT_PARAMS}
+  self.plot_params = {w_Map_PLOT_PARAMS}
   
 end
 
@@ -265,7 +273,7 @@ pro w_Map::DestroyWindParams
   ptr_free, self.wind_params.posx
   ptr_free, self.wind_params.posy
     
-  self.wind_params = {WIND_PARAMS}
+  self.wind_params = {w_Map_WIND_PARAMS}
   self.is_Winded = FALSE
   
 end
@@ -291,7 +299,7 @@ pro w_Map::DestroyMapParams
   ptr_free, self.map_params.ylevels
 
   
-  self.map_params = {MAP_PARAMS}
+  self.map_params = {w_Map_MAP_PARAMS}
   self.is_Mapped = FALSE
   
 end
@@ -395,6 +403,32 @@ end
 
 ;+
 ; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+pro w_Map::DestroyMasks
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  if PTR_VALID(self.masks) then begin  
+    masks = *self.masks
+    for i = 0, N_ELEMENTS(masks) - 1 do begin
+     ptr_free, (masks[i]).mask  
+    endfor
+  endif
+  
+  ptr_free, self.masks
+  self.nmasks= 0L
+  self.is_Masked= FALSE
+  
+end
+
+;+
+; :Description:
 ;    Destroy function. 
 ;
 ; :History:
@@ -419,6 +453,7 @@ pro w_Map::Cleanup
   self->DestroyPolygons     
   self->DestroyPoints   
   self->DestroyContours   
+  self->DestroyMasks
   
 END
 
@@ -429,7 +464,7 @@ END
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c, MAP_PARAMS = map_params
+PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -494,7 +529,7 @@ end
 ;-    
 function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = colors, CMIN=cmin, CMAX=cmax, $
                                   INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color, $
-                                    MIN_VALUE = min_value, MAX_VALUE = max_value, CONTOUR = contour
+                                  MIN_VALUE = min_value, MAX_VALUE = max_value, CONTOUR = contour
          
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1007,7 +1042,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   
-  sh = {MAP_SHAPE}
+  sh = {w_Map_SHAPE}
   sh.color = _color
   sh.shape_file = shpfile
   sh.style = _style
@@ -1106,7 +1141,7 @@ function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYL
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   
-  poly = {MAP_POLYGON}
+  poly = {w_Map_POLYGON}
   poly.color = _color
   poly.style = _style
   poly.thick = _thick  
@@ -1227,7 +1262,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
   if KEYWORD_SET(CHARSIZE) then _charsize = CHARSIZE
   
-  point = REPLICATE({MAP_POINT}, n_coord)  
+  point = REPLICATE({w_Map_POINT}, n_coord)  
   for i = 0, n_coord -1 do begin
     point[i].thick = _thick
     point[i].psym = _psym
@@ -1455,6 +1490,86 @@ end
 
 ;+
 ; :Description:
+;    Sets a mask to overplot on the data. Currently, it is just possible to give it 
+;    a color, but later it will be possible to do more things.
+;    It is possible to set more then one mask.
+;
+; :Params:
+;    mask: in, required, type = 2D array
+;          the mask to overplot
+;    
+;    grid: in, optional, type = w_grid2d
+;          the grid associated to the mask (see 'w_grid2d::map_gridded_data'). If not set,
+;          mask is assumed to be in the same grid as the map and will be resized to the map 
+;          grid using congrid (dangerous if you do not know what you are doing, faster if you sure
+;          the mask is related to the same grid)
+;
+; :Keywords:
+;    BILINEAR: in, optional, type = boolean
+;              set this if you want the mask to be linearily interpolated
+;              onto the map (usually, if it is set in `set_data` it is set
+;              here, too)
+;    COLOR: in, optional, type = color
+;              set this to the color of the mask (string, index in the current table, etc.)
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_mask, mask, grid, BILINEAR = bilinear, COLOR = color
+                             
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyMasks
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  if N_PARAMS() eq 0 then begin
+   self->DestroyMasks
+   return, 1
+  endif  
+  
+  if ~ arg_okay(mask, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('mask', NDIMS=2)
+        
+  if N_ELEMENTS(grid) eq 0 then begin
+    if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _mask = mask $
+    else _mask = CONGRID(mask, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
+  endif else begin
+    _mask = self.grid->map_gridded_data(mask, grid, MISSING = 0, BILINEAR = bilinear)
+  endelse
+  
+  _mask = BYTE(0 > _mask < 1)
+  _color = utils_color_convert(COLORS = color)
+  
+  mask = {w_Map_MASK}
+  mask.color = _color
+  mask.mask = PTR_NEW(_mask, /NO_COPY)
+    
+  if self.nmasks eq 0 then begin
+   self.nmasks = 1
+   self.masks = PTR_NEW(mask, /NO_COPY)
+  endif else begin
+   temp = *self.masks
+   nmasks = self.nmasks
+   ptr_free, self.masks
+   temp = [temp, mask]
+   self.masks = PTR_NEW(temp, /NO_COPY)
+   self.nmasks = nmasks + 1
+  endelse
+    
+  self.is_Masked = TRUE  
+  return, 1
+
+end
+
+;+
+; :Description:
 ;    Set additional data to be contoured over the original plot.
 ;    This can be done as many times as needed.
 ;
@@ -1517,7 +1632,7 @@ function w_Map::set_contour, data, grid, MISSING = missing, _EXTRA = extra
     ENDCASE
   endif  
 
-  cont = {MAP_CONTOUR}
+  cont = {w_Map_CONTOUR}
   cont.data = PTR_NEW(_data, /NO_COPY)
   cont.keywords = PTR_NEW(extra)
  
@@ -1652,17 +1767,29 @@ end
 ;-    
 function w_Map::img_to_rgb
 
-    utils_color_rgb, [self.plot_params.neutral, *self.plot_params.colors], s_r, s_g, s_b
-    r = byte(0 > s_r[*self.img] < 255)
-    g = byte(0 > s_g[*self.img] < 255)
-    b = byte(0 > s_b[*self.img] < 255)
-    img = bytarr(3, self.Xsize, self.Ysize)
-    img[0,*,*] = r[*,*]
-    img[1,*,*] = g[*,*]
-    img[2,*,*] = b[*,*]
-    
-    return, img
-    
+  ; Make an indexed image
+  colors = [self.plot_params.neutral, *self.plot_params.colors]
+  img = *self.img
+  if self.is_Masked then begin
+    for m=0, self.nmasks-1 do begin
+      mask = (*self.masks)[m]
+      pm = where(*mask.mask eq 1, cntm)
+      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+      colors = [colors,mask.color]
+    endfor
+  endif
+  
+  utils_color_rgb, colors, s_r, s_g, s_b
+  r = byte(0 > s_r[img] < 255)
+  g = byte(0 > s_g[img] < 255)
+  b = byte(0 > s_b[img] < 255)
+  img = bytarr(3, self.Xsize, self.Ysize)
+  img[0,*,*] = r[*,*]
+  img[1,*,*] = g[*,*]
+  img[2,*,*] = b[*,*]
+  
+  return, img
+  
 end    
     
 ;+
@@ -1678,38 +1805,52 @@ end
 function w_Map::shading
 
   if self.relief_factor eq 0 then return, self->img_to_rgb()
-  nlevels = self.plot_params.nlevels + 1
+ 
+  nlevels = self.plot_params.nlevels + 1 
+  if self.is_Masked then nlevels += self.nmasks
   
   if nlevels eq 0 or nlevels gt 128 then begin
-   MESSAGE, 'Shading: max number of levels is 127 (because of the neutral color)', /INFORMATIONAL
-   return, self->img_to_rgb()
+    MESSAGE, 'w_Map INFO: Shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
+    return, self->img_to_rgb()
   endif
-
+  
   rp = bindgen(256)
   gp = bindgen(256)
   bp = bindgen(256)
   
-  utils_color_rgb, [self.plot_params.neutral, *self.plot_params.colors], s_r, s_g, s_b  
+  ; Make an indexed image
+  colors = [self.plot_params.neutral, *self.plot_params.colors]
+  img = *self.img  
+  if self.is_Masked then begin
+    for m=0, self.nmasks-1 do begin
+      mask = (*self.masks)[m]
+      pm = where(*mask.mask eq 1, cntm)
+      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+      colors = [colors,mask.color]
+    endfor
+  endif
+  
+  utils_color_rgb, colors, s_r, s_g, s_b
   rp[0:nlevels-1] = s_r[*]
   gp[0:nlevels-1] = s_g[*]
   bp[0:nlevels-1] = s_b[*]
   
   ;******************
   ; Prepare shading *
-  ;******************  
-  sl = *self.sl      
+  ;******************
+  sl = *self.sl
   mean_sl = moment(sl, SDEV=sdev_sl)
   
-  p = where(sl gt 0, cnt)  
+  p = where(sl gt 0, cnt)
   if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
-  p = 0  
+  p = 0
   level = 1.0 - 0.1 * self.relief_factor ; 1.0 for 0% and 0.9 for 100%
   sens  = 0.7 * self.relief_factor       ; 0.0 for 0% and 0.7 for 100%
   
   ;****************
   ; Apply shading *
-  ;****************  
-  _img = ROTATE(*self.img,7)
+  ;****************
+  _img = ROTATE(img,7)
   r = rp[_img]
   g = gp[_img]
   b = bp[_img]
@@ -1722,7 +1863,7 @@ function w_Map::shading
   img = bytarr(3, self.Xsize, self.Ysize)
   img[0,*,*] = r[*,*]
   img[1,*,*] = g[*,*]
-  img[2,*,*] = b[*,*]    
+  img[2,*,*] = b[*,*]
   
   return, reverse(img,3)
   
@@ -1737,7 +1878,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::draw_map, WINDOW = window
+function w_Map::draw_Map, WINDOW = window
   
   if self.map_params.type eq 'LONLAT' then begin
   
@@ -1952,17 +2093,17 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
- 
+  
   if KEYWORD_SET(WINDOW) and ARG_PRESENT(position) then begin ; we have to use a trick to give POSITION as output, too
     cgWID = cgQuery(/CURRENT, COUNT=wincnt)
     IF wincnt EQ 0 THEN Message, 'No active cgWindow to plot the map into...'
     tmp = !D.window
-    wset, cgWID    
+    wset, cgWID
     cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
     xwin = !D.WINDOW
     cgImage, *self.img, /NORMAL, POSITION = position
     wdelete, xwin
-    wset, tmp    
+    wset, tmp
   endif
   
   if self.is_Shaded then begin
@@ -1970,6 +2111,7 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
     cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
   endif else begin
     if self.contour_img then begin
+      if self.is_Masked then message, 'w_Map INFO: for CONTOUR plots the masks are ignored.'
       ; Make no image but just a contour of it
       if FINITE(*self.missing) then begin
         levels = [*self.missing, *self.plot_params.levels]
@@ -1983,15 +2125,27 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
       cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=position, XTICKLEN=0,YTICKLEN=0, label = 0, $
         PALETTE=[[r],[g],[b]], /NORMAL, WINDOW=window, XTICKNAME = REPLICATE(' ', 30), YTICKNAME = REPLICATE(' ', 30)
     endif else begin
-      ; Make an indexed image and show it
-      utils_color_rgb,  [self.plot_params.neutral, *self.plot_params.colors], r,g,b
-      cgImage, *self.img, PALETTE= [[r],[g],[b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE =noerase
+    
+      ; Make an indexed image
+      colors = [self.plot_params.neutral, *self.plot_params.colors]
+      img = *self.img
+      if self.is_Masked then begin
+        for m=0, self.nmasks-1 do begin
+          mask = (*self.masks)[m]
+          pm = where(*mask.mask eq 1, cntm)
+          if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+          colors = [colors,mask.color]
+        endfor
+      endif
+      
+      utils_color_rgb, colors, s_r, s_g, s_b
+      cgImage, img, PALETTE= [[s_r],[s_g],[s_b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
     endelse
   endelse
    
   if self.is_Contoured then ok = self->draw_contours(WINDOW = window) 
   if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
-  if self.is_Mapped then ok = self->draw_map(WINDOW = window)
+  if self.is_Mapped then ok = self->draw_Map(WINDOW = window)
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
   if self.is_Polygoned then ok = self->draw_polygons(WINDOW = window)
   if self.is_Pointed then ok = self->draw_points(WINDOW = window)
@@ -2021,7 +2175,7 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=po
   if n_elements(bar_format) eq 0 then bar_format = '(F5.1)'
   if n_elements(labels) eq 0 then labels = string(*(self.plot_params.levels), FORMAT=bar_format)
   
-  if self.plot_params.nlevels lt 40 then begin
+  if self.plot_params.nlevels lt 50 then begin
     cn = self.plot_params.neutral
     w_cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
       TITLE=title, ADDCMD=window, CHARSIZE=charsize, BAR_OPEN=bar_open, NEUTRAL_COLOR=cn, _EXTRA=extra
