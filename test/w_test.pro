@@ -2678,8 +2678,8 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
     if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
       
-    if redo then POST_aggregate_directory, 1, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom1/', SPINUP_INDEX=1, END_INDEX=8 , START_TIME =   QMS_TIME(year = 2009, day = 13, month = 09, hour = 3), END_TIME=QMS_TIME(year = 2009, day = 15, month = 09, hour = 0)
-    if redo then POST_aggregate_directory, 3, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom3/', SPINUP_INDEX=1, END_INDEX=24, START_TIME =   QMS_TIME(year = 2009, day = 13, month = 09, hour = 1), END_TIME=QMS_TIME(year = 2009, day = 15, month = 09, hour = 0)
+    if redo then POST_aggregate_directory, 1, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom1/'
+    if redo then POST_aggregate_directory, 3, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom3/'
     if ~FILE_TEST(OUTPUT_DIR) then error+=1
     
     ; DOM 1 day one

@@ -5,7 +5,6 @@
 ; to process and aggregate standard WRF output files into e.g. monthly files
 ; using a standard format understood by the WAVE library.
 ; 
-; Currently, only the surface data aggregation is provided
 ; 
 ; The POST library is in development. Here is a non-
 ; exhaustive TODO list::
@@ -75,7 +74,7 @@ end
 ;+
 ; :Description:
 ;       
-; This function parses a standard .csv file which contains a list 
+; This function parses a standard *.csv file which contains a list 
 ; of the WRF output variables that should be aggregated to the final
 ; netcdf file. Normally, you should not call this procedure but
 ; you can try it on your own *.csv file to test if the format
@@ -234,7 +233,7 @@ end
 ; :History:
 ;       Written by FaM, 2010.
 ;-
-function POST_absDate_to_wrfstr, absDate
+function POST_time_to_wrfstr, absDate
   
   ; Set Up environnement
   @WAVE.inc
@@ -265,7 +264,7 @@ end
 ; :History:
 ;       Written by FaM, 2010.
 ;-
-function POST_absDate_to_wrffname, absDate
+function POST_time_to_wrffname, absDate
   
   ; Set Up environnement
   @WAVE.inc
@@ -273,31 +272,7 @@ function POST_absDate_to_wrffname, absDate
   ON_ERROR, 2
   
   ;2003-09-01_12_00_00
-  
-  n = N_ELEMENTS(absdate)    
-
-  if arg_okay(absDate, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = absDate)   $ 
-   else if arg_okay(absDate, STRUCT={ABS_DATE}) then mytime = absDate  $
-     else message, WAVE_Std_Message('ABSDATE', /ARG)
-    
-  for i = 0, n-1 do begin
-  
-   if N_ELEMENTS(sout) eq 0 then sout = '' else sout = [sout , '']
-    
-    str = STRTRIM(mytime[i].year,1) + '-'
-    if mytime[i].month lt 10 then str +=  '0' + STRTRIM(mytime[i].month,1) + '-' else str += STRTRIM(mytime[i].month,1)+ '-'
-    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) + '_' else str += STRTRIM(mytime[i].day,1)+ '_'  
-    
-  
-    if mytime[i].hour lt 10 then str =  str + '0' + STRTRIM(mytime[i].hour,1) + '_' else str = str + STRTRIM(mytime[i].hour,1)+ '_'
-    if mytime[i].minute lt 10 then str =  str + '0' + STRTRIM(mytime[i].minute,1) + '_' else str = str + STRTRIM(mytime[i].minute,1)+ '_'
-    if mytime[i].second lt 10 then str =  str + '0' + STRTRIM(mytime[i].second,1) else str = str + STRTRIM(mytime[i].second,1)
-  
-    sout[i] = str
-    
-  endfor
-  
-  return, sout
+  return, TIME_to_STR(absDate, MASK = 'YYYY-MM-DD_HH_TT_SS')
   
 end
 
@@ -320,34 +295,15 @@ end
 ; :History:
 ;       Written by FaM, 2011.
 ;-
-function POST_absDate_to_wrfdir, absDate
+function POST_time_to_wrfdir, absDate
   
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   ON_ERROR, 2
   
-  ;2003.09.01
-  
-  n = N_ELEMENTS(absdate)    
-
-  if arg_okay(absDate, /NUMERIC) then mytime = MAKE_ABS_DATE(qms = absDate)   $ 
-   else if arg_okay(absDate, STRUCT={ABS_DATE}) then mytime = absDate  $
-     else message, WAVE_Std_Message('ABSDATE', /ARG)
-    
-  for i = 0, n-1 do begin
-  
-   if N_ELEMENTS(sout) eq 0 then sout = '' else sout = [sout , '']
-    
-    str = STRTRIM(mytime[i].year,1) + '.'
-    if mytime[i].month lt 10 then str +=  '0' + STRTRIM(mytime[i].month,1) + '.' else str += STRTRIM(mytime[i].month,1)+ '.'
-    if mytime[i].day lt 10 then str += '0' + STRTRIM(mytime[i].day,1) else str += STRTRIM(mytime[i].day,1)
-  
-    sout[i] = str
-    
-  endfor
-  
-  return, sout
+  ;2003.09.01  
+  return, TIME_to_STR(absDate, MASK = 'YYYY.MM.DD')
   
 end
 
@@ -405,7 +361,7 @@ pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
   day = LONG(STRMID(fname,19,2))
   hour = LONG(STRMID(fname,22,2))
   ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)
-  t0 = POST_absDAte_to_wrffname(REL_TIME(ds, MILLISECOND = step.dms * index))
+  t0 = POST_time_to_wrffname(REL_TIME(ds, MILLISECOND = step.dms * index))
         
   outfile = OUTDIRECTORY + '/' + STRMID(fname,0,11) + t0 + '_24h.nc'
     
@@ -538,6 +494,25 @@ pro POST_crop_file, file, index, step, OUTDIRECTORY = outdirectory
   
 end
 
+;+
+; :Description:
+;    This routine crops automatically ALL WRF files in a directory and copy them
+;    in an other directory. The sub-directories structure and content are kept 
+;    identical. 
+;
+;
+; :Keywords:
+;    input_dir: in, type=string
+;               the path to the directory to copy-crop
+;    output_dir: in, type=string
+;                the path to the output directory
+;
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
 pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
 
   ; Set Up environnement
@@ -599,7 +574,7 @@ pro POST_cpy_crop_directory, input_dir = input_dir, output_dir = output_dir
     day = LONG(STRMID(fname,19,2))
     hour = LONG(STRMID(fname,22,2))
     ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)    
-    new_dir = FILE_DIRNAME(arboU[i]) + '/' + POST_absDAte_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
+    new_dir = FILE_DIRNAME(arboU[i]) + '/' + POST_time_to_wrfdir(REL_TIME(ds, MILLISECOND = step.dms * index))
     new_dir = FILE_DIRNAME(output_dir + '/' + new_dir, /MARK_DIRECTORY) +  FILE_BASENAME(output_dir + '/' + new_dir)
     if dom eq 1 then begin
       FILE_MKDIR, new_dir
@@ -683,8 +658,8 @@ end
 
 ;+
 ; :Description:
-;    This procedure fills a target WRF aggregation file, given 
-;    a list of file to parse and a list of variable to copy.
+;    This procedure fills a target WRF aggregation file.
+;    It is called internally and normal users should not use it.
 ;
 ; :Categories:
 ;    WRF/Post
@@ -705,7 +680,7 @@ end
 ;    spin_index: in, required
 ;                where to start the copy in the original files
 ;    e_index: in, required
-;                where to end the copy in the original files
+;             where to end the copy in the original files
 ;                
 ; :History:
 ;       Written by FaM, 2010.
@@ -715,7 +690,7 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
   nvars = vartokeep.n_vars  
   nfiles = N_ELEMENTS(filelist)
@@ -854,20 +829,42 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
 
 end
 
-
-pro POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
+;+
+; :Description:
+;    This procedure fills a target WRF aggregation MEAN file.
+;    It is called internally and normal users should not use it.
+;
+; :Categories:
+;    WRF/Post
+; 
+; :Private:
+; 
+; :Params:
+;    unit: in, required
+;         the log file unit
+;    tid: in, required
+;         the netCDF target file ID
+;    filelist: in, required
+;              the list of files paths to parse
+;    vartokeep: in, required
+;              the list of variable to copy
+;    ts: in, required
+;        the timeserie of the final aggregated file
+;                
+; :History:
+;       Written by FaM, 2010.
+;-
+pro POST_fill_mean_ncdf, unit, tid, filelist, vartokeep, ts
   
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
   nfiles = N_ELEMENTS(filelist)
   nvars = N_ELEMENTS(vartokeep)  
   nt = N_ELEMENTS(ts) - 1
   cert = LONARR(nt) ; To check if everything is filled
-  
-
   
   for f=0, nfiles-1 do begin
   
@@ -893,10 +890,8 @@ pro POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
     if cnt eq 0 then continue 
     if ps eq N_ELEMENTS(ts)-1 then continue 
     pe = where(ts eq montime1, cnt)    
-;    if cnt eq 0 then Message, 'OUPS'      
     
-    for v=0, nvars - 1 do begin
-    
+    for v=0, nvars - 1 do begin    
       vid = vartokeep[v]
       if vid eq 'Times' then continue
       if vid eq 'V10' then continue
@@ -939,7 +934,7 @@ pro POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
     
     NCDF_VARPUT, tid, 'PRCP', prcp, OFFSET=[0,0,ps]
     NCDF_VARPUT, tid, 'SNOWFALL', snow, OFFSET=[0,0,ps]
-    NCDF_VARPUT, tid, 'Times', byte(POST_absDate_to_wrfstr(time_tofill)), OFFSET=[0,ps]
+    NCDF_VARPUT, tid, 'Times', byte(POST_time_to_wrfstr(time_tofill)), OFFSET=[0,ps]
     
     printf, unit, FILE_BASENAME(filelist[f]) + ' processed.'
     flush, unit
@@ -963,6 +958,11 @@ end
 ;    the keywords 'START_TIME' and 'END_TIME'. The variables that have to be aggregated
 ;    are given using standard file formats (see 'POST_parse_Vartokeep'). Default file
 ;    is the "surface" file in the ./res/files/post directory.
+;    
+;    Unless the SPINUP_INDEX and END_INDEX keywords are set, the routine assumes that you
+;    are aggregating "standard" WRF runs (36H run, step 3H for dom1 and 1H for other domains).
+;    If you are aggregating cropped files that have the "_24h.nc" subset, the indexes will
+;    be adapted automatically.
 ;    
 ;    Be carefull to choose the directory(s) circumspectly. The chosen directories must contain:
 ; 
@@ -1002,6 +1002,9 @@ end
 ;    END_INDEX: in, optional, type = integer
 ;               The index where to stop to get the data in each file to aggregate. Default is
 ;               12 for the first domain, 36 for the other domains. 
+;    CROPPED: in, optional, type = boolean
+;             set this keyword if you are aggregating "standard" WRF cropped files. The 
+;             SPINUP_INDEX and END_INDEX will be set automatically accordingly.
 ;    TIMESTEP: in, optional, type = {TIME_STEP}
 ;              The output time serie timestep. Default is 3 hours for the first domain, 1 hour for the
 ;              others.
@@ -1011,27 +1014,28 @@ end
 ; :History:
 ;       Written by FaM, 2010 
 ;-
-pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
+pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TIME = end_time, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, CROPPED=cropped, $
+                                OUTDIRECTORY = OUTdirectory, VARTOKEEP_FILE = vartokeep_file
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
   
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /Cancel
-;    if N_ELEMENTS(unit) ne 0 then begin
-;      printf, unit, ' '
-;      printf, unit, ' '
-;      printf, unit, '* ERROR : ' + !Error_State.Msg
-;      printf, unit, ' '
-;      printf, unit, ' '
-;      close, unit
-;      free_lun, Unit
-;    endif
-;    ok = WAVE_Error_Message(!Error_State.Msg)
-;    RETURN
-;  ENDIF 
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    if N_ELEMENTS(unit) ne 0 then begin
+      printf, unit, ' '
+      printf, unit, ' '
+      printf, unit, '* ERROR : ' + !Error_State.Msg
+      printf, unit, ' '
+      printf, unit, ' '
+      close, unit
+      free_lun, Unit
+    endif
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF 
   
   ; ---------------
   ; Check the input
@@ -1040,9 +1044,14 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   fileLIST = POST_list_files(domain, directory, CNT = cnt)  
   if cnt eq 0 then Message, 'Either $domain or $directory are not set properly.'
   
-  if ~KEYWORD_SET(SPINUP_INDEX) then begin
-   if domain eq 1 then spin_index = 5 else spin_index = 13
-  endif else spin_index = SPINUP_INDEX
+  if N_ELEMENTS(SPINUP_INDEX) ne 0 then spin_index = SPINUP_INDEX
+  if N_ELEMENTS(END_INDEX) ne 0 then e_index = END_INDEX
+   
+  if N_ELEMENTS(spin_index) eq 0 then if KEYWORD_SET(CROPPED) then spin_index = 1
+  isHere = STRPOS(filelist[0], '_24h.nc')
+  p = WHERE(isHere ne -1, iscropped)  
+  if N_ELEMENTS(spin_index) eq 0 then if iscropped then spin_index = 1
+  if N_ELEMENTS(spin_index) eq 0 then if domain eq 1 then spin_index = 5 else spin_index = 13
   
   if N_ELEMENTS(TIMESTEP) eq 0 then begin
     if domain eq 1 then step = MAKE_TIME_STEP(hour=3) else step = MAKE_TIME_STEP(hour=1)
@@ -1073,9 +1082,11 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   dummy = min(ds, pmin, SUBSCRIPT_MAX=pmax)
   
   myt0 = REL_TIME(ds[pmin], MILLISECOND = step.dms * spin_index)
-  if ~KEYWORD_SET(END_INDEX) then begin
-   if domain eq 1 then e_index = 12 else e_index = 36
-  endif else e_index = END_INDEX
+  
+  if N_ELEMENTS(e_index) eq 0 then if KEYWORD_SET(CROPPED) then if domain eq 1 then e_index = 8 else e_index = 24
+  if N_ELEMENTS(e_index) eq 0 then if iscropped then if domain eq 1 then e_index = 8 else e_index = 24
+  if N_ELEMENTS(e_index) eq 0 then if domain eq 1 then e_index = 12 else e_index = 36
+   
   myt1 = REL_TIME(ds[pmax], MILLISECOND = step.dms * e_index)
 
   if ~KEYWORD_SET(START_TIME) then t0 = myt0 else begin
@@ -1181,7 +1192,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
       continue
     endif
     ; go threw the atts we want to change
-    if str_equiv(sName) eq 'START_DATE' then sValue = POST_absDAte_to_wrfstr(ts[0])
+    if str_equiv(sName) eq 'START_DATE' then sValue = POST_time_to_wrfstr(ts[0])
     
     ; Set the appropriate netCDF data type keyword.
     CASE StrUpCase(sAtt_info.DATATYPE) OF
@@ -1526,28 +1537,64 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   
 end
 
-pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX = spinup_index, END_index = end_index, VARTOKEEP_FILE = vartokeep_file
+;+
+; :Description:
+;    Aggregated autmotically a lot of WRF runs.
+;    
+;    IMPORTANT: it makes a lot of assumptions on the directory structure.
+;               it is recommended to apply this on YEARLY directories, such as:
+;               "~/2008", that contains "2008.XX" subdirectories.               
+;
+; :Params:
+;    domain: in, required, type = integer
+;            The domain id. No default.
+;    directory: in, required, type = string
+;               The directory to parse recursively. If omitted, a dialog window is opened.
+;    outdirectory: in, required, type = string
+;                 The directory were to put the aggregated files.
+; :Keywords:
+;    SPINUP_INDEX: in, optional, type = integer
+;                  The index where to start to get the data in each file to aggregate. Default is
+;                  5 for the first domain, 13 for the other domains. 
+;    END_INDEX: in, optional, type = integer
+;               The index where to stop to get the data in each file to aggregate. Default is
+;               12 for the first domain, 36 for the other domains. 
+;    CROPPED: in, optional, type = boolean
+;             set this keyword if you are aggregating "standard" WRF cropped files. The 
+;             SPINUP_INDEX and END_INDEX will be set automatically accordingly.
+;    TIMESTEP: in, optional, type = {TIME_STEP}
+;              The output time serie timestep. Default is 3 hours for the first domain, 1 hour for the
+;              others.
+;    VARTOKEEP_FILE: in, optional, type = string
+;              The path to the variable file to parse (see 'POST_parse_Vartokeep').
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+pro POST_aggregate_Mass_directory, domain, directory, outdirectory, TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, CROPPED=cropped, VARTOKEEP_FILE = vartokeep_file
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
   
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /Cancel
-;    if N_ELEMENTS(unit) ne 0 then begin
-;      printf, unit, ' '
-;      printf, unit, ' '
-;      printf, unit, '* ERROR : ' + !Error_State.Msg
-;      printf, unit, ' '
-;      printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
-;      printf, unit, ' '
-;      close, unit
-;      free_lun, Unit
-;    endif
-;    ok = WAVE_Error_Message(!Error_State.Msg)
-;    RETURN
-;  ENDIF
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    if N_ELEMENTS(unit) ne 0 then begin
+      printf, unit, ' '
+      printf, unit, ' '
+      printf, unit, '* ERROR : ' + !Error_State.Msg
+      printf, unit, ' '
+      printf, unit, 'End   : ' + TIME_to_STR(QMS_TIME())
+      printf, unit, ' '
+      close, unit
+      free_lun, Unit
+    endif
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
   
   ; ---------------
   ; Check the input
@@ -1591,7 +1638,8 @@ pro POST_aggregate_Mass_directory, domain, directory, OUTdirectory, SPINUP_INDEX
   for i=0, Ndirs-1 do begin
     printf, unit, '  Starting ' + directories[i] + ' ...'  
     flush, unit
-    POST_aggregate_directory, domain, directories[i], SPINUP_INDEX = spinup_index, END_INDEX = end_index, OUTDIRECTORY = outdirs[i], VARTOKEEP_FILE = vartokeep_file
+    POST_aggregate_directory, domain, directories[i], TIMESTEP = timestep, SPINUP_INDEX = spinup_index, END_INDEX = end_index, CROPPED=cropped, $
+                                VARTOKEEP_FILE = vartokeep_file, OUTDIRECTORY = outdirs[i]
   endfor
   
   printf, unit, ' '
@@ -1617,21 +1665,21 @@ pro POST_mean_file, domain, directory, START_MONTH = start_month, END_MONTH = en
   COMPILE_OPT idl2
   @WAVE.inc
   
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /Cancel
-;    if N_ELEMENTS(unit) ne 0 then begin
-;      printf, unit, ' '
-;      printf, unit, ' '
-;      printf, unit, '* ERROR : ' + !Error_State.Msg
-;      printf, unit, ' '
-;      printf, unit, ' '
-;      close, unit
-;      free_lun, Unit
-;    endif
-;    ok = WAVE_Error_Message(!Error_State.Msg)
-;    RETURN
-;  ENDIF 
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    if N_ELEMENTS(unit) ne 0 then begin
+      printf, unit, ' '
+      printf, unit, ' '
+      printf, unit, '* ERROR : ' + !Error_State.Msg
+      printf, unit, ' '
+      printf, unit, ' '
+      close, unit
+      free_lun, Unit
+    endif
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF 
   
   ; ---------------
   ; Check the input
@@ -1771,7 +1819,7 @@ pro POST_mean_file, domain, directory, START_MONTH = start_month, END_MONTH = en
       continue
     endif
     ; go threw the atts we want to change
-    if str_equiv(sName) eq 'START_DATE' then sValue = POST_absDAte_to_wrfstr(ts[0])
+    if str_equiv(sName) eq 'START_DATE' then sValue = POST_time_to_wrfstr(ts[0])
     
     ; Set the appropriate netCDF data type keyword.
     CASE StrUpCase(sAtt_info.DATATYPE) OF
@@ -1931,7 +1979,7 @@ pro POST_mean_file, domain, directory, START_MONTH = start_month, END_MONTH = en
   printf, unit, '-------------'
   printf, unit, ' '
   
-  POST_mean_ncdf, unit, tid, filelist, vartokeep, ts
+  POST_fill_mean_ncdf, unit, tid, filelist, vartokeep, ts
   
   printf, unit, ' '
   printf, unit, ' '
