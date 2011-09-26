@@ -1043,7 +1043,7 @@ PRO w_NCDF::dump, FILE = file
       sAtt_info = NCDF_attINQ(sid, svid, sName)
       NCDF_ATTGET, sid, svid, sName, sValue
                           
-      text = '               ' + s_var_info.name + ':' + sName + ' = ' + STRLOWCASE(str_equiv(sValue)) + ' ;'
+      text = '               ' + s_var_info.name + ':' + string(sName) + ' = ' + STRLOWCASE(str_equiv(sValue)) + ' ;'
       printf, lu, text
 
     endfor

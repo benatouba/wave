@@ -106,6 +106,13 @@ PRO w_Map__Define
             data           : PTR_NEW()       $ ; data to contour 
             }
   
+  ; This is the information for one wind rose to draw
+  struct = {w_Map_WindRose                 , $ 
+            keywords       : PTR_NEW()     , $ ; Keywords for w_add_windRose 
+            wind_dir       : PTR_NEW()     , $ ; wind_dir
+            wind_speed     : PTR_NEW()       $ ; wind_speed
+            }
+  
   ; This is a mask structure
   struct = {w_Map_MASK                     , $
             mask           : PTR_new()     , $ ; the mask
@@ -122,6 +129,7 @@ PRO w_Map__Define
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
             t_Charsize     : 0D            , $ ; Ticks charsizes
+            interval       : 0D            , $ ; The interval between ticks
             color          : ''            , $ ; color of the contour lines
             labeled        : 0L            , $ ; if the contours have to labelled
             label_size_f   : 0D            , $ ; charsize factor
@@ -141,38 +149,47 @@ PRO w_Map__Define
             length         : 0D              $ ; lenght of the arrows
             }
   
+  ; This is for the wind vectors 
+  struct = {w_Map_SHADING_PARAMS           , $
+            relief_factor : 0D             , $ ; strenght of the shading (default: 0.7)
+            smooth        : 0L               $ ; slope layer smoohting width
+            }
+  
   ; Finaly, this is the object
-  struct = { w_Map                               , $
-             grid          : OBJ_NEW()           , $ ; the grid object (nx = Xsize, ny = Ysize)
-             Xsize         : 0L                  , $ ; X size of the image in pixels
-             Ysize         : 0L                  , $ ; Y size of the image in pixels
-             img           : PTR_NEW()           , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
-             data          : PTR_NEW()           , $ ; active data array ([Xsize,Ysize]) of any numeric type
-             missing       : PTR_NEW()           , $ ; missing values in the data array
-             sl            : PTR_NEW()           , $ ; shading layer for topography shading
-             contour_img   : FALSE               , $ ; the imaeg is generated using contour
-             relief_factor : 0D                  , $ ; strenght of the shading (default: 0.7)
-             nshapes       : 0L                  , $ ; number of active shape files to plot                  
-             shapes        : PTR_NEW()           , $ ; array of nshapes {w_Map_SHAPE} structures                               
-             npolygons     : 0L                  , $ ; number of active polygons to plot                  
-             polygons      : PTR_NEW()           , $ ; array of npolygons {w_Map_POLYGON} structures                               
-             npoints       : 0L                  , $ ; number of points to plot                  
-             points        : PTR_NEW()           , $ ; array of npoints {w_Map_POINT} structures                               
-             ncontours     : 0L                  , $ ; number of additional contours to plot                  
-             contours      : PTR_NEW()           , $ ; array of ncontours {w_Map_CONTOUR} structures                               
-             nmasks        : 0L                  , $ ; number of masks                  
-             masks         : PTR_NEW()           , $ ; array of namsks {w_Map_MASK} structures                               
-             map_params    : {w_Map_MAP_PARAMS}  , $ ; the mapping params for contours
-             plot_params   : {w_Map_PLOT_PARAMS} , $ ; the plotting params          
-             wind_params   : {w_Map_WIND_PARAMS} , $ ; the wind params          
-             is_Shaped     : FALSE               , $ ; is there at least one shape to draw?
-             is_Shaded     : FALSE               , $ ; did the user specify a DEM for shading?
-             is_Polygoned  : FALSE               , $ ; did the user specify a polygon to draw?
-             is_Pointed    : FALSE               , $ ; did the user specify a point to draw?
-             is_Mapped     : FALSE               , $ ; did the user specify a contour to draw for mapping?         
-             is_Winded     : FALSE               , $ ; did the user specify wind flows?         
-             is_Contoured  : FALSE               , $ ; did the user specify additional contour plots?      
-             is_Masked     : FALSE                 $ ; did the user specify masks to overplot?      
+  struct = { w_Map                                  , $
+             grid          : OBJ_NEW()              , $ ; the grid object (nx = Xsize, ny = Ysize)
+             Xsize         : 0L                     , $ ; X size of the image in pixels
+             Ysize         : 0L                     , $ ; Y size of the image in pixels
+             img           : PTR_NEW()              , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
+             data          : PTR_NEW()              , $ ; active data array ([Xsize,Ysize]) of any numeric type
+             missing       : PTR_NEW()              , $ ; missing values in the data array
+             sl            : PTR_NEW()              , $ ; shading layer for topography shading
+             contour_img   : FALSE                  , $ ; the imaeg is generated using contour
+             nshapes       : 0L                     , $ ; number of active shape files to plot                  
+             shapes        : PTR_NEW()              , $ ; array of nshapes {w_Map_SHAPE} structures                               
+             npolygons     : 0L                     , $ ; number of active polygons to plot                  
+             polygons      : PTR_NEW()              , $ ; array of npolygons {w_Map_POLYGON} structures                               
+             npoints       : 0L                     , $ ; number of points to plot                  
+             points        : PTR_NEW()              , $ ; array of npoints {w_Map_POINT} structures                               
+             ncontours     : 0L                     , $ ; number of additional contours to plot                  
+             contours      : PTR_NEW()              , $ ; array of ncontours {w_Map_CONTOUR} structures                               
+             nWindRoses    : 0L                     , $ ; number of additional wind roses to plot                  
+             windroses     : PTR_NEW()              , $ ; array of nWindRoses {w_Map_WindRose} structures                               
+             nmasks        : 0L                     , $ ; number of masks                  
+             masks         : PTR_NEW()              , $ ; array of namsks {w_Map_MASK} structures                               
+             map_params    : {w_Map_MAP_PARAMS}     , $ ; the mapping params for contours
+             plot_params   : {w_Map_PLOT_PARAMS}    , $ ; the plotting params          
+             shading_params: {w_Map_SHADING_PARAMS} , $ ; the shading params          
+             wind_params   : {w_Map_WIND_PARAMS}    , $ ; the wind params          
+             is_Shaped     : FALSE                  , $ ; is there at least one shape to draw?
+             is_Shaded     : FALSE                  , $ ; did the user specify a DEM for shading?
+             is_Polygoned  : FALSE                  , $ ; did the user specify a polygon to draw?
+             is_Pointed    : FALSE                  , $ ; did the user specify a point to draw?
+             is_Mapped     : FALSE                  , $ ; did the user specify a contour to draw for mapping?         
+             is_Winded     : FALSE                  , $ ; did the user specify wind flows?         
+             is_Contoured  : FALSE                  , $ ; did the user specify additional contour plots?      
+             is_WindRosed  : FALSE                  , $ ; did the user specify additional windroses?      
+             is_Masked     : FALSE                    $ ; did the user specify masks to overplot?      
              }
     
 END
@@ -408,6 +425,34 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
+pro w_Map::DestroyWindRoses
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  if PTR_VALID(self.windroses) then begin  
+    wr = *self.windroses
+    for i = 0, N_ELEMENTS(wr) - 1 do begin
+     ptr_free, (wr[i]).wind_speed
+     ptr_free, (wr[i]).wind_dir
+     ptr_free, (wr[i]).keywords     
+    endfor
+  endif
+  
+  ptr_free, self.windroses
+  self.nWindRoses= 0L
+  self.is_WindRosed= FALSE
+  
+end
+
+;+
+; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
 pro w_Map::DestroyMasks
 
     ; SET UP ENVIRONNEMENT
@@ -454,6 +499,7 @@ pro w_Map::Cleanup
   self->DestroyPoints   
   self->DestroyContours   
   self->DestroyMasks
+  self->DestroyWindRoses
   
 END
 
@@ -479,9 +525,9 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   
   if ARG_PRESENT(XSIZE) then xsize = self.Xsize
   if ARG_PRESENT(YSIZE) then ysize = self.Ysize
-  if ARG_PRESENT(levels) then levels = *self.plot_params.levels
-  if ARG_PRESENT(colors) then colors = *self.plot_params.colors
-  if ARG_PRESENT(tnt_c) then self.grid->getProperty, TNT_C = tnt_c
+  if ARG_PRESENT(LEVELS) then levels = *self.plot_params.levels
+  if ARG_PRESENT(COLORS) then colors = *self.plot_params.colors
+  if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C = tnt_c
      
 end
 
@@ -653,10 +699,10 @@ end
 ;-    
 function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, $
                                 LABEL = label, NO_TICK_LABELS = no_tick_labels, LABEL_SIZE_FACTOR = label_size_factor
-  
+    
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
   
   Catch, theError
   IF theError NE 0 THEN BEGIN
@@ -664,10 +710,10 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
     self->DestroyMapParams
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
-  ENDIF 
+  ENDIF
   
   ; This is for the Lon-Lat/UTM contours drawing
-   self->DestroyMapParams
+  self->DestroyMapParams
   _type = 'LONLAT'
   _interval = 10.
   _thick = 1.
@@ -685,33 +731,37 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   if N_ELEMENTS(LABEL) eq 1 then _label = LABEL
   if N_ELEMENTS(LABEL_SIZE_FACTOR) eq 1 then _label_size_factor = LABEL_SIZE_FACTOR
   if KEYWORD_SET(NO_TICK_LABELS) eq 1 then _tick_labels = FALSE
-   
+  
   self.map_params.type = _type
   self.map_params.thick = _thick
   self.map_params.style = _style
   self.map_params.color = _color
   self.map_params.labeled = _label
   self.map_params.label_size_f = _label_size_factor
-                           
+  
   self.is_Mapped = _type ne ''
   
   if ~self.is_Mapped then begin
-   self->DestroyMapParams
-   return, 1
+    self->DestroyMapParams
+    return, 1
   endif
   
   if self.map_params.type eq 'LONLAT' then begin
   
     self.grid->get_Lonlat, lon, lat, nx, ny
+    ;Decimal factor for small contours    
+    if _interval lt 0.1 then dec_factor = 100. $
+     else if _interval lt 1. then dec_factor = 10. $
+      else dec_factor = 1.
+  
     Nlevels = 360 / _interval
-    levels = INDGEN(Nlevels) * _interval - 170
-    p = where(levels le floor(max(Lon)) and levels ge ceil(min(Lon)), cnt)
-    if cnt gt 0 then lonlevels = levels[p]
-    p = where(levels le floor(max(Lat)) and levels ge ceil(min(Lat)), cnt)
-    if cnt gt 0 then latlevels = levels[p]
+    levels = INDGEN(Nlevels) * (_interval*dec_factor) - 170 * dec_factor
+    p = where(levels le floor(max(Lon * dec_factor)) and levels ge ceil(min(Lon * dec_factor)), cnt)
+    if cnt gt 0 then lonlevels = levels[p] / dec_factor
+    p = where(levels le floor(max(Lat * dec_factor)) and levels ge ceil(min(Lat * dec_factor)), cnt)
+    if cnt gt 0 then latlevels = levels[p] / dec_factor
     
     if _tick_labels then begin
-    
       for i=0,N_ELEMENTS(lonlevels)-1 do begin
         p = where(Lon[*,0] le lonlevels[i] ,cnt)
         if cnt gt 1 and cnt lt nx then begin
@@ -725,9 +775,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
           if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
           if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  latlevels[i] else ytickValues = [ytickValues, latlevels[i]]
         endif
-        
       endfor
-      
     endif
     
     self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
@@ -736,27 +784,35 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
     self.map_params.yticks = PTR_NEW(yticks, /NO_COPY)
     self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
     self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY)
+    self.map_params.interval = _interval
     
   endif else Message, 'Currently only LONLAT type is supported'
   
   return, 1
-
+  
 end
 
 ;+
 ; :Description:
 ;    Set shading params.
-;    
 ;
 ; :Keywords:
 ;    RELIEF_FACTOR: in, optional, type = float, default = 0.7 
 ;                   the strenght of shading. no rule for this,
 ;                   try and see (0.7 or 1.0 usually provide satisfying results)
 ;
+;    SMOOTH: in, optional, type = long, default = 0 
+;            If the topography shading layer has to be smoothed 
+;            before shading. This can be usefull to hide artefacts
+;            in the DEM, or smooth edges that may occur if the DEM
+;            has not a sufficient resolution for the map.
+;            See `SMOOTH` for a description of the parameter. Default 
+;            is to make no smoothing.  
+;            
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
+function w_Map::set_shading_params, RELIEF_FACTOR=relief_factor, SMOOTH=smooth
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -770,9 +826,12 @@ function w_Map::set_shading_params, RELIEF_FACTOR = relief_factor
   ENDIF 
     
   _relief_factor = 0.7  
+  _smooth = 0L  
   if N_ELEMENTS(RELIEF_FACTOR) eq 1 then _relief_factor = RELIEF_FACTOR                           
+  if N_ELEMENTS(SMOOTH) eq 1 then _smooth = SMOOTH                           
   
-  self.relief_factor = _relief_factor
+  self.shading_params.relief_factor = _relief_factor
+  self.shading_params.smooth = _smooth
   
   return, 1
 
@@ -786,12 +845,19 @@ end
 ; :Keywords:
 ;    GRDFILE: in, required, type = string
 ;             the .grd file to read (with hdr !!!)
+;    USE_GRID: in, optional, type = boolean
+;              If set to 1, this forces to use the exact grid information
+;              from the DEM file. Default is to use Lon-Lat neirest 
+;              neighbor algorithm if possible (the DEM must be defined 
+;              in geographic coordinates) and use exact grid transformation
+;              in all other cases. USE_GRID is more precise, but slower.
+;              In most of the cases you don't have to care about this keyword.              
 ;
 ;
 ; :History:
 ;     Written by DiS, FaM, 2011
 ;-
-function w_Map::set_topography, GRDFILE = grdfile
+function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -826,37 +892,53 @@ function w_Map::set_topography, GRDFILE = grdfile
   if str_equiv(spli[N_ELEMENTS(spli)-1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
   GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
   
-  self.grid->get_Lonlat, lon, lat, nx, ny ; TODO: Update routine: change this into GRID kind of things  
   self.grid->getProperty, tnt_c = c
   
-  ; Open DEM grid
-  !QUIET = 1
-  GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
-  !QUIET = 0
-  if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
+  if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
+    dem = OBJ_NEW('w_DEM', FILE=grdfile)
+    dem->GetProperty, TNT_C=dem_c
+    if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
+    OBJ_DESTROY, dem  
+  endif else _ug = KEYWORD_SET(USE_GRID)
   
-  lat0 = info.coord.y0
-  lon0 = info.coord.x0
-  dlat = info.coord.dy
-  dlon = info.coord.dx
+  if ~_ug then begin ; Simple NN method
   
-  nlon = info.coord.nx
-  nlat = info.coord.ny
+    self.grid->get_Lonlat, lon, lat, nx, ny
+    ; Open DEM grid
+    !QUIET = 1
+    GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
+    !QUIET = 0
+    if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
+    
+    lat0 = info.coord.y0 & lon0 = info.coord.x0
+    dlat = info.coord.dy & dlon = info.coord.dx
+    nlon = info.coord.nx & nlat = info.coord.ny
+    
+    ilat = round((lat0-lat[*])/dlat)
+    ilon = round((lon[*]-lon0)/dlon)
+    rmin = min(ilat)
+    rmax = max(ilat)
+    topo = intarr(nlon,rmax-rmin+1)
+    openr, lun, grdfile, /GET
+    point_lun, lun, 2*rmin*nlon
+    readu, lun, topo
+    free_lun, lun
+    
+    z = topo[ilon,ilat-rmin]
+    p = where(z le -9999, cnt)
+    if cnt gt 0 then z[p] = 0
+    z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))    
   
-  ilat = round((lat0-lat[*])/dlat)
-  ilon = round((lon[*]-lon0)/dlon)
-  rmin = min(ilat)
-  rmax = max(ilat)
-  topo = intarr(nlon,rmax-rmin+1)
-  openr, lun, grdfile, /GET
-  point_lun, lun, 2*rmin*nlon  
-  readu, lun, topo
-  free_lun, lun
+  endif else begin
   
-  z = topo[ilon,ilat-rmin]
-  p = where(z le -9999, cnt)
-  if cnt gt 0 then z[p] = 0
-  z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
+    dem = OBJ_NEW('w_DEM', FILE=grdfile)
+    z = FLOAT(dem->get_Z())
+    p = where(z le -9999, cnt)
+    if cnt gt 0 then z[p] = 0
+    z = self.grid->map_gridded_data(z, dem, MISSING = 0., /CUBIC)
+    OBJ_DESTROY, dem
+  
+  endelse
   
   if str_equiv(c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then begin
     ddx = mean(c.dx * 111200 * cos(lat * !pi / 180d ))
@@ -966,7 +1048,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    range = [min(glon),max(glon),min(glat),max(glat)]
   end
   if is_proj then begin
-   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: Update routine: this
+   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
   end
   
   ; read shp file and create polygon object from entities
@@ -1547,18 +1629,18 @@ function w_Map::set_mask, mask, grid, BILINEAR = bilinear, COLOR = color
   _mask = BYTE(0 > _mask < 1)
   _color = utils_color_convert(COLORS = color)
   
-  mask = {w_Map_MASK}
-  mask.color = _color
-  mask.mask = PTR_NEW(_mask, /NO_COPY)
+  smask = {w_Map_MASK}
+  smask.color = _color
+  smask.mask = PTR_NEW(_mask, /NO_COPY)
     
   if self.nmasks eq 0 then begin
    self.nmasks = 1
-   self.masks = PTR_NEW(mask, /NO_COPY)
+   self.masks = PTR_NEW(smask, /NO_COPY)
   endif else begin
    temp = *self.masks
    nmasks = self.nmasks
    ptr_free, self.masks
-   temp = [temp, mask]
+   temp = [temp, smask]
    self.masks = PTR_NEW(temp, /NO_COPY)
    self.nmasks = nmasks + 1
   endelse
@@ -1648,6 +1730,96 @@ function w_Map::set_contour, data, grid, MISSING = missing, _EXTRA = extra
   endelse
     
   self.is_Contoured = TRUE
+  return, 1
+   
+end
+
+;+
+; :Description:
+;    Set Wind roses to be added to the plot.
+;    This can be done as many times as needed.
+;
+; :Params:
+;    wind_dir: in, required
+;              the wind directions (MET convention, from 0 to 360 deg)
+;    wind_speed: in, required
+;                array of the same dimension as wind_dir.
+;    x: in, required
+;       the x coordinates of the point(s) to draw
+;    
+;    y: in, required
+;       the y coordinates of the point(s) to draw 
+;       
+; :Keywords:
+;    
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;             
+;    _EXTRA: in, optional
+;                all the Keywords accepted by `w_add_Windrose`
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_WindRose, wind_dir, wind_speed, x, y, SRC=SRC, _EXTRA = extra
+                             
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->DestroyContours
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  if N_PARAMS() eq 0 then begin
+    self->DestroyWindRoses
+    RETURN, 1
+  endif  
+  
+  if N_PARAMS() ne 4 then message, WAVE_Std_Message(/NARG)  
+  if ~array_processing(wind_dir, wind_speed) then message, WAVE_Std_Message(/ARG)
+  
+  if ~KEYWORD_SET(src) then GIS_make_datum, ret, src, NAME = 'WGS-84'
+  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+
+  if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
+  self.grid->transform, _x, _y, _x, _y, SRC = src
+  coord = [_x,_y]+0.5 ; Because Center point of the pixel is not the true coord
+
+  wr = {w_Map_WindRose}
+  wr.wind_dir = PTR_NEW(wind_dir)
+  wr.wind_speed = PTR_NEW(wind_speed)
+  
+  if N_ELEMENTS(extra) ne 0 then begin
+   if utils_tag_exist(extra, 'CENTER') then utils_remove_tag, extra, 'CENTER'
+   if utils_tag_exist(extra, 'WIN_FACTOR') then utils_remove_tag, extra, 'WIN_FACTOR'
+   if ~utils_tag_exist(extra, 'MAX_RADIUS') then extra = CREATE_STRUCT(extra, 'MAX_RADIUS', 0.1)
+  endif else begin
+    extra = CREATE_STRUCT('MAX_RADIUS', 0.1)
+  endelse
+  
+  extra = CREATE_STRUCT(extra, 'CENTER', coord)
+  wr.keywords = PTR_NEW(extra)
+
+  if self.nWindRoses eq 0 then begin
+   self.nWindRoses = 1
+   self.windroses = PTR_NEW(wr, /NO_COPY)
+  endif else begin
+   temp = *self.windroses
+   ptr_free, self.windroses
+   temp = [temp, wr]
+   self.windroses = PTR_NEW(temp, /NO_COPY)
+   self.nWindRoses = self.nWindRoses + 1
+  endelse
+    
+  self.is_WindRosed = TRUE
   return, 1
    
 end
@@ -1804,7 +1976,7 @@ end
 ;-    
 function w_Map::shading
 
-  if self.relief_factor eq 0 then return, self->img_to_rgb()
+  if self.shading_params.relief_factor eq 0 then return, self->img_to_rgb()
  
   nlevels = self.plot_params.nlevels + 1 
   if self.is_Masked then nlevels += self.nmasks
@@ -1839,13 +2011,14 @@ function w_Map::shading
   ; Prepare shading *
   ;******************
   sl = *self.sl
+  if self.shading_params.smooth ne 0 then sl = SMOOTH(sl,self.shading_params.smooth)
   mean_sl = moment(sl, SDEV=sdev_sl)
   
   p = where(sl gt 0, cnt)
   if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
   p = 0
-  level = 1.0 - 0.1 * self.relief_factor ; 1.0 for 0% and 0.9 for 100%
-  sens  = 0.7 * self.relief_factor       ; 0.0 for 0% and 0.7 for 100%
+  level = 1.0 - 0.1 * self.shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
+  sens  = 0.7 * self.shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
   
   ;****************
   ; Apply shading *
@@ -1879,27 +2052,23 @@ end
 ;     Written by FaM, 2011.
 ;-    
 function w_Map::draw_Map, WINDOW = window
-  
+
   if self.map_params.type eq 'LONLAT' then begin
-  
     self.grid->get_Lonlat, lon, lat
-    
     cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
       LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
-      
     cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
       LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
-      
   endif
   
   ; Draw a frame
   if ~(self.contour_img and ~self.is_Shaded) then begin
-  xf = [0, self.xsize, self.xsize, 0, 0]
-  yf = [0, 0, self.ysize, self.ysize, 0]
-  cgPlotS, xf, yf, WINDOW = window, /DATA
-  endif 
+    xf = [0, self.xsize, self.xsize, 0, 0]
+    yf = [0, 0, self.ysize, self.ysize, 0]
+    cgPlotS, xf, yf, WINDOW = window, /DATA
+  endif
   
- TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
+  TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
   if TICK_LABEL then begin
   
     xts = *self.map_params.xticks
@@ -1909,14 +2078,16 @@ function w_Map::draw_Map, WINDOW = window
     
     spacing = 1.
     ;  chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
-    ;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))    
+    ;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
     ddy = - 0.023 * spacing * self.ysize
     ddx = - 0.008 * spacing * self.xsize
     
     ; Tick labels
     if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
     charthick = charsize
-    format = '(I4)'
+    if self.map_params.interval lt 0.1 then format = '(F8.2)' $
+     else if self.map_params.interval lt 1. then format = '(F8.1)' $
+       else format = '(I4)'
     for i=0,N_ELEMENTS(xts)-1 do begin
       label = string(abs(xls[i]),FORMAT=format)
       if xls[i] lt 0 then label += 'W' else label += 'E'
@@ -1929,9 +2100,9 @@ function w_Map::draw_Map, WINDOW = window
       cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
-  
+
   return, 1
-  
+
 end
 
 ;+
@@ -2077,6 +2248,36 @@ end
 
 ;+
 ; :Description:
+;    Adds the windroses to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::draw_WindRoses, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.nWindRoses-1 do begin
+    wr = (*self.windroses)[i]
+    k = *wr.keywords
+    c = k.center
+    c = CONVERT_COORD(c[0], c[1], /DATA, /DOUBLE, /TO_NORMAL) 
+    k.center = [c[0],c[1]]
+    w_add_WindRose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
 ;    Adds the image to an existing plot
 ;
 ; :Author: Fabien Maussion::
@@ -2139,7 +2340,8 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
       endif
       
       utils_color_rgb, colors, s_r, s_g, s_b
-      cgImage, img, PALETTE= [[s_r],[s_g],[s_b]], WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
+      if N_ELEMENTS(colors) eq 3 then pal=ROTATE([[s_r],[s_g],[s_b]],4) else pal= [[s_r],[s_g],[s_b]]
+      cgImage, img, PALETTE=pal, WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
     endelse
   endelse
    
@@ -2149,6 +2351,7 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   if self.is_Winded then ok = self->draw_wind(WINDOW = window)
   if self.is_Polygoned then ok = self->draw_polygons(WINDOW = window)
   if self.is_Pointed then ok = self->draw_points(WINDOW = window)
+  if self.is_WindRosed then ok = self->draw_WindRoses(WINDOW = window)
   
 end
 

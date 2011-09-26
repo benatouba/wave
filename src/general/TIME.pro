@@ -287,6 +287,42 @@ end
 
 ;+
 ; :Description:
+;   Simple function to check if a time information (as needed by `QMS_TIME` or `MAKE_ABS_DATE`)
+;   is valid.
+;
+; :Keywords:
+;    see `QMS_TIME`
+;
+; :Returns:
+;    1 if the time is valid, in all other cases
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;
+;-
+function TIME_is_Valid, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
+                      TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+      
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    RETURN, 0
+  ENDIF 
+  
+  dummy = QMS_TIME(YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
+                      TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day)
+  
+  
+  return, 1
+
+end
+;+
+; :Description:
 ; 
 ;    This function generates a new time (in QMS) defined by a given offset 
 ;    to a reference time.
@@ -682,7 +718,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   
   if N_ELEMENTS(refDate) eq 0 then refDate = MAKE_ABS_DATE()
   
-  if ~check_WTIME(refDate, OUT_ABSDATE=outDate) then Message, WAVE_Std_Message('refDate', /ARG)
+  if ~check_WTIME(refDate, OUT_ABSDATE=outDate, WAS_QMS=was_qms) then Message, WAVE_Std_Message('refDate', /ARG)
    
   n_year = n_elements(year)
   n_month = n_elements(month)
@@ -770,6 +806,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
     
   endif
   
+  if WAS_QMS then outDate = outDate.qms
   return, outDate
   
 end

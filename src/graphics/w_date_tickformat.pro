@@ -130,7 +130,12 @@ pro w_date_tickformat, xtickformat, xtickunits, xtickinterval, HOURS = hours, DA
       dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
       xtickformat = ['LABEL_DATE']
       xtickunits = 'Hours'
-      xtickinterval = 12
+      xtickinterval = 6
+    endif else if s.hour gt 1 then begin
+      dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
+      xtickformat = ['LABEL_DATE']
+      xtickunits = 'Hours'
+      xtickinterval = 1
     endif else begin
       dummy = LABEL_DATE(DATE_FORMAT=['%D%M.%Hh'])
       xtickformat = ['LABEL_DATE']

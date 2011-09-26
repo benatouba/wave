@@ -130,7 +130,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
   
   imgX = xsize/double(xs)
   imgY = ysize/double(ys)
-  imx0 = 0.04
+  imx0 = 0.07
   imy0 = 0.08  
   pos = [imx0,imy0,imx0+imgX,imy0+imgY]
 
@@ -216,12 +216,13 @@ pro w_standard_2d_plot, map, TITLE=title,$
   
   ; Legend info
   if ~KEYWORD_SET(SOURCE_INFO) then begin
-    copyright = '!4' +STRING("251B) +  '!X'
+    if !D.Name EQ 'PS' then copyright = '!4' +STRING("251B) +  '!X' $
+     else copyright = '(c)'
     source_info = copyright + ' 2011 TU Berlin!C!CChair of Climatology'
   endif
   if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
    
-  ; Output
+  ; Output  
   if visible then begin
   
     if cgWIN then begin

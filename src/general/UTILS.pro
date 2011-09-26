@@ -2820,6 +2820,53 @@ function utils_chunk_sum_d3, x
 end
 
 
+;+
+; :Description:
+;    Simple wrapper for the IDL built-in LABEL_REGION function, but
+;    with the inclusion of border pixels to the labeling.
+;
+; :Params:
+;    mask: in, required, type=boolean
+;          the mask to label
+;    entitites: out
+;               array of longs of the same dim as mask with the entities
+;    nentities: out
+;               the number of entitites found
+;
+; :Keywords:
+;    ALL_NEIGHBORS: set this keyword to compute regions
+;                   with diagonal contact as well.
+;
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+pro utils_label_entities, mask, entitites, nentities, ALL_NEIGHBORS=all_neighbors
 
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc  
+  ON_ERROR, 2
+
+  if ~arg_okay(mask, /NUMERIC, N_DIM=2) then message, WAVE_Std_Message('mask', /ARG)
+   
+  nx = N_ELEMENTS(mask[*,0])
+  ny = N_ELEMENTS(mask[0,*])
+  
+  _mask = LONARR(nx+2,ny+2)
+  _mask[1:nx,1:ny] = mask
+  
+  entitites = LABEL_REGION(_mask, ALL_NEIGHBORS=all_neighbors)
+  entitites = entitites[1:nx,1:ny]  
+  nentities = max(entitites)
+
+end
+
+function utils_minmax, val
+  
+  return, [min(val, /NAN), max(val, /NAN)]
+  
+end
 
 

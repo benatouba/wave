@@ -2659,7 +2659,7 @@ pro TEST_POST_AGG, REDO = redo
     
 end
 
-pro TEST_POST_AGG_CROPPED, REDO = redo
+pro TEST_POST_AGG_CROPPED, REDO = redo, VERBOSE = verbose
    
     fdir = TEST_file_directory()
     error = 0 
@@ -2677,10 +2677,14 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     if ~ KEYWORD_SET(REDO) then redo = false    
     if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
     if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
-      
+    
+    t1 = SYSTIME(/SECONDS)  
     if redo then POST_aggregate_directory, 1, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom1/'
+    if KEYWORD_SET(VERBOSE) then print, 'IDL agg elapsed time d1 : ' + str_equiv(SYSTIME(/SECONDS)  - t1)
+    t1 = SYSTIME(/SECONDS)
     if redo then POST_aggregate_directory, 3, INPUT_DIR, OUTDIR=OUTPUT_DIR + '/dom3/'
     if ~FILE_TEST(OUTPUT_DIR) then error+=1
+    if KEYWORD_SET(VERBOSE) then print, 'IDL agg elapsed time d3 : ' + str_equiv(SYSTIME(/SECONDS)  - t1)
     
     ; DOM 1 day one
     if ~FILE_TEST(OUTPUT_DIR+'/dom1//wrf_cpy_2009_09_13_d01.log') then error+=1    
@@ -2761,6 +2765,165 @@ pro TEST_POST_AGG_CROPPED, REDO = redo
     OBJ_DESTROY, out
     
     if error ne 0 then message, '% TEST_POST_AGG_CROPPED NOT passed', /CONTINUE else print, 'TEST_POST_AGG_CROPPED passed'
+    
+end
+
+
+pro TEST_POST_AGG_NCL, REDO = redo, VERBOSE = verbose
+   
+    fdir = TEST_file_directory()
+    error = 0 
+    
+    @WAVE.inc
+    
+    ;----------------
+    ; TEST copy crop
+    ;----------------     
+    INPUT_DIR= fdir + '/WRF_CPY_CROP/'
+    CODE_DIR= fdir + '/WRF_NCL_AGG/NCL/'
+    OUTPUT_DIR= fdir + '/WRF_NCL_AGG/OUT/'
+
+    if ~FILE_TEST(INPUT_DIR) then TEST_POST_COPY_CROP, /REDO
+    
+    if ~ KEYWORD_SET(REDO) then redo = false    
+    if FILE_TEST(OUTPUT_DIR) and REDO then FILE_DELETE, OUTPUT_DIR, /RECURSIVE 
+    if ~FILE_TEST(OUTPUT_DIR) then REDO = true else REDO = false
+    
+    t1 = SYSTIME(/SECONDS)  
+    if redo then FILE_MKDIR, OUTPUT_DIR
+    if redo then SPAWN, 'ncl ' + CODE_DIR + '/POST_d1.ncl'
+    if KEYWORD_SET(VERBOSE) then print, 'NCL agg elapsed time d1 : ' + str_equiv(SYSTIME(/SECONDS)  - t1)
+    
+    t1 = SYSTIME(/SECONDS)  
+    if redo then SPAWN, 'ncl ' + CODE_DIR + '/POST_d3.ncl'
+    if KEYWORD_SET(VERBOSE) then print, 'NCL agg elapsed time d3 : ' + str_equiv(SYSTIME(/SECONDS)  - t1)
+             
+    ; DOM 1 day one
+    origf =  INPUT_DIR+ '/2009.09.13/wrfout_d01_2009-09-13_00_00_00_24h.nc'
+    outf =  OUTPUT_DIR + '/wrf_agg_d01_2009-09-13_00_00_00_dyn.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+        
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    t2o = orig->get_Var('RAINNC', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 00))
+    t2o = t2o[*,*,8] - t2o[*,*,0]
+    t2a = out->get_Var('RAINNC', t0 = to1, t1 = to1)    
+    if total(ABS(t2o-t2a)) gt 1e-3 then error += 1
+    
+    t2o = orig->get_Var('RAINNC', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 00))
+    t2o = (utils_ACC_TO_STEP(t2o))[*,*,1:*]    
+    t2a = out->get_Var('RAINNC_STEP', t0 = QMS_TIME(year = 2009, day = 13, month = 09, hour = 03), t1 = t01)    
+    if total(ABS(t2o-t2a)) gt 1e-3 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 1 day two
+    origf =  INPUT_DIR+ '/2009.09.14/wrfout_d01_2009-09-14_00_00_00_24h.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 16 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 3) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 3), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+        
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ; DOM 3 day two
+    origf =  INPUT_DIR+ '/2009.09.14/wrfout_d03_2009-09-14_00_00_00_24h.nc'
+    outf =  OUTPUT_DIR + '/wrf_agg_d03_2009-09-13_00_00_00_dyn.nc'
+    if ~FILE_TEST(origf) then error+=1
+    if ~FILE_TEST(outf) then error+=1
+    
+    orig = OBJ_NEW('w_WRF', FILE=origf)
+    out = OBJ_NEW('w_WRF', FILE=outf)
+    
+    orig->get_time, to, nto, to0, to1
+    out->get_time, ta, nta, ta0, ta1    
+    if nta ne 48 then error += 1
+    if ta0 ne QMS_TIME(year = 2009, day = 13, month = 09, hour = 1) then error += 1
+    if ta1 ne to1 then error += 1
+       
+    t2o = orig->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1))
+    t2a = out->get_Var('t2', t0 = QMS_TIME(year = 2009, day = 14, month = 09, hour = 1), t1 = t01)    
+    if total(ABS(t2o-t2a)) ne 0 then error += 1
+    
+    OBJ_DESTROY, orig
+    OBJ_DESTROY, out
+    
+    ;Now check the diffs IDL-NCL
+    idlf = fdir + '/WRF_AGG_CROPPED/dom1/wrf_agg_2009_09_13_d01.nc'
+    nclf = OUTPUT_DIR + '/wrf_agg_d01_2009-09-13_00_00_00_dyn.nc'
+    idl = OBJ_NEW('w_WRF', FILE=idlf)
+    ncl = OBJ_NEW('w_WRF', FILE=nclf)
+    
+    idl->get_dimList, idimIds, idimNames, idimSizes
+    ncl->get_dimList, ndimIds, ndimNames, ndimSizes
+    
+    if total(idimIds ne ndimIds) ne 0 then error += 1
+    ; if total(idimNames ne ndimNames) ne 0 then error += 1 TODO: DIMS in ncl??
+    if total(idimSizes ne ndimSizes) ne 0 then error += 1
+    
+    idl->get_Varlist, ivarid, ivarnames, ivarndims, ivarunits, ivardescriptions, ivartypes
+    ncl->get_Varlist, nvarid, nvarnames, nvarndims, nvarunits, nvardescriptions, nvartypes
+    
+    for i=0, N_ELEMENTS(ivarid) -1 do begin
+      p = where(nvarnames eq ivarnames[i], cnt) 
+      if cnt eq 0 then error += 1
+      if cnt eq 0 then continue      
+      if ivarndims[i] ne nvarndims[p] then error += 1
+      if ivarunits[i] ne nvarunits[p] then error += 1
+      if ivartypes[i] ne nvartypes[p] then error += 1
+      
+      if STRMID(nvardescriptions[p], 0, 11) eq 'ACCUMULATED' then continue
+      if ivardescriptions[i] ne nvardescriptions[p] then error += 1
+      
+      iv = idl->get_Var(ivarnames[i])
+      nv = ncl->get_Var(nvarnames[p[0]])
+      if total(ABS(iv-nv)) ne 0 then error += 1      
+      
+      idl->get_VattsList, ivarnames[i], ivattsIds, ivattNames
+      ncl->get_VattsList, nvarnames[p[0]], nvattsIds, nvattNames
+;      if N_ELEMENTS(ivattNames) ne N_ELEMENTS(nvattNames) then error += 1
+      for j=0, N_ELEMENTS(ivattsIds) -1 do begin
+        pa = where(nvattNames eq ivattNames[j], cnta)
+        if cnta eq 0 then error += 1
+        if cnta eq 0 then continue
+        ia = idl->get_VAtt(ivarnames[i], ivattNames[j])
+        na = ncl->get_VAtt(ivarnames[i], nvattNames[pa[0]])
+        if nvattNames[pa[0]] eq 'units' then continue
+        if nvattNames[pa[0]] eq 'stagger' then continue
+        if STRING(ia) ne STRING(na) then error += 1
+        if error ne 0 then stop   
+      end      
+         
+    endfor
+    
+    OBJ_DESTROY, idl
+    OBJ_DESTROY, ncl
+    
+    if error ne 0 then message, '% TEST_POST_AGG_NCL NOT passed', /CONTINUE else print, 'TEST_POST_AGG_NCL passed'
     
 end
 
@@ -3163,7 +3326,8 @@ pro TEST_POST, REDO = redo
   TEST_POST_COPY_CROP, REDO = redo
   TEST_POST_AGG, REDO = redo
   TEST_POST_AGG_CROPPED, REDO = redo
-  TEST_3D_STATS
+  TEST_POST_AGG_NCL, REDO = redo
+  TEST_3D_STATS  
 end
 
 pro w_TEST, NCDF = ncdf,  REDO = redo

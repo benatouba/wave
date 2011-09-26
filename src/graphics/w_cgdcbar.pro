@@ -194,8 +194,12 @@ PRO w_cgDCBar, colors, $
       VERTICAL=vertical, $
       NEUTRAL_COLOR=neutral_color, $
       BAR_OPEN=bar_open, $
+      TOP_BAR_OPEN=TOP_BAR_OPEN, $
+      BOT_BAR_OPEN=BOT_BAR_OPEN, $
       CHARTHICK=charthick, $
       WINDOW=window
+
+  @WAVE.inc
 
     ; Standard error handling.
     Catch, theError
@@ -227,6 +231,8 @@ PRO w_cgDCBar, colors, $
             TCHARSIZE=tcharsize, $
             NEUTRAL_COLOR=neutral_color, $
             BAR_OPEN=bar_open, $
+            TOP_BAR_OPEN=TOP_BAR_OPEN, $
+            BOT_BAR_OPEN=BOT_BAR_OPEN, $
             VERTICAL=vertical, $
             REPLACECMD=Keyword_Set(window), $
             ADDCMD=Keyword_Set(addcmd)
@@ -263,8 +269,12 @@ PRO w_cgDCBar, colors, $
     IF N_Elements(bottom) EQ 0 THEN bottom = 255 - ncolors
     IF N_Elements(font) EQ 0 THEN font = !P.Font
     IF N_Elements(labels) EQ 0 THEN labels = StrTrim(SIndgen(ncolors)+1,2)
-    IF N_Elements(labels) NE N_Elements(colors) THEN $
-        Message, 'LABELS vector must be the same length as the COLORS vector.'
+        
+    IF N_Elements(labels) eq N_Elements(colors)+1 then do_plus = TRUE else do_plus = FALSE
+    IF KEYWORD_SET(BAR_OPEN) or KEYWORD_SET(BOT_BAR_OPEN) or KEYWORD_SET(TOP_BAR_OPEN) then do_plus = FALSE
+    
+;    if ~do_plus then IF N_Elements(labels) NE N_Elements(colors) THEN $
+;        Message, 'LABELS vector must be the same length as the COLORS vector.'
     IF N_Elements(rotate) EQ 0 THEN rotate = 0
     rotate = (-180) > rotate < 180 ; Restrict to -180 to 180 degrees.
     IF N_Elements(spacing) EQ 0 THEN spacing = 1.0
@@ -279,8 +289,9 @@ PRO w_cgDCBar, colors, $
         ENDELSE
     ENDIF
     
-    do_arrows = KEYWORD_SET(bar_open)
-    
+    do_arrow_top = KEYWORD_SET(bar_open) or keyword_set(TOP_BAR_OPEN)
+    do_arrow_bot = KEYWORD_SET(bar_open) or keyword_set(BOT_BAR_OPEN)
+   
     ; Save the orginal color table so it can be restored later.
     TVLCT, rr, gg, bb, /Get
     
@@ -406,12 +417,15 @@ PRO w_cgDCBar, colors, $
     IF ~vertical THEN BEGIN
     
         ; Calculate positions for the rectangles of the bar.
-        x0 = position[0]
         step = (position[2]-position[0])/ncolors
+        if do_arrow_top and ~do_arrow_bot then x0 = position[0] + 0.5*step $
+          else x0 = position[0]
+        if do_arrow_bot and ~do_arrow_top then step = (position[2]-position[0])/(ncolors+1)
+
         x1 = x0 + step
         y0 = position[1]
         y1 = position[3]    
-        if do_arrows then begin 
+        if do_arrow_bot then begin 
             dx2 =  (x1 - x0)/2.       
             dy2 =  (y1 - y0)/2.       
             x = [x0, x1-dx2, x1-dx2, x0]
@@ -424,7 +438,7 @@ PRO w_cgDCBar, colors, $
         
         ; Draw each rectangle.        
         FOR j=0,ncolors-1 DO BEGIN
-          if j eq ncolors-1 and do_arrows then begin
+          if j eq ncolors-1 and do_arrow_top then begin
             dx2 = (x1 - x0) / 2.
             dy2 = (y1 - y0) / 2.
             x = [x0, x1-dx2, x0, x0]
@@ -440,10 +454,11 @@ PRO w_cgDCBar, colors, $
         ENDFOR
         
         ; Add the annotations of the bar.
+        if do_plus then add = 0. else add = step/2.
         chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
             ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
         IF !D.Name EQ 'PS' THEN chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * (0.75 * spacing)
-        x = position[0] + step/2.
+        x = position[0] + add
         y = y0 - (chardist * ((rotate NE 0) ? 1 : 2))
         CASE 1 OF
            (rotate EQ 0): alignment = 0.5
@@ -464,10 +479,12 @@ PRO w_cgDCBar, colors, $
         ; Draw each rectangle.
         x0 = position[0]
         x1 = position[2]
-        step = (position[3]-position[1])/(ncolors)         
-        y0 = position[1]
+        step = (position[3]-position[1])/(ncolors)   
+        if do_arrow_top and ~do_arrow_bot then y0 = position[1] + 0.5*step $
+          else y0 = position[1]        
+       if do_arrow_bot and ~do_arrow_top then step = (position[3]-position[1])/(ncolors+1)    
         y1 = y0 + step             
-        if do_arrows then begin 
+        if do_arrow_bot then begin 
             dx2 =  (x1 - x0)/2.       
             dy2 =  (y1 - y0)/2.       
             x = [x0+dx2, x1, x0, x0+dx2]
@@ -479,7 +496,7 @@ PRO w_cgDCBar, colors, $
         endif
                 
         FOR j=0,ncolors-1 DO BEGIN
-          if j eq ncolors-1 and do_arrows then begin
+          if j eq ncolors-1 and do_arrow_top then begin
             dx2 = (x1 - x0) / 2.
             dy2 = (y1 - y0) / 2.
             x = [x0, x1-dx2, x1, x0]
@@ -495,9 +512,10 @@ PRO w_cgDCBar, colors, $
         ENDFOR
 
         ; Add the annotations of the bar.
+        if do_plus then add = 0. else add = step/2.
         chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
             ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.75 * spacing) : (1.25 * spacing))
-        y = position[1] + step/2. - (!D.Y_CH_Size / Float(!D.Y_Size) * 0.5)
+        y = position[1] + add - (!D.Y_CH_Size / Float(!D.Y_Size) * 0.5)
         CASE 1 OF
            (rotate EQ 0): x = x1 + chardist*1
            (rotate GT 0): x = x1 + chardist*1.5

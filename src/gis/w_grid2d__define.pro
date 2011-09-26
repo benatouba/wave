@@ -909,7 +909,7 @@ end
 ;+
 ; :Description:
 ;    Important routine to transform a data array defined in any other GRID the OBJECT GRID. 
-;    Default is to use Neirest Neighbor algorithm, BILINEAR is also implemented.
+;    Default is to use Neirest Neighbor algorithm, BILINEAR and CUBIC interpolation are also implemented.
 ;       
 ; :Categories:
 ;         WAVE/OBJ_GIS
@@ -925,6 +925,8 @@ end
 ;             value to set to missing values in the final grid. NaN or 0 are default values depending on the data type
 ;    BILINEAR: in, optional
 ;             set to use bilinear interpolation instead of NN
+;    CUBIC: in, optional
+;             set to use cubic interpolation (significantly slower) instead of NN
 ;    DATA_DST: in, optional
 ;              if given, this array will be filled with the new mapped data. 
 ;              Only the concerned indexes will be overwritten. (usefull for mosaiking 
@@ -937,7 +939,7 @@ end
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, DATA_DST = DATA_DST
+function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, CUBIC=cubic, DATA_DST=data_dst
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -976,11 +978,12 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
         ELSE: missing = -999
       ENDCASE
   endif 
-
+  bili = KEYWORD_SET(BILINEAR)
+  cubic = KEYWORD_SET(CUBIC)
+  if ~cubic and ~bili then NEAREST = TRUE ;Otherwize, we need the decimals of course
+  
   src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
-  
-  if ~KEYWORD_SET(BILINEAR) then NEAREST = TRUE
   
   ;***********************************************
   ; If the array is too big, subset the problem  *
@@ -1007,11 +1010,11 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   ; Get the data in the source grid  *
   ;***********************************
   p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out)  ; OUT of range
-  bili = KEYWORD_SET(BILINEAR)
     
   for i = 0L, n-1 do begin
     if bili then tmp = BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny)) $
-      else tmp = (reform(data[*,*,i]))[i_dst, j_dst]
+      else if cubic then tmp = INTERPOLATE((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny), CUBIC=-0.5) $ 
+       else tmp = (reform(data[*,*,i]))[i_dst, j_dst]
     if cnt_out ne 0 then begin
       if is_dst then begin
         tmp2 = data_dst[*,*,i]
