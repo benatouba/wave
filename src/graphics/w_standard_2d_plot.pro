@@ -215,11 +215,8 @@ pro w_standard_2d_plot, map, TITLE=title,$
   cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Legend info
-  if ~KEYWORD_SET(SOURCE_INFO) then begin
-    if !D.Name EQ 'PS' then copyright = '!4' +STRING("251B) +  '!X' $
-     else copyright = '(c)'
-    source_info = copyright + ' 2011 TU Berlin!C!CChair of Climatology'
-  endif
+  if ~KEYWORD_SET(SOURCE_INFO) then source_info = cgSymbol('copyright') + ' 2011 TU Berlin!C!CChair of Climatology'
+
   if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
    
   ; Output  

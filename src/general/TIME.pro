@@ -591,7 +591,9 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
         
   endif else if keyword_set(REFdate) then begin
   
-    n_ref = N_ELEMENTS(REFdate)
+    if ~check_WTIME(REFdate, OUT_ABSDATE=_rd) then Message, WAVE_Std_Message('startTime', /ARG)
+  
+    n_ref = N_ELEMENTS(_rd)
     
     if n_ref eq 1 then Begin
     
@@ -624,14 +626,14 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
       
       my_time = REPLICATE({ABS_DATE}, n)
       for i = 0, n-1 do begin
-        my_time[i] = MAKE_REL_DATE(REFdate, YEAR=year[i], MONTH=month[i], DAY=day[i], HOUR=hour[i], MINUTE=minute[i], SECOND=second[i], MILLISECOND = millisecond[i])
+        my_time[i] = MAKE_REL_DATE(_rd, YEAR=year[i], MONTH=month[i], DAY=day[i], HOUR=hour[i], MINUTE=minute[i], SECOND=second[i], MILLISECOND = millisecond[i])
       endfor
       
     endif else begin
       n = n_ref
       my_time = REPLICATE({ABS_DATE}, n) 
       for i = 0, n-1 do begin
-        my_time[i] = MAKE_REL_DATE(REFdate[i], YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond)
+        my_time[i] = MAKE_REL_DATE(_rd[i], YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond)
       endfor
     endelse
   
