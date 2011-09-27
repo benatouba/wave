@@ -560,3 +560,35 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   return, 1 ;OK
 
 end
+
+pro w_MODIS::write_envi_hdr, FILE = file
+
+    if N_ELEMENTS(file) eq 0 then begin
+      file = Dialog_Pickfile(/Write, File= self.fname + '.hdr')
+    endif
+    
+    self->GetProperty, TNT_C = c
+    
+    OPENW, lu, file, /GET_LUN
+    printf, lu, 'ENVI'
+    printf, lu, 'samples = ' + str_equiv(c.nx)
+    printf, lu, 'lines   = ' + str_equiv(c.ny)
+    printf, lu, 'bands   = 1'
+    printf, lu, ' data type = 1'
+    printf, lu, 'header offset = 0'
+    
+    str = '{Sinusoidal, 1.0000, 1.0000, ' + STRING(c.x0 - c.dx/2., FORMAT='(F13.4)') +', ' + STRING(c.y0 + c.dy/2., FORMAT='(F13.4)')
+    str += ', ' + STRING(c.dx, FORMAT='(F9.5)') + ', ' + STRING(c.dy, FORMAT='(F9.5)') + ', , units=Meters}'
+    printf, lu, 'map info = ' + str
+
+    printf, lu, 'projection info = {16, 6371007.2, 0.000000, 0.0, 0.0, Sinusoidal, units=Meters}'
+    printf, lu, 'coordinate system string = {PROJCS["Sinusoidal",GEOGCS["GCS_ELLIPSE_BASED_1",DATUM["D_ELLIPSE_BASED_1",SPHEROID["S_ELLIPSE_BASED_1",6371007.181,0.0]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Sinusoidal"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",0.0],UNIT["Meter",1.0]]}'
+    
+    close, lu ; close file
+    
+    add = utils_replace_string(file, '.hdr', '.img')
+    img = BYTARR(c.nx, c.ny)
+    save,  img, FILENAME=add
+
+
+end
