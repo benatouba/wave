@@ -422,7 +422,7 @@ end
 ;     Written by FaM, 2011.
 ;
 ;-
-pro w_DEM::w_QuickPlotZ, WID = wid, NO_LL=NO_LL
+pro w_DEM::QuickPlotZ, WID = wid, NO_LL=NO_LL
 
   z = self->get_z()
   if ~KEYWORD_SET(NO_LL) then self->Get_LonLat, lon, lat

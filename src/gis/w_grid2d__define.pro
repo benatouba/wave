@@ -228,7 +228,7 @@ Function w_Grid2D::ReInit ,  $
       dx = tnt_c.dx
       dy = tnt_c.dy
       proj = tnt_c.proj
-      tnt_c = tnt_c      
+      _tnt_c = tnt_c      
     end
     else: begin
       Message, WAVE_Std_Message(/NARG), /NoName
@@ -242,23 +242,25 @@ Function w_Grid2D::ReInit ,  $
   ok = GIS_check_proj(proj,/CORR, ERROR=err)
   if not ok then  Message, 'Proj parameter not ok: no correction could be made: ' + TNT_err_txt(err)
   
-  tnt_c = {TNT_COORD}
-  tnt_c.system = 'PROJ'
-  tnt_c.valid = 'POINT'
-  tnt_c.nx = nx
-  tnt_c.ny = ny
-  tnt_c.x0 = x0
-  tnt_c.y0 = y0
-  tnt_c.x1 = x1
-  tnt_c.y1 = y1
-  tnt_c.dx = dx 
-  tnt_c.dy = dy
-  tnt_c.proj = proj
+  if N_ELEMENTS(_tnt_c) eq 0 then _tnt_c = {TNT_COORD}
+  _tnt_c.system = 'PROJ'
+  _tnt_c.valid = 'POINT'
+  _tnt_c.nx = nx
+  _tnt_c.ny = ny
+  _tnt_c.x0 = x0
+  _tnt_c.y0 = y0
+  _tnt_c.x1 = x1
+  _tnt_c.y1 = y1
+  _tnt_c.dx = dx 
+  _tnt_c.dy = dy
+  _tnt_c.proj = proj
   
-  ok = GIS_check_coord(tnt_c, /CORR, ERROR=err)
+  ok = GIS_check_coord(_tnt_c, /CORR, ERROR=err)
   if not ok then  Message, 'Input grid parameters do not describe a correct grid: no correction could be made: ' + TNT_err_txt(err)
+  
+  ; Now check for the map info
    
-  self.tnt_c = tnt_c
+  self.tnt_c = _tnt_c
   self.meta = meta
   
   ; Security check

@@ -301,7 +301,7 @@ end
 ;
 ;
 ;-
-function TIME_is_Valid, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
+function TIME_IS_VALID, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
                       TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day
 
   ; SET UP ENVIRONNEMENT
@@ -321,6 +321,7 @@ function TIME_is_Valid, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
   return, 1
 
 end
+
 ;+
 ; :Description:
 ; 
@@ -413,7 +414,7 @@ function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, 
   
   if N_ELEMENTS(refTime) eq 0 then refTime = QMS_TIME()
   
-  if ~check_WTIME(refTime, OUT_QMS=outDate) then Message, WAVE_Std_Message('refTime', /ARG)
+  if ~check_WTIME(refTime, OUT_QMS=outDate, WAS_ABSDATE=was_absdate) then Message, WAVE_Std_Message('refTime', /ARG)
   
   if not keyword_set(day) then day = 0L
   if not keyword_set(hour) then hour = 0L
@@ -1324,7 +1325,7 @@ end
 ;    MONTH: in, optional, type=integer, default=0
 ;           The timestep in number of months (if set, `TIMESTEP` is ignored)
 ;    QMSTIME: in, optional, type=boolean, default=0
-;           If the output is to be written in qms instead of {ABS_DATE} (better)
+;             If the output is to be written in qms instead of {ABS_DATE}
 ;    NSTEPS: out, optional, type=integer, default=none
 ;           The number of elements of the time serie
 ;
@@ -1370,7 +1371,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
   ; Standard error handling.
   ON_ERROR, 2
 
-  if ~check_WTIME(startTime, OUT_QMS=t1) then Message, WAVE_Std_Message('startTime', /ARG)
+  if ~check_WTIME(startTime, OUT_QMS=t1, WAS_QMS=was_qms) then Message, WAVE_Std_Message('startTime', /ARG)
   if ~check_WTIME(endTime, OUT_QMS=t2) then Message, WAVE_Std_Message('endTime', /ARG)
       
   if t1 le t2 then sign = 1 else sign = -1
@@ -1382,7 +1383,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
     
     nsteps = ABS((t2 - t1) / timestep.dms) + 1
     qms = INDGEN(nsteps, /L64) * timestep.dms + t1
-    if KEYWORD_SET(QMSTIME) then serie = qms else serie = MAKE_ABS_DATE(qms = qms)
+    if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = qms else serie = MAKE_ABS_DATE(qms = qms)
           
   endif else if KEYWORD_SET(month) then begin
   
@@ -1408,7 +1409,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
       
     endwhile
     
-    if KEYWORD_SET(QMSTIME) then serie = serie.qms
+    if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = serie.qms
     nsteps = n_elements(serie)
     
   endif else if KEYWORD_SET(year) then begin
@@ -1436,7 +1437,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
       
     endwhile
     
-    if KEYWORD_SET(QMSTIME) then serie = serie.qms
+    if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = serie.qms
     nsteps = n_elements(serie)
     
   endif else begin
@@ -1526,7 +1527,7 @@ end
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function check_TimeSerie, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
+function CHECK_TIMESERIE, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1611,7 +1612,7 @@ end
 ; :History:
 ;       Written by FaM, 2010.
 ;-
-function check_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_ABSDATE = was_absdate, WAS_QMS = was_qms
+function CHECK_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_ABSDATE = was_absdate, WAS_QMS = was_qms
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1665,7 +1666,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function search_Wtime, ts, time, pos = pos, cnt = cnt
+function SEARCH_WTIME, ts, time, pos = pos, cnt = cnt
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1685,7 +1686,7 @@ end
 
 ;+
 ; :Description:
-;    This function fills gaps in a time serie with a user defined or NaN values.
+;    This function fills gaps in a time serie with user defined values or NaN's.
 ;    It is based on the IDL value_locate function, which is pretty fast.
 ;
 ; :Params:
@@ -2294,8 +2295,27 @@ end
 
 
 
-function TS_RESAMPLE, data, time, $
-           DAY = day, HOUR = hour, M10 = m10, NEW_TIME = new_time
+;+
+; :Description:
+;    ;TODO: DOC:
+;
+; :Params:
+;    data
+;    time
+;
+; :Keywords:
+;    DAY
+;    HOUR
+;    M10
+;    NEW_TIME
+;
+; :Returns:
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+function TS_RESAMPLE, data, time, DAY = day, HOUR = hour, M10 = m10, NEW_TIME = new_time
 
   
   ; Set Up environnement
@@ -2342,8 +2362,6 @@ function TS_RESAMPLE, data, time, $
   
   s = VALUE_LOCATE(qms1,qms2) < (n-1) ;Subscript intervals.
   
-;  sample = 0D  
-;  for i = 0, N_ELEMENTS(newtime) - 1 do sample = [sample,value[s[i]]]
   sample = _data[s]
   
   sample = sample[0: N_ELEMENTS(sample)-2]
@@ -2357,6 +2375,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;    This function fits two time series together. If needed, mean values are built,
 ;    and time periods are selected to match to two together. Timeseries must be 
 ;    regular. 
@@ -2384,7 +2403,7 @@ end
 ;
 ;
 ;-
-function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul, VERBOSE = verbose
+function TS_FIT_SERIES, data1, time1,  data2, time2, CUMUL = cumul, VERBOSE = verbose
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2468,7 +2487,7 @@ function TS_fit_series, data1, time1,  data2, time2, CUMUL = cumul, VERBOSE = ve
   
 end
 
-function TS_wrf_to_mean, data, time
+function TS_WRF_TO_MEAN, data, time
   
   _data = data*1.
   d1 = TS_RESAMPLE(_data, time, /M10)

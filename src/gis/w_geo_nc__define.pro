@@ -575,11 +575,11 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
     if cnt ne 0 then begin ; the variable has a time dimension
       p0 = 0
       p1 = self.nt-1
-      if check_WTIME(t0, OUT_QMS= it0) then begin
+      if check_WTIME(t0, OUT_QMS= it0) and p0 ne p1 then begin
         v = 0 > VALUE_LOCATE(time, it0) < (self.nt-1)
         p0 = v[0]
       endif
-      if check_WTIME(t1, OUT_QMS= it1) then begin
+      if check_WTIME(t1, OUT_QMS= it1) and p0 ne p1 then begin
         v = 0 > VALUE_LOCATE(time, it1) < (self.nt-1)
         p1 = v[0]
       endif

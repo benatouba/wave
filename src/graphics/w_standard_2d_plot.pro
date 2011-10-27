@@ -78,19 +78,21 @@
 ;
 ;-
 pro w_standard_2d_plot, map, TITLE=title,$
-                           BAR_TITLE=bar_title,  $
-                           BAR_TAGS=bar_tags, $
-                           BAR_FORMAT=bar_format, $
-                           BAR_OPEN=bar_open,  $
-                           BAR_SPACING=BAR_spacing,  $
-                           PIXMAP=pixmap,  $
-                           SOURCE_INFO=source_info, $
-                           RESIZABLE=resizable, $
-                           PNG=png, JPEG=jpeg, EPS=eps, STD_PNG=std_png, STD_JPEG=std_jpeg, $
-                           DISP_IMG=disp_img, $
-                           WTITLE=WTITLE, $                        
-                           ANTI_ALIASING=anti_aliasing, $                        
-                           IM_RESIZE=im_resize
+                             BAR_TITLE=bar_title,  $
+                             BAR_TAGS=bar_tags, $
+                             BAR_FORMAT=bar_format, $
+                             BAR_OPEN=bar_open,  $
+                             BAR_SPACING=BAR_spacing,  $
+                             PIXMAP=pixmap,  $
+                             SOURCE_INFO=source_info, $
+                             RESIZABLE=resizable, $
+                             PNG=png, JPEG=jpeg, EPS=eps, STD_PNG=std_png, STD_JPEG=std_jpeg, $
+                             DISP_IMG=disp_img, $
+                             WTITLE=WTITLE, $                        
+                             ANTI_ALIASING=anti_aliasing, $ 
+                             XFACTOR = xfactor, $                      
+                             NO_BAR = no_bar, $                      
+                             IM_RESIZE=im_resize
    
   ;--------------------------
   ; Set up environment
@@ -116,10 +118,6 @@ pro w_standard_2d_plot, map, TITLE=title,$
   if n_elements(BAR_TITLE) eq 0 then BAR_TITLE = 'Data levels'
   
   ar =  float(xsize) / ysize
-;  if ar ge 1.4 then begin
-;    xs = FLOOR(xsize * 1.26d)
-;    ys = FLOOR(ysize * 1.25d)
-;  endif else 
   if ar ge 1. then begin
     xs = FLOOR(xsize * 1.26d)
     ys = FLOOR(ysize * 1.16d)
@@ -127,6 +125,9 @@ pro w_standard_2d_plot, map, TITLE=title,$
     xs = FLOOR(xsize * 1.34d)
     ys = FLOOR(ysize * 1.14d)
   endelse
+  
+  if N_ELEMENTS(XFACTOR) eq 0 then XFACTOR = 1.
+  xs *= XFACTOR
   
   imgX = xsize/double(xs)
   imgY = ysize/double(ys)
@@ -184,12 +185,15 @@ pro w_standard_2d_plot, map, TITLE=title,$
 
   ; Bar
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
+  if ~KEYWORD_SET(NO_BAR) then begin
   map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, BAR_FORMAT=bar_format, $
                       CHARSIZE=1.*sfac, BAR_OPEN=bar_open, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
 
   ; Title bar
   cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
           WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
+  
+  endif
   
   ; Scale
   xSize_map = tnt_C.dx * tnt_C.nx
@@ -215,7 +219,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
   cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Legend info
-  if ~KEYWORD_SET(SOURCE_INFO) then source_info = cgSymbol('copyright') + ' 2011 TU Berlin!C!CChair of Climatology'
+  if ~KEYWORD_SET(SOURCE_INFO) then source_info = cgSymbol('copyright') + ' 2011 TU Berlin!CChair of Climatology'
 
   if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
    

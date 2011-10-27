@@ -74,6 +74,7 @@ PRO w_Map__Define
             style          : 0D            , $ ; style or the shape line for the plot
             color          : ''            , $ ; color or the shape line for the plot
             n_coord        : 0L            , $ ; number of coordinates in the shape (private)
+            fill           : FALSE         , $ ; if the shape has to be filled
             coord          : PTR_NEW()     , $ ; coordinates of the shape points (private)
             conn           : PTR_NEW()       $ ; connivence info (private)          
             }
@@ -994,12 +995,15 @@ end
 ;                   an array containing the id of the shape entities to keep for the plot. 
 ;                   All other entities are ignored.
 ;
+;    FILL: in, optional, type = boolean
+;          if the shapes have to be filled with color rather than lined
+;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
                                     COLOR = color, THICK = thick, STYLE = style, $
-                                    REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
+                                    REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, FILL=fill
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1106,8 +1110,6 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
 
   endfor
   
-  coord = coord + 0.5 ; Because Center point of the pixel is not the true coord 
-
   ; clean unused objects
   obj_destroy, shpModel
   
@@ -1115,6 +1117,8 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    message, 'Did not find anything plotable in the shapefile.', /INFORMATIONAL
    return, 1 ;Nothing to do
   endif  
+  
+  coord = coord - 0.5 ; Because Center point of the pixel is not the true coord 
   
   _color = 'black'
   _style = 0.
@@ -1132,6 +1136,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   sh.conn = PTR_NEW(conn, /NO_COPY)
   sh.coord = PTR_NEW(coord, /NO_COPY)
   sh.n_coord = n_coord
+  sh.fill = KEYWORD_SET(FILL)
   
   if self.nshapes eq 0 then begin
    self.nshapes = 1
@@ -1207,7 +1212,8 @@ function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYL
 
   if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
   if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
-  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+  if OBJ_VALID(src) and OBJ_ISA(src, 'w_Grid2D') then is_grid = TRUE else is_grid = FALSE 
+  if ~is_proj and ~is_dat and ~is_grid then Message, WAVE_Std_Message('src', /ARG)
 
   if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
   n_coord = N_ELEMENTS(_x)
@@ -2125,8 +2131,9 @@ function w_Map::draw_shapes, WINDOW = window
       nbElperConn = (*sh.conn)[index]      
       idx = (*sh.conn)[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
-      _coord = (*sh.coord) [*,idx]      
-      cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
+      _coord = (*sh.coord) [*,idx]     
+      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
+      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
     endwhile  
   endfor
   
