@@ -108,11 +108,13 @@ PRO w_Grid2D__Define
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { w_Grid2D      ,  $
-    lon   : PTR_NEW()    ,  $ ; 2D array containing the longitudes of the grid
-    lat   : PTR_NEW()    ,  $ ; 2D array containing the latitudes of the grid
-    tnt_c : {TNT_COORD}  ,  $ ; intern {TNT_COORD} structure 
-    meta  : ''              $ ; If set, a string containg infos about the grid.
+  struct = { w_Grid2D     ,  $
+    lon    : PTR_NEW()    ,  $ ; 2D array containing the longitudes of the grid
+    lat    : PTR_NEW()    ,  $ ; 2D array containing the latitudes of the grid
+    roi    : PTR_NEW()    ,  $ ; 2D array containing the ROI mask
+    is_roi : FALSE        ,  $ ; if a ROI has bee defined
+    tnt_c  : {TNT_COORD}  ,  $ ; intern {TNT_COORD} structure 
+    meta   : ''              $ ; If set, a string containg infos about the grid.
     }  
 END
 
@@ -266,10 +268,13 @@ Function w_Grid2D::ReInit ,  $
   ; Security check
   lon = -1.
   lat = -1.
+  roi = -1
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
+  Ptr_Free, self.roi
   self.lon = PTR_NEW(lon, /NO_COPY)
   self.lat = PTR_NEW(lat, /NO_COPY)
+  self.roi = PTR_NEW(roi, /NO_COPY)
     
   RETURN, 1
   
@@ -354,10 +359,32 @@ Function w_Grid2D::Init ,  $
   
 END
 
+;+
+; :Description:
+;    Destroy procedure. 
+;
+; :Categories:
+;    WAVE/OBJ_GIS   
+;
+; :History:
+;      Written by FaM, 2010.
+;-
+pro w_Grid2D::destroy_ROI
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  if PTR_VALID(self.roi) then undefine, *self.roi
+  Ptr_Free, self.roi
+  self.roi = PTR_NEW(-1)
+  self.is_ROI = FALSE
+  
+END
 
 ;+
 ; :Description:
-;    Destroy prcocedure. 
+;    Destroy procedure. 
 ;
 ; :Categories:
 ;    WAVE/OBJ_GIS   
@@ -370,7 +397,8 @@ pro w_Grid2D::Cleanup
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-
+  
+  self->destroy_ROI
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
   
@@ -402,9 +430,9 @@ END
 ;      Written by FaM, 2010.
 ;-
 pro w_Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longitudes of the grid 
-                            lat   =  lat   ,  $ ; 2D array containing the latitudes of the grid 
-                            tnt_c =  tnt_c ,  $ ; {TNT_COORD} structure 
-                            meta  =  meta       ; a string containg infos about the grid.
+                              lat   =  lat   ,  $ ; 2D array containing the latitudes of the grid 
+                              tnt_c =  tnt_c ,  $ ; {TNT_COORD} structure 
+                              meta  =  meta       ; a string containg infos about the grid.
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -539,6 +567,20 @@ pro w_Grid2D::Get_XY, x, y, nx, ny, proj
                   x, y
   
 END
+
+pro w_Grid2D::Get_ROI, mask
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  undefine, mask
+  if ~self.is_roi then return
+  mask = *self.roi
+    
+END
+
+
 
 ;+
 ; :Description:
@@ -1260,4 +1302,229 @@ function w_Grid2D::subset, data, CORNERS = corners, SRC = src, CROPBORDER = crop
     
   return, 1
     
+end
+
+;+
+; :Description:
+;    Transforms the coordinates of a shape file into grid coordinates.
+;    
+;    The entities are organised using a connectivity array (see example).
+;    
+;    Default behavior is to consider the grid as an image grid, (grid coordinates 
+;    located in the center of the pixel), and therefore to shift the transformed
+;    coordinates of a half pixel down left. This is a good default for all common
+;    applications (w_Map, ROI), but if you want to avoid this you can set the 
+;    `NO_COORD_SHIFT` keyword to 1.
+; 
+; :Params:
+;    SHPFILE: in, required
+;             the shapefile to read (.shp). If not set, a dialog window will open  
+;    
+;    x: out
+;       the X shape coordinates
+;    y: out
+;       the Y shape coordinates
+;    conn: out
+;          the connectivity array
+;    
+; :Keywords:
+;    
+;    SHP_SRC: in, optional
+;             the shapefile coordinate system (datum or proj) default is WGS-84
+;    
+;    
+;    REMOVE_ENTITITES:in, optional, type = long
+;                     an array containing the id of the shape entities to remove from the plot
+;                     All other entities are plotted normally.
+;                     
+;    KEEP_ENTITITES:in, optional, type = long
+;                   an array containing the id of the shape entities to keep for the plot. 
+;                   All other entities are ignored.
+;
+;    NO_COORD_SHIFT: in, optional, type = boolean
+;                    prevent the shift of the coordinates of a half pixel.
+;
+; :Examples:
+;    
+;    Plot the world boundaries on a device::
+;    
+;      grid = OBJ_NEW('w_TRMM')
+;      
+;      GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
+;      shpf = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp'
+;      grid->transform_shape, shpf, x, y, conn, SHP_SRC=shp_src
+;      
+;      grid->Get_XY, dummyx, dummyy, nx, ny, proj
+;      cgDisplay, nx, ny, /FREE
+;     
+;      index = 0
+;      while index lt N_ELEMENTS(conn) do begin
+;        nbElperConn = conn[index]
+;        idx = conn[index+1:index+nbElperConn]
+;        index += nbElperConn + 1
+;        cgPlots, x[idx], y[idx], /DEVICE, COLOR='black'
+;      endwhile
+;      
+;      undefine, grid
+; 
+; :History:
+;     Written by FaM, 2011.
+;- 
+pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, NO_COORD_SHIFT = no_coord_shift
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  ON_ERROR, 2
+
+  undefine, x, y, conn
+  
+  if N_ELEMENTS(shpfile) eq 0 then shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
+  
+  if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
+  
+  if ~KEYWORD_SET(shp_src) then begin
+   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
+   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
+  endif
+  
+  if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('shp_src', /ARG)
+  
+  ;****************************************
+  ; Make boundaries to spare computations *
+  ;****************************************
+  if is_dat then begin
+   self->get_LonLat, glon, glat
+   range = [min(glon),max(glon),min(glat),max(glat)]
+  end
+  if is_proj then begin
+   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
+  end
+  
+  ; read shp file and create polygon object from entities
+  shpmodel = OBJ_NEW('IDLffShape',shpfile)
+  if ~OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
+  
+  ;Get the number of entities so we can parse through them
+  shpModel->GetProperty, N_ENTITIES=N_ent    
+  n_coord = 0L
+  for i=0L, N_ent-1 do begin
+     
+    if KEYWORD_SET(REMOVE_ENTITITES) then begin
+      pr = where(REMOVE_ENTITITES eq i, cnt)
+      if cnt ne 0 then continue
+    endif
+    if KEYWORD_SET(KEEP_ENTITITES) then begin
+      pr = where(KEEP_ENTITITES eq i, cnt)
+      if cnt eq 0 then continue
+    endif
+     
+    ent = shpmodel->GetEntity(i, /ATTRIBUTES)    
+    if not ptr_valid(ent.vertices) then continue
+    
+    _x = reform((*ent.vertices)[0,*])
+    _y = reform((*ent.vertices)[1,*])
+    n_vert = n_elements(_x)    
+    
+    if n_vert lt 3 $
+    or min(_y) gt range[3] $ 
+    or max(_y) lt range[2] $ 
+    or min(_x) gt range[1] $ 
+    or min(_y) gt range[3] then begin
+      shpmodel->IDLffShape::DestroyEntity, ent 
+      continue
+    endif
+    
+    self->transform, _x, _y, _x, _y, SRC = shp_src    
+    if n_elements(x) eq 0 then x = _x else x = [x,_x]
+    if n_elements(y) eq 0 then y = _y else y = [y,_y]
+        
+    parts = *ent.parts
+    for k=0L, ent.n_parts-1 do begin
+      if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
+      polyconn = (lindgen(n_vert)) + n_coord
+      if n_elements(conn) eq 0 then begin
+        conn = n_vert
+        conn = [conn,polyconn]
+      endif else begin
+        conn = [conn,n_vert]
+        conn = [conn,polyconn]
+      endelse         
+      n_coord += n_vert      
+    endfor   
+        
+    shpmodel->IDLffShape::DestroyEntity, ent 
+
+  endfor
+  
+  ; clean unused objects
+  obj_destroy, shpModel
+  
+  if N_ELEMENTS(CONN) eq 0 then begin
+   message, 'Did not find anything in the shapefile that matches to the grid.', /INFORMATIONAL
+   undefine, x, y, conn
+  endif  
+
+  if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin ; Because Center point of the pixel is not the true coord
+    x = x + 0.5
+    y = y + 0.5
+  endif
+  
+end
+
+function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDER=cropborder, $
+                             REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
+                             MASK_RULE=mask_rule
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel    
+    self->Destroy_ROI
+    ok = self->set_ROI()
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF
+  
+  do_shape = N_ELEMENTS(SHAPE) ne 0
+  do_xy = N_ELEMENTS(X) ne 0 or N_ELEMENTS(Y) ne 0
+  do_mask = N_ELEMENTS(MASK) ne 0
+  do_border = N_ELEMENTS(CROPBORDER) ne 0
+  check_k = [do_shape, do_xy, do_mask, do_border]
+  if total(check_k) eq 0 then begin
+    self->Destroy_ROI
+    return, 1
+  endif  
+  if total(check_k) ne 1 then MESSAGE, 'Ambiguous keyword combination. Set one and only one ROI definition method.'
+  
+  if do_shape then begin
+    self->transform_shape, shape, x, y, conn, SHP_SRC = SRC, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
+    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'    
+    index = 0
+    roi = OBJ_NEW('IDLanROI')
+    undefine, mask
+    while index lt N_ELEMENTS(conn) do begin      
+      nbElperConn = conn[index]
+      idx = conn[index+1:index+nbElperConn]
+      index += nbElperConn + 1      
+      roi->ReplaceData, x[idx], y[idx]
+      if N_ELEMENTS(MASK) eq 0 then mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=mask_rule) $
+       else mask = roi->ComputeMask(MASK_IN=mask, MASK_RULE=mask_rule)
+    endwhile    
+    OBJ_DESTROY, roi
+  endif else MESSAGE, 'Currently only the SHAPE keyword is implemented, sorry!'
+  
+  self.is_roi = TRUE
+  undefine, *self.roi
+  PTR_FREE, self.roi
+  self.roi = PTR_NEW(mask, /NO_COPY)  
+  
+  return, 1
+  
 end

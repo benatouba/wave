@@ -184,18 +184,10 @@ pro w_TRMM::Cleanup
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-
-  NCDF_CLOSE, self.cdfid
-  PTR_FREE, self.varNames
-  PTR_FREE, self.dimNames
-  PTR_FREE, self.dimSizes
-  PTR_FREE, self.gattNames
-
-  PTR_FREE, self.time
-  
-  Ptr_Free, self.lon 
-  Ptr_Free, self.lat
-    
+ 
+  self->w_Grid2D::Cleanup
+  self->w_GEO_nc::Cleanup
+      
 END
 
 ;+

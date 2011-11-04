@@ -223,11 +223,7 @@ pro w_GEO_nc::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  NCDF_CLOSE, self.cdfid
-  PTR_FREE, self.varNames
-  PTR_FREE, self.dimNames
-  PTR_FREE, self.dimSizes
-  PTR_FREE, self.gattNames
+  self->w_NCDF::Cleanup
 
   PTR_FREE, self.time
   

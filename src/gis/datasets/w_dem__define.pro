@@ -329,8 +329,7 @@ pro w_DEM::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2  
 
-  Ptr_Free, self.lon 
-  Ptr_Free, self.lat
+  self->w_Grid2D::Cleanup
   Ptr_Free, self.z
  
 END

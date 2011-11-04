@@ -1022,6 +1022,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    return, self->set_shape_file(SHPFILE = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
             COLOR = color, THICK = thick, STYLE = style, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites)
   endif  
+  
   ;******************
   ; Check arguments *
   ;******************
@@ -1036,90 +1037,10 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    return, 1
   endif
   
-  if ~KEYWORD_SET(shp_src) then begin
-   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
-   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
-  endif
-  if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
-  if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
-  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('shp_src', /ARG)
-  
-  ;****************************************
-  ; Make boundaries to spare computations *
-  ;****************************************
-  if is_dat then begin
-   self.grid->get_LonLat, glon, glat
-   range = [min(glon),max(glon),min(glat),max(glat)]
-  end
-  if is_proj then begin
-   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
-  end
-  
-  ; read shp file and create polygon object from entities
-  shpmodel = OBJ_NEW('IDLffShape',shpfile)
-  if ~ OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
-  
-  ;Get the number of entities so we can parse through them
-  shpModel->GetProperty, N_ENTITIES=N_ent    
-  n_coord = 0L
-  for i=0L, N_ent-1 do begin
-     
-    if KEYWORD_SET(REMOVE_ENTITITES) then begin
-      pr = where(REMOVE_ENTITITES eq i, cnt)
-      if cnt ne 0 then continue
-    endif
-    if KEYWORD_SET(KEEP_ENTITITES) then begin
-      pr = where(KEEP_ENTITITES eq i, cnt)
-      if cnt eq 0 then continue
-    endif
-     
-    ent = shpmodel->GetEntity(i, /ATTRIBUTES)    
-    if not ptr_valid(ent.vertices) then continue
+  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
+  n_coord = N_ELEMENTS(x) 
+  coord = [1#x,1#y]
     
-    x = reform((*ent.vertices)[0,*])
-    y = reform((*ent.vertices)[1,*])
-    n_vert = n_elements(x)    
-    
-    if n_vert lt 3 $
-    or min(y) gt range[3] $ 
-    or max(y) lt range[2] $ 
-    or min(x) gt range[1] $ 
-    or min(y) gt range[3] then begin
-      shpmodel->IDLffShape::DestroyEntity, ent 
-      continue
-    endif
-    
-    self.grid->transform, x, y, x, y, SRC = shp_src
-    if n_elements(coord) eq 0 then coord = [1#x,1#y] else coord = [[coord],[[1#x,1#y]]]
-        
-    parts = *ent.parts
-    for k=0L, ent.n_parts-1 do begin
-      if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
-      polyconn = (lindgen(n_vert)) + n_coord
-      if n_elements(conn) eq 0 then begin
-        conn = n_vert
-        conn = [conn,polyconn]
-      endif else begin
-        conn = [conn,n_vert]
-        conn = [conn,polyconn]
-      endelse         
-      n_coord += n_vert      
-    endfor   
-        
-    shpmodel->IDLffShape::DestroyEntity, ent 
-
-  endfor
-  
-  ; clean unused objects
-  obj_destroy, shpModel
-  
-  if N_ELEMENTS(CONN) eq 0 then begin
-   message, 'Did not find anything plotable in the shapefile.', /INFORMATIONAL
-   return, 1 ;Nothing to do
-  endif  
-  
-  coord = coord - 0.5 ; Because Center point of the pixel is not the true coord 
-  
   _color = 'black'
   _style = 0.
   _thick = 1.5
@@ -2220,7 +2141,7 @@ function w_Map::draw_points, WINDOW = window
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
     cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=cgColor(p.color), ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
   endfor
   
   return, 1

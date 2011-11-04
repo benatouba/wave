@@ -198,11 +198,8 @@ pro w_MODIS::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2  
 
-  HDF_SD_END, self.hdfID
-  PTR_FREE, self.varNames
-  
-  Ptr_Free, self.lon 
-  Ptr_Free, self.lat
+  self->w_Grid2D::Cleanup
+  self->w_HDF_EOS::Cleanup
   
 END
 

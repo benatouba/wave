@@ -124,8 +124,7 @@ pro w_HDF_EOS::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2  
 
-  HDF_SD_END, self.hdfID
-  PTR_FREE, self.varNames
+  self->w_HDF::Cleanup
   
 END
 

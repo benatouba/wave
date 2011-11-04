@@ -2869,4 +2869,34 @@ function utils_minmax, val
   
 end
 
+function utils_neighbors, mask, cnt
+  
+  _mask = 0 > FLOAT(mask) < 1
+  if TOTAL(utils_minmax(_mask) - [0,1]) ne 0 then message, 'you sure this is a correct mask?'
+  
+  sm = SMOOTH(_mask, 3)
+  
+  p = where(sm ne 0, cnt)
+  if cnt eq 0 then return, -1  
+  sm[p] = 1
+    
+  return, where((sm-_mask) eq 1, cnt)    
+  
+end
+
+pro utils_array_el_num, array, elements, cnt, n_el, BY_OCCURENCE=by_occurence
+   
+  _array = array[SORT(array)]
+  elements = _array[UNIQ(_array)]
+  cnt = [-1, VALUE_LOCATE(_array, elements)] 
+  cnt = cnt[1:*] - cnt[0:N_ELEMENTS(cnt)-2]  
+  n_el = N_ELEMENTS(cnt)
+  
+  if KEYWORD_SET(BY_OCCURENCE) then begin
+    s = REVERSE(sort(cnt))
+    cnt = cnt[s]
+    elements =  elements[s]
+  end
+  
+end
 
