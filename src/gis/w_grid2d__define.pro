@@ -1409,20 +1409,19 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
   if ~OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
   
   ;Get the number of entities so we can parse through them
-  shpModel->GetProperty, N_ENTITIES=N_ent    
+  shpModel->GetProperty, N_ENTITIES=N_ent
+  entities = LINDGEN(N_ent)
+  if N_ELEMENTS(REMOVE_ENTITITES) ne 0 then utils_array_remove, remove_entitites, entities
+  if N_ELEMENTS(KEEP_ENTITITES) ne 0 then entities = keep_entitites
+  
+  N_ent = N_ELEMENTS(entities)
   n_coord = 0L
-  for i=0L, N_ent-1 do begin
-     
-    if KEYWORD_SET(REMOVE_ENTITITES) then begin
-      pr = where(REMOVE_ENTITITES eq i, cnt)
-      if cnt ne 0 then continue
-    endif
-    if KEYWORD_SET(KEEP_ENTITITES) then begin
-      pr = where(KEEP_ENTITITES eq i, cnt)
-      if cnt eq 0 then continue
-    endif
-     
-    ent = shpmodel->GetEntity(i, /ATTRIBUTES)    
+  
+  mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
+  mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
+  mg_conn = obj_new('MGcoArrayList', type=IDL_LONG) 
+  for i=0L, N_ent-1 do begin         
+    ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)    
     if not ptr_valid(ent.vertices) then continue
     
     _x = reform((*ent.vertices)[0,*])
@@ -1438,35 +1437,40 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
       continue
     endif
     
-    self->transform, _x, _y, _x, _y, SRC = shp_src    
-    if n_elements(x) eq 0 then x = _x else x = [x,_x]
-    if n_elements(y) eq 0 then y = _y else y = [y,_y]
+    mg_x->add, _x
+    mg_y->add, _y    
         
     parts = *ent.parts
     for k=0L, ent.n_parts-1 do begin
       if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
       polyconn = (lindgen(n_vert)) + n_coord
-      if n_elements(conn) eq 0 then begin
-        conn = n_vert
-        conn = [conn,polyconn]
-      endif else begin
-        conn = [conn,n_vert]
-        conn = [conn,polyconn]
-      endelse         
+;      if n_elements(conn) eq 0 then begin
+;        conn = n_vert
+;        conn = [conn,polyconn]
+;      endif else begin
+;        conn = [conn,n_vert]
+;        conn = [conn,polyconn]
+;      endelse         
+      mg_conn->add, [n_vert,polyconn]
       n_coord += n_vert      
-    endfor   
-        
+    endfor           
     shpmodel->IDLffShape::DestroyEntity, ent 
-
-  endfor
+  endfor  
+  
+  x = mg_x->get(/all)
+  y = mg_y->get(/all)
+  conn = mg_conn->get(/all)
+  if N_ELEMENTS(conn) eq 1 and conn[0] eq -1 then undefine, conn
   
   ; clean unused objects
-  obj_destroy, shpModel
-  
+  undefine, shpModel, mg_x, mg_y, mg_conn
+    
   if N_ELEMENTS(CONN) eq 0 then begin
    message, 'Did not find anything in the shapefile that matches to the grid.', /INFORMATIONAL
    undefine, x, y, conn
   endif  
+  
+  self->transform, x, y, x, y, SRC = shp_src
 
   if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin ; Because Center point of the pixel is not the true coord
     x = x + 0.5
@@ -1507,23 +1511,22 @@ function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDE
     self->transform_shape, shape, x, y, conn, SHP_SRC = SRC, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'    
     index = 0
-    roi = OBJ_NEW('IDLanROI')
     undefine, mask
     while index lt N_ELEMENTS(conn) do begin      
       nbElperConn = conn[index]
       idx = conn[index+1:index+nbElperConn]
       index += nbElperConn + 1      
-      roi->ReplaceData, x[idx], y[idx]
+      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
       if N_ELEMENTS(MASK) eq 0 then mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=mask_rule) $
        else mask = roi->ComputeMask(MASK_IN=mask, MASK_RULE=mask_rule)
-    endwhile    
-    OBJ_DESTROY, roi
+      OBJ_DESTROY, roi
+    endwhile       
   endif else MESSAGE, 'Currently only the SHAPE keyword is implemented, sorry!'
   
   self.is_roi = TRUE
   undefine, *self.roi
   PTR_FREE, self.roi
-  self.roi = PTR_NEW(mask, /NO_COPY)  
+  self.roi = PTR_NEW(mask < 1, /NO_COPY)  
   
   return, 1
   
