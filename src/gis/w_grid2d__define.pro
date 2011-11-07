@@ -1443,15 +1443,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
     parts = *ent.parts
     for k=0L, ent.n_parts-1 do begin
       if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
-      polyconn = (lindgen(n_vert)) + n_coord
-;      if n_elements(conn) eq 0 then begin
-;        conn = n_vert
-;        conn = [conn,polyconn]
-;      endif else begin
-;        conn = [conn,n_vert]
-;        conn = [conn,polyconn]
-;      endelse         
-      mg_conn->add, [n_vert,polyconn]
+      mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
       n_coord += n_vert      
     endfor           
     shpmodel->IDLffShape::DestroyEntity, ent 
