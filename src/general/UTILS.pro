@@ -90,7 +90,7 @@ end
 ;    number: in, required
 ;            array of numbers
 ;    index: in, required
-;           the index of the required byte (e.g. from 0 to 15 for integer, 0 to 8 bor bytes, etc.)
+;           the index of the required byte (e.g. from 0 to 15 for integer, 0 to 8 for bytes, etc.)
 ;
 ; :Returns:
 ; 
