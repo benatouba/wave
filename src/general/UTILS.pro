@@ -74,8 +74,8 @@ pro utils_1d_to_2d, ax, ay, x, y
   nx = n_elements(ax)
   ny = n_elements(ay)
   
-  if nx lt 2 then Message, '$ax has not enough elements.'
-  if ny lt 2 then Message, '$ay has not enough elements.'
+;  if nx lt 2 then Message, '$ax has not enough elements.'
+;  if ny lt 2 then Message, '$ay has not enough elements.'
   
   y = (LONARR(nx) + 1) # ay ; "the georef-eq" 2-dimensional array
   x = ax # (LONARR(ny) + 1) ; "the georef-eq" 2-dimensional array
@@ -2390,6 +2390,40 @@ function utils_wrf_unstagger, varin, unstagDim
 
 end
 
+function utils_wrf_intrp3d, varin, z_in, loc_param
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not arg_okay(varin, /NUMERIC) then message, WAVE_Std_Message(/ARG)
+  if not arg_okay(z_in, /NUMERIC) then message, WAVE_Std_Message(/ARG)
+  if not array_processing(varin, z_in) then message, WAVE_Std_Message(/ARG)  
+  if not arg_okay(loc_param, /NUMERIC) then message, WAVE_Std_Message(/ARG)
+  
+  dims = SIZE(reform(varin), /DIMENSIONS)
+  nd = N_ELEMENTS(dims)  
+  
+  nlocs = N_ELEMENTS(loc_param)
+  
+  if nd eq 3 then begin
+    out_var = FLTARR(dims[0], dims[1], nlocs)
+    for i=0, dims[0]-1 do begin
+      for j=0, dims[1]-1 do begin
+        _z_in = z_in[i,j,*]
+        out_var[i,j,*] = INTERPOL(varin[i,j,*],_z_in,loc_param)
+        p = where(loc_param gt max(_z_in) or loc_param lt min(_z_in), cnt)
+        if cnt ne 0 then  out_var[i,j,p] = !VALUES.F_NAN
+      endfor
+    endfor
+  endif else if nd eq 4 then begin
+    out_var = FLTARR(dims[0], dims[1], nlocs, dims[3])
+    for t=0, dims[3]-1 do out_var[*,*,*,t] = utils_wrf_intrp3d(REFORM(varin[*,*,*,t]), REFORM(z_in[*,*,*,t]), loc_param)
+  endif else Message, WAVE_Std_Message('varIn', /ARG)
+  
+  return, out_var
+  
+end
 
 ;+
 ; :Description:

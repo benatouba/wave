@@ -377,7 +377,7 @@ pro w_Grid2D::destroy_ROI
   
   if PTR_VALID(self.roi) then undefine, *self.roi
   Ptr_Free, self.roi
-  self.roi = PTR_NEW(-1)
+  self.roi = PTR_NEW(-1B)
   self.is_ROI = FALSE
   
 END
@@ -413,17 +413,21 @@ END
 ;            WAVE/OBJ_GIS   
 ;
 ; :Keywords:
-;       lon: out, optional, type = float array 
+;       lon: out, type = float array 
 ;               2D array containing the longitudes of the grid 
 ;               (the longitudes will be computed at the first call and stored
 ;               as a pointer: by large grids, this may cause some memory problems)
-;       lat: out, optional, type = float array 
+;       lat: out, type = float array 
 ;               2D array containing the latitudes of the grid 
 ;               (the latitudes will be computed at the first call and stored
 ;               as a pointer: by large grids, this may cause some memory problems)
-;       tnt_c: out,  optional, type = {TNT_COORD}
+;       nx: out, type = long
+;           the number of grid points in X dimension
+;       ny: out, type = long
+;           the number of grid points in Y dimension
+;       tnt_c: out,  type = {TNT_COORD}
 ;               grid {TNT_COORD} structure 
-;       meta: out, optional, type = string
+;       meta: out, type = string
 ;               a string containg infos about the grid.
 ;
 ; :History:
@@ -431,6 +435,8 @@ END
 ;-
 pro w_Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the longitudes of the grid 
                               lat   =  lat   ,  $ ; 2D array containing the latitudes of the grid 
+                              nx    =  nx    ,  $ 
+                              ny    =  ny    ,  $
                               tnt_c =  tnt_c ,  $ ; {TNT_COORD} structure 
                               meta  =  meta       ; a string containg infos about the grid.
     
@@ -450,6 +456,8 @@ pro w_Grid2D::GetProperty,    lon   =  lon   ,  $ ; 2D array containing the long
   IF Arg_Present(lon) or ARG_PRESENT(lat) THEN self->Get_LonLat, lon, lat, datum
   IF Arg_Present(tnt_c) THEN tnt_c = self.tnt_c
   IF Arg_Present(meta) THEN meta = self.meta
+  IF Arg_Present(nx) THEN  nx = self.tnt_c.nx
+  IF Arg_Present(ny) THEN  ny = self.tnt_c.ny
   
 END
 
@@ -567,6 +575,16 @@ pro w_Grid2D::Get_XY, x, y, nx, ny, proj
                   x, y
   
 END
+
+function w_Grid2D::is_ROI
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  return, self.is_roi
+  
+end
 
 pro w_Grid2D::Get_ROI, mask
 
@@ -842,7 +860,7 @@ PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
     RETURN
   ENDIF
   
-  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('proj', OBJ='w_Grid2D')
+  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
   
   self->transform, i_src, j_src, i, j, SRC = grid, NEAREST=nearest
   
@@ -905,6 +923,8 @@ function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING =
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, -1
   ENDIF
+  
+  Message, 'map_lonlat_data is currently NOT handling ROIs', /INFORMATIONAL
   
   if not arg_okay(src_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('src_datum', STRUCT={TNT_DATUM})
   if ~KEYWORD_SET(missing) then missing = 0
@@ -999,7 +1019,9 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   
   if ~ arg_okay(data, /NUMERIC) then Message, WAVE_Std_Message('data', /ARG)
-  siz_src = SIZE(data)
+  if N_ELEMENTS(data) eq 1 then data=reform(data, 1,1)
+  
+  siz_src = SIZE(data) 
   if siz_src[0] eq 2 then n = 1 else if siz_src[0] eq 3 then n = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
   mx = siz_src[1] & my = siz_src[2]
   
@@ -1018,7 +1040,7 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
       CASE dataTypeName OF
         'FLOAT' : missing = !VALUES.F_NAN
         'DOUBLE': missing = !VALUES.D_NAN
-        'BYTE': missing = 0
+        'BYTE': missing = 0B
         ELSE: missing = -999
       ENDCASE
   endif 
@@ -1054,7 +1076,20 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   ; Get the data in the source grid  *
   ;***********************************
   p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out)  ; OUT of range
-    
+  if src_grid->is_roi() then begin
+    src_grid->get_ROI, mask
+    poutm = where(mask[i_dst, j_dst] ne 1, cntoutm)
+    if cntoutm ne 0 then begin
+      if cnt_out eq 0 then begin
+        cnt_out = cntoutm
+        p_out = poutm
+      endif else begin
+        cnt_out += cntoutm
+        p_out = [p_out, poutm]
+      endelse
+    endif
+  endif
+  
   for i = 0L, n-1 do begin
     if bili then tmp = BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny)) $
       else if cubic then tmp = INTERPOLATE((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny), CUBIC=-0.5) $ 
@@ -1432,7 +1467,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
     or min(_y) gt range[3] $ 
     or max(_y) lt range[2] $ 
     or min(_x) gt range[1] $ 
-    or min(_y) gt range[3] then begin
+    or max(_x) lt range[0] then begin
       shpmodel->IDLffShape::DestroyEntity, ent 
       continue
     endif
@@ -1473,7 +1508,7 @@ end
 
 function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDER=cropborder, $
                              REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
-                             MASK_RULE=mask_rule
+                             ROI_MASK_RULE=roi_mask_rule, GRID=grid, NO_ERASE=no_erase
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1489,36 +1524,63 @@ function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDE
   ENDIF
   
   do_shape = N_ELEMENTS(SHAPE) ne 0
-  do_xy = N_ELEMENTS(X) ne 0 or N_ELEMENTS(Y) ne 0
   do_mask = N_ELEMENTS(MASK) ne 0
+  do_grid = N_ELEMENTS(GRID) ne 0
+  do_xy = N_ELEMENTS(X) ne 0 or N_ELEMENTS(Y) ne 0
   do_border = N_ELEMENTS(CROPBORDER) ne 0
-  check_k = [do_shape, do_xy, do_mask, do_border]
+  
+  check_k = [do_shape, do_xy, do_mask, do_border, do_grid]
   if total(check_k) eq 0 then begin
     self->Destroy_ROI
     return, 1
   endif  
   if total(check_k) ne 1 then MESSAGE, 'Ambiguous keyword combination. Set one and only one ROI definition method.'
   
+  if KEYWORD_SET(NO_ERASE) and self.is_roi then _mask = *self.roi
+  
   if do_shape then begin
     self->transform_shape, shape, x, y, conn, SHP_SRC = SRC, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'    
     index = 0
-    undefine, mask
     while index lt N_ELEMENTS(conn) do begin      
       nbElperConn = conn[index]
       idx = conn[index+1:index+nbElperConn]
       index += nbElperConn + 1      
       roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
-      if N_ELEMENTS(MASK) eq 0 then mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=mask_rule) $
-       else mask = roi->ComputeMask(MASK_IN=mask, MASK_RULE=mask_rule)
+      if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=roi_mask_rule) $
+       else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=roi_mask_rule)
       OBJ_DESTROY, roi
     endwhile       
-  endif else MESSAGE, 'Currently only the SHAPE keyword is implemented, sorry!'
+    _mask = _mask < 1B    
+  endif
+  
+  if do_mask then begin
+    if ~arg_okay(mask, /NUMERIC, DIM=[self.tnt_c.nx,self.tnt_c.ny]) then Message, WAVE_Std_Message('MASK', /ARG)
+    if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    p = where(mask ne 0, cnt)
+    if cnt ne 0 then _mask[p] = 1B  
+  endif
+  
+  if do_grid then begin
+    if not OBJ_ISA(GRID, 'w_Grid2D')  then Message, WAVE_Std_Message('GRID', OBJ='w_Grid2D')
+    grid->getProperty, NX=nx,NY=ny
+    if N_ELEMENTS(_mask) eq 0 then _mask = self->map_gridded_data(BYTARR(nx,ny) + 1B, grid, MISSING=0B) $
+     else _mask = self->map_gridded_data(BYTARR(nx,ny) + 1B, grid, MISSING=0B, DATA_DST=_mask)    
+  endif
+  
+  if do_xy then Message, 'XY currently not implemented'
+  if do_border then Message, 'CROPBORDER currently not implemented'
+  
+  if min(_mask) lt 0 or max(_mask) ne 1 then begin 
+   Message, 'The mask is empty of full. I am igniring it', /INFORMATIONAL
+   self->Destroy_ROI
+   return, 0
+  endif
   
   self.is_roi = TRUE
   undefine, *self.roi
   PTR_FREE, self.roi
-  self.roi = PTR_NEW(mask < 1, /NO_COPY)  
+  self.roi = PTR_NEW(_mask, /NO_COPY)  
   
   return, 1
   
