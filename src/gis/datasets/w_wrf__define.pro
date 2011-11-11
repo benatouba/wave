@@ -732,10 +732,17 @@ end
 ;    PRINTVARS: in, optional
 ;               to print the infos in the console
 ;               
+;    DIAGNOSTIC: in, optional
+;                to obtain the list of the wrf specific computed variables only
+;                
+;    ALL: in, optional
+;         to obtain the list of the all the variables 
+;         (ncdf variables and wrf specific computed variables) 
+;               
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars, DIAGNOSTIC = diagnostic, ALL = all
+pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS=printvars, DIAGNOSTIC=diagnostic, ALL=all
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -758,7 +765,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('rainc')
       if (d1 and d2) then begin
-        var = {name:'PRCP',unit:'mm',ndims:3L,description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -766,40 +773,45 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('rainc')
       if (d1 and d2) then begin
-        var = {name:'PRCP_STEP',unit:'mm',ndims:3L,description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif else begin
         d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
         d2 = self->w_NCDF::get_Var_Info('rainc')
         if (d1 and d2) then begin
-          var = {name:'PRCP_STEP',unit:'mm',ndims:3L,description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
         endif
       endelse
       
       ;TK and TC
-      d1= self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d1= self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
       d2 = self->w_NCDF::get_Var_Info('P')
       d3 = self->w_NCDF::get_Var_Info('PB')
       if (d1 and d2 and d3) then begin
-        var = {name:'TK',unit:'K',ndims:3L,description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'TC',unit:'C',ndims:3L,description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'TC',unit:'C',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
       endif    
-      
-      ;TH and THETA
+      ;THETA
       if (d1) then begin
-        var = {name:'TH',unit:'K',ndims:3L,description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]
-        var = {name:'THETA',unit:'K',ndims:3L,description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'THETA',unit:'K',ndims:N_elements(dims),description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]    
       endif 
-
+      
+      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'TC',unit:'C',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]        
+      endif
+      
       ;T2C
       d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'T2C',unit:'C',ndims:2L,description:'2 m Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'T2C',unit:'C',ndims:N_elements(dims),description:'2 m Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -809,7 +821,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d3 = self->w_NCDF::get_Var_Info('PB')
       d4 = self->w_NCDF::get_Var_Info('QVAPOR')
       if (d1 and d2 and d3 and d4) then begin
-        var = {name:'RH',unit:'%',ndims:3L,description:'Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'RH',unit:'%',ndims:N_elements(dims),description:'Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -818,7 +830,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d2 = self->w_NCDF::get_Var_Info('Q2')
       d3 = self->w_NCDF::get_Var_Info('PSFC')
       if (d1 and d2 and d3) then begin
-        var = {name:'RH2',unit:'%',ndims:2L,description:'2 m Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'RH2',unit:'%',ndims:N_elements(dims),description:'2 m Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -845,7 +857,13 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d5 = self->w_NCDF::get_Var_Info('PH')
       d6 = self->w_NCDF::get_Var_Info('PHB')      
       if (d1 and d2 and d3 and d4 and d5 and d6) then begin
-        var = {name:'SLP',unit:'hPa',ndims:2L,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+      endif
+      
+      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims)  
+      if d1 then begin
+        var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
       endif
       
@@ -855,7 +873,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       if self.type eq 'MET' then d3 = self->w_NCDF::get_Var_Info('HGT_M') $
        else  d3 = self->w_NCDF::get_Var_Info('HGT')
       if (d1 and d2 and d3) then begin
-        var = {name:'SLP_B',unit:'hPa',ndims:2L,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'SLP_B',unit:'hPa',ndims:N_elements(dims),description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif      
       
@@ -863,12 +881,42 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d1 = self->w_NCDF::get_Var_Info('U10', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('V10') 
       if (d1 and d2) then begin
-        var = {name:'WS10',unit:'m.s-1',ndims:2L,description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'WS10',unit:'m.s-1',ndims:N_elements(dims),description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'WD10',unit:'degrees',ndims:2L,description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'WD10',unit:'degrees',ndims:N_elements(dims),description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
       endif      
       
+      ;pressure
+      d1 = self->w_NCDF::get_Var_Info('P', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('PB') 
+      if (d1 and d2) then begin
+        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+      endif           
+      d1 = self->w_NCDF::get_Var_Info('PRES', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+      endif 
+      
+      ; geopotential, z
+      d1 = self->w_NCDF::get_Var_Info('PH', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('PHB')  
+      if (d1 and d2) then begin
+        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]      
+        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]                 
+      endif          
+      d1 = self->w_NCDF::get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
+      if (d1) then begin
+        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]    
+      endif           
+         
       dvars = dvars[1:*]   
       self.ndiagvar = N_ELEMENTS(dvars)
       self.diagVars = PTR_NEW(dvars)      
@@ -985,7 +1033,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if ~arg_okay(VarId, /SCALAR) then MEssage, WAVE_Std_Message('VarId', /SCALAR)
  
   ;Some check
-  not_implemented = ['TK','TC','THETA','SLP','SLP_B']
+  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z']
   pni = where(not_implemented eq str_equiv(Varid), cntni)
   if cntni gt 0 then Message, '$' + str_equiv(VarId) + ' is currently not available for w_WRF::get_TimeSerie.'
         
@@ -1232,9 +1280,15 @@ end
 ;             t2c: 2m Temperature [C]
 ;             theta: Potential temperature [K]
 ;             tk: Temperature [K]
-;             ws10: wind speed at 10m [m.s-1]
-;             wd10: wind direction [degrees]
-; 
+;             ws10: wind speed at 10m [m.s-1] TODO: rotated to earth coordinates
+;             wd10: wind direction [degrees] TODO: rotated to earth coordinates
+;             geopotential: Full model geopotential [m2 s-2]
+;             pressure: Full model pressure [hPa]
+;             z: Full model height [m]
+;             TODO: umet10: 10m U components of wind rotated to earth coordinates
+;             TODO: vmet10: 10m v components of wind rotated to earth coordinates
+;             TODO: umet: U components of wind rotated to earth coordinates
+;             TODO: vmet: V components of wind rotated to earth coordinates
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -1254,6 +1308,19 @@ end
 ;       if set, it defines the last time of the variable timeserie
 ;   unstagger: in, optional
 ;              if set, the variable will be automatically unstaggered
+;   eta_levels: in, optional, type = float
+;            set this keyword to an array of one or two elements, containing the range
+;            of the indexes to keep from the original NCDF file in the Z dimension (eta-levels).
+;   zlevels: in, optional, type = float
+;            same as eta-levels
+;   pressure_levels: in, optional, type = float
+;                    set this keyword to an array of pressure levels (hPa) to interpolate to.
+;                    the output array will then have the dimensions [nx,ny,nl,nt], where nl is the 
+;                    number of elements in pressure_levels
+;   height_levels: in, optional, type = float
+;                  set this keyword to an array of height levels (m) to interpolate to.
+;                  the output array will then have the dimensions [nx,ny,nl,nt], where nl is the 
+;                  number of elements in height_levels
 ;   acc_to_step: in, optional
 ;                if set, the variable is returned "step-wize" (as a difference to previous step) and not accumulated
 ;   description: out, type = string
@@ -1278,7 +1345,11 @@ function w_WRF::get_Var, Varid, $
                             nt,  $
                             T0=t0, $
                             T1=t1, $
-                            UNSTAGGER=unstagger , $
+                            UNSTAGGER=unstagger, $
+                            ETA_LEVELS=eta_levels, $
+                            ZLEVELS=zlevels, $
+                            PRESSURE_LEVELS=pressure_levels, $
+                            HEIGHT_LEVELS=height_levels, $
                             ACC_TO_STEP=acc_to_step , $
                             UNITS=units, $
                             DESCRIPTION=description, $
@@ -1298,6 +1369,14 @@ function w_WRF::get_Var, Varid, $
   
   ;Some check
   if str_equiv(Varid) eq 'SLP' and ~self->get_Var_Info('SLP') then varid = 'SLP_B'
+     
+  ; Z level handling
+  if N_ELEMENTS(ETA_LEVELS) ne 0 then ZLEVELS=eta_levels
+  _do_eta = N_ELEMENTS(ZLEVELS) ne 0
+  _do_pres = N_ELEMENTS(PRESSURE_LEVELS) ne 0
+  _do_h = N_ELEMENTS(HEIGHT_LEVELS) ne 0
+  if total([_do_eta,_do_pres,_do_h]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
+  
   
   ;Check if the variable is available
   if ~self->get_Var_Info(Varid, out_id = vid, $
@@ -1308,6 +1387,7 @@ function w_WRF::get_Var, Varid, $
     dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
     
   _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
+  _unstagger = KEYWORD_SET(UNSTAGGER)
   
   ; Check for the known diagnostic variable names
   case str_equiv(vid) of
@@ -1337,24 +1417,30 @@ function w_WRF::get_Var, Varid, $
     end
     
     'TK': begin
-      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-        dims = dims, $
-        dimnames = dimnames)
-      P = self->get_Var('P', T0=t0, T1=t1)
-      PB = self->get_Var('PB', T0=t0, T1=t1)
-      T = T + 300.
-      P = P + PB
-      value = utils_wrf_tk(P,T)    ; calculate TK
+      if self->get_Var_Info('T') then begin
+        T = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        P = self->get_Var('P', T0=t0, T1=t1, ZLEVELS=zlevels)
+        PB = self->get_Var('PB', T0=t0, T1=t1, ZLEVELS=zlevels)
+        T = T + 300.
+        P = P + PB
+        value = utils_wrf_tk(P,T)    ; calculate TK
+      endif else begin
+        value = self->get_Var('TT', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, ZLEVELS=zlevels, $
+          dimnames = dimnames)
+      endelse
     end
     
     'TC': begin
-      value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1,  $
+      value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames) - 273.15
     end
         
     'THETA': begin
-      value = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      value = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames) + 300.
     end
@@ -1366,12 +1452,12 @@ function w_WRF::get_Var, Varid, $
     end
     
     'RH': begin
-      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames)
-      P = self->get_Var('P', T0=t0, T1=t1)
-      PB = self->get_Var('PB', T0=t0, T1=t1)
-      QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1) > 0.
+      P = self->get_Var('P', T0=t0, T1=t1, ZLEVELS=zlevels)
+      PB = self->get_Var('PB', T0=t0, T1=t1, ZLEVELS=zlevels)
+      QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1, ZLEVELS=zlevels) > 0.
       T = T + 300.
       P  = P + PB
       tk = utils_wrf_tk(P,T)
@@ -1379,18 +1465,18 @@ function w_WRF::get_Var, Varid, $
     end
     
     'RH2': begin
-      T2 = self->get_Var('T2', time, nt, t0 = t0, t1 = t1,  $
+      T2 = self->get_Var('T2', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames)
-      PSFC = self->get_Var('PSFC', T0=t0, T1=t1)
-      Q2 = self->get_Var('Q2', T0=t0, T1=t1) > 0.
+      PSFC = self->get_Var('PSFC', T0=t0, T1=t1, ZLEVELS=zlevels)
+      Q2 = self->get_Var('Q2', T0=t0, T1=t1, ZLEVELS=zlevels) > 0.
       value = utils_wrf_rh(Q2, PSFC, T2)
     end
     
     'TER': begin
       if self.type eq 'WRF' then _id = 'HGT' else _id = 'HGT_M'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
-        dims = dims, $
+        dims = dims, ZLEVELS=zlevels, $
         dimnames = dimnames)
     end
     
@@ -1401,22 +1487,28 @@ function w_WRF::get_Var, Varid, $
     end
     
     'SLP': begin
-      T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
-        dims = dims, $
-        dimnames = dimnames)        
-      P = self->get_Var('P', T0=t0, T1=t1)
-      PB = self->get_Var('PB', T0=t0, T1=t1)
-      QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1) > 0.
-      PH = self->get_Var('PH', T0=t0, T1=t1, /UNSTAGGER)
-      PHB = self->get_Var('PHB', T0=t0, T1=t1, /UNSTAGGER)      
-      T = T + 300.
-      P = P + PB
-      z = ( PH + PHB ) / 9.81
-      tk = utils_wrf_tk(P,T)    ; calculate TK      
-      mdims = SIZE(tk, /DIMENSIONS)
-      value = FLTARR(mdims[0],mdims[1],nt)
-      for t=0, nt-1 do value[*,*,t] = utils_wrf_slp(z[*,*,*,t], tk[*,*,*,t], P[*,*,*,t], QVAPOR[*,*,*,t])  ; calculate slp
-      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+      if self->get_Var_Info('T') then begin
+        T = self->get_Var('T', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, $
+          dimnames = dimnames)
+        P = self->get_Var('P', T0=t0, T1=t1)
+        PB = self->get_Var('PB', T0=t0, T1=t1)
+        QVAPOR = self->get_Var('QVAPOR', T0=t0, T1=t1) > 0.
+        PH = self->get_Var('PH', T0=t0, T1=t1, /UNSTAGGER)
+        PHB = self->get_Var('PHB', T0=t0, T1=t1, /UNSTAGGER)
+        T = T + 300.
+        P = P + PB
+        z = ( PH + PHB ) / 9.81
+        tk = utils_wrf_tk(P,T)    ; calculate TK
+        mdims = SIZE(tk, /DIMENSIONS)
+        value = FLTARR(mdims[0],mdims[1],nt)
+        for t=0, nt-1 do value[*,*,t] = utils_wrf_slp(z[*,*,*,t], tk[*,*,*,t], P[*,*,*,t], QVAPOR[*,*,*,t])  ; calculate slp
+        if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+      endif else begin
+        value = self->get_Var('PMSL', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, $
+          dimnames = dimnames) * 0.01 ; in hPa
+      endelse
     end
     
     'SLP_B': begin
@@ -1432,19 +1524,53 @@ function w_WRF::get_Var, Varid, $
     end
     
     'WS10': begin
-      u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
+      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
         dimnames = dimnames)
       v10 = self->get_Var('V10')      
-      MET_u_v_to_ws_wd, ret, u10, v10, WS = value
+      MET_u_v_to_ws_wd, ret, u10, v10, WS=value
     end
 
     'WD10': begin
-      u10 = self->get_Var('U10', times, nt, T0=t0, T1=t1,  $
+      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
         dimnames = dimnames)
       v10 = self->get_Var('V10')      
-      MET_u_v_to_ws_wd, ret, u10, v10, WD= value
+      MET_u_v_to_ws_wd, ret, u10, v10, WD=value
+    end
+    
+    'PRESSURE': begin
+      if self->get_Var_Info('P') then begin
+        value = self->get_Var('P', time, nt, T0=t0, T1=t1,  $
+          dims = dims, ZLEVELS=zlevels, $
+          dimnames = dimnames)
+        value += self->get_Var('PB', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels)
+      endif else begin
+        value = self->get_Var('PRES', time, nt, T0=t0, T1=t1,  $
+          dims = dims, ZLEVELS=zlevels, $
+          dimnames = dimnames)
+      endelse
+      value *= 0.01
+    end
+    
+    'GEOPOTENTIAL': begin
+      if self->get_Var_Info('PH') then begin
+        value = self->get_Var('PH', time, nt, T0=t0, T1=t1,  $
+          dims = dims, $
+          dimnames = dimnames, ZLEVELS=zlevels)
+        value += self->get_Var('PHB', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels)
+        _unstagger = TRUE
+      endif else begin
+        value = self->get_Var('GHT', time, nt, T0=t0, T1=t1,  $
+          dims = dims, $
+          dimnames = dimnames, ZLEVELS=zlevels) * 9.81
+      endelse
+    end
+    
+    'Z': begin
+        value = self->get_Var('GEOPOTENTIAL', time, nt, T0=t0, T1=t1,  $
+          dims = dims, $
+          dimnames = dimnames, ZLEVELS=zlevels) / 9.81
     end
     
     else:
@@ -1453,7 +1579,7 @@ function w_WRF::get_Var, Varid, $
     
   if N_ELEMENTS(value) eq 0 then begin ;This is probably a standard variable
        
-    value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1,  $
+    value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
       units = units, $
       description = description, $
       varname = varname , $
@@ -1462,8 +1588,10 @@ function w_WRF::get_Var, Varid, $
       
   endif
   
-  if KEYWORD_SET(UNSTAGGER) then begin  
-    ndims = N_ELEMENTS(dims)
+  dims = SIZE(value, /DIMENSIONS)
+  ndims = N_ELEMENTS(dims)
+  
+  if _unstagger then begin  
     found = -1
     for i=0, ndims-1 do begin
       isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('_stag'))
@@ -1479,11 +1607,47 @@ function w_WRF::get_Var, Varid, $
   
   if _acc_to_step then begin
    if KEYWORD_SET(t0) or KEYWORD_SET(t1) then $
-    message, 'Warning. You are using /ACC_TO_STEP with T0 -> T1 intervals, hope you know what you are doing', /INFORMATIONAL
+    message, 'Warning. You are using /ACC_TO_STEP with user set T0 -> T1 intervals, hope you know what you are doing', /INFORMATIONAL
     if nt eq 1 then Message, 'You asked to de-accumulate only one time-step. Not possible.'
    value = utils_ACC_TO_STEP(value)
    description += ' (de-accumulated)' 
   endif 
+ 
+  if _do_pres or _do_h then begin
+    ptime = where(str_equiv(dimnames) eq 'TIME', cnt)
+    isstag = STRPOS(str_equiv(dimnames), str_equiv('_stag'))  
+    found = -1
+    for i=0, ndims-1 do begin
+      isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('bottom_top'))
+      p = WHERE(isHere ne -1, cnt)
+      if cnt eq 0 then begin      
+       isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('num_metgrid_levels'))
+        p = WHERE(isHere ne -1, cnt)
+        if cnt eq 0 then continue
+      endif
+      dimnames[i] = STRMID(dimnames[i], 0, isHere)
+      found = i
+    endfor 
+    if total(isstag+1) then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable (unstagger first).'
+    if (ptime eq 2) or ndims lt 3 or found eq -1 then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable.'
+    
+    if _do_pres then begin
+      p = self->get_Var('pressure', T0=t0, T1=t1)
+      value = reform(utils_wrf_intrp3d(value, p, pressure_levels))
+      nlocs = N_ELEMENTS(pressure_levels)
+      if nlocs eq 1 then utils_array_remove, found, dimnames $
+      else dimnames[found] = 'pressure_levels'
+    endif
+    
+    if _do_h then begin
+      h = self->get_Var('z', T0=t0, T1=t1)
+      value = reform(utils_wrf_intrp3d(value, h, height_levels))
+      nlocs = N_ELEMENTS(height_levels)
+      if nlocs eq 1 then utils_array_remove, found, dimnames $
+      else dimnames[found] = 'height_levels'
+    endif
+     
+  endif
   
   dims = SIZE(value, /DIMENSIONS)
   if N_ELEMENTS(dims) ne N_ELEMENTS(DIMNAMES) then begin
@@ -1491,37 +1655,4 @@ function w_WRF::get_Var, Varid, $
   endif
   return, value
   
-end
-
-;+
-; :Description:
-;    DEPRECATED. Use `w_WRF::get_Var("prcp")` instead.
-;    
-;    
-; :History:
-;     Written by FaM, 2010.
-;-      
-function w_WRF::get_prcp, times, nt, t0 = t0, t1 = t1, STEP_WIZE = step_wize, NONCONVECTIVE = NONCONVECTIVE, CONVECTIVE = CONVECTIVE
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message()
-    RETURN, 0
-  ENDIF 
-  
-  Message, 'INFO: w_WRF::get_prcp is deprecated. You should use: result = w_WRF::get_Var("prcp") instead.', /INFORMATIONAL
-  
-  if KEYWORD_SET(CONVECTIVE) then pcp = self->get_Var('RAINC', times, nt, t0 = t0, t1 = t1) $
-    else if KEYWORD_SET(NONCONVECTIVE) then pcp = self->get_Var('RAINNC',times, nt, t0 = t0, t1 = t1) $
-      else pcp = self->get_Var('RAINNC', times, nt, t0 = t0, t1 = t1) + self->get_Var('RAINC', t0 = t0, t1 = t1)    
-  
-  if KEYWORD_SET(STEP_WIZE) then pcp = utils_ACC_TO_STEP(pcp)
-  
-  return, pcp
-    
 end

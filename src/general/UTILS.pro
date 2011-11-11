@@ -2395,6 +2395,7 @@ function utils_wrf_intrp3d, varin, z_in, loc_param
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
+  ON_ERROR, 2
   
   if not arg_okay(varin, /NUMERIC) then message, WAVE_Std_Message(/ARG)
   if not arg_okay(z_in, /NUMERIC) then message, WAVE_Std_Message(/ARG)

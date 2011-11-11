@@ -67,6 +67,11 @@
 ;    ANTI_ALIASING: in, optional, type = boolean
 ;                   if set, an anti-aliasing is made "on the fly". 
 ;                   (ignored if the `RESIZABLE`, `JPEG`, `EPS` or `PNG` keywords are set)
+;    XFACTOR: in, optional, type=float, default=1.
+;             This is a way to control the X size of the plot. This factor will be multipled 
+;             to the default computed lenght of the plot
+;    NO_BAR: in, optional
+;            set this keyword if you don't want to plot the color bar
 ;    IM_RESIZE: in, optional, type=integer, default=25
 ;                Set this keyword to percentage that the raster image file created my ImageMagick
 ;                 from PostScript output should be resized.
@@ -90,8 +95,8 @@ pro w_standard_2d_plot, map, TITLE=title,$
                              DISP_IMG=disp_img, $
                              WTITLE=WTITLE, $                        
                              ANTI_ALIASING=anti_aliasing, $ 
-                             XFACTOR = xfactor, $                      
-                             NO_BAR = no_bar, $                      
+                             XFACTOR=xfactor, $                      
+                             NO_BAR=no_bar, $                      
                              IM_RESIZE=im_resize
    
   ;--------------------------
@@ -186,13 +191,11 @@ pro w_standard_2d_plot, map, TITLE=title,$
   ; Bar
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   if ~KEYWORD_SET(NO_BAR) then begin
-  map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, BAR_FORMAT=bar_format, $
-                      CHARSIZE=1.*sfac, BAR_OPEN=bar_open, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
-
-  ; Title bar
-  cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
-          WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
-  
+    map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, BAR_FORMAT=bar_format, $
+      CHARSIZE=1.*sfac, BAR_OPEN=bar_open, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
+    ; Title bar
+    cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
+      WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
   endif
   
   ; Scale
@@ -219,10 +222,11 @@ pro w_standard_2d_plot, map, TITLE=title,$
   cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Legend info
-  if ~KEYWORD_SET(SOURCE_INFO) then source_info = cgSymbol('copyright') + ' 2011 TU Berlin!CChair of Climatology'
+  if N_ELEMENTS(SOURCE_INFO) eq 0 then source_info = cgSymbol('copyright') + ' 2011 TU Berlin!C!CChair of Climatology'
 
-  if arg_okay(source_info, TYPE=IDL_STRING) then cgText, 1 - 0.35,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
-   
+  if arg_okay(source_info, TYPE=IDL_STRING) then begin
+   cgText, 0.80,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
+  endif
   ; Output  
   if visible then begin
   

@@ -356,6 +356,15 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
+;   ZLEVELS: in, optional, type = long
+;            set this keyword to an array of one or two elements, containing the range
+;            of the indexes to keep from the original NCDF file in the Z dimension.
+;            It is better to use the `ZDIM_ID` keyword to specify
+;            in which dimension these indexes must be kept, otherwise `get_Var` will try
+;            to do its best from what it knows 
+;            (in most cases -4D arrays-, it should work fine).
+;   ZDIM_ID: in, optional, type = long/string
+;            the dimension name (or ID) to crop (see `ZLEVELS`)   
 ;   description: out, type = string
 ;                If available, the description of the variable
 ;   units: out, type = string
@@ -374,16 +383,17 @@ end
 ;      Written by FaM, 2010.
 ;-
 function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
-                          time,  $
-                          nt,  $
-                          t0 = t0, $
-                          t1 = t1, $
-                          units = units, $
-                          description = description, $
-                          varname = varname , $ ; 
-                          dims = dims, $ ;
-                          dimnames = dimnames ;
-                          ;TODO: Update routine: add Keywords ZDIMID, ZDIMINDS
+                            time,  $
+                            nt,  $
+                            T0=t0, $
+                            T1=t1, $
+                            ZLEVELS=zlevels, $
+                            ZDIM_ID=zdim_id, $
+                            units = units, $
+                            description = description, $
+                            varname = varname , $ 
+                            dims = dims, $ 
+                            dimnames = dimnames 
                         
   
   ; SET UP ENVIRONNEMENT
@@ -408,7 +418,6 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   offset = LONARR(ndims) - 1
   
   if self.cropped ne 'FALSE' and self.cropped ne '' then begin
-  
     p = where(dimnames eq (*self.dimNames)[self.XID], cnt)
     if cnt ne 0 then begin
       offset[p[0]] = self.subset[0]
@@ -419,12 +428,22 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
       offset[p[0]] = self.subset[2]
       count[p[0]] = self.subset[3]
     endif
-    
-  endif
+  endif else begin ; still fill the offests with standard values for later  
+    p = where(dimnames eq (*self.dimNames)[self.XID], cnt)
+    if cnt ne 0 then begin
+      offset[p[0]] = 0
+      count[p[0]] = dims[p[0]]
+    endif
+    p = where(dimnames eq (*self.dimNames)[self.YID], cnt)
+    if cnt ne 0 then begin
+      offset[p[0]] = 0
+      count[p[0]] = dims[p[0]]
+    endif
+  endelse
   
   time = *self.time
   if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file
-  
+    
     p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
     if cnt ne 0 then begin ; the variable has a time dimension
       p0 = 0
@@ -448,6 +467,38 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
     
   endif  
   nt = N_ELEMENTS(time)
+  
+  ; Z cropping
+  if N_ELEMENTS(ZLEVELS) ne 0 then begin
+     
+    if N_ELEMENTS(ZDIM_ID) ne 0 then begin
+      if arg_okay(zdim_id, TYPE=IDL_STRING, /SCALAR) then begin
+        _zid = zdim_id
+      endif else if arg_okay(zdim_id, /NUMERIC, /SCALAR) then begin
+        if zdim_id ge self.Ndims or zdim_id lt 0 then Message, '$ZDIM_ID not valid'
+        _zid = (*self.dimNames)[zdim_id]
+      endif else Message, '$ZDIM_ID not valid'
+      
+      pz = where(dimnames eq _zid, cnt)
+      if cnt ne 1 then Message, '$ZDIM_ID not valid'
+      if offset[pz] ne -1 then Message, '$ZDIM_ID not valid' ; I allready cropped this variable      
+    endif else begin
+      pz =  where(offset lt 0, cnt)
+      if cnt ne 1 then Message, 'I could not determine which Z dimension to crop.'
+    endelse
+    
+    nz = dims[pz[0]]
+    
+    if N_ELEMENTS(zlevels) eq 1 then _zlevels = [zlevels,zlevels] $
+     else if N_ELEMENTS(zlevels) eq 2 then _zlevels = zlevels $
+      else Message, WAVE_Std_Message('zlevels', /NELEMENTS)
+    
+    if min(_zlevels) lt 0 or max(_zlevels) ge nz then Message, WAVE_Std_Message('zlevels', /RANGE)
+    
+    offset[pz[0]] = min(_zlevels)
+    count[pz[0]] = max(_zlevels) - min(_zlevels) + 1 
+
+  endif
       
   ; Now fill every dimension that have not been cropped with std values
   pnok = where(offset lt 0, cnt)

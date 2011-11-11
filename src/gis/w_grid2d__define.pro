@@ -268,13 +268,11 @@ Function w_Grid2D::ReInit ,  $
   ; Security check
   lon = -1.
   lat = -1.
-  roi = -1
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
-  Ptr_Free, self.roi
   self.lon = PTR_NEW(lon, /NO_COPY)
   self.lat = PTR_NEW(lat, /NO_COPY)
-  self.roi = PTR_NEW(roi, /NO_COPY)
+  self->destroy_ROI
     
   RETURN, 1
   
@@ -361,7 +359,7 @@ END
 
 ;+
 ; :Description:
-;    Destroy procedure. 
+;    Empty the roi.
 ;
 ; :Categories:
 ;    WAVE/OBJ_GIS   
@@ -377,7 +375,6 @@ pro w_Grid2D::destroy_ROI
   
   if PTR_VALID(self.roi) then undefine, *self.roi
   Ptr_Free, self.roi
-  self.roi = PTR_NEW(-1B)
   self.is_ROI = FALSE
   
 END
@@ -399,6 +396,8 @@ pro w_Grid2D::Cleanup
   COMPILE_OPT IDL2  
   
   self->destroy_ROI
+  if PTR_VALID(self.lon) then undefine, *self.lon
+  if PTR_VALID(self.lat) then undefine, *self.lat
   Ptr_Free, self.lon 
   Ptr_Free, self.lat
   
@@ -528,12 +527,10 @@ pro w_Grid2D::Get_LonLat, lon, lat, nx, ny, datum
     Ptr_Free, self.lat
     self.lon = PTR_NEW(lon)
     self.lat = PTR_NEW(lat)
-  endif else begin
-  
+  endif else begin  
     ; We already computed it
     lon = *self.lon
-    lat = *self.lat
-    
+    lat = *self.lat    
   endelse
   
 END
@@ -586,19 +583,31 @@ function w_Grid2D::is_ROI
   
 end
 
-pro w_Grid2D::Get_ROI, mask
+;+
+; :Description:
+;   To retrieve the ROI in the form of a mask or a shape file
+;   (if a ROI has been previously set)
+;
+; :Keywords:
+;    MASK: out
+;          the ROI mask
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+pro w_Grid2D::get_ROI, MASK=mask, SHAPE=shape
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  undefine, mask
+  undefine, mask, shape
   if ~self.is_roi then return
-  mask = *self.roi
+  
+  if ARG_PRESENT(MASK) then mask = *self.roi
     
 END
-
-
 
 ;+
 ; :Description:
@@ -621,8 +630,10 @@ END
 ;           the j coordinates of (x,y) in the object grid 
 ;
 ; :Keywords:
-;    SRC: in, required
-;         src the initial coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
+;    SRC: in, optional
+;         src the initial coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) 
+;         in which x and y are defined. Default is the source grid, so that no transformation
+;         is performed
 ;    LON_DST: out, type = float/double 
 ;             the longitudes of (x,y) in the object grid 
 ;    LAT_DST: out, type = float/double  
@@ -883,7 +894,6 @@ end
 ;    large, the program may lag or even go out of memory.
 ;       
 ;    TODO: Update routine: ! 05.11.2010: BACKWARDS METHOD NOT IMPLEMENTED YET !
-;    ====================================================
 ;       
 ;       
 ; :Categories:
@@ -923,9 +933,7 @@ function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING =
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, -1
   ENDIF
-  
-  Message, 'map_lonlat_data is currently NOT handling ROIs', /INFORMATIONAL
-  
+    
   if not arg_okay(src_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('src_datum', STRUCT={TNT_DATUM})
   if ~KEYWORD_SET(missing) then missing = 0
   
@@ -972,9 +980,15 @@ end
 
 ;+
 ; :Description:
-;    Important routine to transform a data array defined in any other GRID the OBJECT GRID. 
-;    Default is to use Neirest Neighbor algorithm, BILINEAR and CUBIC interpolation are also implemented.
-;       
+;    Important routine to transform a data array defined in any other grid INTO the object grid. 
+;    
+;    This routines performs a standard backward projection transformation between two grids, the DESTINATION
+;    grid beeing the current object. The default interpolation method is NEAREST NEIGHBOR. 
+;    BILINEAR and CUBIC interpolation are also implemented.
+;    
+;    If a ROI has been previously defined into the SOURCE grid, the data will be cropped to this ROI
+;    (this has no effect on the processing time).
+;    
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
@@ -982,7 +996,7 @@ end
 ;    data: in, required, type = float array
 ;          the data to map on the grid itself. The two first dimenstions are X and Y, the third is handled as time
 ;    src_grid: in,  type = w_Grid2D
-;              the data grid (w_Grid2D Object)
+;              the SOURCE grid associated to the data (w_Grid2D Object)
 ;
 ; :Keywords:
 ;    MISSING: in, optional
@@ -995,7 +1009,10 @@ end
 ;              if given, this array will be filled with the new mapped data. 
 ;              Only the concerned indexes will be overwritten. (usefull for mosaiking 
 ;              or overplotting, for example). This data must have the same X and Y dimensions
-;              as the grid, and same z dimension as data 
+;              as the grid, and same z dimension as data
+;    TO_ROI: in, optional
+;            if set, the transformation will be made only into the defined ROI. 
+;            (positive impact on the computation time)
 ;
 ; :Returns:
 ;    The remaped data array, of the same dimensions of the object grid, with an eventual 3rd dim (time/Z)
@@ -1003,7 +1020,7 @@ end
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, CUBIC=cubic, DATA_DST=data_dst
+function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, CUBIC=cubic, DATA_DST=data_dst, TO_ROI=to_roi
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1051,6 +1068,12 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
   
+  if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
+    proi = where(*self.roi ne 0)
+    xi =  xi[proi] 
+    yi =  yi[proi]     
+  endif
+  
   ;***********************************************
   ; If the array is too big, subset the problem  *
   ;***********************************************
@@ -1072,12 +1095,21 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   undefine, xi, yi, ind, p1, p2
   j_dst = src_c.ny - j_dst - 1
   
+  if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
+    _i_dst = MAKE_ARRAY(self.tnt_c.nx*self.tnt_c.ny, TYPE=SIZE(i_dst, /TYPE))
+    _j_dst = _i_dst
+    _i_dst[proi] = TEMPORARY(i_dst)
+    _j_dst[proi] = TEMPORARY(j_dst)
+    i_dst = TEMPORARY(_i_dst)
+    j_dst = TEMPORARY(_j_dst)    
+  endif
+  
   ;***********************************
   ; Get the data in the source grid  *
   ;***********************************
   p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out)  ; OUT of range
-  if src_grid->is_roi() then begin
-    src_grid->get_ROI, mask
+  if src_grid->is_roi() then begin ;Add the masked pixels to the indemove afterwards
+    src_grid->get_ROI, MASK=mask
     poutm = where(mask[i_dst, j_dst] ne 1, cntoutm)
     if cntoutm ne 0 then begin
       if cnt_out eq 0 then begin
@@ -1090,21 +1122,23 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
     endif
   endif
   
+  ; Now perform the interpolation using the computed indexes
+  if is_dst then type = SIZE(data_dst,/TYPE) else type = SIZE(data,/TYPE)
+  tdata = MAKE_ARRAY(self.tnt_c.nx, self.tnt_c.ny, n, TYPE=type)
   for i = 0L, n-1 do begin
     if bili then tmp = BILINEAR((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny)) $
       else if cubic then tmp = INTERPOLATE((reform(data[*,*,i])), reform(i_dst, self.tnt_c.nx, self.tnt_c.ny), reform(j_dst, self.tnt_c.nx, self.tnt_c.ny), CUBIC=-0.5) $ 
-       else tmp = (reform(data[*,*,i]))[i_dst, j_dst]
+       else tmp = (data[*,*,i])[i_dst, j_dst]
     if cnt_out ne 0 then begin
       if is_dst then begin
         tmp2 = data_dst[*,*,i]
         tmp[p_out] = tmp2[p_out]
       endif else tmp[p_out] = missing
     endif
-    tmp = reform(tmp, self.tnt_c.nx, self.tnt_c.ny)
-    if N_ELEMENTS(tdata) eq 0 then tdata = tmp else tdata =[[[tdata]],[[tmp]]]
+    tdata[*,*,i] = reform(tmp, self.tnt_c.nx, self.tnt_c.ny)
   endfor
    
-  return, tdata
+  return, reform(tdata)
      
 end
 
@@ -1192,18 +1226,24 @@ end
 
 ;+
 ; :Description:
-;    Generic routine to resample the object grid.
+;    Generic routine to make a copy of the object grid.
+;    If the XSIZE, YSIZE or FACTOR are set, the grid will be resampled
+;    If the `TO_ROI` keyword is set, the copy of the grid will be the 
+;    smallest enclosing grid of the grid ROIs (if present).    
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Keywords:
-;    Xsize:  in, optional, type = integer
+;    XSIZE:  in, optional, type = integer
 ;           the new X dimension size (the original X/Y ratio is conserved) 
-;    Ysize: in, optional, type = integer
-;           the new Y dimension size (the original X/Y ratio is conserved) (if set, Xsize is ignored)
+;    YSIZE: in, optional, type = integer
+;           the new Y dimension size (the original X/Y ratio is conserved)
 ;    FACTOR: in, optional, type = float
-;           a factor to multiply to nx and ny (if set, Xsize and Ysize are ignored)
+;           a factor to multiply to nx and ny (ignored if XSIZE or YSIZE are set)
+;    TO_ROI: in, optional, type = boolean
+;            if set, the returned grid will be will be the 
+;            smallest enclosing grid of the grid ROIs (if present).  
 ;
 ; :Returns:
 ;     A new w_Grid2D, which is a resampled version of the object grid
@@ -1211,7 +1251,7 @@ end
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
+function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, TO_ROI = to_roi
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1221,121 +1261,34 @@ function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor
   
   if ~ arg_okay(FACTOR, /NUMERIC) then factor = 1
   
-  if KEYWORD_SET(Xsize) then factor = double(Xsize) / self.tnt_c.nx $
-  else if KEYWORD_SET(Ysize) then factor = double(Ysize) / self.tnt_c.ny
-    
-  nx = self.tnt_c.nx * FACTOR
-  ny = self.tnt_c.ny * FACTOR
+  if N_ELEMENTS(Xsize) ne 0 and N_ELEMENTS(Ysize) ne 0 then Message, 'Ambiguous keywords.' 
+  if N_ELEMENTS(Xsize) ne 0 then factor = double(Xsize) / self.tnt_c.nx
+  if N_ELEMENTS(Ysize) ne 0 then factor = double(Ysize) / self.tnt_c.ny
+  
+  x0 = self.tnt_c.x0
+  y0 = self.tnt_c.y0
+  nx = self.tnt_c.nx
+  ny = self.tnt_c.ny
+  
+  if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
+    inds = ARRAY_INDICES(BYTARR(self.tnt_c.nx,self.tnt_c.ny), where(*self.roi ne 0))
+    x = inds[0,*]
+    y = inds[1,*]
+    x0 = self.tnt_c.x0 + min(x) * self.tnt_c.dx
+    y0 = self.tnt_c.y0 - (self.tnt_c.ny-1-max(y)) * self.tnt_c.dy
+    nx = max(x)-min(x)+1
+    ny = max(y)-min(y)+1
+  endif
+  
+  nx = nx * FACTOR
+  ny = ny * FACTOR
   dx = self.tnt_c.dx / double(FACTOR)
   dy = self.tnt_c.dy / double(FACTOR)
   
-  x0 = self.tnt_c.x0 - 0.5d*self.tnt_c.dx + dx/2d
-  y0 = self.tnt_c.y0 + 0.5d*self.tnt_c.dy - dy/2d
+  x0 = x0 - 0.5d*self.tnt_c.dx + dx/2d
+  y0 = y0 + 0.5d*self.tnt_c.dy - dy/2d
   
   return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
-    
-end
-
-
-;+
-; :Description:
-;    This function makes a subsets of the object grid, and of a data
-;    array if needed.
-;
-; :Params:
-;    data: in, optional
-;          two or three dimensional data array associated to the object grid
-;
-; :Keywords:
-;    CORNERS: in, optional
-;             the subset corners in the form: [DLX,DLY,URX,URY].
-;    SRC: in, optional
-;         the source coordinates of the corners. If not set, the corners are assumed to be indices in the object grid
-;    CROPBORDER: in, optional
-;                to remove CROPBORDER indexes on the border of the grid
-;    OUT_GRID: out
-;              the new w_grid_2d object
-;    OUT_DATA: out
-;              the subseted data
-; 
-; :Returns:
-;    TRUE if everything went fine
-;
-; :History:
-;     Written by FaM, 2011.
-;
-;
-;-
-function w_Grid2D::subset, data, CORNERS = corners, SRC = src, CROPBORDER = cropborder, OUT_GRID = out_grid, OUT_DATA = out_data
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, 0
-  ENDIF
-
-  isubs = [0, 0, self.tnt_c.nx-1,self.tnt_c.ny-1]
-  if KEYWORD_SET(CROPBORDER) then begin
-     if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
-     if cropborder lt 0 or cropborder ge self.tnt_c.nx / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
-     if cropborder lt 0 or cropborder ge self.tnt_c.ny / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
-     isubs = [cropborder, cropborder, self.tnt_c.nx-1-cropborder, self.tnt_c.ny-1-cropborder]
-  endif else if KEYWORD_SET(CORNERS) then begin
-     if ~ arg_okay(CORNERS, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET_ij', /ARG)
-     x = CORNERS[[0,2]]
-     y = CORNERS[[1,3]]     
-     self->transform, x, y, i, j, SRC = src, /NEAREST
-     if i[0] ge i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
-     if j[0] ge j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
-     if i[0] lt 0 then begin
-       message, 'X Down left corner out of bounders: set to 0', /INFORMATIONAL
-       i[0] = 0
-     endif
-     if j[0] lt 0 then begin
-       message, 'Y Down left corner out of bounders: set to 0', /INFORMATIONAL
-       j[0] = 0
-     endif
-     if i[1] ge self.tnt_c.nx then begin
-       message, 'X Upper right corner out of bounders: set to nx-1', /INFORMATIONAL
-       i[1] = self.tnt_c.nx-1
-     endif
-     if j[1] ge self.tnt_c.ny then begin
-       message, 'Y Upper right corner out of bounders: set to ny-1', /INFORMATIONAL
-       j[1] = self.tnt_c.ny-1
-     endif     
-     isubs = [i[0], j[0], i[1], j[1]]     
-  endif
-  
-  x0 = self.tnt_c.x0 + isubs[0] * self.tnt_c.dx
-  y0 = self.tnt_c.y0 - (self.tnt_c.ny-1-isubs[3]) * self.tnt_c.dy
-  x1 = self.tnt_c.x0 + isubs[2] * self.tnt_c.dx
-  y1 = self.tnt_c.y1 + isubs[1] * self.tnt_c.dy
-  if ARG_PRESENT(OUT_GRID) then OUT_GRID = OBJ_NEW('w_Grid2D', x0=x0, y0=y0, x1=x1, y1=y1, dx=self.tnt_c.dx, dy=self.tnt_c.dy, PROJ=self.tnt_c.proj, META=self.meta + ' subset')
-  if N_ELEMENTS(data) ne 0 then begin
-    siz = SIZE(data)
-    case (siz[0]) of
-      2: begin
-        if siz[1] ne self.tnt_c.nx then  MESSAGE, WAVE_Std_Message('data', /ARG)
-        if siz[2] ne self.tnt_c.ny then  MESSAGE, WAVE_Std_Message('data', /ARG)
-        OUT_DATA = data[isubs[0]:isubs[2],isubs[1]:isubs[3]]        
-      end
-      3: begin
-        if siz[1] ne self.tnt_c.nx then  MESSAGE, WAVE_Std_Message('data', /ARG)
-        if siz[2] ne self.tnt_c.ny then  MESSAGE, WAVE_Std_Message('data', /ARG)  
-        OUT_DATA = data[isubs[0]:isubs[2],isubs[1]:isubs[3],*]            
-      end
-      else: begin
-        MESSAGE, WAVE_Std_Message('data', /ARG)
-      end
-    endcase
-  endif
-    
-  return, 1
     
 end
 
@@ -1348,7 +1301,7 @@ end
 ;    Default behavior is to consider the grid as an image grid, (grid coordinates 
 ;    located in the center of the pixel), and therefore to shift the transformed
 ;    coordinates of a half pixel down left. This is a good default for all common
-;    applications (w_Map, ROI), but if you want to avoid this you can set the 
+;    applications (w_Map), but if you want to avoid this you can set the 
 ;    `NO_COORD_SHIFT` keyword to 1.
 ; 
 ; :Params:
@@ -1369,11 +1322,11 @@ end
 ;    
 ;    
 ;    REMOVE_ENTITITES:in, optional, type = long
-;                     an array containing the id of the shape entities to remove from the plot
+;                     an array containing the id of the shape entities to remove from the shape
 ;                     All other entities are plotted normally.
 ;                     
 ;    KEEP_ENTITITES:in, optional, type = long
-;                   an array containing the id of the shape entities to keep for the plot. 
+;                   an array containing the id of the shape entities to keep for the shape. 
 ;                   All other entities are ignored.
 ;
 ;    NO_COORD_SHIFT: in, optional, type = boolean
@@ -1506,9 +1459,72 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
   
 end
 
-function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDER=cropborder, $
-                             REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
-                             ROI_MASK_RULE=roi_mask_rule, GRID=grid, NO_ERASE=no_erase
+
+;+
+; :Description:
+;    Define a Region of Interest (ROI) within the object grid.
+;    
+;    This can be usefull in many cases, for example to compute a mask
+;    from a polygon or a shape file. In this case, one can obtain the 
+;    computed mask with the `w_Grid_2D::get_ROI` procedure. It is recommended
+;    to delete the ROI afterwards (`w_Grid_2D::destroy_ROI` or `w_Grid_2D::set_ROI` 
+;    without arguments), since the behavior of the grid is changed once a ROI have been
+;    defined. If the grid is used as SOURCE grid in transformations between grids 
+;    using `w_Grid_2D::map_gridded_data`, the transformation will concern only the
+;    zone included into the ROI.
+;    
+;    Currently one can define a ROI with 6 different methods::
+;      1. SHAPE: use a .shp file as imput, the ROI is generated using the 
+;                IDLanROI object to transform the vertices into a mask
+;      2. POLYGON: similar to SHAPE but the polygon is directly specified
+;      3. MASK: simply define the ROI using a mask (of dimensions corresponding to the grid)
+;      4. CROPBORDER: remove a certain number of pixels from the borders of the grid
+;      5. GRID: the ROI is defined by the position of another grid within the object grid
+;      6. CORNERS: the ROI is defined by setting the LL and UR corners of the desired subset
+;
+;
+; :Keywords:
+;    SHAPE: in, type = string
+;           the shapefile to read (.shp), coordinate system defined by `SRC`
+;    POLYGON: in, type = array
+;             not implemented yet, coordinate system defined by `SRC`
+;    MASK: in, type = array
+;          a mask of the desired ROI (dimensions must match the grid)
+;    CROPBORDER: in, type = long
+;                number of pixels to remove from each border
+;    GRID: in, type = w_Grid2D
+;          a grig object
+;    CORNERS: in, type = array 
+;            LL and UR corners of the desired subset ([XLL,YLL,XDR,YDR]), coordinate system defined by `SRC`
+;    NO_ERASE: in, type = boolean
+;              set this keyword to update the ROI in place of replacing it
+;    SRC: in, optional
+;         the polygon coordinate system (datum or proj) default is WGS-84
+;    REMOVE_ENTITITES:in, optional, type = long
+;                     an array containing the id of the shape entities to remove from the shape
+;                     All other entities are plotted normally.
+;    KEEP_ENTITITES:in, optional, type = long
+;                   an array containing the id of the shape entities to keep for the shape. 
+;                   All other entities are ignored.
+;    ROI_MASK_RULE: see `IDLanROI::ComputeMask` documentation
+;
+; :Returns:
+;   1 if the ROI has been set correctly, 0 if not
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+function w_Grid2D::set_ROI, SHAPE=shape,  $
+                            POLYGON=polygon, MASK=mask,  $
+                            CROPBORDER=cropborder,  $
+                            GRID=grid,    $                          
+                            CORNERS=corners, $
+                            NO_ERASE=no_erase, $ 
+                            SRC=src, $
+                            REMOVE_ENTITITES=remove_entitites, $ 
+                            KEEP_ENTITITES=keep_entitites, $
+                            ROI_MASK_RULE=roi_mask_rule
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1526,10 +1542,11 @@ function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDE
   do_shape = N_ELEMENTS(SHAPE) ne 0
   do_mask = N_ELEMENTS(MASK) ne 0
   do_grid = N_ELEMENTS(GRID) ne 0
-  do_xy = N_ELEMENTS(X) ne 0 or N_ELEMENTS(Y) ne 0
+  do_polygon = N_ELEMENTS(POLYGON)
   do_border = N_ELEMENTS(CROPBORDER) ne 0
+  do_corner = N_ELEMENTS(CORNERS) ne 0
   
-  check_k = [do_shape, do_xy, do_mask, do_border, do_grid]
+  check_k = [do_shape, do_polygon, do_mask, do_border, do_grid, do_corner]
   if total(check_k) eq 0 then begin
     self->Destroy_ROI
     return, 1
@@ -1568,18 +1585,58 @@ function w_Grid2D::set_ROI, SHAPE=shape, X=x, Y=y, SRC=src, MASK=mask, CROPBORDE
      else _mask = self->map_gridded_data(BYTARR(nx,ny) + 1B, grid, MISSING=0B, DATA_DST=_mask)    
   endif
   
-  if do_xy then Message, 'XY currently not implemented'
-  if do_border then Message, 'CROPBORDER currently not implemented'
-  
-  if min(_mask) lt 0 or max(_mask) ne 1 then begin 
-   Message, 'The mask is empty of full. I am igniring it', /INFORMATIONAL
-   self->Destroy_ROI
-   return, 0
+  if do_border then begin
+    if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG)
+    if cropborder lt 0 or cropborder ge self.tnt_c.nx / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
+    if cropborder lt 0 or cropborder ge self.tnt_c.ny / 2 then message, WAVE_Std_Message('CROPBORDER', /RANGE)
+    mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    mask[cropborder:self.tnt_c.nx-1-cropborder,cropborder:self.tnt_c.ny-1-cropborder] = 1B
+    if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    p = where(mask ne 0, cnt)
+    if cnt ne 0 then _mask[p] = 1B
   endif
   
+  if do_corner then begin
+    if ~ arg_okay(CORNERS, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('CORNERS', /ARG)
+    x = CORNERS[[0,2]]
+    y = CORNERS[[1,3]]
+    if ~KEYWORD_SET(src) then begin
+      MESSAGE, '$SRC is not set. Setting to WGS-84' , /INFORMATIONAL
+      GIS_make_datum, ret, src, NAME = 'WGS-84'
+    endif
+    self->transform, x, y, i, j, SRC=src, /NEAREST
+    if i[0] ge i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if j[0] ge j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if i[0] lt 0 then begin
+      message, 'X Down left corner out of bounders: set to 0', /INFORMATIONAL
+      i[0] = 0
+    endif
+    if j[0] lt 0 then begin
+      message, 'Y Down left corner out of bounders: set to 0', /INFORMATIONAL
+      j[0] = 0
+    endif
+    if i[1] ge self.tnt_c.nx then begin
+      message, 'X Upper right corner out of bounders: set to nx-1', /INFORMATIONAL
+      i[1] = self.tnt_c.nx-1
+    endif
+    if j[1] ge self.tnt_c.ny then begin
+      message, 'Y Upper right corner out of bounders: set to ny-1', /INFORMATIONAL
+      j[1] = self.tnt_c.ny-1
+    endif
+    mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    mask[i[0]:i[1],j[0]:j[1]] = 1B
+    if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    p = where(mask ne 0, cnt)
+    if cnt ne 0 then _mask[p] = 1B
+    isubs = [i[0], j[0], i[1], j[1]]
+  endif
+  
+  if do_polygon then Message, 'POLYGON currently not implemented'
+  
+  if min(_mask) lt 0 or max(_mask) ne 1 then Message, 'The mask is either empty or full.'
+  
+  self->destroy_ROI 
   self.is_roi = TRUE
-  undefine, *self.roi
-  PTR_FREE, self.roi
   self.roi = PTR_NEW(_mask, /NO_COPY)  
   
   return, 1

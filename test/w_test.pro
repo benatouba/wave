@@ -1666,24 +1666,24 @@ pro TEST_WRF_OUT
     if ~ok then error+=1    
     
     ; TEST grid regrid
-    ok = dom1->subset(t2_bef_crop, OUT_GRID = out_grid, OUT_DATA=out_data)  
+    ok = dom1->set_ROI(CROPBORDER=5)
+    if ~ ok then  error+=1
+    out_grid = dom1->reGrid(/TO_ROI)
+    out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
+    if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
+    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    OBJ_DESTROY, out_grid
+    
+    ; TEST grid regrid
+    ok = dom1->set_ROI(CORNERS=[5,5,144,144], src=dom1)
     if ~ ok then error+=1
-    if TOTAL(ABS(out_data-t2_bef_crop) ne 0) then error+=1
-    if ~utils_compare_grid(dom1, out_grid) then error+=1 
-    OBJ_DESTROY, out_grid
-    ; TEST grid regrid
-    ok = dom1->subset(t2_bef_crop, CROPBORDER=5, OUT_GRID = out_grid, OUT_DATA=out_data)    
-    if ~ ok then  error+=1
-    if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
-    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
-    OBJ_DESTROY, out_grid
-    
-    ; TEST grid regrid
-    ok = dom1->subset(t2_bef_crop, CORNERS=[5,5,144,144], OUT_GRID = out_grid, OUT_DATA=out_data)    
-    if ~ ok then  error+=1
+    out_grid = dom1->reGrid(/TO_ROI)
+    out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
     if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
     
+    ok = dom1->set_ROI()
+    if ~ ok then error+=1
     OBJ_DESTROY, out_grid
     OBJ_DESTROY, dom1_crop       
     
@@ -1802,24 +1802,25 @@ pro TEST_WRF_OUT
     if abs(GISLAT[NX-1,Ny-1]-33.) gt MEAN(GISLAT[nx-1,1:*]-GISLAT[nx-1,0:Ny-2])/2. then error +=1
     
     t2_after_crop = dom1->get_var('t2')
-    dom1_crop = dom1->reGrid()
+    dom1_crop = dom1->reGrid(/TO_ROI)
+    if ~utils_compare_grid(dom1_crop, dom1) then error+=1  
     
-    
-    ; TEST grid regrid
     ok = dom1->define_subset()
-    if ~ok then error+=1    
-    ok = dom1->subset(t2_bef_crop, OUT_GRID = out_grid, OUT_DATA=out_data)  
-    if ~ ok then error+=1
-    if TOTAL(ABS(out_data-t2_bef_crop) ne 0) then error+=1
-    if ~utils_compare_grid(dom1, out_grid) then error+=1 
-    OBJ_DESTROY, out_grid
     
-    ; TEST grid regrid
+    ; TEST grid regrid  
+    dom1->transform, 5, 3, i, j
+    if ROUND(i) ne 5 then error+=1   
+    if ROUND(j) ne 3 then error+=1   
+    
     GIS_make_datum, ret, src, NAME='WGS-84'
-    ok = dom1->subset(t2_bef_crop, CORNERS=[91.,31.,93.,33.], src =src, OUT_GRID = out_grid, OUT_DATA=out_data)    
+    ok = dom1->set_roi(CORNERS=[91.,31.,93.,33.], src =src)        
     if ~ ok then  error+=1
+    out_grid = dom1->reGrid(/TO_ROI)
+    out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
     if ~utils_compare_grid(dom1_crop, out_grid) then error+=1    
+    ok = dom1->set_roi()
+
     OBJ_DESTROY, out_grid
     OBJ_DESTROY, dom1_crop         
     
@@ -2006,6 +2007,107 @@ pro TEST_WRF_GEO
     OBJ_DESTROY, dom1     
     if error ne 0 then message, '% TEST_WRF_GEO NOT passed', /CONTINUE else print, 'TEST_WRF_GEO passed'
         
+end
+
+pro TEST_GRIDS
+
+    fdir = TEST_file_directory()
+    error = 0 
+    
+   GIS_make_proj, ret, proj, PARAM='1, WGS-84'
+   
+   grid_one = OBJ_NEW('w_Grid2D', x0=95., y0=30., nx=1, ny=1, dx=0.1, dy=0.1, PROJ=proj)
+   grid_one->Get_LonLat, lon, lat
+   if ABS(lon-95.) gt 1e-5 or ABS(lat-30.) gt 1e-5 then error+=1
+   GIS_make_datum, ret, src, NAME='wgs-84'
+   grid_one->transform_LonLat, lon, lat, src, i, j 
+   if ABS(i-0.) gt 1e-5 or ABS(j-0.) gt 1e-5 then error+=1
+   
+   grid_two  = OBJ_NEW('w_Grid2D', x0=95.-(0.25), y0=30.+(0.25), nx=3, ny=3, dx=0.25, dy=0.25, PROJ=proj)
+   grid_two->Get_LonLat, lon, lat
+   
+   map = grid_two->map_gridded_data(1B, grid_one)
+   should = BYTARR(3,3)
+   should[1,1]=1B
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one
+  
+   grid_one = OBJ_NEW('w_Grid2D', x0=95.25, y0=30.25, nx=1, ny=1, dx=0.1, dy=0.1, PROJ=proj)
+   grid_one->Get_LonLat, lon, lat
+   map = grid_two->map_gridded_data(1B, grid_one)
+   should = BYTARR(3,3)
+   should[2,2] = 1
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one
+  
+   grid_one = OBJ_NEW('w_Grid2D', x0=95.1125, y0=30.1125, nx=1, ny=1, dx=0.01, dy=0.01, PROJ=proj)
+   grid_one->Get_LonLat, lon, lat
+   map = grid_two->map_gridded_data(1B, grid_one)
+   should = BYTARR(3,3)
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one
+  
+   grid_one = OBJ_NEW('w_Grid2D', x0=95.01, y0=30.01, nx=1, ny=1, dx=0.03, dy=0.03, PROJ=proj)
+   grid_one->Get_LonLat, lon, lat
+   map = grid_two->map_gridded_data(1B, grid_one)
+   should = BYTARR(3,3)
+   should[1,1]=1B
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one
+   
+   grid_one  = OBJ_NEW('w_Grid2D', x0=95.-(0.25), y0=30.+(0.25), nx=3, ny=3, dx=0.25, dy=0.25, PROJ=proj)
+   ok = grid_one->set_ROI(MASK=should)
+   if ~ok then error+=1
+   
+   map = grid_two->map_gridded_data(BYTARR(3,3)+1B, grid_one)
+   should = BYTARR(3,3)
+   should[1,1]=1B
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one
+   
+   grid_one  = OBJ_NEW('w_Grid2D', x0=95.-(0.5), y0=30.+(0.5), nx=5, ny=5, dx=0.25, dy=0.25, PROJ=proj)
+   mask = BYTARR(5,5)
+   mask[2,2] = 1B
+   ok = grid_one->set_ROI(MASK=mask)
+   if ~ok then error+=1   
+   map = grid_two->map_gridded_data(BYTARR(5,5)+1B, grid_one)
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one, grid_two
+      
+   grid_two  = OBJ_NEW('w_Grid2D', x0=95.-(0.5), y0=30.+(0.5), nx=5, ny=5, dx=0.25, dy=0.25, PROJ=proj)
+   grid_one  = OBJ_NEW('w_Grid2D', x0=95.-(0.25), y0=30.+(0.25), nx=3, ny=3, dx=0.25, dy=0.25, PROJ=proj)
+   
+   ok = grid_one->set_ROI(MASK=should)
+   if ~ok then error+=1
+   
+   map = grid_two->map_gridded_data(BYTARR(3,3)+1B, grid_one)
+   should = BYTARR(5,5)
+   should[2,2]=1B
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one, grid_two
+   
+   grid_one  = OBJ_NEW('w_Grid2D', x0=95.-(0.5), y0=30.+(0.5), nx=5, ny=5, dx=0.25, dy=0.25, PROJ=proj)
+   
+   ok = grid_one->set_ROI(MASK=should)
+   if ~ok then error+=1
+   
+   map = grid_one->map_gridded_data(BYTARR(5,5)+1B, grid_one)
+   should = BYTARR(5,5)
+   should[2,2]=1B
+   if TOTAL(ABS(map-should)) ne 0 then error+=1
+   
+   undefine, grid_one, grid_two   
+   
+   
+   if error ne 0 then message, '% TEST_GRIDS NOT passed', /CONTINUE else print, 'TEST_GRIDS passed'
+
 end
 
 
@@ -3084,8 +3186,10 @@ pro TEST_MOSAIC
   
   grids = [h25v05,h25v06,h26v05,h26v05]  
   mosaic = utils_MOSAIC_grid(grids)
-  
-  modata = MOSAIC->map_gridded_data(data1, h25v05, MISSING = 0)
+  ok = MOSAIC->set_ROI(GRID = h25v05)
+  if ok ne 1 then error+=1
+  modata = MOSAIC->map_gridded_data(data1, h25v05, MISSING = 0, /TO_ROI)
+  ok = MOSAIC->set_ROI()
   modata = MOSAIC->map_gridded_data(data2, h25v06, DATA_DST = modata)
   modata = MOSAIC->map_gridded_data(data3, h26v05, DATA_DST = modata)
   modata = MOSAIC->map_gridded_data(data4, h26v06, DATA_DST = modata)
@@ -3121,22 +3225,31 @@ pro TEST_WRF_GETVAR
     ; Test 3Hourly product
     ;-------------------------    
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
-    
-    
-    ;PRCP
     wrf->get_time, time, nt
+    wrf->GetProperty, nx=nx, ny=ny
+        
+    ; GEO get_Var    
+    all = wrf->w_geo_nc::get_Var('P')    
+    levs = wrf->w_geo_nc::get_Var('P', ZLEVELS=[2,5])
+    if total(ABS(all[*,*,2:5,*] - levs)) ne 0 then error+=1
+    levs = wrf->w_geo_nc::get_Var('P', ZLEVELS=[2,5], ZDIM_ID='bottom_top')
+    if total(ABS(all[*,*,2:5,*] - levs)) ne 0 then error+=1    
+    levs = wrf->w_geo_nc::get_Var('P', ZLEVELS=[2,5], T0=time[2], T1=time[4])
+    if total(ABS(all[*,*,2:5,2:4] - levs)) ne 0 then error+=1    
+    ok = wrf->define_subset(CROPBORDER=5)    
+    levs = wrf->w_geo_nc::get_Var('P', ZLEVELS=[2,5], T0=time[2], T1=time[4])
+    if total(ABS(all[5:nx-6,5:ny-6,2:5,2:4] - levs)) ne 0 then error+=1    
+    ok = wrf->define_subset()    
     
+    ;PRCP    
     rainnc_ref = wrf->w_NCDF::get_var('RAINNC')
-    rainc_ref = wrf->w_NCDF::get_var('RAINC')
-    
+    rainc_ref = wrf->w_NCDF::get_var('RAINC')    
     tot_ref = rainc_ref + rainnc_ref
-    step_ref = utils_acc_to_step(tot_ref)
-    
+    step_ref = utils_acc_to_step(tot_ref)    
     mytot = wrf->get_var('PRCP')
     if TOTAL(ABS(tot_ref-mytot)) ne 0 then error += 1    
     mystep = wrf->get_var('PRCP_STEP')
-    if TOTAL(ABS(step_ref-mystep)) ne 0 then error += 1
-    
+    if TOTAL(ABS(step_ref-mystep)) ne 0 then error += 1    
     mytot = wrf->get_var('PRCP', t1 = time[0])
     if TOTAL(ABS(mytot)) ne 0 then error += 1    
     mytot = wrf->get_var('PRCP', t0 = time[8], t1 = time[10])
@@ -3146,10 +3259,36 @@ pro TEST_WRF_GETVAR
     !QUIET = 0  
     if TOTAL(ABS(step_ref[*,*,9:10]-mystep[*,*,1:*])) ne 0 then error += 1    
     
+    
+    ncldir = TEST_file_directory() + 'WRF/ncl_out/'
+    
+    met = OBJ_NEW('w_WRF', FILE=fdir+'met_em.d01.2009-05-01_12_00_00.nc')
+    
+    ; TK    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     tk_wrf = wrf->get_Var('tk', T0 = t0, T1 = t0)
     tk_ncl = tk_wrf * 0.    
-    tk_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/tk/tk_d1_2008-10-26_21:00:00'
+    tk_f = ncldir+'/wrfd1_tk2008-10-26_21:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1     
+    ; Met em
+    tk_wrf = met->get_Var('tk',UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )
+                             
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/metd1_tk2009-05-01_12:00:00'
     OPENR, lun, tk_f, /GET_LUN
     line = ''
     k=0LL
@@ -3162,11 +3301,186 @@ pro TEST_WRF_GETVAR
     FREE_LUN, lun
     if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1 
     
+    ; theta    
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    tk_wrf = wrf->get_Var('theta', T0 = t0, T1 = t0)
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/wrfd1_theta2008-10-26_21:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1   
     
+    tk_wrf = wrf->get_Var('theta', T0 = t0, T1 = t0, ETA_LEVELS=5)
+    if MAX(ABS(tk_ncl[*,*,5]-tk_wrf)) gt 1e-3 then error +=1   
+    tk_wrf = wrf->get_Var('theta', T0 = t0, T1 = t0, ETA_LEVELS=[5,8])
+    if MAX(ABS(tk_ncl[*,*,5:8]-tk_wrf)) gt 1e-3 then error +=1   
+    
+    ;SLP
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_ncl = slp_wrf * 0.    
+    slp_f = ncldir+'/wrfd1_slp2008-10-26_21:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun    
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+           
+    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_ncl = slp_wrf * 0.    
+    slp_f = ncldir+'/wrfd1_slp2008-10-27_06:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun   
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+        
+    slp_wrf = (wrf->get_Var('slp', DIMNAMES=dm))[*,*,8]
+    slp_ncl = slp_wrf * 0.    
+    slp_f = ncldir+'/wrfd1_slp2008-10-27_12:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun   
+    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
+           
+    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
+    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
+    slp_wrf_b = wrf->get_Var('slp_b', T0 = t0, T1 = t0)
+    if mean(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 1e-2 then error +=1 
+    if max(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 0.06 then error +=1
+    
+    t2 =  wrf->get_TimeSerie('t2', 54, 75) - 273.15
+    t2c =  wrf->get_TimeSerie('t2c', 54, 75)
+    if total(t2-t2c) ne 0 then  error +=1  
+    
+    ;Met
+    slp_wrf = met->get_Var('slp',UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )
+                             
+    slp_ncl = tk_wrf * 0.    
+    slp_f = ncldir+'/metd1_slp2009-05-01_12:00:00'
+    OPENR, lun, slp_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     slp_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(slp_ncl* 0.01 -slp_wrf)) gt 1e-3 then error +=1 
+    
+    ; Geopotential
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    tk_wrf = wrf->get_Var('geopotential', T0 = t0, T1 = t0)
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/wrfd1_geopotential2008-10-26_21:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 0.5 then error +=1     
+    ; Met em
+    tk_wrf = met->get_Var('geopotential',UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )
+                             
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/metd1_geopotential2009-05-01_12:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 0.5 then error +=1 
+     
+    ; pressure
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    tk_wrf = wrf->get_Var('pressure', T0 = t0, T1 = t0)
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/wrfd1_pressure2008-10-26_21:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf))  gt 1e-3 then error +=1   
+    ; Met em
+    tk_wrf = met->get_Var('pressure',UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )
+                             
+    tk_ncl = tk_wrf * 0.    
+    tk_f = ncldir+'/metd1_pressure2009-05-01_12:00:00'
+    OPENR, lun, tk_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     tk_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1 
+     
+    ;RH2
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 18)    
     var_wrf = wrf->get_Var('rh2', T0 = t0, T1 = t0)
     var_ncl = var_wrf * 0.    
-    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh2_d1_2008-10-26_18:00:00'
+    var_f = ncldir+'/wrfd1_rh22008-10-26_18:00:00'
     OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
@@ -3187,7 +3501,7 @@ pro TEST_WRF_GETVAR
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     var_wrf = wrf->get_Var('rh', T0 = t0, T1 = t0)
     var_ncl = var_wrf * 0.    
-    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh_d1_2008-10-26_21:00:00'
+    var_f = ncldir+'/wrfd1_rh2008-10-26_21:00:00'
     OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
@@ -3209,81 +3523,228 @@ pro TEST_WRF_GETVAR
     
     var_wrf =(wrf->get_Var('rh'))[*,*,*,8]
     var_ncl = var_wrf * 0.    
-    var_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/rh/rh_d1_2008-10-27_12:00:00'
+    var_f = ncldir+'/wrfd1_rh2008-10-27_12:00:00'
     OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
     while ~eof(lun) do begin
-     readf,lun, line
-     var_ncl[k] = FLOAT(line)   
-     k+=1 
-    endwhile       
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
     CLOSE, lun
     FREE_LUN, lun
-    if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1 
+    if MAX(ABS(var_ncl-var_wrf)) gt 1e-3 then error +=1
     
-    
-    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)
-    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
-    slp_ncl = slp_wrf * 0.    
-    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-26_21:00:00'
-    OPENR, lun, slp_f, /GET_LUN
+    ;TC PLANE
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    varin = wrf->get_Var('tc', t0 = t0, t1 = t0, PRESSURE_LEVELS=[850., 700., 500., 300.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) - 0.01    
+               
+     
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_tc_plane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
     while ~eof(lun) do begin
-     readf,lun, line
-     slp_ncl[k] = FLOAT(line)   
-     k+=1 
-    endwhile       
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
     CLOSE, lun
     FREE_LUN, lun    
-    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
-           
-    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
-    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
-    slp_ncl = slp_wrf * 0.    
-    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-27_06:00:00'
-    OPENR, lun, slp_f, /GET_LUN
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
+    
+    varin = wrf->get_Var('tc', t0 = t0, t1 = t0, PRESSURE_LEVELS=[700.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) - 0.01    
+    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl[*,*,1]-varin)) gt 1e-3 then error +=1
+    
+    varin = wrf->get_Var('tc', PRESSURE_LEVELS=[700.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) - 0.01    
+    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl[*,*,1]-varin[*,*,3])) gt 1e-3 then error +=1
+    
+    ;RH PLANE
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    varin = wrf->get_Var('rh', t0 = t0, t1 = t0, PRESSURE_LEVELS=[850., 700., 500., 300.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) 
+               
+     
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_rh_plane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
     while ~eof(lun) do begin
-     readf,lun, line
-     slp_ncl[k] = FLOAT(line)   
-     k+=1 
-    endwhile       
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
     CLOSE, lun
-    FREE_LUN, lun   
-    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
-    
-    
-    slp_wrf = (wrf->get_Var('slp', DIMNAMES=dm))[*,*,8]
-    slp_ncl = slp_wrf * 0.    
-    slp_f = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/WRF/slp/slp_d1_2008-10-27_12:00:00'
-    OPENR, lun, slp_f, /GET_LUN
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
+    ; Metem
+    varin = met->get_Var('rh',PRESSURE_LEVELS=[850., 700., 500., 300.]) 
+    var_ncl = varin * 0.
+    var_f = ncldir+'/metd1_rh_plane2009-05-01_12:00:00'
+    OPENR, lun, var_f, /GET_LUN
     line = ''
     k=0LL
     while ~eof(lun) do begin
-     readf,lun, line
-     slp_ncl[k] = FLOAT(line)   
-     k+=1 
-    endwhile       
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
     CLOSE, lun
-    FREE_LUN, lun   
-    if MAX(ABS(slp_ncl-slp_wrf)) gt 1e-3 then error +=1 
-       
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
-    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 06)
-    slp_wrf = wrf->get_Var('slp', T0 = t0, T1 = t0)
-    slp_wrf_b = wrf->get_Var('slp_b', T0 = t0, T1 = t0)
-    if mean(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 1e-2 then error +=1 
-    if max(ABS(slp_wrf-slp_wrf_b)/slp_wrf) gt 0.06 then error +=1
+    ;Z PLANE
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    varin = wrf->get_Var('z', t0 = t0, t1 = t0, PRESSURE_LEVELS=[850., 700., 500., 300.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) 
+               
+     
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_z_plane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
+    CLOSE, lun
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 0.002 then error +=1
     
-    t2 =  wrf->get_TimeSerie('t2', 54, 75) - 273.15
-    t2c =  wrf->get_TimeSerie('t2c', 54, 75)
-    if total(t2-t2c) ne 0 then  error +=1
+    ;U PLANE
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    varin = wrf->get_Var('U', t0 = t0, t1 = t0, PRESSURE_LEVELS=[850., 700., 500., 300.], /UNSTAGGER, UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) 
+               
+     
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_u_plane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
+    CLOSE, lun
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
-
+    varin = wrf->get_Var('U', PRESSURE_LEVELS=[850., 700., 500., 300.], /UNSTAGGER, UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames ) 
+               
+     
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_u_plane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
+    CLOSE, lun
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin[*,*,*,3])) gt 1e-3 then error +=1
+    
+    ;P H PLANE
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    varin = wrf->get_Var('pressure', t0 = t0, t1 = t0, HEIGHT_LEVELS=[250., 2000.], UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )      
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_p_hplane2008-10-26_21:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
+    CLOSE, lun
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
+    
+    ;V H PLANE
+    t0 = QMS_TIME(year = 2008, day = 27, month = 10, hour = 03)    
+    varin = wrf->get_Var('V', t0 = t0, t1 = t0, HEIGHT_LEVELS=[250., 2000.], UNITS=units, /UNSTAGGER, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ 
+                              DIMS=dims, $ 
+                              DIMNAMES=dimnames )      
+    var_ncl = varin * 0.
+    var_f = ncldir+'/wrfd1_v_hplane2008-10-27_03:00:00'
+    OPENR, lun, var_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+      readf,lun, line
+      var_ncl[k] = FLOAT(line)
+      k+=1
+    endwhile
+    CLOSE, lun
+    FREE_LUN, lun    
+    p = where(~FINITE(varin), cnt)
+    if cnt ne 0 then varin[p] = -999999
+    if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
+    
+    
     OBJ_DESTROY, wrf    
+    OBJ_DESTROY, met    
     if error ne 0 then message, '% TEST_WRF_GETVAR NOT passed', /CONTINUE else print, 'TEST_WRF_GETVAR passed'
 end
 
@@ -3315,11 +3776,11 @@ pro TEST_DATASETS, NCDF = ncdf
 end
 
 pro TEST_UTILS
+  TEST_GRIDS
   TEST_WRF_AGG_MASSGRID
   TEST_NEIREST_NEIGHBOR
   TEST_MOSAIC
   TEST_REGRID
-  TEST_WRF_GETVAR
 end
 
 pro TEST_POST, REDO = redo
@@ -3335,5 +3796,6 @@ pro w_TEST, NCDF = ncdf,  REDO = redo
   TEST_DATASETS, NCDF = ncdf
   TEST_UTILS
   if KEYWORD_SET(NCDF) then TEST_POST, REDO = redo
+  if KEYWORD_SET(NCDF) then TEST_WRF_GETVAR
 end
 
