@@ -2390,7 +2390,7 @@ function utils_wrf_unstagger, varin, unstagDim
 
 end
 
-function utils_wrf_intrp3d, varin, z_in, loc_param
+function utils_wrf_intrp3d, varin, z_in, loc_param, EXTRAPOLATE=extrapolate
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -2403,7 +2403,9 @@ function utils_wrf_intrp3d, varin, z_in, loc_param
   if not arg_okay(loc_param, /NUMERIC) then message, WAVE_Std_Message(/ARG)
   
   dims = SIZE(reform(varin), /DIMENSIONS)
-  nd = N_ELEMENTS(dims)  
+  nd = N_ELEMENTS(dims) 
+  
+  _extra = ~KEYWORD_SET(EXTRAPOLATE) 
   
   nlocs = N_ELEMENTS(loc_param)
   
@@ -2413,13 +2415,15 @@ function utils_wrf_intrp3d, varin, z_in, loc_param
       for j=0, dims[1]-1 do begin
         _z_in = z_in[i,j,*]
         out_var[i,j,*] = INTERPOL(varin[i,j,*],_z_in,loc_param)
-        p = where(loc_param gt max(_z_in) or loc_param lt min(_z_in), cnt)
-        if cnt ne 0 then  out_var[i,j,p] = !VALUES.F_NAN
+        if _EXTRA then begin
+          p = where(loc_param gt max(_z_in) or loc_param lt min(_z_in), cnt)
+          if cnt ne 0 then  out_var[i,j,p] = !VALUES.F_NAN
+        endif
       endfor
     endfor
   endif else if nd eq 4 then begin
     out_var = FLTARR(dims[0], dims[1], nlocs, dims[3])
-    for t=0, dims[3]-1 do out_var[*,*,*,t] = utils_wrf_intrp3d(REFORM(varin[*,*,*,t]), REFORM(z_in[*,*,*,t]), loc_param)
+    for t=0, dims[3]-1 do out_var[*,*,*,t] = utils_wrf_intrp3d(REFORM(varin[*,*,*,t]), REFORM(z_in[*,*,*,t]), loc_param, EXTRAPOLATE=extrapolate)
   endif else Message, WAVE_Std_Message('varIn', /ARG)
   
   return, out_var

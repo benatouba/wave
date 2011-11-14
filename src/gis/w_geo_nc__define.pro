@@ -805,17 +805,17 @@ end
 ; :Keywords:
 ;   UPSIDEDOWN: in, optional
 ;                to rotate the variable before plotting it
-;   T0: in, optional, type = qms/{ABS_DATE}
-;       if set, it defines the first time of the variable timeserie
-;   T1: in, optional, type = qms/{ABS_DATE}
-;       if set, it defines the last time of the variable timeserie
 ;    WID: out
 ;         the widget id     
+;    
+;    _EXTRA: in, optional
+;            All keywords accepted by the get_var() function
+;    
 ;         
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WID = wid
+pro w_GEO_nc::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid, _EXTRA = extra
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -828,7 +828,7 @@ pro w_GEO_nc::QuickPlotVar, Varid, t0 = t0, t1 = t1, UPSIDEDOWN = UPSIDEDOWN, WI
   ENDIF
   
   if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
-  var = self->get_Var(Varid, time, t0 = t0, t1 = t1, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
+  var = self->get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
 
 
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 

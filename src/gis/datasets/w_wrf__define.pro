@@ -764,26 +764,36 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       ;PRCP
       d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('rainc')
+      d3 = self->w_NCDF::get_Var_Info('SR')
       if (d1 and d2) then begin
         var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-      endif
-      
-      ;PRCP_STEP
-      d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('rainc')
-      if (d1 and d2) then begin
         var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
+        if d3 then begin
+          var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Snowfall from fraction of frozen precipitation (step wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+        endif
       endif else begin
-        d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
-        d2 = self->w_NCDF::get_Var_Info('rainc')
+        d1 = self->w_NCDF::get_Var_Info('rainnc_step', DIMNAMES=dnames,DIMS=dims)
+        d2 = self->w_NCDF::get_Var_Info('rainc_step')
         if (d1 and d2) then begin
           var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
+          if d3 then begin
+            var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Snowfall from fraction of frozen precipitation (step wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+            dvars = [dvars,var]
+          endif
         endif
       endelse
       
+      ;snowfall
+      d1 = self->w_NCDF::get_Var_Info('SNOWNC', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SNOWNC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total grid scale snow and ice',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif  
+        
       ;TK and TC
       d1= self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
       d2 = self->w_NCDF::get_Var_Info('P')
@@ -792,7 +802,11 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         var = {name:'TC',unit:'C',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]        
+        dvars = [dvars,var]   
+        var = {name:'T2PBL',unit:'K',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+        var = {name:'T2PBLC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]     
       endif    
       ;THETA
       if (d1) then begin
@@ -881,7 +895,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d1 = self->w_NCDF::get_Var_Info('U10', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('V10') 
       if (d1 and d2) then begin
-        var = {name:'WS10',unit:'m.s-1',ndims:N_elements(dims),description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'WS10',unit:'m s-1',ndims:N_elements(dims),description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         var = {name:'WD10',unit:'degrees',ndims:N_elements(dims),description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
@@ -918,6 +932,13 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif           
          
       dvars = dvars[1:*]   
+      
+      ; Check if they are already available in the orig ncdf (maybe an agg file)
+      self->w_NCDF::get_Varlist, ncvarid, ncvarnames
+      for i=0, N_ELEMENTS(dvars)-1 do begin
+        match = where(strmatch(str_equiv(ncvarnames),str_equiv((dvars[i]).name)), nmatch)
+        if nmatch ne 0L then utils_array_remove, match, dvars
+      endfor      
       self.ndiagvar = N_ELEMENTS(dvars)
       self.diagVars = PTR_NEW(dvars)      
       
@@ -1033,7 +1054,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if ~arg_okay(VarId, /SCALAR) then MEssage, WAVE_Std_Message('VarId', /SCALAR)
  
   ;Some check
-  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z']
+  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z', 'T2PBL', 'T2PBLC']
   pni = where(not_implemented eq str_equiv(Varid), cntni)
   if cntni gt 0 then Message, '$' + str_equiv(VarId) + ' is currently not available for w_WRF::get_TimeSerie.'
         
@@ -1278,13 +1299,17 @@ end
 ;             lucat: Model landuse category [] (static: no time dimension)
 ;             tc: Temperature [C]
 ;             t2c: 2m Temperature [C]
+;             t2pbl: 2 m temperature (extrapolated from eta-levels) [K]
+;             t2pblc: 2 m temperature (extrapolated from eta-levels) [C]
 ;             theta: Potential temperature [K]
 ;             tk: Temperature [K]
 ;             ws10: wind speed at 10m [m.s-1] TODO: rotated to earth coordinates
 ;             wd10: wind direction [degrees] TODO: rotated to earth coordinates
 ;             geopotential: Full model geopotential [m2 s-2]
 ;             pressure: Full model pressure [hPa]
-;             z: Full model height [m]
+;             z: Full model height (geopotential / 9.81) [m]
+;             snownc_step: Total STEP WISE grid scale snow and ice [mm]
+;             snowfall: Snowfall (step wize) computed from fraction of frozen precipitation [mm]
 ;             TODO: umet10: 10m U components of wind rotated to earth coordinates
 ;             TODO: vmet10: 10m v components of wind rotated to earth coordinates
 ;             TODO: umet: U components of wind rotated to earth coordinates
@@ -1321,6 +1346,10 @@ end
 ;                  set this keyword to an array of height levels (m) to interpolate to.
 ;                  the output array will then have the dimensions [nx,ny,nl,nt], where nl is the 
 ;                  number of elements in height_levels
+;   above_ground_levels: in, optional, type = float
+;                        set this keyword to an array of height levels (m) ABOVE model height to interpolate to.
+;                        the output array will then have the dimensions [nx,ny,nl,nt], where nl is the 
+;                        number of elements in height_levels
 ;   acc_to_step: in, optional
 ;                if set, the variable is returned "step-wize" (as a difference to previous step) and not accumulated
 ;   description: out, type = string
@@ -1350,6 +1379,7 @@ function w_WRF::get_Var, Varid, $
                             ZLEVELS=zlevels, $
                             PRESSURE_LEVELS=pressure_levels, $
                             HEIGHT_LEVELS=height_levels, $
+                            ABOVE_GROUND_LEVELS=above_ground_levels, $
                             ACC_TO_STEP=acc_to_step , $
                             UNITS=units, $
                             DESCRIPTION=description, $
@@ -1375,7 +1405,8 @@ function w_WRF::get_Var, Varid, $
   _do_eta = N_ELEMENTS(ZLEVELS) ne 0
   _do_pres = N_ELEMENTS(PRESSURE_LEVELS) ne 0
   _do_h = N_ELEMENTS(HEIGHT_LEVELS) ne 0
-  if total([_do_eta,_do_pres,_do_h]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
+  _do_ag = N_ELEMENTS(ABOVE_GROUND_LEVELS) ne 0
+  if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
   
   
   ;Check if the variable is available
@@ -1416,6 +1447,20 @@ function w_WRF::get_Var, Varid, $
       endelse
     end
     
+    'SNOWNC_STEP': begin
+      value = self->get_Var('SNOWNC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'SNOWFALL': begin
+      value = self->get_Var('PRCP_STEP', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      value *= self->get_Var('SR', t0 = t0, t1 = t1)
+    end
+    
     'TK': begin
       if self->get_Var_Info('T') then begin
         T = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
@@ -1450,6 +1495,18 @@ function w_WRF::get_Var, Varid, $
         dims = dims, $
         dimnames = dimnames) - 273.15
     end
+    
+    'T2PBL': begin
+      value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, ABOVE_GROUND_LEVELS=2., $
+        dimnames = dimnames)      
+     end
+    
+    'T2PBLC': begin
+      value = self->get_Var('T2PBL', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) - 273.15      
+     end
     
     'RH': begin
       T = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
@@ -1613,38 +1670,40 @@ function w_WRF::get_Var, Varid, $
    description += ' (de-accumulated)' 
   endif 
  
-  if _do_pres or _do_h then begin
-    ptime = where(str_equiv(dimnames) eq 'TIME', cnt)
-    isstag = STRPOS(str_equiv(dimnames), str_equiv('_stag'))  
-    found = -1
-    for i=0, ndims-1 do begin
-      isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('bottom_top'))
-      p = WHERE(isHere ne -1, cnt)
-      if cnt eq 0 then begin      
-       isHere = STRPOS(str_equiv(dimnames[i]), str_equiv('num_metgrid_levels'))
-        p = WHERE(isHere ne -1, cnt)
-        if cnt eq 0 then continue
-      endif
-      dimnames[i] = STRMID(dimnames[i], 0, isHere)
-      found = i
-    endfor 
-    if total(isstag+1) then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable (unstagger first).'
-    if (ptime eq 2) or ndims lt 3 or found eq -1 then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable.'
+  if _do_pres or _do_h or _do_ag then begin
+    ptime = where(strmatch(str_equiv(dimnames), 'TIME'), cnttime)
+    pstag = where(strmatch(str_equiv(dimnames), '*_STAG'), cntstag)
+
+    pdimtochange = where(strmatch(str_equiv(dimnames), 'BOTTOM_TOP'), cntdimtochange)
+    if cntdimtochange eq 0 then $ ; Try the metgrid case
+      pdimtochange = where(strmatch(str_equiv(dimnames), 'NUM_METGRID_LEVELS'), cntdimtochange)      
+    if cntstag ne 0 then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable (unstagger first).'
+    if (ptime eq 2) or (ndims lt 3) or (cntdimtochange ne 1)then Message, 'It does not seem I can perform the vertical levels interpolation on the selected variable.'
     
     if _do_pres then begin
       p = self->get_Var('pressure', T0=t0, T1=t1)
       value = reform(utils_wrf_intrp3d(value, p, pressure_levels))
       nlocs = N_ELEMENTS(pressure_levels)
-      if nlocs eq 1 then utils_array_remove, found, dimnames $
-      else dimnames[found] = 'pressure_levels'
+      if nlocs eq 1 then utils_array_remove, pdimtochange, dimnames $
+      else dimnames[pdimtochange] = 'pressure_levels'
     endif
     
     if _do_h then begin
       h = self->get_Var('z', T0=t0, T1=t1)
       value = reform(utils_wrf_intrp3d(value, h, height_levels))
       nlocs = N_ELEMENTS(height_levels)
-      if nlocs eq 1 then utils_array_remove, found, dimnames $
-      else dimnames[found] = 'height_levels'
+      if nlocs eq 1 then utils_array_remove, pdimtochange, dimnames $
+      else dimnames[pdimtochange] = 'height_levels'
+    endif
+    
+    if _do_ag then begin
+      _dims = dims & _dims[2:*] = 1
+      ter =  rebin(reform(self->get_Var('ter'),_dims), dims) ; make it same dim as z
+      h = self->get_Var('z', T0=t0, T1=t1) - TEMPORARY(ter)
+      value = reform(utils_wrf_intrp3d(value, h, above_ground_levels, /EXTRAPOLATE))
+      nlocs = N_ELEMENTS(above_ground_levels)
+      if nlocs eq 1 then utils_array_remove, pdimtochange, dimnames $
+      else dimnames[pdimtochange] = 'height_above_ground'
     endif
      
   endif

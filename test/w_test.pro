@@ -3259,7 +3259,20 @@ pro TEST_WRF_GETVAR
     !QUIET = 0  
     if TOTAL(ABS(step_ref[*,*,9:10]-mystep[*,*,1:*])) ne 0 then error += 1    
     
-    
+    ; Snowfall
+;    frommod = wrf->get_var('SNOWNC_STEP')
+;    fromfr = wrf->get_var('SNOWFALL')
+;    p = where(TOTAL(frommod,3) gt TOTAL(fromfr,3), cnt)
+;    w_QuickPlot, TOTAL(frommod,3) - TOTAL(fromfr,3)
+;    if cnt ne 0 then error += 1
+;    HFX = wrf->get_var('HFX')
+;    LH = wrf->get_var('LH')
+;    ACHFX = wrf->get_var('ACHFX', /ACC_TO_STEP) / (3.*60.*60.)
+;    ACLHF = wrf->get_var('ACLHF', /ACC_TO_STEP)    
+;    wrf->QuickPlotVar, 'ACHFX'
+;    wrf->QuickPlotVar, 'HFX'    
+;     w_QuickPlot, ACHFX
+;    return
     ncldir = TEST_file_directory() + 'WRF/ncl_out/'
     
     met = OBJ_NEW('w_WRF', FILE=fdir+'met_em.d01.2009-05-01_12_00_00.nc')
@@ -3286,7 +3299,7 @@ pro TEST_WRF_GETVAR
                               VARNAME=varname , $ 
                               DIMS=dims, $ 
                               DIMNAMES=dimnames )
-                             
+                              
     tk_ncl = tk_wrf * 0.    
     tk_f = ncldir+'/metd1_tk2009-05-01_12:00:00'
     OPENR, lun, tk_f, /GET_LUN
@@ -3543,7 +3556,8 @@ pro TEST_WRF_GETVAR
                               VARNAME=varname , $ 
                               DIMS=dims, $ 
                               DIMNAMES=dimnames ) - 0.01    
-               
+    
+    if TOTAL(dimnames eq ['west_east','south_north','pressure_levels']) ne 3 then error+=1          
      
     var_ncl = varin * 0.
     var_f = ncldir+'/wrfd1_tc_plane2008-10-26_21:00:00'
@@ -3566,7 +3580,7 @@ pro TEST_WRF_GETVAR
                               VARNAME=varname , $ 
                               DIMS=dims, $ 
                               DIMNAMES=dimnames ) - 0.01    
-    
+    if TOTAL(dimnames eq ['west_east','south_north']) ne 2 then error+=1 
     p = where(~FINITE(varin), cnt)
     if cnt ne 0 then varin[p] = -999999
     if MAX(ABS(var_ncl[*,*,1]-varin)) gt 1e-3 then error +=1
@@ -3679,7 +3693,7 @@ pro TEST_WRF_GETVAR
                               DIMS=dims, $ 
                               DIMNAMES=dimnames ) 
                
-     
+    if TOTAL(dimnames eq ['west_east','south_north','pressure_levels','Time']) ne 4 then error+=1    
     var_ncl = varin * 0.
     var_f = ncldir+'/wrfd1_u_plane2008-10-26_21:00:00'
     OPENR, lun, var_f, /GET_LUN
@@ -3726,6 +3740,7 @@ pro TEST_WRF_GETVAR
                               VARNAME=varname , $ 
                               DIMS=dims, $ 
                               DIMNAMES=dimnames )      
+    if TOTAL(dimnames eq ['west_east','south_north','height_levels']) ne 3 then error+=1   
     var_ncl = varin * 0.
     var_f = ncldir+'/wrfd1_v_hplane2008-10-27_03:00:00'
     OPENR, lun, var_f, /GET_LUN
