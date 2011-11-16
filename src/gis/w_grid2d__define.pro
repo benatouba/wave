@@ -1448,6 +1448,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
   if N_ELEMENTS(CONN) eq 0 then begin
    message, 'Did not find anything in the shapefile that matches to the grid.', /INFORMATIONAL
    undefine, x, y, conn
+   return
   endif  
   
   self->transform, x, y, x, y, SRC = shp_src

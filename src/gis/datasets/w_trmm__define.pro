@@ -51,7 +51,7 @@ PRO w_TRMM__Define
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = { w_TRMM                  ,  $
+  struct = { w_TRMM                     ,  $
             INHERITS w_Grid2D           ,  $
             INHERITS w_GEO_nc           ,  $
             type:               ''       $ ; type of data granule: '3B42_d', '3B42_h', '3B43', '3B42_a', '3B43_a'

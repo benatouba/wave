@@ -1039,6 +1039,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   
   self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
   n_coord = N_ELEMENTS(x) 
+  if n_coord eq 0 then return, 0
   coord = [1#x,1#y]
     
   _color = 'black'
