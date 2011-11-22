@@ -48,6 +48,7 @@
 ;       VECCOLORS:  The vector colors. Must be either a scalar, or
 ;                   a vector (nmeric or string) the same size as VELX. 
 ;                   Set to COLOR by default.
+;       THICK:      Thickness of the arrows to plot
 ;       WINDOW - Set this keyword to plot to a resizeable graphics window
 ;
 ;       Plot        All other keywords available to cgPlot (e.g. AXISCOLOR,
@@ -93,7 +94,7 @@
 ;-
 
 PRO w_partvelvec,velx,vely,posx,posy,x,y, OVER = over, VECCOLORS=vecColors, $
-               FRACTION=fraction,LENGTH=length,COLOR=color,WINDOW=window, $
+               FRACTION=fraction,LENGTH=length,COLOR=color,WINDOW=window, THICK=thick, $
 	             _EXTRA=extra
 
 
@@ -198,8 +199,8 @@ ENDELSE
 IF n_elements(over) EQ 0 THEN BEGIN
 IF nparams EQ 4 THEN $
   cgPlot,[minposx,maxposx],[minposy,maxposy], axiscolor=color,$
-  /nodata,/xstyle,/ystyle,COLOR=color,window=window,_EXTRA=extra $
-ELSE cgPlot,x,y,/nodata,/xstyle,/ystyle,COLOR=color,window=window,_EXTRA=extra
+  /nodata,/xstyle,/ystyle,COLOR=color,window=window, THICK=thick, _EXTRA=extra $
+ELSE cgPlot,x,y,/nodata,/xstyle,/ystyle,COLOR=color,window=window, THICK=thick,_EXTRA=extra
 ENDIF
 ;if keyword_set(window) then cgcontrol,execute=0
 ;--------------
@@ -239,7 +240,7 @@ FOR i=0l,nvecs-1l DO BEGIN  ; Loop over particles.
            x1[i],x1[i]-(vx[i]*rcos-vy[i]*rsin)/vel[i]], $
           [py[i],y1[i],y1[i]-(vy[i]*rcos-vx[i]*rsin)/vel[i], $
            y1[i],y1[i]-(vy[i]*rcos+vx[i]*rsin)/vel[i]],COLOR=veccolors[i],$
-	   ADDCMD = window, NOClip = 0
+	   ADDCMD = window, NOClip = 0, THICK = thick
 	
 ENDFOR
 ; if keyword_set(window) then cgcontrol,execute=1
