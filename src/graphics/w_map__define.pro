@@ -1952,6 +1952,16 @@ end
 ;-    
 function w_Map::shading
 
+  if SIZE(*self.img, /N_DIMENSIONS) gt 2 then begin 
+   img = COLOR_QUAN(*self.img, 1, _r, _g, _b, COLORS=127) + 1
+   _colors = utils_color_convert(COLORS=[[_r],[_g],[_b]])
+   PTR_FREE, self.img
+   self.img = PTR_NEW(img, /NO_COPY)
+   self.plot_params.nlevels  = 127
+   PTR_FREE, self.plot_params.colors
+   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
+  endif
+  
   if self.shading_params.relief_factor eq 0 then return, self->img_to_rgb()
  
   nlevels = self.plot_params.nlevels + 1 
