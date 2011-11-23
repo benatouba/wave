@@ -214,12 +214,18 @@ END
 ;                  default behavior is to add country outlines to the map automatically. 
 ;                  This can be a bit long. Set this keyword to prevent drawing countries
 ;                  automatically.
-;
+;    BLUE_MARBLE: in, optional, type = boolean/string
+;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
+;                 if set to a string, it is the path to an alternative jpg file to use as background
+;    SHADING: in, optional, type = boolean
+;             set this keyword to automatically add shading from the blue marble topography (2 km resolution)
+;             for better and HR topographical shading, use your own .grd instead (`w_Map::set_topography`)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES = no_countries
+Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
+                            BLUE_MARBLE=blue_marble, SHADING=shading
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -243,13 +249,39 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   self.Xsize = c.nx
   self.Ysize = c.ny
   
+  ; Defaults
   dummy = self->set_data()
   dummy = self->set_plot_params(COLORS='white')  
-  if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   dummy = self->set_map_params()  
-  dummy = self->set_shading_params()  
-  dummy = self->set_wind(COLOR='black', LENGTH=0.08, THICK=1)  
-               
+  dummy = self->set_shading_params()
+  dummy = self->set_wind()  
+  
+  if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
+  
+  if KEYWORD_SET(BLUE_MARBLE) then begin
+    if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
+    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
+    undefine, w
+  endif
+  
+  if KEYWORD_SET(SHADING) then begin
+    w = OBJ_NEW('w_BlueMarble', /SRTM)
+    z = FLOAT(self.grid->map_gridded_data(w->get_img(), w, /BILINEAR))
+    undefine, w
+    if str_equiv(c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then begin
+      ddx = mean(c.dx * 111200 * cos(lat * !pi / 180d ))
+      ddy = c.dy * 111200
+    endif else begin
+      ddx = c.dx
+      ddy = c.dy
+    endelse
+    GIS_xy_derivatives, ret, rotate(z,7), dx = ddx, dy = ddy, DFDX=dhdx,DFDY=dhdy
+    sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer
+    PTR_FREE, self.sl
+    self.sl = PTR_NEW(sl, /NO_COPY)
+    self.is_Shaded = TRUE
+  endif
+                 
   RETURN, 1
   
 END
@@ -1305,16 +1337,23 @@ end
 
 ;+
 ; :Description:
-;   This function is called internally each time
-;   the plot params or the data are set. 
-;   You do not have to call it by yourself.   
-;  
-; :Private:
+;   If called without arguments, it generates a true-color image 
+;   from the map data and levels (called internally, you don't have
+;   to worry about it).
+;   
+;   You can give a true color as argument to override this behavior and 
+;   set by yourself a true color img (3,nx,ny) to put on the map. If you do
+;   so, the data and levels will be ignored on the plot.
+;   
+; :Params:
+;   img: in, optional
+;        sets a true color image on the map. If not set, the true color
+;        image is generated based on the map data, datalevels and colors.
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_img
+function w_Map::set_img, img
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1329,6 +1368,15 @@ function w_Map::set_img
     RETURN, 0
   ENDIF 
   
+  if N_ELEMENTS(img) ne 0 then begin
+    s = SIZE(img, /DIMENSIONS)
+    if s[0] ne 3 then Message, '$IMG does not seem to be a TRUECOLOR image. Check it (dims = [3,nx,ny]).'
+    PTR_FREE, self.img
+    if s[1] ne self.Xsize or s[2] ne self.Ysize then $
+     self.img = PTR_NEW(FSC_Resize_Image(img, self.Xsize, self.Ysize)) $
+       else self.img = PTR_NEW(img)    
+    return, 1
+  endif  
 
   if self.contour_img then begin
   

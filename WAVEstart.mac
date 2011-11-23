@@ -46,6 +46,7 @@ pushd, root
 .run w_wrf__define.pro
 .run w_modis__define.pro
 .run w_dem__define.pro
+.run w_bluemarble__define.pro
 
 ; Graphics
 .run w_map__define.pro

@@ -757,7 +757,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
     
   if KEYWORD_SET(DIAGNOSTIC) then begin ; Computed Diagnostic variables 
   
-    if self.ndiagvar eq 0 then begin    
+    if ~ PTR_VALID(self.diagVars) then begin  ; first call
       
       dvars = {name:'',unit:'',ndims:0L,description:'',type:'',dims:PTR_NEW(),dimnames:PTR_NEW()}
       
@@ -769,6 +769,10 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'RAINNC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step grid scale precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'RAINC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step cumulus precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         if d3 then begin
           var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Snowfall from fraction of frozen precipitation (step wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
@@ -930,27 +934,35 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]    
       endif           
-         
-      dvars = dvars[1:*]   
       
-      ; Check if they are already available in the orig ncdf (maybe an agg file)
-      self->w_NCDF::get_Varlist, ncvarid, ncvarnames
-      for i=0, N_ELEMENTS(dvars)-1 do begin
-        match = where(strmatch(str_equiv(ncvarnames),str_equiv((dvars[i]).name)), nmatch)
-        if nmatch ne 0L then utils_array_remove, match, dvars
-      endfor      
-      self.ndiagvar = N_ELEMENTS(dvars)
-      self.diagVars = PTR_NEW(dvars)      
-      
-    endif else dvars = *self.diagVars
+      self.ndiagvar = N_ELEMENTS(dvars) - 1
+      if self.ndiagvar ne 0 then begin      
+        dvars = dvars[1:*]
+        ; Check if they are already available in the orig ncdf (maybe an agg file)
+        self->w_NCDF::get_Varlist, ncvarid, ncvarnames
+        for i=0, N_ELEMENTS(dvars)-1 do begin
+          dummy = where(str_equiv(ncvarnames) eq str_equiv((dvars[i]).name), nmatch)
+          if nmatch ne 0L then begin
+            if N_ELEMENTS(match) eq 0 then match = i else match = [match,i]
+          endif
+        endfor   
+        if N_ELEMENTS(match) ne 0 then utils_array_remove, match, dvars     
+      endif
+      self.diagVars = PTR_NEW(dvars)    
+      self.ndiagvar = N_ELEMENTS(dvars)  
+    endif else begin
+     dvars = *self.diagVars
+    endelse
     
+    undefine, varid, varnames, varndims, varunits, vardescriptions, vartypes
+
     varid = LONARR(self.ndiagvar) - 1
     varnames = dvars.name
     varndims = dvars.ndims
     varunits = dvars.unit
     vardescriptions = dvars.description
     vartypes = dvars.type
-    
+
     if KEYWORD_SET(PRINTVARS) then print, 'WAVE diagnostic variables:'
     if KEYWORD_SET(PRINTVARS) then for i = 0, self.ndiagvar-1 DO print, 'Id: ' + str_equiv(varid[i]) + $
        '. Name: ' + varnames[i] + '. Unit: ' + varunits[i] + '. Ndims: ' + str_equiv(varndims[i])+ $
@@ -960,12 +972,15 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
   
     self->w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
     self->get_Varlist, dvarid, dvarnames, dvarndims, dvarunits, dvardescriptions, dvartypes, /DIAGNOSTIC, PRINTVARS = printvars
-    varid = [varid,dvarid]
-    varnames = [varnames,dvarnames]
-    varndims = [varndims,dvarndims]
-    varunits = [varunits,dvarunits]
-    vardescriptions = [vardescriptions,dvardescriptions]
-    vartypes = [vartypes,dvartypes]
+     
+    if self.ndiagvar ne 0 then begin
+      varid = [varid,dvarid]
+      varnames = [varnames,dvarnames]
+      varndims = [varndims,dvarndims]
+      varunits = [varunits,dvarunits]
+      vardescriptions = [vardescriptions,dvardescriptions]
+      vartypes = [vartypes,dvartypes]
+    endif
     
   endif else self->w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
   
@@ -1258,7 +1273,7 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
                          varname = varname , $ ; 
                          dims = dims, $ ;
                          dimnames = dimnames )
-  
+                           
   ;TODO: Update routine: if var dim 2 then more than one curve 
   
   w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
@@ -1459,6 +1474,7 @@ function w_WRF::get_Var, Varid, $
         dims = dims, $
         dimnames = dimnames)
       value *= self->get_Var('SR', t0 = t0, t1 = t1)
+      _acc_to_step = FALSE
     end
     
     'TK': begin
