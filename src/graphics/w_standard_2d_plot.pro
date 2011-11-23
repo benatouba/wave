@@ -207,12 +207,17 @@ pro w_standard_2d_plot, map, TITLE=title,$
     xSize_map_bar =  xSize_map_bar / 1000.
     unit = ' km'
   endif
+
+  if xSize_map_bar ge 5. then str_xSize_map_bar = str_equiv(LONG(xSize_map_bar)) $
+    else if xSize_map_bar ge 1. then str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F3.1)') $
+     else str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F4.2)')
+
   xLegend = pos[0] + [0., xSize_bar_device]
   yLegend = pos[1] / 5. + [0.,0.]
   cgPlotS, xLegend, yLegend, COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
   cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
   cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-  cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_equiv(LONG(xSize_map_bar)) + unit, ALIGNMENT=0.5, $
+  cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_xSize_map_bar + unit, ALIGNMENT=0.5, $
              CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
   
   ; Projection  
