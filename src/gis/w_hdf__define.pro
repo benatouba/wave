@@ -366,7 +366,7 @@ function w_HDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a prev
                         units = units, $ ; If available, the units of the variable
                         varname = varname , $  ; the name of the variable
                         dims = dims, $ ; the variable dimensions
-                        NO_CALIB = no_calib ; the variable dimensions
+                        NO_CALIB = no_calib
                         
   
   ; SET UP ENVIRONNEMENT

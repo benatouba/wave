@@ -885,12 +885,13 @@ end
 ;              in geographic coordinates) and use exact grid transformation
 ;              in all other cases. USE_GRID is more precise, but slower.
 ;              In most of the cases you don't have to care about this keyword.              
-;
+;    Z: out, otional, type = string
+;       to obtain the topography values for e.g a plot
 ;
 ; :History:
 ;     Written by DiS, FaM, 2011
 ;-
-function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid
+function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1497,17 +1498,21 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
     else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
   endif else begin
     if N_ELEMENTS(missing) ne 0 then _missing = missing
-    if _oplot then _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear, DATA_DST = *self.data) $
-     else _data = self.grid->map_gridded_data(data, grid, MISSING = _missing, BILINEAR = bilinear)
+    if _oplot then _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR = bilinear, DATA_DST = *self.data) $
+     else _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR = bilinear)
   endelse
   
   if N_ELEMENTS(missing) eq 0 then begin
     dataTypeName = Size(data, /TNAME)
     CASE dataTypeName OF
+      'FLOAT' : missing = !VALUES.F_NAN
       'DOUBLE': missing = !VALUES.D_NAN
-      ELSE: missing = !VALUES.F_NAN
+      'BYTE': missing = 0B
+      ELSE: missing = -999
     ENDCASE
   endif
+
+    
   
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
@@ -1545,6 +1550,51 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
   return, self->set_img()
 
 end
+
+;+
+; :Description:
+;    Similar to set_data but for non-gridded data sets
+;
+; :Params:
+;    data: in, required, type = 2D array
+;          the data array to plot
+;    lon: in, required, type = float array
+;             the longitudes of the data
+;    lat: in, required, type = float array
+;             the latitudes of the data
+;               
+; :Keywords:
+;    SRC: in, optional, type = {TNT_DATUM}
+;               the datum of the lonlats (default is WGS-84)
+;    MISSING: in, optional
+;             value to set to missing values in the final grid
+;             
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::set_ll_data, data, lon, lat, SRC=src, MISSING = missing
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    PTR_FREE, self.data
+    ok = self->set_data()
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  if N_PARAMS() eq 0 then return, self->set_data()
+ 
+  _data = self.grid->map_lonlat_data(data, lon, lat, SRC=src, MISSING = missing)
+  
+  return, self->set_data(_data, MISSING = missing)
+
+end
+
 
 ;+
 ; :Description:
@@ -2041,10 +2091,14 @@ function w_Map::draw_Map, WINDOW = window
 
   if self.map_params.type eq 'LONLAT' then begin
     self.grid->get_Lonlat, lon, lat
-    cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
-      LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
-    cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
-      LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
+    if N_ELEMENTS(*(self.map_params.xlevels)) ne 0 then begin
+      cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
+        LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
+    endif
+    if N_ELEMENTS(*(self.map_params.ylevels)) ne 0 then begin
+      cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
+        LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
+    endif
   endif
   
   ; Draw a frame
@@ -2054,36 +2108,27 @@ function w_Map::draw_Map, WINDOW = window
     cgPlotS, xf, yf, WINDOW = window, /DATA
   endif
   
-  TICK_LABEL = N_ELEMENTS(*self.map_params.xtickvalues) ne 0
-  if TICK_LABEL then begin
-  
-    xts = *self.map_params.xticks
-    yts = *self.map_params.yticks
-    xls = *self.map_params.xtickvalues
-    yls = *self.map_params.ytickvalues
-    
+  TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
+  if TICK_LABEL then begin    
     spacing = 1.
-    ;  chardist = !D.Y_CH_SIZE / Float(!D.Y_Size) * $
-    ;          ((StrUpCase(!Version.OS_Family) EQ 'WINDOWS') ? (0.9 * spacing) : (1.5 * spacing))
     ddy = - 0.023 * spacing * self.ysize
-    ddx = - 0.008 * spacing * self.xsize
-    
+    ddx = - 0.008 * spacing * self.xsize    
     ; Tick labels
     if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
     charthick = charsize
     if self.map_params.interval lt 0.1 then format = '(F8.2)' $
      else if self.map_params.interval lt 1. then format = '(F8.1)' $
        else format = '(I4)'
-    for i=0,N_ELEMENTS(xts)-1 do begin
-      label = string(abs(xls[i]),FORMAT=format)
-      if xls[i] lt 0 then label += 'W' else label += 'E'
-      cgText, xts[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
+    for i=0,N_ELEMENTS(*self.map_params.xticks)-1 do begin
+      label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
+      if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
+      cgText, (*self.map_params.xticks)[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
     endfor
-    for i=0,N_ELEMENTS(yts)-1 do begin
-      label = string(abs(yls[i]),FORMAT=format)
-      if yls[i] lt 0 then label += 'S' else label += 'N'
-      if yls[i] eq 0 then label = 'Eq.'
-      cgText, ddx, yts[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
+    for i=0,N_ELEMENTS(*self.map_params.yticks)-1 do begin
+      label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
+      if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
+      if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
+      cgText, ddx, (*self.map_params.yticks)[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
 
@@ -2362,7 +2407,7 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=po
   compile_opt idl2
   @WAVE.inc
   
-  if n_elements(bar_format) eq 0 then bar_format = '(F5.1)'
+  if n_elements(bar_format) eq 0 then bar_format = '(F7.1)'
   if n_elements(labels) eq 0 then labels = string(*(self.plot_params.levels), FORMAT=bar_format)
   
   if self.plot_params.nlevels lt 50 then begin

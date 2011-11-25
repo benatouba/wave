@@ -188,7 +188,7 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
   
   mytime = 0LL
   
-  if KEYWORD_SET(TNT_T) then begin ; Make an absolute date from a TNT time
+  if N_ELEMENTS(TNT_T) ne 0 then begin ; Make an absolute date from a TNT time
     
     if arg_okay(TNT_T, /NUMERIC) then GEN_quattro_time, ret, TNT_T, tt  $ 
      else if arg_okay(TNT_T, STRUCT={TNT_TIME}) then tt =TNT_T   $
@@ -198,19 +198,19 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
     my_time = LON64ARR(n)    
     my_time = LONG64(tt.qt)* D_QMS + LONG64(tt.hour)* H_QMS + LONG64(tt.minute)* M_QMS + LONG64(tt.second)* S_QMS + LONG64(1000.*tt.fraction)
         
-  endif else if KEYWORD_SET(JULIAN_DAY) then begin  ; Make an absolute date from a string
+  endif else if N_ELEMENTS(JULIAN_DAY) ne 0 then begin  ; Make an absolute date from a string
   
     if not arg_okay(JULIAN_DAY, /NUMERIC) then  Message, WAVE_Std_Message('jd', /NUMERIC) 
     
     CALDAT, JULIAN_DAY, Month, Day, Year, Hour, Minute, Second
     my_time = QMS_TIME(year=year, day=day, month=month, minute=minute, second=second, hour = hour)
         
-  endif else if KEYWORD_SET(DATE_Str) then begin  ; Make an absolute date from a string
+  endif else if N_ELEMENTS(DATE_Str) ne 0 then begin  ; Make an absolute date from a string
   
     if not arg_okay(DATE_Str, type = IDL_STRING) then Message, WAVE_Std_Message('DATE_Str', /STR)    
     nD = N_ELEMENTS(DATE_Str)
     
-    if not KEYWORD_SET(TIME_Str) then time_Str = '00:00:00'
+    if N_ELEMENTS(TIME_Str) eq 0 then time_Str = '00:00:00'
     if not arg_okay(time_str, type = IDL_STRING) then Message, WAVE_Std_Message('time_str', /STR)    
     nT = N_ELEMENTS(TIME_Str)
     
@@ -222,18 +222,18 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
     GEN_str_time, ret, tt, DSTR=DATE_Str, DMASK='DD.MM.YYYY',TSTR=time_str,TMASK='HH:MM:SS' 
     my_time = LONG64(tt.qt)* D_QMS + LONG64(tt.hour)* H_QMS + LONG64(tt.minute)* M_QMS + LONG64(tt.second)* S_QMS
         
-  endif else if KEYWORD_SET(year) or keyword_set(month) or $
-                 keyword_set(day) or keyword_set(hour)  or $
-                 keyword_set(minute) or  keyword_set(second) or $
-                 keyword_set(millisecond) then begin  ; Make an absolute date from gregorian params
+  endif else if N_ELEMENTS(year) ne 0 or N_ELEMENTS(month)  ne 0 or $
+                N_ELEMENTS(day) ne 0 or N_ELEMENTS(hour) ne 0  or $
+                N_ELEMENTS(minute) ne 0 or N_ELEMENTS(second) ne 0 or $
+                N_ELEMENTS(millisecond) ne 0 then begin  ; Make an absolute date from gregorian params
   
-    if not keyword_set(year) then year = 1899L
-    if not keyword_set(month) then month = 12L
-    if not keyword_set(day) then day = 30L
-    if not keyword_set(hour) then hour = 0L
-    if not keyword_set(minute) then minute = 0L
-    if not keyword_set(second) then second = 0L
-    if not keyword_set(millisecond) then millisecond = 0L
+    if N_ELEMENTS(year) eq 0 then year = 1899L
+    if N_ELEMENTS(month) eq 0 then month = 12L
+    if N_ELEMENTS(day) eq 0 then day = 30L
+    if N_ELEMENTS(hour) eq 0 then hour = 0L
+    if N_ELEMENTS(minute) eq 0 then minute = 0L
+    if N_ELEMENTS(second) eq 0 then second = 0L
+    if N_ELEMENTS(millisecond) eq 0 then millisecond = 0L
     
     if not arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('year', /NUMERIC)
     if not arg_okay(month, /NUMERIC) then Message, WAVE_Std_Message('month', /NUMERIC)
@@ -416,11 +416,11 @@ function REL_TIME, refTime, DAY = day, HOUR=hour, MINUTE=minute, SECOND=second, 
   
   if ~check_WTIME(refTime, OUT_QMS=outDate, WAS_ABSDATE=was_absdate) then Message, WAVE_Std_Message('refTime', /ARG)
   
-  if not keyword_set(day) then day = 0L
-  if not keyword_set(hour) then hour = 0L
-  if not keyword_set(minute) then minute = 0L
-  if not keyword_set(second) then second = 0L
-  if not keyword_set(millisecond) then millisecond = 0L
+  if N_ELEMENTS(day) eq 0 then day = 0L
+  if N_ELEMENTS(hour) eq 0 then hour = 0L
+  if N_ELEMENTS(minute) eq 0 then minute = 0L
+  if N_ELEMENTS(second) eq 0 then second = 0L
+  if N_ELEMENTS(millisecond) eq 0 then millisecond = 0L
   
   n_day = n_elements(day)
   n_hour = n_elements(hour)
@@ -561,7 +561,7 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
   ; Standard error handling.
   ON_ERROR, 2
   
-  if KEYWORD_SET(qms) then begin ; Make an absolute date from QMS
+  if N_ELEMENTS(qms) ne 0 then begin ; Make an absolute date from QMS
   
     if not arg_okay(qms, /NUMERIC) then message, WAVE_Std_Message('qms', /NUMERIC)
     
@@ -590,7 +590,7 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
     
     my_time.qt = qt
         
-  endif else if keyword_set(REFdate) then begin
+  endif else if N_ELEMENTS(REFdate) ne 0  then begin
   
     if ~check_WTIME(REFdate, OUT_ABSDATE=_rd) then Message, WAVE_Std_Message('startTime', /ARG)
   
@@ -598,13 +598,13 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
     
     if n_ref eq 1 then Begin
     
-      if not keyword_set(year) then year = 0L
-      if not keyword_set(month) then month = 0L
-      if not keyword_set(day) then day = 0L
-      if not keyword_set(hour) then hour = 0L
-      if not keyword_set(minute) then minute = 0L
-      if not keyword_set(second) then second = 0L
-      if not keyword_set(millisecond) then millisecond = 0L
+      if n_elements(year) eq 0 then year = 0L
+      if n_elements(month) eq 0 then month = 0L
+      if n_elements(day) eq 0 then day = 0L
+      if n_elements(hour) eq 0 then hour = 0L
+      if n_elements(minute) eq 0 then minute = 0L
+      if n_elements(second) eq 0 then second = 0L
+      if n_elements(millisecond) eq 0 then millisecond = 0L
       
       n_year = n_elements(year)
       n_month = n_elements(month)
@@ -638,12 +638,12 @@ function MAKE_ABS_DATE, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minut
       endfor
     endelse
   
-  endif else if KEYWORD_SET(year) or keyword_set(month) or $
-                keyword_set(day) or keyword_set(hour)  or $
-                keyword_set(minute) or  keyword_set(second) or $
-                keyword_set(millisecond) or  keyword_set(tnt_t) or $
-                keyword_set(date_str) or  keyword_set(time_str) or $
-                keyword_set(julian_day) then begin  ; Make an absolute date from other cases
+  endif else if N_ELEMENTS(year) ne 0 or N_ELEMENTS(month)  ne 0 or $
+                N_ELEMENTS(day) ne 0 or N_ELEMENTS(hour) ne 0  or $
+                N_ELEMENTS(minute) ne 0 or N_ELEMENTS(second) ne 0 or $
+                N_ELEMENTS(millisecond) ne 0 or N_ELEMENTS(tnt_t) ne 0 or $
+                N_ELEMENTS(date_str) ne 0 or N_ELEMENTS(time_str) ne 0 or $
+                N_ELEMENTS(julian_day) ne 0 then begin  ; Make an absolute date from other cases
                   
     myqms = QMS_TIME(YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, $
                       MILLISECOND = millisecond,TNT_T=tnt_t, DATE_STR=date_str, TIME_STR = time_str, JULIAN_DAY=julian_day)
@@ -736,12 +736,12 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   if max(ns) gt 1 then MESSAGE, 'arguments have to be scalars!.'    
   if N_ELEMENTS(outDate) ne 1 then MESSAGE, 'refDate has to be a scalar!'
   
-  if keyword_set(year) then begin
+  if n_elements(year) ne 0 then begin
     if not arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('year', /NUMERIC)
     outDate = MAKE_ABS_DATE(YEAR=outDate.year+year, MONTH=outDate.month, DAY=outDate.day, HOUR=outDate.hour, MINUTE=outDate.minute, SECOND=outDate.second, MILLISECOND=outDate.millisecond)
   end
   
-  if keyword_set(month) then begin
+  if n_elements(month) ne 0 then begin
     if not arg_okay(month, /NUMERIC) then  Message, WAVE_Std_Message('month', /NUMERIC)
     newmonth = outDate.month + LONG(month)
     
@@ -762,7 +762,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
     
   endif
   
-  if keyword_set(day) then begin
+  if n_elements(day) ne 0 then begin
   
     if not arg_okay(day, /NUMERIC) then  Message, WAVE_Std_Message('day', /NUMERIC)
     
@@ -772,7 +772,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   endif
   
   
-  if keyword_set(hour) then begin
+  if n_elements(hour) ne 0 then begin
   
     if not arg_okay(hour, /NUMERIC) then  Message, WAVE_Std_Message('hour', /NUMERIC)
     
@@ -782,7 +782,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   endif
   
   
-  if keyword_set(minute) then begin
+  if n_elements(minute) ne 0 then begin
   
     if not arg_okay(minute, /NUMERIC) then  Message, WAVE_Std_Message('minute', /NUMERIC)
     
@@ -791,7 +791,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
     
   endif
   
-  if keyword_set(second) then begin
+  if n_elements(second) ne 0 then begin
   
     if not arg_okay(second, /NUMERIC) then  Message, WAVE_Std_Message('second', /NUMERIC)
     
@@ -800,7 +800,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
     
   endif
   
-  if keyword_set(millisecond) then begin
+  if n_elements(millisecond) ne 0 then begin
   
     if not arg_okay(millisecond, /NUMERIC) then  Message, WAVE_Std_Message('millisecond', /NUMERIC)
     
@@ -810,6 +810,7 @@ function MAKE_REL_DATE, refDate, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MIN
   endif
   
   if WAS_QMS then outDate = outDate.qms
+  
   return, outDate
   
 end
@@ -892,7 +893,7 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd, MASK = mask
   ; Standard error handling.
   ON_ERROR, 2
   
-  if N_ELEMENTS(time) eq 0 then mytime = MAKE_ABS_DATE()
+  if N_ELEMENTS(time) eq 0 then time = QMS_TIME()
   
   if ~check_WTIME(time, OUT_ABSDATE=mytime) then Message, WAVE_Std_Message('time', /ARG)
   
@@ -1131,11 +1132,11 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
   
   ; Standard error handling.
   ON_ERROR, 2
-    
+  
   tstep = {TIME_STEP}
   
   if N_ELEMENTS(dms) ne 0 then begin
-    
+  
     if not arg_okay(dms, /NUMERIC) then Message, WAVE_Std_Message('dms', /NUMERIC)
     if not arg_okay(dms, /SCALAR) then Message, WAVE_Std_Message('dms', /SCALAR)
     
@@ -1147,16 +1148,16 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
     tstep.minute = LONG(tstep.dms - lday - lhour) / M_QMS
     lmin = tstep.minute*M_QMS
     tstep.second =  LONG(tstep.dms - lday - lhour - lmin) / S_QMS
-    tstep.millisecond =  LONG(tstep.dms - lday - lhour - lmin - tstep.second * S_QMS)    
+    tstep.millisecond =  LONG(tstep.dms - lday - lhour - lmin - tstep.second * S_QMS)
     
   endif else begin
-
-    if not keyword_set(day) then day = 0L
-    if not keyword_set(hour) then hour = 0L
-    if not keyword_set(minute) then minute = 0L
-    if not keyword_set(second) then second = 0L
-    if not keyword_set(millisecond) then millisecond = 0L    
-
+  
+    if N_ELEMENTS(day) eq 0 then day = 0L
+    if N_ELEMENTS(hour) eq 0 then hour = 0L
+    if N_ELEMENTS(minute) eq 0 then minute = 0L
+    if N_ELEMENTS(second) eq 0 then second = 0L
+    if N_ELEMENTS(millisecond) eq 0 then millisecond = 0L
+    
     if not arg_okay(day, /NUMERIC) then Message, WAVE_Std_Message('day', /NUMERIC)
     if not arg_okay(day, /SCALAR) then Message, WAVE_Std_Message('day', /SCALAR)
     if not arg_okay(hour, /NUMERIC) then Message, WAVE_Std_Message('hour', /NUMERIC)
@@ -1169,9 +1170,9 @@ function MAKE_TIME_STEP, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLI
     if not arg_okay(millisecond, /SCALAR) then Message, WAVE_Std_Message('millisecond', /SCALAR)
     
     tstep = MAKE_TIME_STEP(DMS = LONG64(day)* D_QMS + LONG64(hour)* H_QMS + LONG64(minute)* M_QMS + LONG64(second)* S_QMS + LONG64(millisecond))
-        
+    
   endelse
-
+  
   return, tstep
   
 end
@@ -1248,11 +1249,11 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
   ;KEYWORDS Handling
   mode = 0
   
-  if keyword_set(timestep) then mode = 1
+  if N_ELEMENTS(timestep) ne 0 then mode = 1
   if keyword_set(year) then mode = 2
   if keyword_set(month) then mode = 3
   if keyword_set(month) and keyword_set(year) then mode = 0
-  if not keyword_set(nsteps) then mode = 0
+  if N_ELEMENTS(nsteps) eq 0 then mode = 0
   
   
   CASE mode OF
@@ -1376,7 +1377,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
       
   if t1 le t2 then sign = 1 else sign = -1
   
-  if KEYWORD_SET(timestep) then begin
+  if N_ELEMENTS(timestep) ne 0 then begin
   
     if not arg_okay(timestep, STRUCT={TIME_STEP}) then Message, WAVE_Std_Message('timestep', STRUCT={TIME_STEP})    
     if sign ne LONG(ABS(timestep.dms)/timestep.dms) then  Message, '$timestep not compatible with start and end times'
@@ -1385,7 +1386,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
     qms = INDGEN(nsteps, /L64) * timestep.dms + t1
     if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = qms else serie = MAKE_ABS_DATE(qms = qms)
           
-  endif else if KEYWORD_SET(month) then begin
+  endif else if N_ELEMENTS(month) ne 0 then begin
   
     if sign ne LONG(ABS(month)/month) then Message, '$month not compatible with start and end times'
     
@@ -1412,7 +1413,7 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
     if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = serie.qms
     nsteps = n_elements(serie)
     
-  endif else if KEYWORD_SET(year) then begin
+  endif else if N_ELEMENTS(year) ne 0 then begin
   
     if sign ne LONG(ABS(year)/year) then Message, '$year not compatible with start and end times'
     
@@ -1830,10 +1831,10 @@ function TS_MEAN_STATISTICS, data, time, MISSING = missing, AGG_METHOD = agg_met
   _data = _data[sor]
   
   ; Automatic aggregation
-  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
+  if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
   
-    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
-    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
+    if N_ELEMENTS(hour) ne 0 then qms = H_QMS * LONG64(HOUR) $
+    else if N_ELEMENTS(day) ne 0 then qms = D_QMS * LONG64(DAY)
     
     qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
     qmsend = CEIL(qms1[n-1] / double(qms)) * qms
@@ -2003,10 +2004,10 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   _data = _data[sor]
   
   ; Automatic aggregation
-  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
+  if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
   
-    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
-    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
+    if N_ELEMENTS(hour) ne 0 then qms = H_QMS * LONG64(HOUR) $
+    else if N_ELEMENTS(day) ne  0 then qms = D_QMS * LONG64(DAY)
     
     qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
     qmsend = CEIL(qms1[n-1] / double(qms)) * qms
@@ -2024,7 +2025,7 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   endif else message, 'One of the positionnal keywords must be set.'
   
   dataTypeName = Size(_data, /TNAME)
-  _missing = KEYWORD_SET(MISSING)
+  _missing = N_ELEMENTS(missing) ne 0
   CASE dataTypeName OF
     'FLOAT': begin
       if _missing then miss = float(missing) else miss = !VALUES.F_NAN
@@ -2185,10 +2186,10 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   am = CAL_agg_method(AGG_METHOD)
   
   ; Automatic aggregation
-  if KEYWORD_SET(hour) or KEYWORD_SET(day) then begin
+  if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
   
-    if KEYWORD_SET(hour) then qms = H_QMS * LONG64(HOUR) $
-    else if KEYWORD_SET(day) then qms = D_QMS * LONG64(DAY)
+    if N_ELEMENTS(hour) ne 0 then qms = H_QMS * LONG64(HOUR) $
+    else if N_ELEMENTS(day) ne 0 then qms = D_QMS * LONG64(DAY)
     
     qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
     qmsend = CEIL(qms1[n-1] / double(qms)) * qms

@@ -880,48 +880,42 @@ end
 ;+
 ; :Description:
 ;    Generic routine to transform any georeferenced grid without projection
-;    into the object grid using nearest neighborhood. (for example lon and lat grid from swath files)
-;       
-;    The default method is to transform it forwards: the LatLon points are transformed into
-;    the grid and the data value is affected to the neirest grid point. This method is not
-;    recomended because the end grid may not be filled entirely if its resolution is finer
-;    than the lat-lon grid, for example.
-;       
-;    The second method (BACKWARDS keyword) transforms the grid points into lat-lon and looks
-;    for the neirest points into the input lat-lon grid to perform interpolation. This method 
-;    is recomended. However, this implies using NN interpolation algorithm into irregular grids,
-;    which is very demanding in both memory and processor use. If your LatLon arrays are too
-;    large, the program may lag or even go out of memory.
-;       
-;    TODO: Update routine: ! 05.11.2010: BACKWARDS METHOD NOT IMPLEMENTED YET !
-;       
+;    (for example lon and lat grid from swath files) into the object grid. 
+;              
+;    The default method uses GRIDDATA to perform interpolation. This method 
+;    is recommended. However, this implies using interpolation algorithms from
+;    the irregular grid to the regular arrival grid, which is demanding in both memory 
+;    and processor use. If your coordinates arrays are too large, the program may lag 
+;    or even go out of memory. Moreover, you should be aware that there is no way to
+;    know if a grid point is inside our outside the lonlat coordinates, so that 
+;    extrapolation may be performed without warning. Be sure that the arrival grid
+;    allways lies inside the data you want to interpolate.        
+;    
 ;       
 ; :Categories:
 ;         WAVE/OBJ_GIS
 ;
 ; :Params:
 ;    data: in, required, type = float array
-;          the data to map on the object grid. The two first dimenstions are X and Y, the third is handled as time or Z dim 
-;    src_datum: in, required, type = {TNT_DATUM}
-;               the datum of the grid
-;    src_lon: in, required, type = float array
+;          the data to map on the object grid. The two first dimenstions are X and Y, the third is handled as time or Z dim
+;    lon: in, required, type = float array
 ;             the longitudes of the data
-;    src_lat: in, required, type = float array
+;    lat: in, required, type = float array
 ;             the latitudes of the data
-;
+;               
 ; :Keywords:
+;    SRC: in, optional, type = {TNT_DATUM}
+;               the datum of the lonlats (default is WGS-84)
 ;    MISSING: in, optional
-;             value to set to missing values in the final grid. 0. is the default value
-;    BACKWARDS: in, optional
-;               set to use the backwards method (NOT IMPLEMENTED YET)
+;             value to set to missing values in the final grid
 ;
 ; :Returns:
-;    the transformed data array in the grid (same dims)
+;    the transformed data array in the grid (same X Y dims as the grid)
 ;
 ; :History:
-;      Written by FaM, 2010.
+;      Written by FaM, 2011.
 ;-
-function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING = missing, BACKWARDS = backwards
+function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing                 
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -934,47 +928,42 @@ function w_Grid2D::map_lonlat_data, data, src_datum, src_lon, src_lat, MISSING =
     RETURN, -1
   ENDIF
     
-  if not arg_okay(src_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('src_datum', STRUCT={TNT_DATUM})
-  if ~KEYWORD_SET(missing) then missing = 0
+  if not arg_okay(src, STRUCT={TNT_DATUM}) then begin
+   GIS_make_datum, ret, src, NAME = 'WGS-84'
+  endif
   
-  siz = SIZE(data)
+  if N_ELEMENTS(missing) eq 0 then begin
+      dataTypeName = Size(data, /TNAME)
+      CASE dataTypeName OF
+        'FLOAT' : missing = !VALUES.F_NAN
+        'DOUBLE': missing = !VALUES.D_NAN
+        'BYTE': missing = 0B
+        ELSE: missing = -999
+      ENDCASE
+  endif 
   
-  if siz[0] eq 1 then nt = 1
-  if siz[0] eq 2 then if siz[1] eq N_ELEMENTS(src_lon) then nt = siz[2] else nt = 1
-  if siz[0] eq 3 then nt = siz[3]
+  siz_src = SIZE(data) 
+  if siz_src[0] le 2 then nt = 1 else if siz_src[0] eq 3 then nt = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
+  nc = N_ELEMENTS(data[*,*,0])
   
-  if KEYWORD_SET(BACKWARDS) then begin
-   ;TODO: Update routine: implement this (idea is already here)
-  endif else begin
-  
-    ntot =  N_ELEMENTS(data[*,*,0])
-    tot = INDGEN(ntot, /LONG)
-    self->transform_LonLat, src_lon[tot], src_lat[tot], src_datum, i, j, /NEAREST
-    
-    data_grid = DBLARR(self.tnt_c.nx, self.tnt_c.ny, nt)
-    data_grid[*] = missing
-    
-    pok = WHERE(i ge 0 and j ge 0 and i lt self.tnt_c.nx and j lt self.tnt_c.ny, cnt)
-    if cnt ne 0 then begin
-      i = i[pok]
-      j = j[pok]
-      tot = tot[pok]
-    endif
-    
-    if nt eq 1 then begin
-      data_grid[i, j] = data[tot]
-    endif else begin
-      tmp = DBLARR(self.tnt_c.nx, self.tnt_c.ny)
-      for i = 0L, nt-1 do begin
-        tmp *= 0
-        tmp[*] =  missing
-        if siz[0] eq 2 then tmp[i, j] = (reform(data[*,i]))[tot] else tmp[i, j] = (reform(data[*,*,i]))[tot]
-        data_grid[*,*,i] = tmp
-      endfor
-    endelse
-  endelse
-  
-  return, data_grid
+  if nc ne N_ELEMENTS(lon) or nc ne N_ELEMENTS(lat) $ 
+   then message, 'Data and coordinates incompatible'
+   
+  ; Define output size
+  type = SIZE(data,/TYPE)
+  tdata = MAKE_ARRAY(self.tnt_c.nx, self.tnt_c.ny, nt, TYPE=type)
+  tdata[*] = missing
+   
+  self->transform_LonLat, lon, lat, src, i, j
+  TRIANGULATE, i, j, triangles
+  for t=0, nt-1 do begin
+    temp = tdata[*,*,t]
+    temp[*] = GRIDDATA(i, j, data, START=[0D,0D], DELTA=[1D,1D], DIMENSION=[self.tnt_c.nx,self.tnt_c.ny], $
+    TRIANGLES=triangles, /NEAREST_NEIGHBOR)        
+    tdata[*,*,t] = TEMPORARY(temp)
+  endfor   
+
+  return, reform(tdata)
   
 end
 
@@ -1060,7 +1049,8 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
         'BYTE': missing = 0B
         ELSE: missing = -999
       ENDCASE
-  endif 
+  endif
+  
   bili = KEYWORD_SET(BILINEAR)
   cubic = KEYWORD_SET(CUBIC)
   if ~cubic and ~bili then NEAREST = TRUE ;Otherwize, we need the decimals of course
@@ -1372,7 +1362,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
   
   if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
   
-  if ~KEYWORD_SET(shp_src) then begin
+  if N_ELEMENTS(shp_src) eq 0 then begin
    MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
   endif
