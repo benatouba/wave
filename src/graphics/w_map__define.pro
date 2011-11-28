@@ -2328,10 +2328,7 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   @WAVE.inc
   
   if KEYWORD_SET(WINDOW) and ARG_PRESENT(position) then begin ; we have to use a trick to give POSITION as output, too
-    cgWID = cgQuery(/CURRENT, COUNT=wincnt)
-    IF wincnt EQ 0 THEN Message, 'No active cgWindow to plot the map into...'
     tmp = !D.window
-    wset, cgWID
     cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
     xwin = !D.WINDOW
     cgImage, *self.img, /NORMAL, POSITION = position
