@@ -2104,7 +2104,24 @@ pro TEST_GRIDS
    if TOTAL(ABS(map-should)) ne 0 then error+=1
    
    undefine, grid_one, grid_two   
-   
+      
+;   grid_one  = OBJ_NEW('w_Grid2D', x0=95.-(0.5), y0=30.+(0.5), nx=5, ny=5, dx=0.25, dy=0.25, PROJ=proj)
+;   grid_two  = grid_one->reGrid(FACTOR=10)   
+;   grid_one->Get_LonLat, lon, lat
+;   data = lon+lat  
+;   map = OBJ_NEW('w_Map', grid_two, YSIZE=900) 
+;  GIS_make_datum, ret, src, NAME = 'WGS-84'
+;  cgLoadCT, 33  
+;  ; Make a vector of 16 points, A[i] = 2pi/16:
+;  ; Define the symbol to be a unit circle with 16 points,
+;  ; and set the filled flag:
+;  A = FINDGEN(17) * (!PI*2/16.)
+;  USERSYM, COS(A), SIN(A), /FILL  
+;  ok = map->set_ll_data(data, lon, lat)
+;  ok = map->set_plot_params(N_LEVELS=126)
+;  ok = map->set_point(lon, lat, SRC=src, PSYM=8, SYMSIZE=1.)  
+;  w_standard_2d_plot, map, PNG='test_final.png', IM_RESIZE=100   
+;   undefine, grid_one, grid_two, map 
    
    if error ne 0 then message, '% TEST_GRIDS NOT passed', /CONTINUE else print, 'TEST_GRIDS passed'
 

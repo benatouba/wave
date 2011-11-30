@@ -1,7 +1,8 @@
 ; docformat = 'rst'
 ;+
 ;
-;This bundle of procedures is a tool set available to the WAVE user for reading ASCII files from Campbell loggers
+;  This bundle of procedures is a tool set available to the WAVE user for reading 
+;  ASCII files from Campbell loggers, aggregate the data, fill data gaps, etc. 
 ;
 ; :Author:
 ;       Fabien Maussion::
@@ -12,7 +13,8 @@
 ;       WAVE V0.1
 ;       
 ; :History:
-;     Last modification:  10-Feb-2011 FaM
+;     Written by FaM, 2011.
+;     
 ;-
 
 
@@ -23,97 +25,13 @@
 ; :History:
 ;     Written by FaM, 2011.
 ;
-;
 ;-
 pro AWS_Init
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
-  
-  struct = {W_VAR, $
-           varname: '', $
-           nt: 0L, $
-           time: PTR_NEW(), $
-           data: PTR_NEW(), $
-           unit: '', $
-           type: 0L, $
-           regular: FALSE, $
-           cumul: FALSE, $
-           mean: FALSE, $
-           missing: PTR_NEW() $
-           }
-           
-  struct = {W_AWS, $
-           station_name: '', $
-           nt  : 0LL, $
-           loc_x : 0D, $
-           loc_y : 0D, $
-           src: PTR_NEW(), $
-           step_info: '', $
-           missing: PTR_NEW(), $
-           time: PTR_NEW(), $
-           nvar: 0L, $
-           varnames: PTR_NEW(), $
-           variables: PTR_NEW() $
-           }    
 
-end
-
-;+
-; :Description:   
-;    This is to clean the named structure {W_VAR}
-;   
-; :History:
-;     Written by FaM, 2011.
-;
-;
-;-
-pro AWS_clean_w_Var, struct
-
-  ; Set Up environnement
-  COMPILE_OPT idl2
-  @WAVE.inc
-  
-  if ~ arg_okay(struct, STRUCT={W_VAR}) then return ; nothing to do
-  
-  for i = 0, N_ELEMENTS(struct) do begin
-    temp = struct[i]
-    PTR_FREE, temp.data
-    PTR_FREE, temp.time
-    PTR_FREE, temp.missing
-  endfor
-  
-end
-
-;+
-; :Description:   
-;    This is to clean the named structure {W_AWS} (and all contained {W_VAR} structures, too)
-;   
-; :History:
-;     Written by FaM, 2011.
-;
-;
-;-
-pro AWS_clean_w_AWS, struct
-
-  ; Set Up environnement
-  COMPILE_OPT idl2
-  @WAVE.inc
-  
-  if ~ arg_okay(struct, STRUCT={W_AWS}) then return ; nothing to do
-  
-  for i = 0, N_ELEMENTS(struct) do begin
-    temp = struct[i]
-    PTR_FREE, temp.src
-    PTR_FREE, temp.time
-    PTR_FREE, temp.varnames
-    PTR_FREE, temp.missing
-    variables = *temp.variables
-    for j=0, N_ELEMENTS(variables)-1 do AWS_clean_w_Var, variables[i]
-    PTR_FREE, temp.variables
-  endfor
-  
 end
 
 ;+
@@ -130,7 +48,7 @@ end
 ;     Written by FaM, 2010.
 ;
 ;-
-function AWS_parse_time, stimes
+function AWS_parse_logger_time, stimes
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -144,6 +62,28 @@ function AWS_parse_time, stimes
     
   return, QMS_TIME(YEAR=STRMID(stimes,0+s,4), MONTH=STRMID(stimes,5+s,2),DAY=STRMID(stimes,8+s,2), $
     HOUR=STRMID(stimes,11+s,2),MINUTE=STRMID(stimes,14+s,2),SECOND=STRMID(stimes,17+s,2))
+
+end
+
+function AWS_time_is_valid, stimes
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    RETURN, 0
+  ENDIF 
+  
+  if ~arg_okay(stimes, TYPE = IDL_SRING) then Message, WAVE_Std_Message('stimes', /STRING)
+  
+  isthere=WHERE(BYTE(stimes[0]) EQ ((BYTE('"'))[0]), count)
+  if count eq 0 then s = 0 else s = 1
+  dummy = QMS_TIME(YEAR=STRMID(stimes,0+s,4), MONTH=STRMID(stimes,5+s,2),DAY=STRMID(stimes,8+s,2), $
+    HOUR=STRMID(stimes,11+s,2),MINUTE=STRMID(stimes,14+s,2),SECOND=STRMID(stimes,17+s,2))
+    
+  return, 1
 
 end
 
@@ -207,7 +147,7 @@ function AWS_parse_file, FILE_PATH = file_path, TPL_path = TPL_PATH, DELTA_QMS =
           
           if str_equiv(names[i]) eq 'TIMESTAMP' then begin
           
-            time = AWS_PARSE_TIME(ascii_data.(i))
+            time = AWS_parse_logger_time(ascii_data.(i))
             nt = N_ELEMENTS(time)
             
             if KEYWORD_SET(delta_qms) then time = time + delta_qms
@@ -297,15 +237,17 @@ function AWS_auto_template, FILE_PATH = file_path
      readf, lun, line
      k += 1 
      if (BYTE(line))[0] eq BYTE('%') then continue
+     line = utils_replace_string(line, ',:', ':') 
      els = utils_replace_string(STRSPLIT(line, ',' ,/EXTRACT, /PRESERVE_NULL), '"', '')     
      if m eq 0 then var_names = els
      if m eq 1 then var_units = els
      if m eq 2 then var_type = els
-     if m ge 3 then stop_header = TRUE
+     if m ge 3 and AWS_time_is_valid(els[0]) then stop_header = TRUE
      m += 1 
   endwhile
   FREE_LUN, lun
-
+  var_names = utils_replace_string(var_names, '(', '_')  
+  var_names = utils_replace_string(var_names, ')', '_')  
   nf = N_ELEMENTS(var_names)
   if nf ne N_ELEMENTS(var_units) then message, 'Units and variables do not match.'
   if nf ne N_ELEMENTS(var_type) then message, 'Types and variables do not match.'
@@ -381,7 +323,7 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
   names = tag_names(ascii_data)
   
   foundtimes = FALSE
-  
+   
   for i=0,n-1 do begin ; Go threw all infos
   
     case size(ascii_data.(i),/TYPE) of
@@ -389,8 +331,7 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
     7 : begin ; If this is a string, it must be time. Otherwise, we don't now how to handle it.
           
           if str_equiv(names[i]) eq 'TIMESTAMP' then begin
-          
-            time = AWS_PARSE_TIME(ascii_data.(i))
+            time = AWS_parse_logger_time(ascii_data.(i))
             nt = N_ELEMENTS(time)
             
             if KEYWORD_SET(delta_qms) then time = time + delta_qms
@@ -398,11 +339,8 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
             ;create new structure/ add entry to existing structure
             if n_elements(ostr) eq 0 then ostr = create_struct('time',time,'nt',nt) $
             else  ostr = create_struct(ostr,'time',time,'nt',nt)
-            
             foundtimes = TRUE
-            
           endif
-          
         end
         
     ; check for all other data types
@@ -410,6 +348,7 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
             ;create new structure/ add entry to existing structure
             if n_elements(ostr) eq 0 then ostr = create_struct(names[i],ascii_data.(i)) $
             else  ostr = create_struct(ostr,names[i],ascii_data.(i))
+            if N_ELEMENTS(units) eq 0 then units=template.fieldUnits[i] else units=[units,template.fieldUnits[i]] 
           end
     endcase
 
@@ -418,7 +357,7 @@ function AWS_parse_file_auto, FILE_PATH = file_path, DELTA_QMS = delta_qms
  
   if foundtimes eq FALSE then message, 'The given structure did not contain a TIMESTAMP field. I would be happy to find one'
   
-  ostr = create_struct(ostr,'unit', template.fieldUnits)
+  ostr = create_struct(ostr,'unit',units)
   
   return, ostr
 
@@ -477,6 +416,7 @@ function AWS_crop_struct, struct, t0 = t0, t1 = t1
   for i=0,n-1 do begin ; Go threw all infos
   
     if str_equiv(names[i]) eq 'NT' then continue
+    if str_equiv(names[i]) eq 'UNIT' then continue
     
     ;create new structure/ add entry to existing structure
     if n_elements(ostr) eq 0 then ostr = create_struct(names[i],(struct.(i))[p0:p1]) $
@@ -520,6 +460,7 @@ function AWS_merge_struct, struct1, struct2
   for i=0,n-1 do begin ; Go threw all infos
   
     if str_equiv(names[i]) eq 'NT' then continue
+    if str_equiv(names[i]) eq 'UNIT' then continue
     j = where(str_equiv(names2) eq str_equiv(names[i]), cnt)
     if cnt ne 1 then message, 'Problem.'
     
@@ -530,7 +471,8 @@ function AWS_merge_struct, struct1, struct2
   ; End of Loop
   endfor
   
-  return, create_struct(ostr,'nt', N_ELEMENTS(ostr.time))
+  ostr =  create_struct(ostr,'NT', N_ELEMENTS(ostr.time))
+  return, create_struct(ostr, 'UNIT', struct1.unit)
   
 end
 
@@ -569,6 +511,7 @@ function AWS_interp_struct, struct
   for i=0,n-1 do begin ; Go threw all infos
   
     if str_equiv(names[i]) eq 'NT' then continue
+    if str_equiv(names[i]) eq 'UNIT' then continue
     if str_equiv(names[i]) eq 'TIME' then continue
    
     ;add entry to existing structure
@@ -577,7 +520,62 @@ function AWS_interp_struct, struct
   ; End of Loop
   endfor
   
-  return, create_struct(ostr,'NT', N_ELEMENTS(ostr.time))
+  ostr =  create_struct(ostr,'NT', N_ELEMENTS(ostr.time))
+  return, create_struct(ostr, 'UNIT', struct.unit)
+  
+end
+
+;+
+; :Description:
+;    Reads a tag from an AWS structure.
+;    
+;    (TODO: make it mor beautiful)
+;
+; :Params:
+;    struct: in, required, Type=struct
+;            the AWS structure to read
+;    tag: in, required, Type=str
+;         the required tag name
+;    data: out
+;          the corresponding data
+;    time: out
+;          the time (qms)
+;    unit: out
+;          the variable unit
+;
+;
+;
+; :Returns:
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+pro AWS_read_tag, struct, tag, data, time, unit
+ 
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  ON_ERROR, 2
+  
+  ; data
+  tags = tag_names(struct)
+  p = WHERE(str_equiv(tags) eq str_equiv(tag), cnt)
+  if cnt ne 1 then Message, 'Tag not found in structure.'  
+  data=struct.(p)
+  time=struct.time
+  
+  ; unit (ugly programming)
+  ptr = WHERE(str_equiv(tags) ne str_equiv('NT'), cnt)
+  if cnt ne 0 then tags_wt = tags[ptr]
+  ptr = WHERE(str_equiv(tags_wt) ne str_equiv('TIME'), cnt)
+  if cnt ne 0 then tags_wt = tags_wt[ptr]
+  ptr = WHERE(str_equiv(tags_wt) ne str_equiv('UNIT'), cnt)
+  if cnt ne 0 then tags_wt = tags_wt[ptr]
+  
+  p = WHERE(str_equiv(tags_wt) eq str_equiv(tag), cnt)
+  unit = struct.unit[p]
   
 end
 
@@ -762,4 +760,95 @@ function AWS_linear_interp, top, bot, top_h, bot_h, H = h
   
   return, a * double(h) + b
   
+end
+
+;-----------------------------------------------------------------------
+;+
+; NAME:
+;       TIB_AWS_write_file
+;
+; PURPOSE:
+;       TIB_AWS_write_file writes an ascii file in the usual AWS file format
+;
+; CATEGORY:
+;       AWS
+;
+; CALLING SEQUENCE:
+;       ATIB_AWS_write_file, FILE = file, time, data, tag, unit, type, TITLE = title
+;
+; KEYWORDS:
+;       FILE: the path of the file to create. if not given, a dialog window will open
+;       TITLE: the header line of the file.  if not given, a std text will be written (not good)
+;
+; INPUT:
+;       time: the time serie in absolute date format. (one dimensional array of dimension N)
+;       data: the data to write (two dimensional array of dimension N, V)
+;       tag: string array with the variable names (one dimensional array of dimension V)
+;       unit : string array with the variable units (one dimensional array of dimension V)
+;       type: string array with the variable types ('float' or 'long')
+;
+; OUTPUT:
+;       an scii file
+;
+;-
+;-----------------------------------------------------------------------
+pro AWS_write_file, data_struct, TITLE = title, FILE = file
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+
+  if ~KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please name the file you want to create')
+  
+  _d = data_struct
+  
+  time = _d.time
+  n = _d.nt  
+  unit = _d.unit
+  utils_remove_tag, _d, 'TIME'
+  utils_remove_tag, _d, 'NT'
+  utils_remove_tag, _d, 'UNIT'
+   
+  tags = TAG_NAMES(_d)
+  nvar = N_ELEMENTS(tags)
+  
+  openw, id, file, /GET_LUN
+  
+  if ~KEYWORD_SET(title) then title = '% File created with IDL' else title = '%' + title
+  printf, id, title
+  
+  sep = '","'
+  
+  text = '"TIMESTAMP","'
+  for i = 0, nvar - 2 do text +=tags[i] + sep
+  text += tags[nvar- 1]  + '"'
+  printf, id, text
+ 
+  text = '"-","'
+  for i = 0, nvar - 2 do text +=unit[i] + sep
+  text += unit[nvar- 1]  + '"'
+  printf, id, text
+  
+  text = '"string","'
+  for i = 0, nvar - 2 do text += type_name(var_info((_d.(i))[0])) + sep
+  text += type_name(var_info((_d.(nvar-1))[0])) + '"'
+  printf, id, text
+  
+  sep = ','
+  for l = 0, n-1 do begin
+    ;"2011-08-16 12:30:00"  
+    t = TIME_to_STR(time[l], MASK='YYYY-MM-DD HH:TT:SS')
+
+    text = '"' + t + '",'
+    for i = 0, nvar - 1 do begin
+      val = (_d.(i))[l]
+      if var_info(val) eq IDL_FLOAT then v = strcompress(STRING(val,FORMAT = '(F8.3)'),/REMOVE_ALL)
+      if var_info(val) eq IDL_LONG  then v = strcompress(STRING(val,FORMAT = '(I8)'),/REMOVE_ALL)
+      if i lt nvar - 1 then text += v + sep else text += v
+    endfor    
+    printf, id, text
+  endfor
+  
+  close, id
+  FREE_LUN, id
 end
