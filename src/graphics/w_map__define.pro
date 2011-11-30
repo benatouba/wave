@@ -787,7 +787,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
      else if _interval lt 1. then dec_factor = 10. $
       else dec_factor = 1.
   
-    Nlevels = 360 / _interval
+    Nlevels = (180 + 360) / _interval
     levels = INDGEN(Nlevels) * (_interval*dec_factor) - 170 * dec_factor
     p = where(levels le floor(max(Lon * dec_factor)) and levels ge ceil(min(Lon * dec_factor)), cnt)
     if cnt gt 0 then lonlevels = levels[p] / dec_factor

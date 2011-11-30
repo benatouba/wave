@@ -88,42 +88,79 @@ END
 
 ;+
 ; :Description:
-;    Redefine the WRF subset.
+;    Defines a subset of the WRF data. This has two major consequences. First,
+;    the geolocalisation of the WRF object is changed (w_grid2D) accordingly. 
+;    Second, the `w_WRF::get_var` is automatically returning data corresponding
+;    to the chosen subset.
+;    
+;    Call this function without arguments to reset the WRF object to its original
+;    form.
+;    
+;    Internally, the w_Grid2D::set_ROI method is called but the indexes of the
+;    spatially heterogen ROI are then used to create the 
+;    
+;    Currently one can define a subset with 6 different methods::
+;      1. SHAPE: use a .shp file as imput, the ROI is generated using the 
+;                IDLanROI object to transform the vertices into a mask
+;                (don't forget to set the SRC keyword)
+;      2. POLYGON: similar to SHAPE but the polygon is directly specified
+;                 (don't forget to set the SRC keyword)
+;      3. MASK: simply define the ROI using a mask (of dimensions corresponding to the grid)
+;      4. CROPBORDER: remove a certain number of pixels from the borders of the grid
+;      5. GRID: the ROI is defined by the position of another grid within the object grid
+;      6. CORNERS: the ROI is defined by setting the LL and UR corners of the desired subset
+;                 (don't forget to set the SRC keyword)
 ;
-; :Categories:
-;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;       SUBSET_LL : in, optional, type = float vector 
-;                   set it to the desired subset corners to automatically subset the data.
-;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
-;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : in, type = long vector
-;                   Four elements array::              
-;                   first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
-;                   second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
-;                   third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
-;                   fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
-;                   Unless you know what you do, it should not be set manually but 
-;                   retrieved using the 'define_subset' method.
-;                   
-;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
-;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
-;                   
-;       CROPCHILD: in, optional
-;                  set this keyword to crop the grid to the area covered by its child domain (if any)
-;                  
-;       CROPBORDER: in, optional
-;                  set this keyword to crop the grid of CROPBORDER elements on each side
-;    
+;    SHAPE: in, type = string
+;           the shapefile to read (.shp), coordinate system defined by `SRC`
+;    POLYGON: in, type = array
+;             not implemented yet, coordinate system defined by `SRC`
+;    MASK: in, type = array
+;          a mask of the desired ROI (dimensions must match the grid)
+;    CROPBORDER: in, type = long
+;                number of pixels to remove from each border
+;    GRID: in, type = w_Grid2D
+;          a grig object
+;    CORNERS: in, type = array 
+;            LL and UR corners of the desired subset ([XLL,YLL,XDR,YDR]), coordinate system defined by `SRC`
+;    NO_ERASE: in, type = boolean
+;              set this keyword to update the ROI in place of replacing it
+;    SRC: in, optional
+;         the polygon or shape coordinate system (datum or proj) default is WGS-84
+;    REMOVE_ENTITITES:in, optional, type = long
+;                     an array containing the id of the shape entities to remove from the shape
+;                     All other entities are plotted normally.
+;    KEEP_ENTITITES:in, optional, type = long
+;                   an array containing the id of the shape entities to keep for the shape. 
+;                   All other entities are ignored.
+;    ROI_MASK_RULE: Set this keyword to an integer specifying the rule used to determine whether
+;                   a given pixel should be set within the mask when computing a mask with
+;                   polygons or shapes. Valid values include::
+;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
+;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
+;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set. This is the default.
+;
+; :Returns:
+;   1 if the subset has been set correctly, 0 if not
+;
 ; :History:
-;     Written by FaM, 2010.
-;-      
-function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
-                               SUBSET_IJ  = subset_ij,  $
-                               LL_DATUM   = ll_datum ,  $
-                               CROPCHILD  = cropchild   ,  $
-                               CROPBORDER = cropborder 
+;     Written by FaM, 2011.
+;
+;-
+function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for backwards compatibility
+                                LL_DATUM   = ll_datum ,  $ ; Place holder for backwards compatibility
+                                SHAPE=shape,  $
+                                POLYGON=polygon, MASK=mask,  $
+                                CROPBORDER=cropborder,  $
+                                GRID=grid,    $                          
+                                CORNERS=corners, $
+                                NO_ERASE=no_erase, $ 
+                                SRC=src, $
+                                REMOVE_ENTITITES=remove_entitites, $ 
+                                KEEP_ENTITITES=keep_entitites, $
+                                ROI_MASK_RULE=roi_mask_rule
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -139,47 +176,18 @@ function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
   ;*******************
   ; check what to do *
   ;*******************
-  do_init = self.cropped eq '' ;first init
-  firstcall = do_init
-   
-  if ~ do_init then begin
-    if KEYWORD_SET(CROPBORDER) then do_init = self.cropped ne 'BORDER'  $ ; Is not cropped yet
-    else if KEYWORD_SET(CROPCHILD) then do_init = self.cropped ne 'CROPCHILD'   $ ; Is not cropped yet    
-    else if KEYWORD_SET(SUBSET_LL) then do_init = TRUE  $  ; Is not cropped yet    
-    else if KEYWORD_SET(SUBSET_IJ) then do_init = self.cropped ne 'SUBSET'  $  ; Is not cropped yet    
-    else do_init = self.cropped ne 'FALSE'   ; Is cropped but we dont want to
+  firstcall = self.cropped eq '' ;first init
+  if N_ELEMENTS(SUBSET_LL) ne 0 then begin
+    CORNERS = SUBSET_LL
+    if N_ELEMENTS(ll_datum) ne 0 then src=ll_datum else GIS_make_datum, ret, src, NAME='WGS-84'
+    message, 'SUBSET_LL Keyword is depreciated. Use CORNERS with SRC instead', /INFORMATIONAL
   endif
-  
-  if ~ do_init and KEYWORD_SET(SUBSET_IJ) then begin
-    if ~ arg_okay(SUBSET_ij, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET_ij', /ARG)
-    do_init = self.subset[0] ne SUBSET_IJ[0]
-    if ~ do_init then do_init = self.subset[1] ne SUBSET_IJ[1]
-    if ~ do_init then do_init = self.subset[2] ne SUBSET_IJ[2]
-    if ~ do_init then do_init = self.subset[3] ne SUBSET_IJ[3]    
-  endif
-  
-  if ~ do_init and KEYWORD_SET(CROPBORDER) then begin
-    if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
-    do_init = self.subset[0] ne CROPBORDER
-    if ~ do_init then do_init = self.subset[1] ne self.west_east - 2 * CROPBORDER
-    if ~ do_init then do_init = self.subset[2] ne CROPBORDER
-    if ~ do_init then do_init = self.subset[3] ne self.south_north - 2 * CROPBORDER
-  endif
-      
-  if ~ do_init then return, 1 ;nothing to do
-  
-  if KEYWORD_SET(CROPBORDER) then self.cropped = 'BORDER' $
-    else if KEYWORD_SET(CROPCHILD) then self.cropped = 'CROPCHILD' $
-      else if KEYWORD_SET(Subset_LL) then self.cropped = 'SUBSET_LL' $
-        else if KEYWORD_SET(Subset_IJ) then self.cropped = 'SUBSET_IJ' $
-          else self.cropped = 'FALSE'  
         
   ;************
   ; GRID info *
   ;************      
   center_lat = self->get_Gatt('CEN_LAT')
-  center_lon = self->get_Gatt('CEN_LON')
-  
+  center_lon = self->get_Gatt('CEN_LON')  
   ; Get easting and northings from dom center
   GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj    
   nx = self.west_east
@@ -188,159 +196,42 @@ function w_WRF::define_subset, SUBSET_LL  = subset_ll,  $
   y0 =    (ny-1) / 2. * self.dy + n ; UL corner
   if FIRSTCALL then begin
     IF NOT self->w_Grid2D::Init(  nx = nx                , $
-                                ny = ny                , $
-                                dx = self.DX           , $
-                                dy = self.dy           , $
-                                x0 = x0                , $
-                                y0 = y0                , $
-                                proj = self.tnt_c.proj) THEN RETURN, 0  
+                                  ny = ny                , $
+                                  dx = self.DX           , $
+                                  dy = self.dy           , $
+                                  x0 = x0                , $
+                                  y0 = y0                , $
+                                  proj = self.tnt_c.proj) THEN RETURN, 0  
   endif else begin
    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
-                                 ny = ny                , $
-                                 dx = self.DX           , $
-                                 dy = self.DY           , $
-                                 x0 = x0                , $
-                                 y0 = y0                , $
-                                 proj = self.tnt_c.proj) THEN RETURN, 0  
+                                   ny = ny                , $
+                                   dx = self.DX           , $
+                                   dy = self.DY           , $
+                                   x0 = x0                , $
+                                   y0 = y0                , $
+                                   proj = self.tnt_c.proj) THEN RETURN, 0  
   endelse
   
-  ; Indexes in the original ncdf file
-  isubs =[0l,0l,0l,0l]
-           
-  case self.cropped of
-    'BORDER': begin
-      if ~ arg_okay(CROPBORDER, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('CROPBORDER', /ARG) 
-      if cropborder lt 0 or cropborder ge nx / 2 then message, 'Cropsize not ok'
-      if cropborder lt 0 or cropborder ge ny / 2 then message, 'Cropsize not ok'
-      isubs = [cropborder, nx-2*cropborder, cropborder, ny-2*cropborder]
-    end
-    'CROPCHILD': begin
-      if self->get_Var_Info('NEST_POS') then begin
-        nest_pos = self->w_NCDF::get_Var('NEST_POS')
-        nest_pos = nest_pos[*,*,0]
-        npos = where(nest_pos ne 0, cnt)
-        if cnt ne 0 then begin
-          inds = ARRAY_INDICES(NEST_POS, npos)
-          mx = min(inds[0,*]) - 1
-          my = min(inds[1,*]) - 1
-          isubs = [mx,max(inds[0,*])-mx+2,my,max(inds[1,*])-my+2]
-        endif else begin
-          ; we have to check if there is the child file here
-          file1 = self.path
-          GEN_str_subst, ret, file1,'d0'+str_equiv(self.dom),'d0'+str_equiv(self.dom+1),file2
-          if ~NCDF_IsValidFile(file2) then Message, 'could not find NEST_POS or the child domains file for cropping.'
-          cdfid = NCDF_OPEN(file2, /NOWRITE)
-          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
-          NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
-          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
-          NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
-          if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
-          NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
-          NCDF_ATTGET, Cdfid , 'WEST-EAST_GRID_DIMENSION', ni, /GLOBAL
-          NCDF_ATTGET, Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', nj, /GLOBAL
-          NCDF_close, cdfid
-          neli = LONG(DOUBLE(ni)/DOUBLE(ratio))
-          nelj = LONG(DOUBLE(nj)/DOUBLE(ratio))
-          isubs = [iPar-1, neli,jPar-1,nelj]
-        endelse        
-      endif else begin
-        ; we have to check if there is the child file here
-        file1 = self.path
-        GEN_str_subst, ret, file1,'d0'+str_equiv(self.dom),'d0'+str_equiv(self.dom+1),file2
-        if ~NCDF_IsValidFile(file2) then Message, 'could not find NEST_POS or the child domains file for cropping.'
-        cdfid = NCDF_OPEN(file2, /NOWRITE)
-        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'i_parent_start' else attid = 'I_PARENT_START'
-        NCDF_ATTGET, Cdfid , attid, ipar, /GLOBAL
-        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'j_parent_start' else attid = 'J_PARENT_START'
-        NCDF_ATTGET, Cdfid , attid, jpar, /GLOBAL
-        if self.type eq 'GEO' or self.type eq 'MET' then attid = 'parent_grid_ratio' else attid = 'PARENT_GRID_RATIO'
-        NCDF_ATTGET, Cdfid , attid, ratio, /GLOBAL
-        NCDF_ATTGET, Cdfid , 'WEST-EAST_GRID_DIMENSION', ni, /GLOBAL
-        NCDF_ATTGET, Cdfid , 'SOUTH-NORTH_GRID_DIMENSION', nj, /GLOBAL
-        NCDF_close, cdfid
-        neli = LONG(DOUBLE(ni)/DOUBLE(ratio))
-        nelj = LONG(DOUBLE(nj)/DOUBLE(ratio))
-        isubs = [iPar-1, neli,jPar-1,nelj]
-      endelse    
-    end
-    'SUBSET_IJ': begin
-       isubs = SUBSET_IJ 
-       self.cropped = 'SUBSET'
-    end
-    'SUBSET_LL': begin
-      if KEYWORD_SET(ll_datum) then begin
-        if not arg_okay(ll_datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('ll_datum', STRUCT={TNT_DATUM})
-        dat = ll_datum
-      endif else GIS_make_datum, ret, dat, NAME='WGS-84'
-      
-      self->transform_LonLat, SUBSET_LL[0], SUBSET_LL[1], dat, idl, jdl, /NEAREST
-      self->transform_LonLat, SUBSET_LL[2], SUBSET_LL[3], dat, iur, jur, /NEAREST
-      
-      ;**********
-      ; Errors? *
-      ;**********
-      if idl lt 0 then begin
-        idl = 0
-        MESSAGE, 'Down left corner out of X range. Setting to 0.', /INFORMATIONAL
-      endif
-      if idl gt (self.tnt_c.nx - 1) then begin
-        idl = (self.tnt_c.nx - 1)
-        MESSAGE, 'Down left corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
-      endif
-      if jdl lt 0 then begin
-        jdl = 0
-        MESSAGE, 'Down left corner out of Y range. Setting to 0.', /INFORMATIONAL
-      endif
-      if jdl gt (self.tnt_c.ny - 1) then begin
-        jdl = (self.tnt_c.ny - 1)
-        MESSAGE, 'Down left corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
-      endif
-      if iur lt 0 then begin
-        iur = 0
-        MESSAGE, 'Upper right corner out of X range. Setting to 0.', /INFORMATIONAL
-      endif
-      if iur gt (self.tnt_c.nx - 1) then begin
-        iur = (self.tnt_c.nx - 1)
-        MESSAGE, 'Upper right corner out of X range. Setting to (nx - 1).', /INFORMATIONAL
-      endif
-      if jur lt 0 then begin
-        jur = 0
-        MESSAGE, 'Upper right corner out of Y range. Setting to 0.', /INFORMATIONAL
-      endif
-      if jur gt (self.tnt_c.ny - 1) then begin
-        jur = (self.tnt_c.ny - 1)
-        MESSAGE, 'Upper right corner out of Y range. Setting to (ny - 1).', /INFORMATIONAL
-      endif
-      cx = iur - idl + 1
-      cy = jur - jdl + 1
-      if (cx lt 1) or (cy lt 1) then MESSAGE, 'Subset_LL corners are not compatible.'  ; Fatal error
-      isubs = [idl,cx,jdl,cy]
-      self.cropped = 'SUBSET'
-    end
-    else: begin
-      ; nothing to do
-    end
-  endcase
+  IF NOT self->set_ROI(SHAPE=shape,  $
+    POLYGON=polygon, MASK=mask,  $
+    CROPBORDER=cropborder,  $
+    GRID=grid,    $
+    CORNERS=corners, $
+    NO_ERASE=no_erase, $
+    SRC=src, $
+    REMOVE_ENTITITES=remove_entitites, $
+    KEEP_ENTITITES=keep_entitites, $
+    ROI_MASK_RULE=roi_mask_rule) THEN RETURN, 0
   
-  before = self.cropped
-  if ~self->w_GEO_nc::define_subset(SUBSET=isubs) then return, 0 
-  self.cropped = before 
-  if self.cropped ne 'FALSE' then begin
-    x0 = x0 + self.dx*isubs[0]
-    y0 = y0 - self.dy*(self.south_north - (isubs[3]+isubs[2]))
-    nx = isubs[1]
-    ny = isubs[3]
-    IF NOT self->w_Grid2D::ReInit( nx = nx                , $
-                                 ny = ny                , $
-                                 dx = self.Dx           , $
-                                 dy = self.dy           , $
-                                 x0 = x0                , $
-                                 y0 = y0                , $
-                                 proj = self.tnt_c.proj) THEN RETURN, 0  
-   
-  endif
-      
-  if ARG_PRESENT(SUBSET_ij) then SUBSET_ij = self.subset  
+  dummy = self->w_GEO_nc::define_subset()
+  if self->is_ROI() then begin
+    self->get_ROI, SUBSET=subset
+    if ~self->w_GEO_nc::define_subset(SUBSET=SUBSET) then return, 0 
+    new_grid = self->reGrid(/TO_ROI)
+    IF NOT self->w_Grid2D::ReInit(grid=new_grid) THEN RETURN, 0  
+    dummy = self->set_ROI()    
+    undefine, new_grid
+  endif 
     
   return, 1
     
@@ -353,27 +244,8 @@ end
 ; :Keywords:
 ;       FILE      : in, optional, type = string
 ;                   the path to the WRF file. If not set, a dialog window will open
-;       SUBSET_LL : in, optional, type = float vector 
-;                   set it to the desired subset corners to automatically subset the data.
-;                   Format : [dl_lon, dl_lat, ur_lon, ur_lat]. (it is assumed that
-;                   lons and lats are in the WGS-84 Datum if LL_DATUM is not set.)
-;       SUBSET_IJ : in, type = long vector
-;                   Four elements array::              
-;                   first  el: start index in the ncdf variable in X dimension. Default is 0 (no subset)
-;                   second el: count of the variable in X dimension. default matches the size of the variable so that all data is written out. 
-;                   third  el: start index in the ncdf variable in Y dimension. Default is 0 (no subset)
-;                   fourth el: count of the variable in Y dimension. default matches the size of the variable so that all data is written out.
-;                   Unless you know what you do, it should not be set manually but 
-;                   retrieved using the 'define_subset' method.
-;                   
-;       LL_DATUM  : in, type = {TNT_DATUM}, default = WGS-84
-;                   datum in which the Lat and Lons from 'SUBSET_LL' are defined
-;                   
-;       CROPCHILD: in, optional
-;                  set this keyword to crop the grid to the area covered by its child domain (if any)
-;                  
-;       CROPBORDER: in, optional
-;                  set this keyword to crop the grid of CROPBORDER elements on each side
+;       _REF_EXTRA: in, optional
+;                   all keywords accepted by w_WRF::define_subset
 ;
 ; :Returns:
 ; 
@@ -382,12 +254,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-Function w_WRF::Init, FILE       = file     ,  $
-                      SUBSET_LL  = subset_ll,  $
-                      SUBSET_IJ  = subset_ij,  $
-                      LL_DATUM   = ll_datum ,  $
-                      CROPCHILD  = cropchild   ,  $
-                      CROPBORDER = cropborder
+Function w_WRF::Init, FILE=file, _REF_EXTRA=extra  
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -514,11 +381,7 @@ Function w_WRF::Init, FILE       = file     ,  $
   ; define *
   ;*********
   self.cropped = ''
-  if NOT self->define_subset(SUBSET_LL = subset_ll,  $
-                             SUBSET_IJ  = subset_ij,  $
-                             LL_DATUM   = ll_datum ,  $
-                             CROPCHILD  = cropchild   ,  $
-                             CROPBORDER = cropborder) THEN RETURN, 0
+  if NOT self->define_subset(_EXTRA=extra) THEN RETURN, 0
     
   RETURN, 1
   

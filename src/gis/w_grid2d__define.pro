@@ -149,8 +149,11 @@ END
 ;        resolution in y-direction
 ;    tnt_c: in, optional, type = {TNT_COORD}
 ;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
-;    proj: in, optional, type = {TNT_PROJ}
+;    proj: in, required, type = {TNT_PROJ}
 ;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
+;    grid: in, optional, type = w_Grid2D
+;          if set, all other keywords are ignored and
+;          the re-initialized grid will be a copy of the input grid 
 ;    meta: in, optional, type = string
 ;         a string containing any kind of info
 ;
@@ -171,6 +174,7 @@ Function w_Grid2D::ReInit ,  $
     dy = dy           ,  $   
     proj = proj       ,  $ 
     tnt_c = tnt_c     ,  $     
+    grid = grid       ,  $     
     meta = meta       
 
   ; SET UP ENVIRONNEMENT
@@ -188,19 +192,20 @@ Function w_Grid2D::ReInit ,  $
   
   ; Go threw the keywords ... 
   if KEYWORD_SET(nx) and KEYWORD_SET(ny) and N_ELEMENTS(x0) eq 1 and  N_ELEMENTS(y0)  eq 1 $
-    and KEYWORD_SET(dx) and KEYWORD_SET(dy) then cas = 1
+    and N_ELEMENTS(dx) eq 1 and N_ELEMENTS(dy) eq 1 then cas = 1
  
   if KEYWORD_SET(nx) and KEYWORD_SET(ny) and N_ELEMENTS(x1) eq 1 and  N_ELEMENTS(y1)  eq 1 $
-    and KEYWORD_SET(dx) and KEYWORD_SET(dy) then cas = 2
+    and N_ELEMENTS(dx) eq 1 and N_ELEMENTS(dy) eq 1 then cas = 2
   
   if N_ELEMENTS(x0) eq 1 and  N_ELEMENTS(y0)  eq 1 and N_ELEMENTS(x1) eq 1 and  N_ELEMENTS(y1)  eq 1  $
-    and KEYWORD_SET(dx) and KEYWORD_SET(dy) then cas = 3
+    and N_ELEMENTS(dx) eq 1 and N_ELEMENTS(dy) eq 1 then cas = 3
   
   if N_ELEMENTS(x0) eq 1 and  N_ELEMENTS(y0)  eq 1 and N_ELEMENTS(x1) eq 1 and  N_ELEMENTS(y1)  eq 1  $
-    and KEYWORD_SET(nx) and KEYWORD_SET(ny) then cas = 4
+   and N_ELEMENTS(nx) eq 1 and N_ELEMENTS(ny) eq 1 then cas = 4
   
-  if KEYWORD_SET(tnt_c) then cas = 5
+  if N_ELEMENTS(tnt_c) eq 1 then cas = 5
   
+  if N_ELEMENTS(grid) eq 1 then cas = 6  
   
   case (cas) of
     1: begin
@@ -231,6 +236,21 @@ Function w_Grid2D::ReInit ,  $
       dy = tnt_c.dy
       proj = tnt_c.proj
       _tnt_c = tnt_c      
+    end
+    6: begin
+      ok = (OBJ_VALID(grid)) and OBJ_ISA(grid, 'w_Grid2D')
+      if ~ok then message, WAVE_Std_Message('grid', /ARG)
+      grid->getProperty, tnt_c=c, meta=meta 
+      nx = c.nx
+      ny = c.ny
+      x0 = c.x0
+      y0 = c.y0
+      x1 = c.x1
+      y1 = c.y1
+      dx = c.dx
+      dy = c.dy
+      proj = c.proj
+      _tnt_c = c      
     end
     else: begin
       Message, WAVE_Std_Message(/NARG), /NoName
@@ -596,16 +616,23 @@ end
 ;     Written by FaM, 2011.
 ;
 ;-
-pro w_Grid2D::get_ROI, MASK=mask, SHAPE=shape
+pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  undefine, mask, shape
-  if ~self.is_roi then return
+  undefine, mask, subset
+  if ~self.is_roi then mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny) + 1B else mask = *self.roi  
   
-  if ARG_PRESENT(MASK) then mask = *self.roi
+  p = where(mask eq 1, cnt)
+  inds = ARRAY_INDICES(mask, p)   
+  xmin = min(inds[0,*])
+  xmax = max(inds[0,*])
+  ymin = min(inds[1,*])
+  ymax = max(inds[1,*])  
+  subset = [xmin, (xmax-xmin)+1, ymin, (ymax-ymin)+1]
+    
     
 END
 
@@ -1376,9 +1403,11 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_EN
   ;****************************************
   if is_dat then begin
    self->get_LonLat, glon, glat
-   range = [min(glon),max(glon),min(glat),max(glat)]
+   p = where(glon gt 180, cnt)
+   if cnt ne 0 then glon[p] = glon[p] - 360
+   range = [min(glon),max(glon),min(glat),max(glat)]   
   end
-  if is_proj then begin
+  if is_proj then begin   
    range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
   end
   
@@ -1457,8 +1486,9 @@ end
 ;    
 ;    This can be usefull in many cases, for example to compute a mask
 ;    from a polygon or a shape file. In this case, one can obtain the 
-;    computed mask with the `w_Grid_2D::get_ROI` procedure. It is recommended
-;    to delete the ROI afterwards (`w_Grid_2D::destroy_ROI` or `w_Grid_2D::set_ROI` 
+;    computed mask with the `w_Grid_2D::get_ROI` procedure. 
+;    
+;    It is recommended to delete the ROI afterwards (`w_Grid_2D::destroy_ROI` or `w_Grid_2D::set_ROI` 
 ;    without arguments), since the behavior of the grid is changed once a ROI have been
 ;    defined. If the grid is used as SOURCE grid in transformations between grids 
 ;    using `w_Grid_2D::map_gridded_data`, the transformation will concern only the
@@ -1467,11 +1497,14 @@ end
 ;    Currently one can define a ROI with 6 different methods::
 ;      1. SHAPE: use a .shp file as imput, the ROI is generated using the 
 ;                IDLanROI object to transform the vertices into a mask
+;                (don't forget to set the SRC keyword)
 ;      2. POLYGON: similar to SHAPE but the polygon is directly specified
+;                 (don't forget to set the SRC keyword)
 ;      3. MASK: simply define the ROI using a mask (of dimensions corresponding to the grid)
 ;      4. CROPBORDER: remove a certain number of pixels from the borders of the grid
 ;      5. GRID: the ROI is defined by the position of another grid within the object grid
 ;      6. CORNERS: the ROI is defined by setting the LL and UR corners of the desired subset
+;                 (don't forget to set the SRC keyword)
 ;
 ;
 ; :Keywords:
@@ -1490,14 +1523,19 @@ end
 ;    NO_ERASE: in, type = boolean
 ;              set this keyword to update the ROI in place of replacing it
 ;    SRC: in, optional
-;         the polygon coordinate system (datum or proj) default is WGS-84
+;         the polygon or shape coordinate system (datum or proj) default is WGS-84
 ;    REMOVE_ENTITITES:in, optional, type = long
 ;                     an array containing the id of the shape entities to remove from the shape
 ;                     All other entities are plotted normally.
 ;    KEEP_ENTITITES:in, optional, type = long
 ;                   an array containing the id of the shape entities to keep for the shape. 
 ;                   All other entities are ignored.
-;    ROI_MASK_RULE: see `IDLanROI::ComputeMask` documentation
+;    ROI_MASK_RULE: Set this keyword to an integer specifying the rule used to determine whether
+;                   a given pixel should be set within the mask when computing a mask with
+;                   polygons or shapes. Valid values include::
+;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
+;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
+;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set. This is the default.
 ;
 ; :Returns:
 ;   1 if the ROI has been set correctly, 0 if not
@@ -1591,27 +1629,23 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     if ~ arg_okay(CORNERS, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('CORNERS', /ARG)
     x = CORNERS[[0,2]]
     y = CORNERS[[1,3]]
-    if ~KEYWORD_SET(src) then begin
-      MESSAGE, '$SRC is not set. Setting to WGS-84' , /INFORMATIONAL
-      GIS_make_datum, ret, src, NAME = 'WGS-84'
-    endif
     self->transform, x, y, i, j, SRC=src, /NEAREST
     if i[0] ge i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
     if j[0] ge j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
     if i[0] lt 0 then begin
-      message, 'X Down left corner out of bounders: set to 0', /INFORMATIONAL
+      message, 'X Down left corner out of bounds: set to 0', /INFORMATIONAL
       i[0] = 0
     endif
     if j[0] lt 0 then begin
-      message, 'Y Down left corner out of bounders: set to 0', /INFORMATIONAL
+      message, 'Y Down left corner out of bounds: set to 0', /INFORMATIONAL
       j[0] = 0
     endif
     if i[1] ge self.tnt_c.nx then begin
-      message, 'X Upper right corner out of bounders: set to nx-1', /INFORMATIONAL
+      message, 'X Upper right corner out of bounds: set to nx-1', /INFORMATIONAL
       i[1] = self.tnt_c.nx-1
     endif
     if j[1] ge self.tnt_c.ny then begin
-      message, 'Y Upper right corner out of bounders: set to ny-1', /INFORMATIONAL
+      message, 'Y Upper right corner out of bounds: set to ny-1', /INFORMATIONAL
       j[1] = self.tnt_c.ny-1
     endif
     mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)

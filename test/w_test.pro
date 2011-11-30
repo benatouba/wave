@@ -1632,7 +1632,7 @@ pro TEST_WRF_OUT
     if ny ne 140 then error += 1
     if c.nx ne 140 then error +=1
     if c.ny ne 140 then error +=1
-    if crop ne 'BORDER' then error += 1
+    if crop ne 'TRUE' then error += 1
     if max(abs(gislon-lon)) gt 1e-4 then  error += 1
     if max(abs(gislat-lat)) gt 1e-4 then  error += 1
     
@@ -1735,8 +1735,10 @@ pro TEST_WRF_OUT
      ;----------------------------
      ; CROP CHILD
      ;----------------------------
-     ok = dom1->define_subset(/CROPCHILD)
+     dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26')   
+     ok = dom1->define_subset(GRID=dom2)
      if ~ok then error+=1
+     UNDEFINE, dom2
      
     dom1->get_time, time, nt, t0, t1    
     if nt ne 13 then error += 1    
@@ -1748,7 +1750,7 @@ pro TEST_WRF_OUT
     dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
      dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
       type = typ, version = ver
-    if crop ne 'CROPCHILD' then error += 1 
+    if crop ne 'TRUE' then error += 1 
     dom1->get_ncdf_coordinates, lon, lat, nx, ny
     
     if nx ne 50 then error += 1
@@ -1782,14 +1784,15 @@ pro TEST_WRF_OUT
     ;----------------------------
     ; CROP SUBSET
     ;----------------------------
-    ok = dom1->define_subset(SUBSET_LL=[91.,31.,93.,33.], SUBSET_IJ=sij)
+    GIS_make_datum, ret, src, NAME='WGS-84'
+    ok = dom1->define_subset(CORNERS=[91.,31.,93.,33.], SRC=src)
     if ~ok then error+=1
     dom1->get_LONLAT, tdlon, tdlat, tdx, tdy
         
     dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
      dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
       type = typ, version = ver
-     if crop ne 'SUBSET' then error += 1 
+     if crop ne 'TRUE' then error += 1 
     
     dom1->get_ncdf_coordinates, lon, lat, nx, ny
     
@@ -2000,7 +2003,7 @@ pro TEST_WRF_GEO
     if ny ne 90 then error += 1
     if c.nx ne 130 then error +=1
     if c.ny ne 90 then error +=1
-    if crop ne 'BORDER' then error += 1
+    if crop ne 'TRUE' then error += 1
     if max(abs(gislon-lon)) gt 1e-4 then  error += 1
     if max(abs(gislat-lat)) gt 1e-4 then  error += 1
     
@@ -3064,7 +3067,8 @@ pro TEST_WRF_AGG_MASSGRID
     d2pcp = UTILS_aggregate_Grid_data(d2pcp, 3)
     d1pcp = UTILS_aggregate_Grid_data(d1pcp, 3)
     
-    ok = DOM1->define_subset(/CROPCHILD)
+    ok = DOM2->define_subset()
+    ok = DOM1->define_subset(GRID=dom2)
     orig = (DOM1->get_var('prcp'))[*,*,12]
     
     if max(abs(d1pcp - d2pcp)) gt 0.2 then error +=1
@@ -3088,8 +3092,9 @@ pro TEST_REGRID
     ; Test 3Hourly product
     ;-------------------------
     
-    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26', /CROPCHILD)
+    
     dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26')    
+    dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26', GRID=dom2)
     reg = dom1->reGrid(FACTOR=3)
    
     reg->get_LonLat, rlon, rlat, rnx, rny
@@ -3120,6 +3125,32 @@ pro TEST_REGRID
         
 end
 
+pro TEST_FNL
+
+    fdir = TEST_file_directory() + 'FNL/'
+    error = 0 
+   
+    fnl = OBJ_NEW('w_FNL', FILE=fdir+'fnl_20100301_12_00_c.nc')
+    
+    dat = GIS_default_datum()
+    fnl->transform_LonLat, -52., 12., dat, i, j
+    print, i, j
+    
+    
+    
+    map = OBJ_NEW('w_Map', fnl, YSIZE=600)
+    cgLoadCT, 33
+    ok = map->set_plot_params(N_LEVELS=127)
+    ok = map->set_data(fnl->get_var('TMP_3_SPDY_10'))
+    
+    w_standard_2d_plot, map, TITLE='FNL Temperature' , BAR_TITLE='degC', PNG='test_fnl.png'   
+;    fnl->QuickPlotVar, 'SOILW_3_DBLY_10'
+    
+    UNDEFINE, fnl, map
+    
+    if error ne 0 then message, '% TEST_FNL NOT passed', /CONTINUE else print, 'TEST_FNL passed'
+        
+end
 pro TEST_NEIREST_NEIGHBOR
 
   @WAVE.inc
@@ -3805,6 +3836,7 @@ pro TEST_DATASETS, NCDF = ncdf
   TEST_WRF_GEO
   TEST_MODIS  
   TEST_W_MAP
+  TEST_FNL
 end
 
 pro TEST_UTILS
