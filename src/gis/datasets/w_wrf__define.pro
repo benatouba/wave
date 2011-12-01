@@ -716,7 +716,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif
       
       ;TER      
-      if self.type eq 'WRF' then d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims) $
+      if self.type eq 'WRF' or self.type eq 'AGG' then d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims) $
        else  d1 = self->w_NCDF::get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
@@ -1410,7 +1410,7 @@ function w_WRF::get_Var, Varid, $
     end
     
     'TER': begin
-      if self.type eq 'WRF' then _id = 'HGT' else _id = 'HGT_M'
+      if self.type eq 'WRF' or self.type eq 'AGG' then _id = 'HGT' else _id = 'HGT_M'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
         dims = dims, ZLEVELS=zlevels, $
         dimnames = dimnames)
