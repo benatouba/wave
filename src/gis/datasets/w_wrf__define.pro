@@ -715,18 +715,47 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
       endif
       
-      ;TER      
-      if self.type eq 'WRF' or self.type eq 'AGG' then d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims) $
-       else  d1 = self->w_NCDF::get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
+      ;ter      
+      d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      d1 = self->w_NCDF::get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
-      ;LUCAT      
+      
+      ;lucat      
       d1 = self->w_NCDF::get_Var_Info('LU_INDEX', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'LUCAT',unit:'-',ndims:2L,description:'Model Landuse Category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      
+      ;soiltop      
+      d1 = self->w_NCDF::get_Var_Info('SCT_DOM', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SOILTOP',unit:'-',ndims:2L,description:'Model dominant soil category (top)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      d1 = self->w_NCDF::get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SOILTOP',unit:'-',ndims:2L,description:'Model dominant soil category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      
+      ;soilbot      
+      d1 = self->w_NCDF::get_Var_Info('SCB_DOM', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SOILBOT',unit:'-',ndims:2L,description:'Model dominant soil category (bottom)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
+        dvars = [dvars,var]
+      endif
+      d1 = self->w_NCDF::get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SOILBOT',unit:'-',ndims:2L,description:'Model dominant soil category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
@@ -811,6 +840,11 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         endfor   
         if N_ELEMENTS(match) ne 0 then utils_array_remove, match, dvars     
       endif
+
+      dvarnames = str_equiv(dvars.name)
+      u = UNIQ(dvarnames, SORT(dvarnames))
+      dvars = dvars[u]
+      dvars.name = dvarnames[u]
       self.diagVars = PTR_NEW(dvars)    
       self.ndiagvar = N_ELEMENTS(dvars)  
     endif else begin
@@ -819,7 +853,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
     
     undefine, varid, varnames, varndims, varunits, vardescriptions, vartypes
 
-    varid = LONARR(self.ndiagvar) - 1
+    varid = -1L * (LINDGEN(N_ELEMENTS(u))+1L)
     varnames = dvars.name
     varndims = dvars.ndims
     varunits = dvars.unit
@@ -1175,6 +1209,8 @@ end
 ;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see `MET_barometric` for more info)
 ;             ter: Model terrain height [m] (static: no time dimension)
 ;             lucat: Model landuse category [] (static: no time dimension)
+;             soiltop: Model soil category top [] (static: no time dimension)
+;             soilbot: Model soil category bot [] (static: no time dimension)
 ;             tc: Temperature [C]
 ;             t2c: 2m Temperature [C]
 ;             t2pbl: 2 m temperature (extrapolated from eta-levels) [K]
@@ -1410,7 +1446,24 @@ function w_WRF::get_Var, Varid, $
     end
     
     'TER': begin
-      if self.type eq 'WRF' or self.type eq 'AGG' then _id = 'HGT' else _id = 'HGT_M'
+      if self->w_NCDF::get_Var_Info('HGT') then _id = 'HGT' $
+       else _id = 'HGT_M'
+      value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
+        dims = dims, ZLEVELS=zlevels, $
+        dimnames = dimnames)
+    end
+    
+    'SOILTOP': begin
+      if self->w_NCDF::get_Var_Info('SCT_DOM') then _id = 'SCT_DOM' $
+       else _id = 'ISLTYP'
+      value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
+        dims = dims, ZLEVELS=zlevels, $
+        dimnames = dimnames)
+    end
+    
+    'SOILBOT': begin
+      if self->w_NCDF::get_Var_Info('SCB_DOM') then _id = 'SCB_DOM' $
+       else _id = 'ISLTYP'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
         dims = dims, ZLEVELS=zlevels, $
         dimnames = dimnames)

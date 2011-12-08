@@ -356,6 +356,9 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
+;   STATIC: in, optional, boolean
+;           set this keyword to automaticaly retrieve only the first
+;           element of the variable in the time dimension
 ;   ZLEVELS: in, optional, type = long
 ;            set this keyword to an array of one or two elements, containing the range
 ;            of the indexes to keep from the original NCDF file in the Z dimension.
@@ -387,6 +390,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                             nt,  $
                             T0=t0, $
                             T1=t1, $
+                            STATIC=static , $
                             ZLEVELS=zlevels, $
                             ZDIM_ID=zdim_id, $
                             units = units, $
@@ -412,6 +416,11 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
     varname = varname , $
     dims = dims, $
     dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
+  
+  if KEYWORD_SET(STATIC) then begin
+   T0 = self.t0
+   T1 = self.t0   
+  endif
     
   ndims = N_ELEMENTS(dims)
   count = LONARR(ndims) - 1

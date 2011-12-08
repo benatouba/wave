@@ -1889,7 +1889,7 @@ pro TEST_MODIS
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
-    
+        
         
     ;================
     ; Try resample
@@ -3127,28 +3127,28 @@ end
 
 pro TEST_FNL
 
-    fdir = TEST_file_directory() + 'FNL/'
-    error = 0 
-   
-    fnl = OBJ_NEW('w_FNL', FILE=fdir+'fnl_20100301_12_00_c.nc')
-    
-    dat = GIS_default_datum()
-    fnl->transform_LonLat, -52., 12., dat, i, j
-    print, i, j
-    
-    
-    
-    map = OBJ_NEW('w_Map', fnl, YSIZE=600)
-    cgLoadCT, 33
-    ok = map->set_plot_params(N_LEVELS=127)
-    ok = map->set_data(fnl->get_var('TMP_3_SPDY_10'))
-    
-    w_standard_2d_plot, map, TITLE='FNL Temperature' , BAR_TITLE='degC', PNG='test_fnl.png'   
-;    fnl->QuickPlotVar, 'SOILW_3_DBLY_10'
-    
-    UNDEFINE, fnl, map
-    
-    if error ne 0 then message, '% TEST_FNL NOT passed', /CONTINUE else print, 'TEST_FNL passed'
+;    fdir = TEST_file_directory() + 'FNL/'
+;    error = 0 
+;   
+;    fnl = OBJ_NEW('w_FNL', FILE=fdir+'fnl_20100301_12_00_c.nc')
+;    
+;    dat = GIS_default_datum()
+;    fnl->transform_LonLat, -52., 12., dat, i, j
+;    print, i, j
+;    
+;    
+;    
+;    map = OBJ_NEW('w_Map', fnl, YSIZE=600)
+;    cgLoadCT, 33
+;    ok = map->set_plot_params(N_LEVELS=127)
+;    ok = map->set_data(fnl->get_var('TMP_3_SPDY_10'))
+;    
+;    w_standard_2d_plot, map, TITLE='FNL Temperature' , BAR_TITLE='degC', PNG='test_fnl.png'   
+;;    fnl->QuickPlotVar, 'SOILW_3_DBLY_10'
+;    
+;    UNDEFINE, fnl, map
+;    
+;    if error ne 0 then message, '% TEST_FNL NOT passed', /CONTINUE else print, 'TEST_FNL passed'
         
 end
 pro TEST_NEIREST_NEIGHBOR
@@ -3273,8 +3273,51 @@ pro TEST_WRF_GETVAR
     ; Test 3Hourly product
     ;-------------------------    
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+    met = OBJ_NEW('w_WRF', FILE=fdir+'met_em.d01.2009-05-01_12_00_00.nc')
+    geo = OBJ_NEW('w_WRF', FILE=fdir+'geo_em.d03.nc')
+
     wrf->get_time, time, nt
     wrf->GetProperty, nx=nx, ny=ny
+
+    ; Some static things   
+    wrf_v = 'ter'     
+    totest=wrf->get_Var(wrf_v)
+    ref=wrf->w_geo_nc::get_Var('hgt')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=geo->get_Var(wrf_v)
+    ref=geo->w_geo_nc::get_Var('hgt_m')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=met->get_Var(wrf_v)
+    ref=met->w_geo_nc::get_Var('hgt_m')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    
+    wrf_v = 'lucat'     
+    totest=wrf->get_Var(wrf_v)
+    ref=wrf->w_geo_nc::get_Var('LU_INDEX')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=geo->get_Var(wrf_v)
+    ref=geo->w_geo_nc::get_Var('LU_INDEX')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=met->get_Var(wrf_v)
+    ref=met->w_geo_nc::get_Var('LU_INDEX')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    
+    wrf_v = 'soiltop'     
+    totest=wrf->get_Var(wrf_v)
+    ref=wrf->w_geo_nc::get_Var('ISLTYP')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=geo->get_Var(wrf_v)
+    ref=geo->w_geo_nc::get_Var('SCT_DOM')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    wrf_v = 'soilbot'     
+    totest=wrf->get_Var(wrf_v)
+    ref=wrf->w_geo_nc::get_Var('ISLTYP')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    totest=geo->get_Var(wrf_v)
+    ref=geo->w_geo_nc::get_Var('SCB_DOM')
+    if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
+    
+    
         
     ; GEO get_Var    
     all = wrf->w_geo_nc::get_Var('P')    
@@ -3322,9 +3365,7 @@ pro TEST_WRF_GETVAR
 ;     w_QuickPlot, ACHFX
 ;    return
     ncldir = TEST_file_directory() + 'WRF/ncl_out/'
-    
-    met = OBJ_NEW('w_WRF', FILE=fdir+'met_em.d01.2009-05-01_12_00_00.nc')
-    
+   
     ; TK    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     tk_wrf = wrf->get_Var('tk', T0 = t0, T1 = t0)
@@ -3808,7 +3849,9 @@ pro TEST_WRF_GETVAR
     
     OBJ_DESTROY, wrf    
     OBJ_DESTROY, met    
+    OBJ_DESTROY, geo    
     if error ne 0 then message, '% TEST_WRF_GETVAR NOT passed', /CONTINUE else print, 'TEST_WRF_GETVAR passed'
+    
 end
 
 pro TEST_TIME

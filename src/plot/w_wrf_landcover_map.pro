@@ -1,10 +1,48 @@
-pro w_wrf_Landcover_map, map, landcover, bar_tags, ALL_CLASSES = all_classes
+;+
+; :Description:
+;    Utilitary routine to plot WRF landcover (LU_INDEX) on a map. It just
+;    sets the map levels and colors accordingly and returns the map for later
+;    plotting. Additionally, it returns the bar tags for legend.
+;    
+;    Default behiavior is to remove the land classes that are not present in
+;    the data to reduce the number of classes in the legend. Set the /ALL_CLASSES 
+;    keyword to avoid it.
+;        
+; :Params:
+;    map: in, required
+;         the map to fill
+;    wrf: in, required
+;         the wrf object to get the land cover from
+;               
+;    bar_tags: out
+;              the bar tags for legend
+;    bar_title: out
+;               the bar title for legend
+;
+; :Keywords:
+;    ALL_CLASSES: in, optional
+;                 if set, all classes are in the legend. Default is to remove
+;                 clases that are not in the data from the legend                 
+;
+; :History:
+;     Written by FaM, 2011.
+;
+;-
+pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classes
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
+  ON_ERROR, 2
   
-  lu_tags = ['Urban and Built-up Land' , $ ; 246, 1 , 0
+  if ~OBJ_VALID(map) and ~OBJ_ISA(map, 'w_Map') then message, WAVE_Std_Message('map', /ARG)
+  if ~OBJ_VALID(wrf) and ~OBJ_ISA(wrf, 'w_wrf') then message, WAVE_Std_Message('wrf', /ARG)
+  
+  toplot = wrf->get_var('lucat')
+  
+  levels = [INDGEN(24)+1,28]
+  
+  bar_tags = ['Urban and Built-up Land' , $ ; 246, 1 , 0
     'Dryland Cropland and Pasture' , $ ; 215, 207, 60
     'Irrigated Cropland and Pasture' , $ ; 174, 114, 41
     'Mixed Dryland/Irrigated Cropland and Pasture' , $ ;
@@ -33,32 +71,20 @@ pro w_wrf_Landcover_map, map, landcover, bar_tags, ALL_CLASSES = all_classes
   r = [246,215,174,174,191,88,108,200,233,253,108,29,108,29,189,32,129,130,179,130,209,206,206,231,92]
   g = [1,207,114,114,191,97,169,180,240,212,169,101,169,101,204,69,204,179,175,186,187,221,221,239,129]
   b = [0,60,41,41,122,40,102,111,187,2,102,51,102,51,147,122,184,176,164,157,130,40,40,252,182]
-  
-  ;      r = [246,215,174,174,191,88,108,200,233,253,108,29,108,29,189,32,129,130,179,130,209,206,206,255,92]
-  ;      g = [1,207,114,114,191,97,169,180,240,212,169,101,169,101,204,69,204,179,175,186,187,221,221,0,129]
-  ;      b = [0,60,41,41,122,40,102,111,187,2,102,51,102,51,147,122,184,176,164,157,130,40,40,255,182]
-    
-  levels = [INDGEN(24)+1,28]
-    
+   
   if not KEYWORD_SET(ALL_CLASSES) then begin
-    u = landcover[UNIQ(landcover, SORT(landcover))]
-    for i=0, N_ELEMENTS(u)-1 do begin
-      p = where(levels eq u[i])
-      if N_ELEMENTS(_r) eq 0 then _r = r[p] else _r = [_r,r[p]]
-      if N_ELEMENTS(_g) eq 0 then _g = g[p] else _g = [_g,g[p]]
-      if N_ELEMENTS(_b) eq 0 then _b = b[p] else _b = [_b,b[p]]
-      if N_ELEMENTS(levs) eq 0 then levs = levels[p] else levs = [levs,levels[p]]
-      if N_ELEMENTS(bar_tags) eq 0 then bar_tags = lu_tags[p] else bar_tags = [bar_tags,lu_tags[p]]
-    endfor
-  endif else begin
-   levs = levels
-   bar_tags = lu_tags
-  endelse 
+    u = toplot[UNIQ(toplot, SORT(toplot))]    
+    levels = levels[u-1]
+    bar_tags = bar_tags[u-1]
+    r = r[u-1]
+    g = g[u-1]
+    b = b[u-1]
+  endif 
   
-  pal = [[_r],[_g],[_b]]  
+  bar_title = 'Category'
   
   d = map->set_Plot_Params()
-  d = map->set_data(landcover)
-  d = map->set_Plot_Params(COLORS = pal, LEVELS=levs)
+  d = map->set_data(toplot, wrf)
+  d = map->set_Plot_Params(COLORS=[[r],[g],[b]] , LEVELS=levels)
   
 end
