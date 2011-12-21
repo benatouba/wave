@@ -1545,7 +1545,9 @@ function CHECK_TIMESERIE, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_mis
   mytime = mytime[SORT(mytime)]
   n = N_ELEMENTS(mytime)
   steps = mytime[1:n-1] - mytime[0:n-2]
-  h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=min(steps))
+  bs = min(steps)
+  if bs eq 0 then Message, 'The timeserie is not valid (some times are not unique)'
+  h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=bs)
   m = MAX(h, p)
   steps = steps - p - om
   timestep = MAKE_TIME_STEP(DMS = p + om)
@@ -2676,9 +2678,9 @@ function TS_7DIURNAL_MEANS, data, time, MISSING = missing
   endif
   
   NSTEPS = dqms / sqms
-  newtime = INDGEN(NSTEPS) * sqms
+  newtime = indgen(NSTEPS) * sqms
   
-  means = REPLICATE(data[0], NSTEPS) * 0
+  means = replicate(data[0], NSTEPS) * 0
   maxs = means & mins = means
   tots = means & nels = LONG(means) & stddevs = means
   

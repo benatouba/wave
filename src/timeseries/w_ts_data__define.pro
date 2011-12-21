@@ -15,7 +15,7 @@ pro w_ts_Data__Define
            regular:     FALSE, $ ; If the TS is regular
            step : {TIME_STEP}, $ ; Probale Timestep
            agg_method: 'NONE', $ ; Aggregation method. See `TS_AGG`
-           aggregated:  FALSE, $ ; If it is aggregated
+           valid:     'POINT', $ ; If it is aggregated
            missing: PTR_NEW()  $ ; Missing data values
            }
 
