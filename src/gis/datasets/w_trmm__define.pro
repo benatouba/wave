@@ -102,6 +102,7 @@ Function w_TRMM::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if self.cdfid gt 0 then ncdf_close, self.cdfid
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF 

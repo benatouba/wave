@@ -131,6 +131,7 @@ Function w_MODIS::Init, FILE = file, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_i
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if self.hdfID gt 0 then HDF_SD_END, self.hdfID
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF

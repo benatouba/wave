@@ -80,6 +80,7 @@ Function W_HDF_EOS::Init, FILE = file
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if self.hdfID gt 0 then HDF_SD_END, self.hdfID
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF 

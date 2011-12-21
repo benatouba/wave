@@ -133,6 +133,7 @@ Function w_NCDF::Init, FILE = file
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if self.cdfid gt 0 then ncdf_close, self.cdfid
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF 

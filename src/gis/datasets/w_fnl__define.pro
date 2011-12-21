@@ -55,6 +55,7 @@ Function w_FNL::Init, FILE = file
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
+    if self.cdfid gt 0 then ncdf_close, self.cdfid
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF 
@@ -92,12 +93,12 @@ Function w_FNL::Init, FILE = file
   ; Read metadata *
   ;****************    
   
-  ; Read time from fname : fnl_20100301_12_00_c.nc
-  tsp = self.fname
-  y = LONG(STRMID(tsp,4,4))
-  m = LONG(STRMID(tsp,8,2))
-  d = LONG(STRMID(tsp,10,2))
-  h = LONG(STRMID(tsp,13,2))
+  ; Read time from variable
+  tsp = self->get_VAtt('TMP_3_SPDY_10', 'initial_time')
+  y = LONG(STRMID(tsp,6,4))
+  m = LONG(STRMID(tsp,0,2))
+  d = LONG(STRMID(tsp,3,2))
+  h = LONG(STRMID(tsp,12,2))
   time0 = QMS_TIME(YEAR=y, MONTH=m, DAY=d, HOUR=h)
   time1 = time0
   time = time0
