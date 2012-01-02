@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ;
-;  w_BlueMarble is a basis class to read jpeg files from the NASA Blue Marble Serie
+;  w_BlueMarble is a basis class to read image files from the NASA Blue Marble Serie
 ;  (http://earthobservatory.nasa.gov/Features/BlueMarble/). 
 ;  
 ;  The default world map (Low Res, Topo global) and a 2km SRTM dataset 
@@ -20,12 +20,13 @@ PRO w_BlueMarble__Define
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  struct = {w_BlueMarble                    ,  $
+  struct = {w_BlueMarble               ,  $
             INHERITS w_Grid2D          ,  $
-            path :               ''    ,  $ ; .jpg NASA file
-            cropped :            ''    ,  $ ; is cropped? 'BORDER' 'SUBSET_LL' 'SUBSET_IJ' 'FALSE'
+            path :               ''    ,  $ ; path to the file or directory
+            type :               ''    ,  $ ; JPG or PNG or DIR
+            cropped :            ''    ,  $ ; is cropped? 'TRUE' 'FALSE'
             subset : [0L,0L,0L,0L]     ,  $ ; [x0,y0,x1,y1]
-            img:      PTR_NEW()             $ ; the elevation
+            img:      PTR_NEW()           $ ; the img
             }
     
 end
@@ -65,8 +66,18 @@ Function w_BlueMarble::Init, FILE=file, SRTM=srtm
   if N_ELEMENTS(FILE) eq 0 then _file = WAVE_RESOURCE_DIR+'/files/bluemarble/world.topo.200407.3x5400x2700.jpg' $
    else _file = file
   if KEYWORD_SET(SRTM) then _file = WAVE_RESOURCE_DIR+'/files/bluemarble/srtm_ramp2.world.21600x10800.jpg'
-    
-  if ~QUERY_JPEG(_file, Info) then message, WAVE_Std_Message('FILE', /FILE)
+ 
+  if N_ELEMENTS(_file) eq 0 then _file = DIALOG_PICKFILE(TITLE='Please select bluemarble file or directory to read')
+  
+  type = ''
+  if QUERY_JPEG(_file, Info) then type = 'JPG'
+  if type eq '' and QUERY_PNG(_file, Info) then type = 'PNG'
+  if FILE_TEST(_file, /DIRECTORY) then type = 'DIR'
+  
+  if type eq 'DIR' then Message, 'Large files currently not supported.'
+  if type eq '' then Message, WAVE_Std_Message(_file, /FILE)
+  
+  self.type = type
   self.path = _file  
 
   nx = info.dimensions[0]
@@ -167,7 +178,8 @@ function w_BlueMarble::get_img
   COMPILE_OPT IDL2
   
   if ~PTR_VALID(self.img) then begin
-    READ_JPEG, self.path, img
+    if self.type eq 'JPG' then  READ_JPEG, self.path, img
+    if self.type eq 'PNG' then  READ_PNG, self.path, img
     self.img = PTR_NEW(img, /NO_COPY)
   endif
 

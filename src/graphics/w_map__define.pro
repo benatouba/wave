@@ -217,15 +217,12 @@ END
 ;    BLUE_MARBLE: in, optional, type = boolean/string
 ;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
 ;                 if set to a string, it is the path to an alternative jpg file to use as background
-;    SHADING: in, optional, type = boolean
-;             set this keyword to automatically add shading from the blue marble topography (2 km resolution)
-;             for better and HR topographical shading, use your own .grd instead (`w_Map::set_topography`)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
-                            BLUE_MARBLE=blue_marble, SHADING=shading
+                            BLUE_MARBLE=blue_marble
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -262,24 +259,6 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
     if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
     ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
     undefine, w
-  endif
-  
-  if KEYWORD_SET(SHADING) then begin
-    w = OBJ_NEW('w_BlueMarble', /SRTM)
-    z = FLOAT(self.grid->map_gridded_data(w->get_img(), w, /BILINEAR))
-    undefine, w
-    if str_equiv(c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then begin
-      ddx = mean(c.dx * 111200 * cos(lat * !pi / 180d ))
-      ddy = c.dy * 111200
-    endif else begin
-      ddx = c.dx
-      ddy = c.dy
-    endelse
-    GIS_xy_derivatives, ret, rotate(z,7), dx = ddx, dy = ddy, DFDX=dhdx,DFDY=dhdy
-    sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer
-    PTR_FREE, self.sl
-    self.sl = PTR_NEW(sl, /NO_COPY)
-    self.is_Shaded = TRUE
   endif
                  
   RETURN, 1
@@ -876,7 +855,10 @@ end
 ;   To set a topography for the shading layer.
 ;
 ; :Keywords:
-;    GRDFILE: in, required, type = string
+;    DEFAULT: in, optional, type = boolean
+;             set this keyword to use the default topography file.
+;             Source: BLUEMARBLE SRTM image, resolution 1 minute of arc
+;    GRDFILE: in, optional, type = string
 ;             the .grd file to read (with hdr !!!)
 ;    USE_GRID: in, optional, type = boolean
 ;              If set to 1, this forces to use the exact grid information
@@ -885,13 +867,13 @@ end
 ;              in geographic coordinates) and use exact grid transformation
 ;              in all other cases. USE_GRID is more precise, but slower.
 ;              In most of the cases you don't have to care about this keyword.              
-;    Z: out, otional, type = string
+;    Z: out, type = float
 ;       to obtain the topography values for e.g a plot
 ;
 ; :History:
 ;     Written by DiS, FaM, 2011
 ;-
-function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
+function w_Map::set_topography, DEFAULT = default, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -909,69 +891,71 @@ function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(grdfile) then begin
+  if N_ELEMENTS(GRDFILE) eq 0 and not KEYWORD_SET(DEFAULT) then begin
     PTR_FREE, self.sl
     self.is_Shaded = false
     return, 1
   end
-  
-  if N_ELEMENTS(grdfile) eq 0 then grdfile = DIALOG_PICKFILE(TITLE='Please select .grd file to read', /MUST_EXIST)
-  if GRDFILE eq '' then begin
-    PTR_FREE, self.sl
-    self.is_Shaded = false
-    return, 1
-  end
-  
-  spli = STRSPLIT(grdfile, '.', /EXTRACT)
-  if str_equiv(spli[N_ELEMENTS(spli)-1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
-  GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
   
   self.grid->getProperty, tnt_c = c
   
-  if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
-    dem = OBJ_NEW('w_DEM', FILE=grdfile)
-    dem->GetProperty, TNT_C=dem_c
-    if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
-    OBJ_DESTROY, dem  
-  endif else _ug = KEYWORD_SET(USE_GRID)
+  if KEYWORD_SET(DEFAULT) then begin
   
-  if ~_ug then begin ; Simple NN method
-  
-    self.grid->get_Lonlat, lon, lat, nx, ny
-    ; Open DEM grid
-    !QUIET = 1
-    GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
-    !QUIET = 0
-    if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
+    w = OBJ_NEW('w_BlueMarble', /SRTM)
+    z = FLOAT(self.grid->map_gridded_data(w->get_img(), w, /BILINEAR))
+    undefine, w
     
-    lat0 = info.coord.y0 & lon0 = info.coord.x0
-    dlat = info.coord.dy & dlon = info.coord.dx
-    nlon = info.coord.nx & nlat = info.coord.ny
-    
-    ilat = round((lat0-lat[*])/dlat)
-    ilon = round((lon[*]-lon0)/dlon)
-    rmin = min(ilat)
-    rmax = max(ilat)
-    topo = intarr(nlon,rmax-rmin+1)
-    openr, lun, grdfile, /GET
-    point_lun, lun, 2*rmin*nlon
-    readu, lun, topo
-    free_lun, lun
-    
-    z = topo[ilon,ilat-rmin]
-    p = where(z le -9999, cnt)
-    if cnt gt 0 then z[p] = 0
-    z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))    
-  
   endif else begin
-  
-    dem = OBJ_NEW('w_DEM', FILE=grdfile)
-    z = FLOAT(dem->get_Z())
-    p = where(z le -9999, cnt)
-    if cnt gt 0 then z[p] = 0
-    z = self.grid->map_gridded_data(z, dem, MISSING = 0., /CUBIC)
-    OBJ_DESTROY, dem
-  
+    
+    spli = STRSPLIT(grdfile, '.', /EXTRACT)
+    if str_equiv(spli[N_ELEMENTS(spli)-1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
+    GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
+        
+    if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
+      dem = OBJ_NEW('w_DEM', FILE=grdfile)
+      dem->GetProperty, TNT_C=dem_c
+      if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
+      OBJ_DESTROY, dem
+    endif else _ug = KEYWORD_SET(USE_GRID)
+    
+    if ~_ug then begin ; Simple NN method
+    
+      self.grid->get_Lonlat, lon, lat, nx, ny
+      ; Open DEM grid
+      !QUIET = 1
+      GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
+      !QUIET = 0
+      if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
+      
+      lat0 = info.coord.y0 & lon0 = info.coord.x0
+      dlat = info.coord.dy & dlon = info.coord.dx
+      nlon = info.coord.nx & nlat = info.coord.ny
+      
+      ilat = round((lat0-lat[*])/dlat)
+      ilon = round((lon[*]-lon0)/dlon)
+      rmin = min(ilat)
+      rmax = max(ilat)
+      topo = intarr(nlon,rmax-rmin+1)
+      openr, lun, grdfile, /GET
+      point_lun, lun, 2*rmin*nlon
+      readu, lun, topo
+      free_lun, lun
+      
+      z = topo[ilon,ilat-rmin]
+      p = where(z le -9999, cnt)
+      if cnt gt 0 then z[p] = 0
+      z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
+      
+    endif else begin
+    
+      dem = OBJ_NEW('w_DEM', FILE=grdfile)
+      z = FLOAT(dem->get_Z())
+      p = where(z le -9999, cnt)
+      if cnt gt 0 then z[p] = 0
+      z = self.grid->map_gridded_data(z, dem, MISSING = 0., /CUBIC)
+      OBJ_DESTROY, dem
+      
+    endelse
   endelse
   
   if str_equiv(c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then begin
@@ -983,7 +967,7 @@ function w_Map::set_topography, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
   endelse
   
   GIS_xy_derivatives, ret, rotate(z,7), dx = ddx, dy = ddy, DFDX=dhdx,DFDY=dhdy
-  if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message('Error by calculating derivatives.')
+  if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message('Error when calculating derivatives.')
   
   sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer  
   
@@ -1461,7 +1445,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VAL_MIN = val_min, VAL_MAX = val_max, OVERPLOT = overplot
+function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, OVERPLOT = overplot
                              
   
   ; SET UP ENVIRONNEMENT
@@ -1485,10 +1469,7 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
    self.missing = PTR_NEW(!VALUES.F_NAN)
    return, self->set_img()
   endif  
-  
-  ;TODO: remove this when made sure than nobody uses it
-  if N_ELEMENTS(VAL_MIN) ne 0 or N_ELEMENTS(VAL_MAX) ne 0 then Message, 'VAL_MIN and VAL_MAX keywords in $w_Map::set_data are deprecated. Use $w_Map::set_plot_params instead.'
-  
+    
   if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
   
   _oplot = KEYWORD_SET(OVERPLOT)
@@ -1511,8 +1492,6 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, VA
       ELSE: missing = -999
     ENDCASE
   endif
-
-    
   
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
