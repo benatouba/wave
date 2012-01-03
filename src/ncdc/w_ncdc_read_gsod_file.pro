@@ -87,7 +87,7 @@
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function NCDC_VAL_from_ASCII, data, ascii_tag
+function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
 
   ; Set up environment
   compile_opt idl2
@@ -259,7 +259,7 @@ end
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function NCDC_parse_time, yearmoda
+function w_ncdc_read_gsod_file_parse_time, yearmoda
 
 
   ; Set up environment
@@ -318,7 +318,7 @@ end
 ; :History:
 ;       Written by FaM, CoK 2009.
 ;-
-function NCDC_DAILY_DATA, FILE = file
+function w_ncdc_read_gsod_file, FILE = file
 
   ;--------------------------
   ; Set up environment
@@ -340,14 +340,14 @@ function NCDC_DAILY_DATA, FILE = file
   ascii_tags = tag_names(ascii_data)
   nvals = N_ELEMENTS(ascii_tags)
   
-  date = NCDC_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
+  date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
   
   nb_entries=N_ELEMENTS(date)
   if nb_entries eq 0 then message, 'No data in file'
   
   stn = ascii_data.stn  
   for k = 0, nvals-1 do begin    
-    val = NCDC_VAL_from_ASCII(ascii_data.(k), ascii_tags[k])  
+    val = w_ncdc_read_gsod_file_parse_val_from_ascii(ascii_data.(k), ascii_tags[k])  
     if arg_okay(val,TYPE=IDL_STRING) then continue
     if (N_ELEMENTS(stat_vars) eq 0) then stat_vars = ptr_new(val) else stat_vars = [stat_vars, ptr_new(val)]
   endfor
