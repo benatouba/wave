@@ -28,7 +28,7 @@
 ; :History:
 ;     Written by CoK, FaM, 2011.
 ;-
-pro w_ncdc_gsod_extract, usaf, wban, gsod_directory, out_directory, QUIET=quiet
+pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
   
   ; Set Up environnement
   COMPILE_OPT idl2
