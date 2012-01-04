@@ -855,7 +855,10 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
       Catch, /Cancel
       ok = WAVE_Error_Message(!Error_State.Msg) + ' Will not aggregate...'
       if arg_okay(outfile, TYPE = IDL_STRING) then if FILE_TEST(outfile) then FILE_DELETE, outfile
-      if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
+      if N_ELEMENTS(lun) ne 0 then begin 
+        printf, lun, 'ERROR. Stopped aggregation.'
+        FREE_LUN, lun
+      endif
       RETURN
     ENDIF
   
@@ -949,7 +952,7 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   ; ---------------------------
   ; Create the Netcdf out file
   ; ---------------------------
-  tid = NCDF_CREATE(outfile, /CLOBBER)
+  tid = NCDF_CREATE(outfile, /CLOBBER, /NET)
   NCDF_CONTROL, tid, /FILL
   ;Define dimensions
   dimTimeid  = NCDF_DIMDEF(tid, 'time', nt)
@@ -1000,7 +1003,12 @@ pro utils_trmm_aggregate_3B42, directory, START_TIME = start_time, END_TIME = en
   for i = 0, cfiles-1 do begin
   
     t_obj = OBJ_NEW('w_TRMM', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
-
+    
+    if ~OBJ_VALID(t_obj) then t_obj = OBJ_NEW('w_TRMM', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+    if ~OBJ_VALID(t_obj) then t_obj = OBJ_NEW('w_TRMM', FILE=fileLIST[i], SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL_DATUM = ll_datum)
+    if ~OBJ_VALID(t_obj) then Message, 'FILE: ' + fileLIST[i] + ' is a problem.'
+    
+    
     pcp = (t_obj->get_prcp(t) > 0) * 3
     
     undefine, chk
