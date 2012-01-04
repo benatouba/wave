@@ -1052,7 +1052,8 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     end
 
     'TER': begin
-      if self.type eq 'WRF' then _id = 'HGT' else _id = 'HGT_M'
+      if self->w_NCDF::get_Var_Info('HGT') then _id = 'HGT' $
+       else _id = 'HGT_M'
       value = self->w_GEO_nc::get_TimeSerie(_id, point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
         dims = dims, $ ;
         dimnames = dimnames)
