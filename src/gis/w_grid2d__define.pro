@@ -611,12 +611,17 @@ end
 ; :Keywords:
 ;    MASK: out
 ;          the ROI mask
-;
+;    SUBSET: out
+;           the smallest subset ([x0_dl, nx, y0_dl, ny]) surrounding the ROI
+;    MARGIN: in
+;            set to a positive integer value to add a margin to the subset
+;            (MARGIN=1 will put one grid point on each side of the subset, so two
+;             more columns per dimension in total)
 ; :History:
 ;     Written by FaM, 2011.
 ;
 ;-
-pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset
+pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset, MARGIN=margin
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -632,6 +637,8 @@ pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset
   ymin = min(inds[1,*])
   ymax = max(inds[1,*])  
   subset = [xmin, (xmax-xmin)+1, ymin, (ymax-ymin)+1]
+  
+  IF arg_okay(MARGIN, /INTEGER) then subset += [-margin,margin*2,-margin,margin*2]
     
     
 END
@@ -1124,7 +1131,9 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   ;***********************************
   ; Get the data in the source grid  *
   ;***********************************
-  p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out)  ; OUT of range
+  if NEAREST then p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out) $ ; OUT of range $
+   else p_out = where((i_dst lt -0.5) or (j_dst lt -0.5) or (i_dst gt mx+0.5) or (j_dst gt my+0.5), cnt_out)
+   
   if src_grid->is_roi() then begin ;Add the masked pixels to the indemove afterwards
     src_grid->get_ROI, MASK=mask
     poutm = where(mask[i_dst, j_dst] ne 1, cntoutm)
@@ -1261,14 +1270,17 @@ end
 ;    TO_ROI: in, optional, type = boolean
 ;            if set, the returned grid will be will be the 
 ;            smallest enclosing grid of the grid ROIs (if present).  
-;
+;    MARGIN: in
+;            set to a positive integer value to add a margin to the subset
+;            (MARGIN=1 will put one grid point on each side of the subset, so two
+;             more columns per dimension in total)
 ; :Returns:
 ;     A new w_Grid2D, which is a resampled version of the object grid
 ;     
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, TO_ROI = to_roi
+function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_roi, MARGIN=margin
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1278,7 +1290,7 @@ function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, TO_RO
   
   if ~ arg_okay(FACTOR, /NUMERIC) then factor = 1
   
-  if N_ELEMENTS(Xsize) ne 0 and N_ELEMENTS(Ysize) ne 0 then Message, 'Ambiguous keywords.' 
+  if N_ELEMENTS(Xsize) ne 0 and N_ELEMENTS(Ysize) ne 0 then Message, 'Ambiguous keyword combination.' 
   if N_ELEMENTS(Xsize) ne 0 then factor = double(Xsize) / self.tnt_c.nx
   if N_ELEMENTS(Ysize) ne 0 then factor = double(Ysize) / self.tnt_c.ny
   
@@ -1288,13 +1300,11 @@ function w_Grid2D::reGrid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, TO_RO
   ny = self.tnt_c.ny
   
   if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
-    inds = ARRAY_INDICES(BYTARR(self.tnt_c.nx,self.tnt_c.ny), where(*self.roi ne 0))
-    x = inds[0,*]
-    y = inds[1,*]
-    x0 = self.tnt_c.x0 + min(x) * self.tnt_c.dx
-    y0 = self.tnt_c.y0 - (self.tnt_c.ny-1-max(y)) * self.tnt_c.dy
-    nx = max(x)-min(x)+1
-    ny = max(y)-min(y)+1
+    self->get_ROI, SUBSET=subset, MARGIN=margin
+    x0 = self.tnt_c.x0 + subset[0] * self.tnt_c.dx
+    y0 = self.tnt_c.y0 - (self.tnt_c.ny-(subset[2]+subset[3])) * self.tnt_c.dy
+    nx = subset[1]
+    ny = subset[3]
   endif
   
   nx = nx * FACTOR
