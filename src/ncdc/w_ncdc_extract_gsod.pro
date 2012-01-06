@@ -59,26 +59,35 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
   
   nyears = 0L
   
-  years=FILE_BASENAME(FILE_SEARCH(gsod_directory+'\*',  COUNT=nyears, /TEST_DIRECTORY))  ;durchsucht auch unterordner?? (dauert lange)
+  years=FILE_BASENAME(FILE_SEARCH(gsod_directory+'/*',  COUNT=nyears, /TEST_DIRECTORY))  ;durchsucht auch unterordner?? (dauert lange)
   
+  if nyears eq 0 then MESSAGE, 'GSOD data directory not valid.'
   
-  nvalidstat = 0L
+  nvalidstat = 0L  
+  for s=0, nostat-1 do begin  
   
-  for s=0, nostat-1 do begin
     nvalidyears = 0L
+    
     for y=0, nyears-1 do begin
     
-      search_folder=gsod_directory+'/'+years[y]
+      search_folder = gsod_directory+'/'+years[y]+'/'
+      search_file = search_folder + str_usaf[s]+'-'+str_wban[s]+'-'+years[y]
+      file_path=FILE_SEARCH(search_file+'*', COUNT=nf)
       
-      file_path=FILE_SEARCH(search_folder+'/*')
-      file_name=strmid(FILE_BASENAME(file_path, '.*'), 0, 17)
-      pfile=where(file_name eq str_usaf[s]+'-'+str_wban[s]+'-'+years[y], cnt)
+;      file_name=strmid(FILE_BASENAME(file_path, '.*'), 0, 17)
+;      pfile=where(file_name eq str_usaf[s]+'-'+str_wban[s]+'-'+years[y], cnt)
       
-      if cnt eq 0 then print, 'NCDC station with ID '+ str_usaf[s] + ' and ' + str_wban[s] + ' could not be found for year ' + years[y]
-      if cnt eq 0 then continue
+      if nf eq 0 then begin
+       print, 'NCDC station with ID '+ str_usaf[s] + ' and ' + str_wban[s] + ' could not be found for year ' + years[y]
+       continue
+      endif
+      if nf gt 1 then Message, 'oula'
+      
+;      _file_path = out_directory
+;      FILE_COPY, file_path, _file_path
       
       nvalidyears += 1
-      OPENR, lun, file_path[pfile], /GET_LUN, /COMPRESS
+      OPENR, lun, file_path, /GET_LUN, /COMPRESS
       if nvalidyears eq 1 then OPENW, luns, out_directory+'/'+str_ofiles[s], /GET_LUN
       if nvalidyears gt 1 then OPENU, luns, out_directory+'/'+str_ofiles[s], /GET_LUN, /APPEND
       line = ''
@@ -90,15 +99,14 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
         if (nvalidyears gt 1) and (linecnt gt 1) then printf, luns, line
       endwhile
       free_lun, lun
-      free_lun, luns
-      
-      
-      
+      free_lun, luns     
       
     endfor
     
+    if nvalidyears gt 0 then nvalidstat +=1
+    
   endfor
   
-  if talk then Print, 'Done. NCDC stations were saved in the output directory.'
+  if talk then Print, 'Done. ' + str_equiv(nvalidstat)+ ' NCDC stations were saved in the output directory.'
   
 end
