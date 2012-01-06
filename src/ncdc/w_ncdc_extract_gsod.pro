@@ -59,12 +59,12 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
   
   nyears = 0L
   
-  years=FILE_BASENAME(FILE_SEARCH(gsod_directory+'/*',  COUNT=nyears, /TEST_DIRECTORY))  ;durchsucht auch unterordner?? (dauert lange)
+  years=FILE_BASENAME(FILE_SEARCH(gsod_directory+'/*',  COUNT=nyears, /TEST_DIRECTORY))
   
   if nyears eq 0 then MESSAGE, 'GSOD data directory not valid.'
   
-  nvalidstat = 0L  
-  for s=0, nostat-1 do begin  
+  nvalidstat = 0L
+  for s=0, nostat-1 do begin
   
     nvalidyears = 0L
     
@@ -72,19 +72,13 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
     
       search_folder = gsod_directory+'/'+years[y]+'/'
       search_file = search_folder + str_usaf[s]+'-'+str_wban[s]+'-'+years[y]
-      file_path=FILE_SEARCH(search_file+'*', COUNT=nf)
+      file_op=FILE_TEST(search_file+'.op.gz')
+      if file_op eq 0 then file_gz=FILE_TEST(search_file+'.gz')
       
-;      file_name=strmid(FILE_BASENAME(file_path, '.*'), 0, 17)
-;      pfile=where(file_name eq str_usaf[s]+'-'+str_wban[s]+'-'+years[y], cnt)
-      
-      if nf eq 0 then begin
-       print, 'NCDC station with ID '+ str_usaf[s] + ' and ' + str_wban[s] + ' could not be found for year ' + years[y]
-       continue
-      endif
-      if nf gt 1 then Message, 'oula'
-      
-;      _file_path = out_directory
-;      FILE_COPY, file_path, _file_path
+      if (file_op eq 0) and (file_gz eq 0) then continue else $
+        print, 'NCDC station with ID '+ str_usaf[s] + ' and WBAN ' + str_wban[s] + ' were found for year ' + years[y]
+        
+      if file_op eq 1 then file_path=search_file+'.op.gz' else file_path=search_file+'.gz'
       
       nvalidyears += 1
       OPENR, lun, file_path, /GET_LUN, /COMPRESS
@@ -99,7 +93,7 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
         if (nvalidyears gt 1) and (linecnt gt 1) then printf, luns, line
       endwhile
       free_lun, lun
-      free_lun, luns     
+      free_lun, luns
       
     endfor
     
