@@ -335,7 +335,7 @@ function w_ncdc_read_gsod_file, FILE = file
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
   
-  ascii_data = READ_ASCII(file, TEMPLATE=template, DELIMITER='')
+  ascii_data = READ_ASCII(file, TEMPLATE=template)
   
   ascii_tags = tag_names(ascii_data)
   nvals = N_ELEMENTS(ascii_tags)
