@@ -1,23 +1,60 @@
-pro w_ncdc_read_ish_history_csv, ish_history_file
+;+
+; :Description:
+;    This routine reads the NCDC history file from the NCDF ftp server
+;    and replaces the WAVE resource file with the updated information.     
+;    
+;    This routine must not be called very often (only when the history 
+;    file changed on the server).
+;
+;
+; :History:
+;     Written by FaM, 2012.
+;
+;-
+
+;+
+; :Description:
+;    To remove the " string from ascii fields
+;
+;-
+function w_ncdc_read_ish_history_csv_clean_str, str
+
+  n = N_ELEMENTS(str)
+  for i=0, N_ELEMENTS(str)-1 do str[i] = STRJOIN(STRTOK(str[i], '"', /REGEX, /EXTRACT))
+  return, str
+  
+end
+
+pro w_ncdc_read_ish_history_csv, CACHE_DIRECTORY=cache_directory
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   ;  ON_ERROR, 2
   
+  if N_ELEMENTS(CACHE_DIRECTORY) eq 0 then CACHE_DIRECTORY = ''
+  local_path = 'tmp_ish-history.csv'
+
+  oUrl = OBJ_NEW('IDLnetUrl', URL_SCHEME='ftp', URL_HOST='ftp.ncdc.noaa.gov/pub/data/gsod/')
+  oURL->SetProperty, URL_PATH = 'ish-history.csv'
+  dummy = oURL->Get(FILENAME = local_path) 
+  UNDEFINE, ourl
+    
   ; Read the CSV file (READ_CSV not possible because of the wrong datatypes)
   restore, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ish_history_file.tpl'
-  ascii_data = READ_ASCII(ish_history_file, TEMPLATE=template)
+  ascii_data = READ_ASCII(local_path, TEMPLATE=template)
+  FILE_DELETE, local_path
   
   ;Read the needed tags and remove the "
   usaf= STRMID(ascii_data.usaf, 1, 6)
   wban= STRMID(ascii_data.wban, 1, 5)
-  name = utils_replace_string(ascii_data.name, '"', '')
-  lon = utils_replace_string(ascii_data.lon, '"', '')
-  lat = utils_replace_string(ascii_data.lat, '"', '')
-  elev = utils_replace_string(ascii_data.elev, '"', '')
-  begind = utils_replace_string(ascii_data.begind, '"', '')
-  endd = utils_replace_string(ascii_data.endd, '"', '')
+  
+  name = w_ncdc_read_ish_history_csv_clean_str(ascii_data.name)
+  lon = w_ncdc_read_ish_history_csv_clean_str(ascii_data.lon)
+  lat = w_ncdc_read_ish_history_csv_clean_str(ascii_data.lat)
+  elev = w_ncdc_read_ish_history_csv_clean_str(ascii_data.elev)
+  begind = w_ncdc_read_ish_history_csv_clean_str(ascii_data.begind)
+  endd = w_ncdc_read_ish_history_csv_clean_str(ascii_data.endd)
   
   ; Select valid stations
   pnok = where(lon eq '' or lat eq '' or elev eq '' or lon eq '-99999' or lat eq '-99999' or elev eq '-99999', cntnok, COMPLEMENT=pok, NCOMPLEMENT=cntok)

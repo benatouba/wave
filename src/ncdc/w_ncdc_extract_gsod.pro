@@ -42,7 +42,7 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
   if ~ utils_is_dir(out_directory) then out_directory = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
   if ~ utils_is_dir(out_directory) then MESSAGE, 'Output data directory not valid.'
   
-  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_hist.sav'
+  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
   ;   for i=0, N_ELEMENTS(usaf)-1 do begin
   ;   us=where(ncdc_history.usaf eq usaf[i])
   ;   wb=where(ncdc_history.wban eq wban[i])
@@ -52,8 +52,8 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, QUIET=quiet
   talk = ~ KEYWORD_SET(QUIET)
   
   ; Define output file names
-  str_usaf = STRING(usaf, FORMAT='(I06)')
-  str_wban = STRING(wban, FORMAT='(I05)')
+  str_usaf = usaf
+  str_wban = wban
   str_ofiles = 'gsod-'+str_usaf+'-'+str_wban+'.dat'
   nostat = N_ELEMENTS(str_ofiles)
   
