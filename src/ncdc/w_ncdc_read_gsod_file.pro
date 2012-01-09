@@ -332,10 +332,10 @@ function w_ncdc_read_gsod_file, FILE = file
   
   if file eq '' then message, 'No file found'
   
-  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc.tpl'
-  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_hist.sav'
+  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
+  RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
   
-  ascii_data = READ_ASCII(file, TEMPLATE=template)
+  ascii_data = READ_ASCII(file, TEMPLATE=template, DELIMITER='')
   
   ascii_tags = tag_names(ascii_data)
   nvals = N_ELEMENTS(ascii_tags)
@@ -360,7 +360,7 @@ function w_ncdc_read_gsod_file, FILE = file
   for i=0, nstats-1 do begin
   
     id = ids[i]    
-    s=where(ncdc_history.usaf eq id, cnt)    
+    s=where(NCDC_HISTORY.usaf eq id, cnt)    
     if cnt eq 0 then Message, id + ' not found, please update your NCDC history file!'   
        
     lat = ncdc_history.lat[s]*0.001
