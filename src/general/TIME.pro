@@ -2097,6 +2097,103 @@ end
 
 ;+
 ; :Description:
+; 
+;    Same as TS_AGG but only for wind vectors. Input can be of the 
+;    form WS-WD or U-V, but it MUST be specified by one and only one of
+;    the dedicated keywords.    
+;
+; :Params:
+;    wind_data1: in, required, type = array
+;                the data serie to aggregate. Depending on the keywords UV or WSWD,
+;                it is either U or WS 
+;    wind_data2: in, required, type = array
+;                the data serie to aggregate. Depending on the keywords UV or WSWD,
+;                it is either V or WS 
+;    time: in, required, type = {ABS_DATE}/qms
+;          the associated time (same size as data)
+;    agg_ws: out, type = array
+;            the aggregated data (wind speed)
+;    agg_time: out, type = {ABS_DATE}/qms
+;              the associated time (same size as agg)
+;
+; :Keywords:
+;    UV: in, optional
+;        set this keyword to indicate that the wind input in is UV
+;    WSWD: in, optional
+;          set this keyword to indicate that the wind input in is WS, WD   
+;    MISSING: in, optional, default = NaN
+;             if no valid value is found within an interval, the missing
+;             value is assigned the the statistics
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored if `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded)
+;    DOUBLE: in, optional
+;            set this keyword to compute in double precision
+; 
+;
+; :History:
+;     Written by FaM, 2011.
+;-
+pro TS_AGG_WIND, wind_data1, wind_data2, time, agg_ws, agg_wd, agg_u, agg_v, agg_time, UV=uv, WSWD=wswd, $
+     MISSING=missing, DAY=day, HOUR=hour, NEW_TIME=new_time, DOUBLE=double
+    
+    
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  on_Error, 2
+  
+  ; Check args
+  if KEYWORD_SET(UV) then _uv = TRUE else _uv = FALSE
+  if KEYWORD_SET(WSWD) then _wswd = TRUE else _wswd = FALSE
+  if (_wswd and _uv) or (~_wswd and ~_uv) then Message, WAVE_Std_Message(/NARG)
+  if ~ array_processing(time, wind_data1, wind_data2) then message, '$DATA and $TIME arrays must have same number of elements'
+  
+  if _uv then begin
+    u = wind_data1
+    v = wind_data2
+    MET_u_v_to_ws_wd, ret, u, v, WS=ws, WD=wd
+  endif 
+  if _wswd then begin
+    ws = wind_data1
+    wd = wind_data2
+    MET_ws_wd_to_u_v, ret, ws, wd, U=u, V=v
+  endif
+  
+  TS_AGG, ws, time, agg_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+            
+  ; Temporary vector means
+  TS_AGG, u, time, agg_u, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+  TS_AGG, v, time, agg_v, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double           
+  MET_u_v_to_ws_wd, ret, agg_u, agg_v, WD=agg_wd
+  
+  p = where(agg_wd lt 0.,cnt) ;for missing values
+  if cnt gt 0 then begin
+  TS_AGG, wd, time, dummy_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+   agg_wd[p] = dummy_ws[p]
+  endif
+  undefine, agg_u, agg_v ; no need
+  
+  ; Now back to UV
+  MET_ws_wd_to_u_v, ret, agg_ws, agg_wd, U=agg_u, V=agg_v
+
+  
+end
+
+;+
+; :Description:
 ;    
 ;    Same as `TS_AGG` but for 2D or 3D arrays.
 ;    

@@ -602,12 +602,12 @@ function AWS_mast_angle, x, y
   if not array_processing(x, y) then message, WAVE_Std_Message(/ARG)
   
   ;X and Y are in degrees, they should be in RADs. Also, the difference to the vertical should be computed, not the horizontal.  
-  alpha = DOUBLE(!pi / 2d - ABS(x) * !pi / 180d )
-  beta = DOUBLE(!pi / 2d - ABS(y) * !pi / 180d )
+  alpha = (!pi / 2 - ABS(x) * !pi / 180 )
+  beta = (!pi / 2 - ABS(y) * !pi / 180 )
   
-  angle = ABS(atan((tan(alpha)*tan(beta))/ SQRT(tan(alpha)^2+tan(beta)^2)) * 180d / (!pi))
+  angle = ABS(atan((tan(alpha)*tan(beta))/ SQRT(tan(alpha)^2+tan(beta)^2)) * 180 / (!pi))
   
-  return, 90d - angle ; Also the same, the difference to vertical should be computed.
+  return, 90 - angle ; Also the same, the difference to vertical should be computed.
      
 end
 
@@ -721,18 +721,18 @@ function AWS_RH_campbell, rh, t
   if ~ array_processing(rh, t) then Message, WAVE_Std_Message(/ARG)
   
   ;linfit
-  a = 0.84285714d
-  b = 99.5d
+  a = 0.84285714
+  b = 99.5
   fac = 100. / (a * t + b) 
   
   ;polyfit
   x0 = 100.00000
-  x1 = 0.78000000d
-  x2 = -0.13177778d
-  x3 = -0.025666667d
-  x4 = -0.0019111111d
-  x5 = -6.1333334d-05
-  x6 = -7.1111111d-07
+  x1 = 0.78000000
+  x2 = -0.13177778
+  x3 = -0.025666667
+  x4 = -0.0019111111
+  x5 = -6.1333334e-05
+  x6 = -7.1111111e-07
   fac = 100. / (x0 + x1*t + x2*t^2 + x3*t^3 + x4*t^4 + x5*t^5 + x6*t^6) 
   
   p = where(t lt 0., cnt)
@@ -758,7 +758,7 @@ function AWS_linear_interp, top, bot, top_h, bot_h, H = h
   
   if ~KEYWORD_SET(h) then h = 2
   
-  return, a * double(h) + b
+  return, a * h + b
   
 end
 
