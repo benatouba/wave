@@ -644,3 +644,107 @@ function w_TRMM::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, LL
   return, 1 ;OK
   
 end
+
+
+;+
+; :Description:
+;    This function reads a variable from the file but only
+;    at a specific location. The output is a vector of 
+;    nt elements, where nt is the number of times in the 
+;    time serie.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;         
+; :Params:
+;    varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;    x: in, required, type = long
+;       the X coordinate of the point where to get the variable (if SRC is not specified, it is an index within the Grid)
+;    y: in, required, type = long
+;       the Y coordinate of the point where to get the variable (if SRC is not specified, it is an index within the Grid)
+;    time:  out, type = qms
+;           the variable times
+;    nt: out, type = long
+;        the variable number of times
+;
+; :Keywords:
+;    t0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    t1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+;    src: in, optional
+;         the coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
+;    point_i: out, optional
+;             the i index in the grid where the nearest point was found
+;    point_j: out, optional
+;             the j index in the grid where the nearest point was found
+;    point_lon: out, optional
+;              the longitude of the nearest grid point
+;    point_lat: out, optional
+;              the latitude of the nearest grid point
+;    units: out, type = string
+;           If available, the units of the variable
+;    description: out, type = string
+;                 If available, the description of the variable
+;    varname: out, type = string
+;             the name of the variable
+;    dims: out, type = long
+;          the variable dimensions
+;    dimnames: out, type = string
+;              the dimensions names
+;              
+; :History:
+;     Written by FaM, 2010.
+;-      
+function w_TRMM::get_TimeSerie,varid, x, y, $
+                              time, nt, $
+                              T0=t0, T1=t1, $
+                              SRC=src, $
+                              K=K, $
+                              POINT_I=point_i, $
+                              POINT_J=point_j, $
+                              POINT_LON=point_lon, $
+                              POINT_LAT=point_lat, $
+                              UNITS=units, $
+                              DESCRIPTION=description, $
+                              VARNAME=varname , $ ; 
+                              DIMS=dims, $ ;
+                              DIMNAMES=dimnames 
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ON_ERROR, 2
+  
+  if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
+  if ~arg_okay(VarId, /SCALAR) then MEssage, WAVE_Std_Message('VarId', /SCALAR)
+   
+  ;Check if the variable is available
+  if ~self->get_Var_Info(Varid, out_id = vid, $
+    units = units, $
+    description = description, $
+    varname = varname , $
+    dims = dims, $
+    dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
+      
+  ; GIS
+  if N_ELEMENTS(src) EQ 0 then mysrc = self else mysrc = src
+  ; This is to obtain the indexes in the grid
+  self->transform,  x, y, point_i, point_j, SRC = mysrc, /NEAREST, E_DST=_x, N_DST=_y
+  ; This is to obtain lat and lons of the selected grid point
+  self->transform, point_i, point_j, dummy, dummy, src=self, $
+    LON_DST=point_lon, LAT_DST=point_lat
+  
+  value = self->w_GEO_nc::get_TimeSerie(varid, point_i, point_j, time, nt, t0 = t0, t1 = t1, $
+    K = K , $
+    units = units, $
+    description = description, $
+    varname = varname , $ ;
+    dims = dims, $ ;
+    dimnames = dimnames )
+    
+  return, value
+  
+end
