@@ -19,6 +19,12 @@
 ;                   it will be created. If gsod files of corresponding
 ;                   ids are found in the directory (from e.g. a previous
 ;                   call of this routine), they will be deleted.
+;    S_YEAR: in, optional, type=integer
+;            If set, the routine extracts data beginning from the given start year.
+;            Stations without data for the given time period are ignored.       
+;    E_YEAR: in, optional, type=integer
+;            If set, the routine extracts data including the given end year.
+;            Stations without data for the given time period are ignored.                 
 ;    LOG: in, optional, type=boolean
 ;                   Per default, the routine logs what it does in
 ;                   a log file saved in the output directory.
@@ -33,7 +39,7 @@
 ; :History:
 ;     Last modification: 12 Jan 2012
 ;-
-pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, LOG=log, S_YEAR=s_year, E_YEAR=e_year
+pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_year, E_YEAR=e_year, LOG=log
 
   ; Set Up environment
   COMPILE_OPT idl2
