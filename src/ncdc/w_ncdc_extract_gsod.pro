@@ -33,7 +33,7 @@
 ; :History:
 ;     Last modification: 12 Jan 2012
 ;-
-pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, LOG=log
+pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, LOG=log, S_YEAR=s_year, E_YEAR=e_year
 
 ; Set Up environment
 COMPILE_OPT idl2
@@ -77,7 +77,7 @@ for s=0, nostat-1 do begin
   ;Begin search for station number
   print, 'Searching data for station '+str_usaf[s]+'.'
   nvalidyears = 0L
-  
+  selyear = 0L
   for y=0, nyears-1 do begin
     ;Begin search for station ASCII file in every single folder
     search_folder = gsod_directory+'/'+years[y]+'/'
@@ -90,30 +90,46 @@ for s=0, nostat-1 do begin
     
     if (file_op eq 0) and (file_gz eq 0) then continue
     nvalidyears += 1
+    if (N_ELEMENTS(S_YEAR) eq 0) or (N_ELEMENTS(E_YEAR) eq 0) then selyear+=1
     
     if nvalidyears eq 1 then y0=years[y]
     y1= years[y]
+    end_year=TIME_to_STR(QMS_TIME(), MASK='YYYY')
+    start_year=y0
+   
+    if N_ELEMENTS(S_YEAR) ne 0 then start_year=s_year
+    if N_ELEMENTS(E_YEAR) ne 0 then end_year=e_year 
+    diff=long(end_year)-long(start_year)
+    
+    if (N_ELEMENTS(S_YEAR) ne 0) or (N_ELEMENTS(E_YEAR) ne 0) then begin
+   
+    yarr=INDGEN(diff+1)+long(S_YEAR)
+    yt=where(yarr eq y1, ycnt) 
+    if ycnt eq 0 then continue 
+    if ycnt eq 1 then selyear+=1
+    
+    endif
     
     if file_op eq 1 then file_path=search_file+'.op.gz' else file_path=search_file+'.gz'
     
     ;Start writing ASCII file
     OPENR, lun, file_path, /GET_LUN, /COMPRESS
-    if nvalidyears eq 1 then OPENW, luns, out_directory+'/'+str_ofiles[s], /GET_LUN
-    if nvalidyears gt 1 then OPENU, luns, out_directory+'/'+str_ofiles[s], /GET_LUN, /APPEND
+    if selyear eq 1 then OPENW, luns, out_directory+'/'+str_ofiles[s], /GET_LUN
+    if selyear gt 1 then OPENU, luns, out_directory+'/'+str_ofiles[s], /GET_LUN, /APPEND
     line = ''
     linecnt=0
     while not eof(lun) do begin
       linecnt+=1
       readf, lun, line
-      if nvalidyears eq 1 then printf, luns, line
-      if (nvalidyears gt 1) and (linecnt gt 1) then printf, luns, line
+      if selyear eq 1 then printf, luns, line
+      if (selyear gt 1) and (linecnt gt 1) then printf, luns, line
     endwhile
     free_lun, lun
     free_lun, luns
     
   endfor
-  
-  if nvalidyears gt 0 then nvalidstat +=1
+   
+  if selyear gt 0 then nvalidstat +=1
   if nvalidstat eq 0 then continue
   
   ;Start writing log file
@@ -133,8 +149,8 @@ for s=0, nostat-1 do begin
     
     stat_info=str_usaf[s]+', '+str_wban[s]+', '+st_names[s]+', '+y0+', '+y1
     
-    if nvalidstat gt 1 then OPENU, lun, out_directory+'/'+ logfile, /GET_LUN, /APPEND
-    printf, lun, stat_info
+    if (nvalidstat gt 1) and (selyear gt 0) then OPENU, lun, out_directory+'/'+ logfile, /GET_LUN, /APPEND
+    if selyear gt 0 then printf, lun, stat_info
     
     free_lun, lun
   endif
