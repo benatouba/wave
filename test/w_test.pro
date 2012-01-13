@@ -659,6 +659,20 @@ pro TEST_TS_FILL_MISSING
   if N_ELEMENTS(inds) ne 1 then error +=1 
   if inds[0] ne -1 then error +=1   
   
+  goodTS = QMS_TIME(year=2010,month=01, day=[1,2,3,4])
+  badTS = QMS_TIME(year=2010,month=01, day=[2,3])
+  GOODDATA = INDGEN(4)
+  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, badTS, INDEXES=inds)
+  if total([1,2] - filled_Data) ne 0 then error +=1  
+  if N_ELEMENTS(inds) ne 1 then error +=1 
+  if inds[0] ne -1 then error +=1   
+  
+  GOODDATA = INDGEN(2)
+  filled_Data = TS_FILL_MISSING(GOODDATA, badTS, goodTS, FILL_VALUE=-1, INDEXES=inds)
+  if total(ABS([-1,0,1,-1] - filled_Data)) ne 0 then error +=1  
+  if N_ELEMENTS(inds) ne 2 then error +=1 
+  if inds[0] ne 0 then error +=1   
+  if inds[1] ne 3 then error +=1   
   
   if error ne 0 then message, '% TEST_TS_FILL_MISSING NOT passed', /CONTINUE else print, 'TEST_TS_FILL_MISSING passed'
   
