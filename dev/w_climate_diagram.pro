@@ -1,21 +1,22 @@
-pro w_climate_diagram, temperature, prcp
-  
-  
-  temperature = [0.,1,3,6,8,12,14,18,14,8,4,0]
-  prcp = [100,20,100,80,42,150,100,20,100,80,42,150]
-  
-  meanT = mean(temperature)
-  totPrcp = total(prcp)
+pro w_climate_diagram,name, precipitation, temperature, lat, lon, vnames, h, timeperiod, cntnok
   
   labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   
-  cgbarplot, prcp, color='blue', title='climate diagram Berlin-Dahlem!C(52'+cgsymbol('deg')+'27´N/13'+cgsymbol('deg')+'18´E), 58m', $
-             xtitle='month', ytitle='precipitation [mm]', yrange=[0,400], xstyle= 1, $
-             position=[0.1, 0.25, 0.9, 0.85], barnames=labels, XTICK_GET = V
-              ;, barspace=0.05
+  lat = STRING(lat,FORMAT='(F7.2)')
+  lon = STRING(lat,FORMAT='(F7.2)')
+  h   = STRING(h,FORMAT='(I4)')
   
-  axis, yaxis=1, yrange=[-10,30], ystyle=1, color = cgcolor('black'), /save ,ytitle='temperature ['+cgsymbol('deg')+'C]'
-
-  cgplot, INDGEN(12)+0.5, temperature, color=cgcolor('red'), /overplot, PSYM=5
+  meanTemp = STRING(mean(temperature),FORMAT='(F4.1)')
+  sumPrcp = STRING(total(precipitation), FORMAT='(I4)')
+  
+  cgbarplot, precipitation, color='blue',$
+             xtitle='month', ytitle='precipitation [mm]', yrange=[0,max(precipitation)+60], xstyle= 1, $
+             position=[0.15, 0.15, 0.85, 0.78], barnames=labels, XTICK_GET = V , /window
+  cgaxis, yaxis=1, yrange=[min(temperature)-10,max(temperature)+10], ystyle=1, color = cgcolor('black'), /save ,ytitle='temperature ['+cgsymbol('deg')+'C]', /window
+  cgplot, INDGEN(12)+0.5, temperature, color=cgcolor('red'), /overplot, /window
+  cgtext, 0.25, 0.95,'climate diagram '+name+' ('+timeperiod+')', /Normal, /Window
+  cgtext, 0.25,0.9,'lat ='+lat+''+cgsymbol('deg')+' / lon ='+lon+''+cgsymbol('deg')+' / '+h+' m', /Normal, /Window
+  cgtext, 0.38, 0.85, 'missing days = '+STR_equiv(cntnok)+'',/Normal, /Window
+  cgtext, 0.4, 0.8, ''+meanTemp+''+cgsymbol('deg')+'C, '+sumPrcp+'mm',/Normal, /Window
 
 end
