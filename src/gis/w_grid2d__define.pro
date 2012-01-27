@@ -1087,7 +1087,7 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   
   bili = KEYWORD_SET(BILINEAR)
   cubic = KEYWORD_SET(CUBIC)
-  if ~cubic and ~bili then NEAREST = TRUE ;Otherwize, we need the decimals of course
+  if ~cubic and ~bili then nearest = TRUE else nearest = false ;Otherwize, we need the decimals of course
   
   src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
@@ -1131,7 +1131,7 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR
   ;***********************************
   ; Get the data in the source grid  *
   ;***********************************
-  if NEAREST then p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out) $ ; OUT of range $
+  if nearest then p_out = where((i_dst lt 0) or (j_dst lt 0) or (i_dst ge mx) or (j_dst ge my), cnt_out) $ ; OUT of range $
    else p_out = where((i_dst lt -0.5) or (j_dst lt -0.5) or (i_dst gt mx+0.5) or (j_dst gt my+0.5), cnt_out)
    
   if src_grid->is_roi() then begin ;Add the masked pixels to the indemove afterwards
