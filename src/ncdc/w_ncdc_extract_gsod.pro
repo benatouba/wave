@@ -25,10 +25,10 @@
 ;    E_YEAR: in, optional, type=integer
 ;            If set, the routine extracts data including the given end year.
 ;            Stations without data for the given time period are ignored.                 
-;    LOG: in, optional, type=boolean
-;                   Per default, the routine logs what it does in
-;                   a log file saved in the output directory.
-;                   Set this keyword to avoid this.                  
+;    NOLOG: in, optional, type=boolean
+;         Per default, the routine logs what it does in
+;         a log file saved in the output directory.
+;         Set this keyword to avoid this.                  
 ;                  
 ; :Author:
 ;   FaM, CoK
@@ -39,7 +39,7 @@
 ; :History:
 ;     Last modification: 12 Jan 2012
 ;-
-pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_year, E_YEAR=e_year, LOG=log
+pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_year, E_YEAR=e_year, NOLOG=nolog
 
   ; Set Up environment
   COMPILE_OPT idl2
@@ -58,31 +58,46 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_yea
   ;Check existence of USAF/WBAN combination in history
   nostat = N_ELEMENTS(usaf)
   st_names = STRARR(nostat)
+  st_lons = STRARR(nostat)
+  st_lats = STRARR(nostat)
   test_id = ncdc_history.usaf+ncdc_history.wban
   for i=0, nostat-1 do begin
     uw=where(test_id eq usaf[i]+wban[i], cnt)
     if cnt eq 0 then MESSAGE, 'The station with USAF '+ usaf[i] + ' and WBAN ' + wban[i] + ' does not exist in NCDC history file.'
     st_names[i] = ncdc_history.name[uw]
+    st_lons[i] = STRING(ncdc_history.lon[uw], FORMAT='(F10.5)')
+    st_lats[i] = STRING(ncdc_history.lat[uw], FORMAT='(F10.5)')    
   endfor
-  
-  talk = ~ KEYWORD_SET(LOG)
+
+  talk = ~ KEYWORD_SET(NOLOG)
   
   ; Define output file names
   str_usaf = usaf
   str_wban = wban
   str_ofiles = 'gsod-'+str_usaf+'-'+str_wban+'.dat'
-  nyears = 0L
   
+  ;For the log
+  if talk then begin
+    ac_date = time_to_str(QMS_TIME(), MASK='YYYY-MM-DD_HHTT')
+    logfile='GSOD_EXTRACT_'+ac_date+'.log'
+  endif
   ; Read available years
   years=FILE_BASENAME(FILE_SEARCH(gsod_directory+'/*',  COUNT=nyears, /TEST_DIRECTORY))
   if nyears eq 0 then MESSAGE, 'GSOD data directory not valid.'
   
+   
+  if N_ELEMENTS(S_YEAR) ne 0 then start_year=s_year else start_year=years[0]
+  if N_ELEMENTS(E_YEAR) ne 0 then end_year=e_year else end_year=years[nyears-1]
+  nyears = LONG(end_year)-LONG(start_year)+1
+  years = str_equiv(INDGEN(nyears) + LONG(start_year))  
+  
   nvalidstat = 0L
   for s=0, nostat-1 do begin
+  
     ;Begin search for station number
     print, 'Searching data for station id '+str_usaf[s]+'. ' + str_equiv(nostat-s) + ' left.'
     nvalidyears = 0L
-    selyear = 0L
+    
     for y=0, nyears-1 do begin
       ;Begin search for station ASCII file in every single folder
       search_folder = gsod_directory+'/'+years[y]+'/'
@@ -90,73 +105,50 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_yea
       
       ;Check for variable file extension
       file_op=FILE_TEST(search_file+'.op.gz')
-      file_gz=0L
+      file_gz=0
       if file_op eq 0 then file_gz=FILE_TEST(search_file+'.gz')
-      
       if (file_op eq 0) and (file_gz eq 0) then continue
       nvalidyears += 1
-      if (N_ELEMENTS(S_YEAR) eq 0) or (N_ELEMENTS(E_YEAR) eq 0) then selyear+=1
-      
-      if nvalidyears eq 1 then y0=years[y]
-      y1= years[y]
-      end_year=TIME_to_STR(QMS_TIME(), MASK='YYYY')
-      start_year=y0
-      
-      if N_ELEMENTS(S_YEAR) ne 0 then start_year=s_year
-      if N_ELEMENTS(E_YEAR) ne 0 then end_year=e_year
-      diff=long(end_year)-long(start_year)
-      
-      if (N_ELEMENTS(S_YEAR) ne 0) or (N_ELEMENTS(E_YEAR) ne 0) then begin
-      
-        yarr=INDGEN(diff+1)+long(S_YEAR)
-        yt=where(yarr eq y1, ycnt)
-        if ycnt eq 0 then continue
-        if ycnt eq 1 then selyear+=1
-        
-      endif
       
       if file_op eq 1 then file_path=search_file+'.op.gz' else file_path=search_file+'.gz'
       
       ;Start writing ASCII file
       OPENR, lun, file_path, /GET_LUN, /COMPRESS
-      if selyear eq 1 then OPENW, luns, out_directory+'/'+str_ofiles[s], /GET_LUN
-      if selyear gt 1 then OPENU, luns, out_directory+'/'+str_ofiles[s], /GET_LUN, /APPEND
       line = ''
-      linecnt=0
+      readf, lun, line
+      
+      if nvalidyears eq 1 then begin
+        y0 = years[y]
+        OPENW, luns, out_directory+'/'+str_ofiles[s], /GET_LUN
+        printf, luns, line ; write the header
+      endif else OPENU, luns, out_directory+'/'+str_ofiles[s], /GET_LUN, /APPEND
+      
       while not eof(lun) do begin
-        linecnt+=1
         readf, lun, line
-        if selyear eq 1 then printf, luns, line
-        if (selyear gt 1) and (linecnt gt 1) then printf, luns, line
+        printf, luns, line
       endwhile
       free_lun, lun
       free_lun, luns
-      
+      y1 = years[y]
     endfor
     
-    if selyear gt 0 then nvalidstat +=1
-    if nvalidstat eq 0 then continue
-    
+    if nvalidyears gt 0 then nvalidstat +=1 else continue
+   
     ;Start writing log file
     if talk then begin
+    
       if nvalidstat eq 1 then begin
-        ac_date=time_to_str(QMS_TIME(), MASK='YYYY-MM-DD_HHTT')
-        logfile='GSOD_EXTRACT_'+ac_date+'.log'
-        
         OPENW, lun, out_directory+'/'+ logfile, /GET_LUN
-        
         header='#######GSOD_EXTRACT_NCDC LOG FILE_'+ac_date+'#######'
-        descr= 'USAF, WBAN, NAME, START_YEAR, END_YEAR'
-        
+        descr= 'USAF, WBAN, NAME, LON, LAT, START_YEAR, END_YEAR'
         printf, lun, header
         printf, lun, descr
+        free_lun, lun
       endif
       
-      stat_info=str_usaf[s]+', '+str_wban[s]+', '+st_names[s]+', '+y0+', '+y1
-      
-      if (nvalidstat gt 1) and (selyear gt 0) then OPENU, lun, out_directory+'/'+ logfile, /GET_LUN, /APPEND
-      if selyear gt 0 then printf, lun, stat_info
-      
+      stat_info=str_usaf[s]+', '+str_wban[s]+', '+st_names[s]+', '+ st_lons[s]+', '+ st_lats[s]+', '+ y0+', '+ y1
+      OPENU, lun, out_directory+'/'+ logfile, /GET_LUN, /APPEND
+      printf, lun, stat_info
       free_lun, lun
     endif
   endfor

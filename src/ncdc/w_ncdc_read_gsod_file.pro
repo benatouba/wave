@@ -292,7 +292,7 @@ end
 ; :History:
 ;       Written by FaM, CoK, 2012.
 ;-
-function w_ncdc_read_gsod_file, FILE = file, DIRECTORY=directory
+function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
 
   ;--------------------------
   ; Set up environment
@@ -310,6 +310,7 @@ function w_ncdc_read_gsod_file, FILE = file, DIRECTORY=directory
   cnt=1L
   if N_ELEMENTS(DIRECTORY) ne 0 then file_list=FILE_SEARCH(directory, 'gsod-*.dat', count=filecnt)
   if N_ELEMENTS(FILE) ne 0 then file_list=file
+  filecnt = N_ELEMENTS(file_list)
   
   if N_ELEMENTS(file_list) eq 0 then message, 'No file(s) found.'
   
@@ -356,26 +357,27 @@ function w_ncdc_read_gsod_file, FILE = file, DIRECTORY=directory
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
       
+      ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
+         ID=s_id, $ ; Station ID
+         DESCRIPTION='NCDC Station', $ ; A short description of the station
+         ELEVATION=elev, $ ; altitude in m
+         LOC_X=lon, $ ; X location in SRC
+         LOC_Y=lat )
+            
       for j=0, N_ELEMENTS(stat_vars)-1 do begin
         _var = *(stat_vars[j])
         _d = (_var.data[p])[un]
-        var = w_ts_MakeData(_d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
-          VALID='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing)
-        if j eq 0 then variables=var else variables = [variables, var]
+        var = OBJ_NEW('w_ts_Data', _d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
+          VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing)
+        ncdc_station->addVar, var
       endfor
-      
-      ncdc_station=w_ts_MakeStation(variables, NAME=sname, $ ; The name of the station
-        ID=s_id, $ ; Station ID
-        DESCRIPTION='NCDC Station', $ ; A short description of the station
-        ELEVATION=elev, $ ; altitude in m
-        LOC_X=lon, $ ; X location in SRC
-        LOC_Y=lat )
         
       if (N_ELEMENTS(list_values) eq 0) then list_values = ncdc_station else list_values = [list_values, ncdc_station]
       
     endfor
-    
+        
   endfor
+  
   undefine, stat_vars
   return, list_values
   

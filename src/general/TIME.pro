@@ -1266,11 +1266,11 @@ function MAKE_TIME_SERIE, startTime, NSTEPS = nsteps, TIMESTEP=timestep, YEAR=ye
     
     1: begin ; TIMESTEP
     
-      if not arg_okay(timestep, STRUCT={TIME_STEP}) then Message, WAVE_Std_Message('timestep', STRUCT={TIME_STEP})
+      if not CHECK_WTIMESTEP(timestep, OUT_DMS=dms) then Message, WAVE_Std_Message('timestep', /ARG)   
       if not arg_okay(nsteps, /NUMERIC) then Message, WAVE_Std_Message('nsteps', /NUMERIC)     
       if nsteps lt 1 then Message,'nsteps should be greater than zero.'
       
-      serie = INDGEN(nsteps, /L64) * TIMESTEP.dms + t
+      serie = INDGEN(nsteps, /L64) * dms + t
       if WAS_ABSDATE then serie = MAKE_ABS_DATE(QMS = serie)     
       
     end
@@ -1378,12 +1378,12 @@ function MAKE_ENDED_TIME_SERIE, startTime, endTime, TIMESTEP=timestep, NSTEPS = 
   if t1 le t2 then sign = 1 else sign = -1
   
   if N_ELEMENTS(timestep) ne 0 then begin
-  
-    if not arg_okay(timestep, STRUCT={TIME_STEP}) then Message, WAVE_Std_Message('timestep', STRUCT={TIME_STEP})    
-    if sign ne LONG(ABS(timestep.dms)/timestep.dms) then  Message, '$timestep not compatible with start and end times'
     
-    nsteps = ABS((t2 - t1) / timestep.dms) + 1
-    qms = INDGEN(nsteps, /L64) * timestep.dms + t1
+    if not CHECK_WTIMESTEP(timestep, OUT_DMS=dms) then Message, WAVE_Std_Message('timestep', /ARG)   
+    if sign ne LONG(ABS(dms)/dms) then  Message, '$timestep not compatible with start and end times'
+    
+    nsteps = ABS((t2 - t1) / dms) + 1
+    qms = INDGEN(nsteps, /L64) * dms + t1
     if KEYWORD_SET(QMSTIME) or WAS_QMS then serie = qms else serie = MAKE_ABS_DATE(qms = qms)
           
   endif else if N_ELEMENTS(month) ne 0 then begin
@@ -1477,10 +1477,16 @@ end
 ;
 ; :Keywords:
 ;    FULL_TS: out, optional, type={ABS_DATE}/qms vector, default=none
-;         The "probable" complete time serie, of the same type as `ts`
-;    IND_MISSING: out, optional, type=integer vector, default=none
-;         The indexes in `FULL_TS` where `ts` is incomplete. -1 if 
-;         the ts is regular.
+;             The "probable" complete time serie, of the same type as `ts`
+;    IND_MISSING: out, optional, type=integer vector
+;                 The indexes in `FULL_TS` where `ts` is incomplete. -1 if 
+;                 the ts is regular.
+;    CONFIDENCE: out, optional, type=float
+;                from 0 to 1, the percentage of time steps that match the
+;                most probable timestep
+;    FORCE_TIMESTEP: in, optional, type={TIMESTEP}
+;                    if set, the routine doesn't try to find out the timestep 
+;                    but takes yours
 ;
 ; :Returns:
 ;    TRUE if the time serie is regular, FALSE if not
@@ -1528,7 +1534,7 @@ end
 ; :History:
 ;       Written by FaM, 2009.
 ;-
-function CHECK_TIMESERIE, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_missing
+function CHECK_TIMESERIE, ts, timestep, FULL_TS=full_ts, IND_MISSING=ind_missing, CONFIDENCE=confidence, FORCE_TIMESTEP=force_timestep
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1547,14 +1553,22 @@ function CHECK_TIMESERIE, ts, timestep, FULL_TS = full_ts, IND_MISSING = IND_mis
   steps = mytime[1:n-1] - mytime[0:n-2]
   bs = min(steps)
   if bs eq 0 then Message, 'The timeserie is not valid (some times are not unique)'
-  h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=bs)
-  m = MAX(h, p)
-  steps = steps - p - om
-  timestep = MAKE_TIME_STEP(DMS = p + om)
+  if N_ELEMENTS(FORCE_TIMESTEP) eq 0 then begin
+    h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=bs)
+    m = MAX(h, p)
+    timestep = MAKE_TIME_STEP(DMS = p*bs + om)
+  endif else begin
+    if ~ arg_okay(FORCE_TIMESTEP, STRUCT={TIME_STEP}) then message, WAVE_Std_Message('FORCE_TIMESTEP', /ARG)
+    timestep = force_timestep
+  endelse
+  
+  pok = where(steps eq timestep.dms, cntok)
+  confidence = float(cntok) / N_ELEMENTS(steps)
+  steps = steps - timestep.dms
   if TOTAL(steps) eq 0 then ret = TRUE else ret = FALSE
   
   if ARG_PRESENT(FULL_TS) or ARG_PRESENT(IND_missing) then begin
-  
+    
     if ret eq TRUE then begin
     
      full_TS = mytime
@@ -1615,7 +1629,7 @@ end
 ; :History:
 ;       Written by FaM, 2010.
 ;-
-function CHECK_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_ABSDATE = was_absdate, WAS_QMS = was_qms
+function CHECK_WTIME, time, OUT_QMS=out_qms, OUT_ABSDATE=out_absdate, WAS_ABSDATE=was_absdate, WAS_QMS=was_qms
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1623,6 +1637,7 @@ function CHECK_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_AB
   ; Standard error handling.
   ON_ERROR, 2
   
+  undefine, out_qms, out_absdate
   was_qms = FALSE
   was_absdate = FALSE
   
@@ -1641,8 +1656,67 @@ function CHECK_WTIME, time, OUT_QMS = OUT_QMS, OUT_ABSDATE = out_absdate, WAS_AB
   endif
   
   ; If we are here there is a problem
-  OUT_QMS = QMS_TIME()
-  out_absdate = MAKE_ABS_DATE()
+  return, FALSE
+
+end
+
+;+
+; :Description:
+;    This function checks if a timestep (e.g. a parameter of a procedure) is 
+;    in a Format that WAVE can understand and retrieves the time in one 
+;    of the both formats (dms or {TIME_STEP}) if desired. 
+;       
+; :Categories:
+;    General/Time
+;
+; :Params:
+;    timestep: in, required , type={TIME_STEP}/qms, default = none
+;              the parameter to check
+;      
+; :Keywords:
+;    OUT_DMS: out, optional, type=dms, default=none
+;             if set to a named variable, returns the timestep in dms
+;    OUT_TIMESTEP: out, optional, type={TIME_STEP}, default=none
+;                  if set to a named variable, returns the timestep in {TIME_STEP}
+;    WAS_TIMESTEP: out, optional, type=boolean, default=none
+;                  if set to a named variable, returns True if timestep is a {TIME_STEP} or False in all other cases
+;    WAS_DMS: out, optional, type=boolean, default=none
+;             if set to a named variable, returns True if timestep is a DMS or False in all other cases
+;
+; :Returns:
+;    TRUE if the timestep is a good WAVE timestep format, FALSE in all other cases.
+;
+;
+; :History:
+;       Written by FaM, 2010.
+;-
+function CHECK_WTIMESTEP, timestep, OUT_DMS=out_dms, OUT_TIMESTEP=out_timestep, WAS_TIMESTEP=was_timestep, WAS_DMS=was_dms
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ; Standard error handling.
+  ON_ERROR, 2
+  
+  undefine, out_dms, out_timestep
+  was_dms = FALSE
+  was_timestep = FALSE
+  
+  if arg_okay(timestep, /NUMERIC) then begin
+    if ARG_PRESENT(OUT_DMS) then OUT_DMS = timestep
+    if ARG_PRESENT(OUT_TIMESTEP) then OUT_TIMESTEP = MAKE_TIME_STEP(DMS = timestep)
+    was_dms = TRUE
+    return, TRUE
+  endif 
+  
+  if arg_okay(timestep, STRUCT={TIME_STEP}) then begin
+    if ARG_PRESENT(OUT_DMS) then OUT_DMS = timestep.dms
+    if ARG_PRESENT(OUT_TIMESTEP) then OUT_TIMESTEP = timestep
+    was_timestep = TRUE
+    return, TRUE
+  endif
+  
+  ; If we are here there is a problem
   return, FALSE
 
 end
@@ -1712,7 +1786,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXES = indexes
+function TS_FILL_MISSING, data, time, new_time, FILL_VALUE=fill_value, INDEXES=indexes
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -1723,18 +1797,18 @@ function TS_FILL_MISSING, data, time, new_time, FILL_VALUE =  fill_value, INDEXE
   if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /NUMERIC)
   if ~ check_WTIME(time, OUT_QMS=qms1) then message, WAVE_Std_Message('time', /ARG)
   if ~ check_WTIME(new_time, OUT_QMS=qms2) then message, WAVE_Std_Message('new_time', /ARG)
+  indexes = -1
    
   n = N_elements(data) 
   if n_elements(qms1) ne n then message, 'data and time arrays must have same number of elements'
+  if N_ELEMENTS(qms2) eq n and TOTAL(ABS(qms2-qms1)) eq 0 then return, data ;nothing to do
   
   s = VALUE_LOCATE(qms1, qms2) < (n-1) ;Subscript intervals
   If N_ELEMENTS(FILL_VALUE) eq 0 then FILL_VALUE = !VALUES.F_NAN
   
   out = data[s > 0]  
   sd = s[1:*] - s[0:N_ELEMENTS(s)-2]
-  
-  indexes = -1
-  
+    
   p1 = WHERE(sd eq 0, cnt)
   if cnt ne 0 then begin
    out[p1+1] = FILL_VALUE 

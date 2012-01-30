@@ -1,55 +1,603 @@
-pro w_ts_Data::cleanTS
+; docformat = 'rst'
+;+
+;  
+; Object to store, retrieve  and analyse data timeseries.   
+; 
+; Definition::
+;       
+;         class = {w_ts_Data              , $
+;                  name:           ''     , $ ; The name of the variable
+;                  description:    ''     , $ ; A short description of the variable
+;                  unit:           ''     , $ ; The variable unit
+;                  type:           0L     , $ ; The variable type (IDL)
+;                  nt:             0L     , $ ; Number of times
+;                  t0:             0LL    , $ ; Start Time
+;                  t1:             0LL    , $ ; End Time
+;                  step:           ''     , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
+;                  timestep :      0LL    , $ ; Timestep
+;                  agg_method: 'NONE'     , $ ; Aggregation method. See `TS_AGG`
+;                  validity:  'POINT'     , $ ; Temporal validity of the data values ('INTEGRAL' or 'POINT')
+;                  missing: PTR_NEW()     , $ ; Missing data value
+;                  time:    PTR_NEW()     , $ ; Array of QMS/ABS_DATE
+;                  data:    PTR_NEW()       $ ; Array of data values
+;                  }
+;
+; :Categories:
+;    Timeseries, Objects
+;
+; :History:
+;     Written by FaM, 2012
+;           
+;-
+
+;+
+; :Description:
+;    To create the object instance.
+;    
+;    `data` and `time` arrays are required to initialize the object, but
+;    it is also a good idea to set the `NAME`,`UNIT`,`VALIDITY`,`AGG_METHOD`,
+;    and `MISSING` keywords. If the timeserie is exotic, the `STEP` and 
+;    `TIMESTEP` keywords are highly recommended.
+;
+; :Params:
+;    data: in, optional
+;          array of data values
+;          (you can also add it it later with `w_ts_Data::addData`)
+;    time: in, optional
+;          array of time values
+;          (you can also add it it later with `w_ts_Data::addData`)
+;          
+; :Keywords:
+;    NAME: in, optional, type=string
+;          The name of the variable
+;    DESCRIPTION: in, optional, type=string
+;                 A short description of the variable
+;    UNIT: in, optional, type=string
+;          The variable unit
+;    VALIDITY: in, optional, type=string
+;              Temporal validity of the data values ('INTEGRAL' or 'POINT')
+;    AGG_METHOD: in, optional, type=string
+;                Aggregation method. See `TS_AGG`
+;    T0: in, optional, type=qms/{ABS_DATE}
+;        The first time of the period (see `w_ts_Data::setPeriod`)
+;        Ignored if `data` and `time` are not set
+;    T1: in, optional, type=qms/{ABS_DATE}
+;        The last time of the period (see `w_ts_Data::setPeriod`)
+;        Ignored if `data` and `time` are not set
+;    STEP: in, optional, type=string
+;          Either IRREGULAR, TIMESTEP, MONTH or YEAR (see `w_ts_Data::addData`)
+;          Ignored if `data` and `time` are not set
+;    TIMESTEP: in, optional, type=DMS/{TIME_STEP}
+;              Timeserie timestep (see `w_ts_Data::addData`)
+;              Ignored if `data` and `time` are not set
+;    MISSING: in, optional, type=string
+;             value for missing data in the timeserie (see `w_ts_Data::addData`)
+;             Ignored if `data` and `time` are not set
+;
+;-
+function w_ts_Data::init, data, time, NAME=name, $
+                                      DESCRIPTION=description, $
+                                      UNIT=unit, $
+                                      VALIDITY=validity, $
+                                      AGG_METHOD=agg_method, $
+                                      T0=t0, $
+                                      T1=t1, $
+                                      STEP=step, $
+                                      TIMESTEP=timestep, $ 
+                                      MISSING=missing
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+      
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+    RETURN, 0
+  ENDIF 
+  
+  if N_ELEMENTS(NAME) eq 0 then _name = 'Data' else _name = name
+  if N_ELEMENTS(DESCRIPTION) eq 0 then _description = '' else _description = description
+  if N_ELEMENTS(UNIT) eq 0 then _unit = '' else _unit = unit
+  if N_ELEMENTS(AGG_METHOD) eq 0 then _agg_method = 'MEAN' else _agg_method = agg_method
+  if N_ELEMENTS(VALIDITY) eq 0 then _validity = 'POINT' else _validity = validity
+    
+  self.agg_method = _agg_method
+  self.description = _description
+  self.name = _name
+  self.unit = _unit
+  self.validity = _validity
+  
+  if N_PARAMS() eq 2 then self->addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing
+  self->setPeriod, T0=t0, T1=t1
+  
+  return, 1
+    
+end
+
+;+
+; :Description:
+;    Destroys the object instance and frees the memory.
+;
+;-
+pro w_ts_Data::Cleanup
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+
+  PTR_FREE, self.time
+  PTR_FREE, self.data
+  PTR_FREE, self.missing
+  
+end
+
+;+
+; :Description:
+;    Get access to some object properties.
+;          
+; :Keywords:
+;    NAME: out, type=string
+;          The name of the variable
+;    DESCRIPTION: in, type=string
+;                 A short description of the variable
+;    UNIT: out, type=string
+;          The variable unit
+;    VALIDITY: out, type=string
+;              Temporal validity of the data values ('INTEGRAL' or 'POINT')
+;    TYPE: out, type=long
+;          data type
+;    AGG_METHOD: out, type=string
+;                Aggregation method. See `TS_AGG`
+;    STEP: out, type=string
+;          Either IRREGULAR, TIMESTEP, MONTH or YEAR 
+;    T0: out, type=qms/{ABS_DATE}
+;        The first time of the period
+;    T1: out, type=qms/{ABS_DATE}
+;        The last time of the period
+;    NT: out, type=qms/{ABS_DATE}
+;        The number of times in the period
+;    TIMESTEP: out, type={TIME_STEP}
+;              Timeserie timestep
+;    MISSING: out, type=string
+;             value for missing data in the timeserie
+;
+;-
+pro w_ts_Data::getProperty, NAME=name, $
+                            DESCRIPTION=description, $
+                            UNIT=unit, $
+                            TYPE=type, $                            
+                            VALIDITY=validity, $
+                            STEP=step, $
+                            T0=t0, $
+                            T1=t1, $
+                            NT=nt, $
+                            TIMESTEP=timestep, $
+                            MISSING=missing, $
+                            AGG_METHOD=agg_method
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  fmissing = FINITE(*self.missing)
+  NAME=self.name
+  DESCRIPTION=self.description
+  UNIT=self.unit
+  TYPE=self.type
+  VALIDITY=self.validity
+  STEP=self.step
+  TIMESTEP=self.timestep
+  MISSING=*self.missing
+  AGG_METHOD=self.agg_method
+  T0=self.t0
+  T1=self.t1
+  NT=self.nt
+ 
+end
+
+;+
+; :Description:
+;    Returns the properties of the object one at a time. Only
+;    the properties accessible with the homonym routine are 
+;    accessible here.
+;
+;
+; :Params:
+;    thisProperty: in, required
+;                  A string variable that is equivalent to a field in the object's    
+;                  class structure. See the getProperty routine for which properties  
+;                  can be returned. The property is case insensitive.
+;                  
+; :Returns:
+;    The value of a particular object property. Note that pointer       
+;    properties will return the variable the pointer points to.
+;                    
+; :History:
+;    Modifications::
+;     (c) David Fanning
+;     FaM, 2012: Adapted to the WAVE
+;
+;-
+function w_ts_Data::getProperty, thisProperty
+
+  ; SET UP ENVIRONNEMENT
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
   
-  if fmissing then begin
-    dataTypeName = Size(*self.data, /TNAME)
-    CASE dataTypeName OF
-      'STRING': indices = Where(*self.data ne *self.missing, count)
-      'FLOAT': indices = Where(Abs(*self.data - missing) gt (MACHAR()).eps, count)
-      'DOUBLE': indices = Where( Abs(*self.data - missing) gt (MACHAR(DOUBLE=1)).eps, count)
-      ELSE: indices = Where(*self.data ne missing, count)
-    ENDCASE
-  endif else begin
-    indices = Where(finite(*self.data), count)
-  endelse
+  avail = ['NAME', $
+           'DESCRIPTION', $
+           'UNIT', $
+           'TYPE', $
+           'VALIDITY', $
+           'STEP', $
+           'TIMESTEP', $
+           'MISSING', $
+           'AGG_METHOD', $
+           'T0', $
+           'T1', $
+           'NT']
   
-  if count eq 0 then begin
-    PTR_FREE, self.data
-    PTR_FREE, self.time
-    PTR_FREE, self.mask
-    self.nt = 0
-    Message, 'Mega problem, no element in the time serie'
-    self.regular = FALSE
-  endif else begin
-    _data = (*self.data)[indices]
-    _time = (*self.time)[indices]
-    self.nt  = count
-    _mask = BYTARR(count) + 1B
-    PTR_FREE, self.data
-    PTR_FREE, self.time
-    PTR_FREE, self.mask
-    self.data = PTR_NEW(_data, /NO_COPY)
-    self.time = PTR_NEW(_time, /NO_COPY)
-    self.mask = PTR_NEW(_mask, /NO_COPY)
-  endelse
+  ; Check if ok
+  index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
+  index = index[0]    
+  CASE count OF
+    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
+    1:
+    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
+  ENDCASE
+  
+  ; Now david fanning's stuff
+  
+  ; Get the self structure as a structure, rather than as an object.
+  Call_Procedure, StrLowCase(Obj_Class(self)) + '__define', classStruct
+  
+  ; Find the property in this class structure.
+  index = Where(StrPos(Tag_Names(classStruct), StrUpCase(thisProperty)) EQ 0, count)
+  index = index[0]
+  
+  ; What happened?
+  CASE count OF
+    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
+    1: propertyValue = self.(index)
+    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
+  ENDCASE
+  
+  ; If this is a pointer, you want the thing pointed to.
+  IF Size(propertyValue, /TNAME) EQ 'POINTER' THEN propertyValue = *propertyValue
+  return, propertyValue
+  
+end
+
+;+
+; :Description:
+;    Resets some object properties.   
+;          
+; :Keywords:
+;    NAME: in, optional, type=string
+;          The name of the variable
+;    DESCRIPTION: in, optional, type=string
+;                 A short description of the variable
+;    UNIT: in, optional, type=string
+;          The variable unit
+;    VALIDITY: in, optional, type=string
+;              Temporal validity of the data values ('INTEGRAL' or 'POINT')
+;    AGG_METHOD: in, optional, type=string
+;                Aggregation method. See `TS_AGG`
+;
+;-
+pro w_ts_Data::setProperty, NAME=name, $
+                            DESCRIPTION=description, $
+                            UNIT=unit, $
+                            VALIDITY=validity, $
+                            AGG_METHOD=agg_method
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
+  
+  if N_ELEMENTS(NAME) ne 0 then self.name = name
+  if N_ELEMENTS(DESCRIPTION) ne 0 then self.description = description
+  if N_ELEMENTS(UNIT) ne 0  then self.unit = unit
+  if N_ELEMENTS(AGG_METHOD) ne 0  then self.agg_method = agg_method
+  if N_ELEMENTS(VALIDITY) ne 0 then self.validity = validity
     
 end
 
-pro w_ts_Data::printMissingPeriods, T0=t0, T1=t1
+;+
+; :Description:
+;    Adds data to the timeserie or replaces old one.
+;
+; :Params:
+;    data: in, required
+;          array of data values
+;    time: in, required
+;          array of time values
+;          
+; :Keywords:
+;    STEP: in, optional, type=string
+;          Either IRREGULAR, TIMESTEP, MONTH or YEAR. 
+;          FIRST CALL ONLY   
+;    TIMESTEP: in, optional, type=DMS/{TIME_STEP}
+;              Timeserie timestep. 
+;              FIRST CALL ONLY      
+;    MISSING: in, optional, type=string
+;             value for missing data in the timeserie. 
+;             FIRST CALL ONLY             
+;    REPLACE: in, optional, type=boolean
+;             replace the old data? 
+;             Automatically set for the first call
+;
+;-
+pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, REPLACE=replace
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if N_PARAMS() ne 2 then MESSAGE, WAVE_Std_Message(/NARG)
+  if ~array_processing(data, time, REP_A0=_data) then MESSAGE, '$DATA and $TIME arrays not compatible'
+  if ~CHECK_WTIME(time, OUT_QMS=qms) then MESSAGE, WAVE_Std_Message('$TIME', /ARG)
+  if N_ELEMENTS(data) lt 2 then Message, '$DATA must contain at least two elements.'
+  if ptr_valid(self.time) then _first = FALSE else _first = TRUE
+  if _first then _replace = TRUE else _replace = KEYWORD_SET(REPLACE)
+  
+  ;Type
+  if self.type eq 0 then self.type = SIZE(_data, /TYPE);first call
+  
+  ; Define a missing flag
+  if ~ptr_valid(self.missing) then begin ;first call
+    if N_ELEMENTS(MISSING) eq 0 then begin
+      case self.type of
+        IDL_INT: _missing = FIX(-9999)
+        IDL_LONG: _missing = LONG(-9999)
+        IDL_LONG64: _missing = LONG64(-9999)
+        IDL_FLOAT: _missing = !VALUES.F_NAN
+        IDL_DOUBLE: _missing = !VALUES.D_NAN
+        else: MESSAGE, 'With data array of type: ' + type_name(self.type) + ', the MISSING keyword must be explicitly specified'
+      endcase
+    endif else _missing = missing
+    PTR_FREE, self.missing
+    self.missing = PTR_NEW(_missing, /NO_COPY)
+  endif
+  
+  ; Steps
+  if self.step eq '' then begin ;first call
+    if N_ELEMENTS(STEP) ne 0 then _step = step else _step = 'TIMESTEP'
+    if _step eq 'IRREGULAR' then Message, 'IRREGULAR steps not implemented yet'
+    if _step eq 'MONTH' then Message, 'MONTH steps not implemented yet'
+    if _step eq 'YEAR' then Message, 'YEAR steps not implemented yet'
+    self.step=_step
+  endif
+  
+  ; Timestep
+  if (self.timestep eq 0) and self.step eq 'TIMESTEP' then begin ;first call
+    if N_ELEMENTS(TIMESTEP) eq 0 then begin ; find out by myself
+      ok = check_timeserie(qms, _timestep, CONFIDENCE=confidence)
+      if confidence lt 0.75 then begin
+        Message, 'Probable timestep chosen with a low confidence of: ' + $
+          STRING(confidence, FORMAT='(F5.2)') + '. You should check it.'
+      endif
+    endif else _timestep = timestep
+    if ~ CHECK_WTIMESTEP(_timestep, OUT_DMS=dms) then message, WAVE_Std_Message('TIMESTEP', /ARG)
+    if dms le 0 then message, 'Timestep le 0?'
+    self.timestep = dms    
+  endif
+ 
+  ; Check if we have to add the data or replace it
+  if ~ _replace then begin
+    qms = [*self.time, qms]
+    _data = [*self.data, _data]
+  endif
+
+  ;Check for non-finite values in the timeserie anyway
+  pf = where(~finite(_data), cntf)
+  if cntf ne 0 then _data[pf]=*self.missing
+  
+  ; Check for the time serie validity
+  s = sort(qms)
+  if N_ELEMENTS(uniq(qms, s)) ne N_ELEMENTS(qms) then message, 'Times are not unique.'
+  qms = qms[s]
+  _data = _data[s]
+  
+  ; Done
+  PTR_FREE, self.data
+  PTR_FREE, self.time
+  self.data = PTR_NEW(_data, /NO_COPY)
+  self.time = PTR_NEW(qms, /NO_COPY)
+  
+  if _first then self->setPeriod
+  
+end
+
+;+
+; :Description:
+;    Sets the focus period to its original period
+;    or to a user-defined period. All later
+;    calls to `w_ts_Data::getData`, `w_ts_Data::getTime`
+;    or similar object functions will be affected by this change. 
+;
+; :Keywords:
+;    T0: in, optional, type=qms/{ABS_DATE}, default=first original time in the ts
+;        the first time of the desired period
+;    T1: in, optional, type=qms/{ABS_DATE}, default=last original time in the ts
+;        the last time of the desired period
+;
+;-
+pro w_ts_Data::setPeriod, T0=t0, T1=t1
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if ~ptr_valid(self.time) then return ; no data yet
+   
+  if N_ELEMENTS(T0) ne 0 then begin  
+    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)    
+  endif else _t0 = (*self.time)[0]
+  
+  if N_ELEMENTS(T1) ne 0 then begin  
+    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)    
+  endif else _t1 = (*self.time)[N_ELEMENTS(*self.time)-1]
+  
+  ; Check the time
+  _nt = (_t1 - _t0) / self.timestep
+  if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
+   Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
+   self->setPeriod
+  endif
+  _nt+=1
+  
+  ;Fill
+  self.t0 = _t0
+  self.t1 = _t1
+  self.nt = _nt
+ 
+end
+
+;+
+; :Description:
+;    Get the time
+;
+; :Params:
+;    nt: out
+;        the number of times
+;
+; :Returns:
+;   A time array of nt elements
+;
+;-
+function w_ts_Data::getTime, nt
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  nt = self.nt
+  return, MAKE_ENDED_TIME_SERIE(self.t0, self.t1, TIMESTEP=self.timestep, NSTEPS=nt) 
+  
+end
+
+;+
+; :Description:
+;    Get the data
+;   
+; :Returns:
+;   A data array of nt elements
+;
+;-
+function w_ts_Data::getData
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  return, TS_FILL_MISSING(*self.data, *self.time, self->getTime(), FILL_VALUE=*self.missing)
+  
+end
+
+
+;+
+; :Description:
+;   The validity of the data timeserie
+;   
+; :Returns:
+;   An array of nt elements (valid = 1)
+;
+;-
+function w_ts_Data::Valid
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  _mask = BYTARR(self.nt)
+  data = self->getData()
+  
+  missing = *self.missing
+  
+  fmissing = finite(missing)  
+  if fmissing then begin
+    CASE self.type OF
+      'FLOAT': indices = Where(Abs(data - missing) gt (MACHAR()).eps, count)
+      'DOUBLE': indices = Where(Abs(data - missing) gt (MACHAR(/DOUBLE)).eps, count)
+      ELSE: indices = Where(data ne missing, count)
+    ENDCASE
+  endif else begin
+    indices = Where(finite(data), count)
+  endelse
+  
+  if count ne 0 then _mask[indices] = 1
+  
+  return, _mask
+  
+end
+
+
+;+
+; :Description:
+;    Short way to get acccess to a clean timeserie 
+;    (without missing values but possibly irregular or empty)
+;
+; :Params: 
+;    data: out
+;          the data
+;    time: out
+;          the data
+;    nt: out
+;        number of times
+;
+;-
+pro w_ts_Data::cleanTS, data, time, nt
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  data = self->getData()
+  time = self->getTime() 
+
+  p = where(self->Valid(), cnt)
+  if cnt ne 0 then begin
+    data = data[p]
+    time = time[p]    
+  endif else begin
+    undefine, data, time  
+  endelse
+
+  nt = N_ELEMENTS(time)
+  
+end
+
+;+
+; :Description:
+;    to know if there are missing values in the TS
+;
+; :Returns:
+;    1 if the TS is clean, 0 otherwise
+;
+;-
+function w_ts_Data::isClean
+  
+  return, TOTAL(self->valid()) eq self.nt
+  
+end
+  
+  
+;+
+; :Description:
+;    Just prints the missing periods of a TS in the console
+;
+;-
+pro w_ts_Data::printMissingPeriods
   
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  self->regularTS, T0=t0, T1=t1
   t = self->getTime()
-  ents = [0,~self->getMask(),0]
-  ents = LABEL_REGION(ents)
+  ents = LABEL_REGION([0,~self->valid(),0])
   ents = ents[1:N_elements(ents)-2]
   n_ents = max(ents)
   print, ' ' + str_equiv(n_ents) + ' missing periods'
@@ -67,6 +615,11 @@ pro w_ts_Data::printMissingPeriods, T0=t0, T1=t1
     
 end
 
+;+
+; :Description:
+;    Just plots the time serie
+;
+;-
 pro w_ts_Data::plotTS
 
   if self.description ne '' then TITLE = self.description else TITLE = self.name
@@ -75,66 +628,42 @@ pro w_ts_Data::plotTS
 
 end
 
-pro w_ts_Data::regularTS, T0=t0, T1=t1
 
-  ; SET UP ENVIRONNEMENT
+;+
+; :Description:
+;   Replaces all invalid data values by linear interpolation.
+;   In case extrapolation is needed, a warning is sent and the closest
+;   data value is chosen instead.
+;   
+;   Carefull: this change is irreversible, there is no way back to
+;   the original data afterwards.
+;
+;-
+pro w_ts_Data::interpol
+
+   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  self->cleanTS
-  
-  if self.nt eq 0 and (N_ELEMENTS(T0) eq 0 or N_ELEMENTS(T1) eq 0) then Message, 'Mega problem, no element in the time serie'
-  
-  if N_ELEMENTS(T0) ne 0 then begin  
-    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)    
-  endif else _t0 = (self->getTime())[0]
-  
-  if N_ELEMENTS(T1) ne 0 then begin  
-    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)    
-  endif else _t1 = (self->getTime())[self.nt-1]
-  
-  _time = MAKE_ENDED_TIME_SERIE(_t0, _t1, TIMESTEP=self.step, NSTEPS=nt)
-  
-  _data = TS_FILL_MISSING(self->getData(), self->getTime(), _time, FILL_VALUE=self->getMissing(), INDEXES=indexes)
-  
-  _mask = BYTARR(nt) + 1B
-  if indexes[0] ne -1 then _mask[indexes] = 0B
-  
-  PTR_FREE, self.data
-  PTR_FREE, self.time
-  PTR_FREE, self.mask
-  self.data = PTR_NEW(_data, /NO_COPY)
-  self.time = PTR_NEW(_time, /NO_COPY)
-  self.mask = PTR_NEW(_mask, /NO_COPY)
- 
-end
-
-pro w_ts_Data::interpolTS, T0=t0, T1=t1
-  
-  self->regularTS, T0=t0, T1=t1
-
-  pv = where(self->getMask(), cnt, NCOMPLEMENT=nc)
-  if nc eq 0 then return
-  if cnt eq 0 then message, 'arf'
+  COMPILE_OPT IDL2  
+    
+  pv = where(self->valid(), cnt, NCOMPLEMENT=nc)
+  if nc eq 0 then return ;nothing to do
+  if cnt eq 0 then message, 'No valid data values'
 
   t = self->getTime(nt)
-  d = self->getData()
-  ents = [0,~self->getMask(),0]
-  ents = LABEL_REGION(ents)
-  ents = ents[1:N_elements(ents)-2]
-  
-  self->cleanTS    
-  new = INTERPOL(self->getData(), self->getTime(), t) 
-  
+  self->cleanTS, data, time, nt
+  new = INTERPOL(data, time, t) 
+   
   ;Carefull with extrapolating
+  ents = LABEL_REGION([0,~self->valid(),0])
+  ents = ents[1:N_elements(ents)-2]
   if ents[0] ne 0 then begin
-    val0 = d[min(where(ents eq 0))]
-    message, 'carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
+    val0 = (self->getData())[min(where(ents eq 0))]
+    message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
     new[where(ents eq ents[0])] = val0
   endif
-  if ents[nt-1] ne 0 then begin
-    val0 = d[max(where(ents eq 0))]
-    message, 'carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
+  if ents[N_ELEMENTS(ents)-1] ne 0 then begin
+    val0 = (self->getData())[max(where(ents eq 0))]
+    message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
     new[where(ents eq ents[nt-1])] = val0
   endif
   
@@ -142,249 +671,80 @@ pro w_ts_Data::interpolTS, T0=t0, T1=t1
 
 end
 
-function w_ts_Data::isRegular
 
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2   
+;+
+; :Description:
+;    Aggregates the timeserie data and creates a new TS object with the
+;    new timeserie.
+;    
+;    See `TS_AGG` for more info on the aggregation.
+;
+; :Keywords:
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored if `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded)
+;
+; :Returns:
+;    A new object with the aggregated data
+;
+;-
+function w_ts_Data::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
 
-  return, *self.regular
-  
-end
 
-function w_ts_Data::getMissing
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-
-  return, *self.missing
-  
-end
-
-function w_ts_Data::getData
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-
-  return, *self.data
-  
-end
-
-function w_ts_Data::getTime, nt
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  nt = N_ELEMENTS(*self.time)
-  return, *self.time
-  
-end
-
-function w_ts_Data::getMask
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-
-  return, *self.mask
-  
-end
-
-function w_ts_Data::getName
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-
-  return, self.name
-  
-end
-
-pro w_ts_Data::getProperty, NAME=name, $
-                            DESCRIPTION=description, $
-                            UNIT=unit, $
-                            TYPE=type, $                            
-                            TYPE_NAME=type_name, $
-                            VALID=valid, $
-                            TIMESTEP=timestep, $
-                            AGG_METHOD=agg_method
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  NAME=self.name
-  DESCRIPTION=self.description
-  UNIT=self.unit
-  TYPE=self.type
-  VALID=self.valid
-  TIMESTEP=self.step
-  AGG_METHOD=self.agg_method
-  TYPE_NAME=TYPE_NAME(self.type)
-  
-end
-
-pro w_ts_Data::setProperty, DESCRIPTION=description, $
-                            UNIT=unit, $
-                            VALID=valid, $
-                            TYPE=type, $
-                            AGG_METHOD=agg_method
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  if N_ELEMENTS(DESCRIPTION) ne 0 then self.description = description
-  if N_ELEMENTS(UNIT) ne 0  then self.UNIT = unit
-  if N_ELEMENTS(AGG_METHOD) ne 0  then self.AGG_METHOD = agg_method
-  if N_ELEMENTS(VALID) ne 0 then self.VALID = valid
-  if N_ELEMENTS(TYPE) ne 0 then self.TYPE = type
+  TS_AGG, self->getData(), self->getTime(), agg, agg_time, $
+  DAY=day, HOUR=hour, NEW_TIME=new_time, $
+    AGG_METHOD=self.agg_method, MISSING=*self.missing
     
-end
-
-pro w_ts_Data::Cleanup
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-
-  PTR_FREE, self.time
-  PTR_FREE, self.data
-  PTR_FREE, self.mask
-  PTR_FREE, self.missing
-  
-end
-
-pro w_ts_Data::addData, data, time, REPLACE=replace
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  if N_PARAMS() ne 2 then MESSAGE, WAVE_Std_Message(/NARG)
-  if ~array_processing(data, time, REP_A0=_data) then MESSAGE, '$DATA and $TIME arrays not compatible'
-  if ~CHECK_WTIME(time, OUT_QMS=qms) then MESSAGE, WAVE_Std_Message('$TIME', /ARG)
-  
-  if ~KEYWORD_SET(REPLACE) and self.nt ne 0 then begin
-    qms = [qms,self->getTime()]
-    _data = [_data,self->getData()]
-  endif
-  
-  s = sort(qms)
-  if N_ELEMENTS(uniq(qms, s)) ne N_ELEMENTS(qms) then message, 'Times are not unique?'
-  qms = qms[s]
-  _data = _data[s]
-  
-  _regular = CHECK_TIMESERIE(qms, ts)
-  
-  PTR_FREE, self.data
-  PTR_FREE, self.time
-  self.data = PTR_NEW(_data, /NO_COPY)
-  self.nt = N_ELEMENTS(qms)
-  self.time = PTR_NEW(qms, /NO_COPY)  
-  self.regular = _regular
-  self.step = ts
-  
-  self->cleanTS
-  
-end
-
-function w_ts_Data::init, data, time, NAME=name, $
-                                      DESCRIPTION=description, $
-                                      UNIT=unit, $
-                                      TYPE=type, $
-                                      VALID=valid, $
-                                      AGG_METHOD=agg_method, $
-                                      MISSING=missing
-  
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-      
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
-    RETURN, 0
-  ENDIF 
-  
-  if N_PARAMS() ne 2 then MESSAGE, WAVE_Std_Message(/NARG)
-  if ~array_processing(data, time, REP_A0=_data) then MESSAGE, '$DATA and $TIME arrays not compatible'
-  if ~CHECK_WTIME(time, OUT_QMS=qms) then MESSAGE, WAVE_Std_Message('$TIME', /ARG)
-  
-  if N_ELEMENTS(NAME) eq 0 then _name = 'Data' else _name = name
-  if N_ELEMENTS(DESCRIPTION) eq 0 then _description = '' else _description = description
-  if N_ELEMENTS(UNIT) eq 0 then _unit = '' else _unit = unit
-  if N_ELEMENTS(TYPE) eq 0 then _type = SIZE(_data, /TYPE) else _type = type
-  if N_ELEMENTS(AGG_METHOD) eq 0 then _agg_method = 'MEAN' else _agg_method = agg_method
-  if N_ELEMENTS(VALID) eq 0 then _valid = 'POINT' else _valid = valid
-  
-  ;TODO: check input  
-  case _type of
-    IDL_STRING: _data = STRING(_data)
-    IDL_BYTE: _data = LONG(_data)
-    IDL_INT: _data = LONG(_data)
-    IDL_LONG: _data = LONG(_data)
-    IDL_UINT: _data = LONG(_data)
-    IDL_ULONG: _data = LONG(_data)
-    IDL_LONG64: _data = LONG(_data)
-    IDL_ULONG64: _data = LONG(_data)
-    IDL_FLOAT: _data = FLOAT(_data)
-    IDL_DOUBLE: _data = DOUBLE(_data)
-    else: MESSAGE,WAVE_Std_Message('$TYPE', /ARG)    
-  endcase
-  
-  _type = SIZE(_data, /TYPE)
-
-  if N_ELEMENTS(MISSING) eq 0 then begin
-    case _type of
-      IDL_STRING: _missing = ''
-      IDL_LONG: _missing = -9999L
-      IDL_FLOAT: _missing = !VALUES.F_NAN
-      IDL_DOUBLE: _missing = !VALUES.D_NAN
-      else: MESSAGE, 'Should not be there'
-    endcase
-  endif else _missing = missing
+  out= OBJ_NEW('w_ts_Data', agg, agg_time, $
+    NAME=self.name, $
+    DESCRIPTION=self.description, $
+    UNIT=self.unit, $
+    VALIDITY='INTERVAL', $
+    AGG_METHOD=self.agg_method, $
+    STEP=self.step, $
+    MISSING=*self.missing)
     
-  self.agg_method = _agg_method
-  self.description = _description
-  self.missing = PTR_NEW(_missing, /NO_COPY)
-  self.name = _name
-  self.type = _type
-  self.unit = _unit
-  self.valid = _valid
+  return, out
   
-  self->addData, _data, qms
-  
-  self->cleanTS
-  
-  return, 1
-    
 end
 
-pro w_ts_Data__Define
+;+
+;   Class definition module. 
+;
+; :Params:
+;    class: out, optional, type=structure
+;           class definition as a structure variable
+;           
+;-
+pro w_ts_Data__Define, class
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
 
-  class = {w_ts_Data        , $
-           name:           '', $ ; The name of the variable
-           description:    '', $ ; A short description of the variable
-           nt:             0L, $ ; Number of times
-           time:    PTR_NEW(), $ ; Array of QMS/ABS_DATE of nt elements
-           data:    PTR_NEW(), $ ; Data array of nt elements
-           mask:    PTR_NEW(), $ ; mask array of nt elements
-           unit:           '', $ ; The variable unit
-           type:          0L , $ ; The variable type (IDL)
-           regular:     FALSE, $ ; If the TS is regular
-           step : {TIME_STEP}, $ ; Probale Timestep
-           agg_method: 'NONE', $ ; Aggregation method. See `TS_AGG`
-           valid:     'POINT', $ ; If it is aggregated
-           missing: PTR_NEW()  $ ; Missing data values
+  class = {w_ts_Data              , $
+           name:           ''     , $ ; The name of the variable
+           description:    ''     , $ ; A short description of the variable
+           unit:           ''     , $ ; The variable unit
+           type:           0L     , $ ; The variable type (IDL)
+           nt:             0L     , $ ; Number of times
+           t0:             0LL    , $ ; Start Time
+           t1:             0LL    , $ ; End Time
+           step:           ''     , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
+           timestep:       0LL    , $ ; Timestep
+           agg_method: 'NONE'     , $ ; Aggregation method. See `TS_AGG`
+           validity:  'POINT'     , $ ; Temporal validity of the data values ('INTEGRAL' or 'POINT')
+           missing: PTR_NEW()     , $ ; Missing data value
+           time:    PTR_NEW()     , $ ; Array of QMS/ABS_DATE
+           data:    PTR_NEW()       $ ; Array of data values
            }
 
 end

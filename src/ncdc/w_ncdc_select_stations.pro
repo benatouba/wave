@@ -29,7 +29,7 @@
 ;-
 function w_ncdc_select_stations_crop_struct, h, p, cnt
 
-  return, {n_stations:cnt, $
+  out={n_stations:cnt, $
     usaf:h.usaf[p] ,$
     wban:h.wban[p] ,$
     name:h.name[p] ,$
@@ -40,7 +40,7 @@ function w_ncdc_select_stations_crop_struct, h, p, cnt
     t0:h.t0[p] ,$
     t1:h.t1[p]  $
     }
-    
+  return, out
 end
 
 
@@ -112,24 +112,6 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
   endif else MESSAGE, WAVE_Std_Message(/ARG)
   
   stations = w_ncdc_select_stations_crop_struct(_h, p_in, cnt_in)
-  
-;  _h_not = _h
-;  if N_ELEMENTS(t0) ne 0 or N_ELEMENTS(t1) ne 0 then begin
-;    pv = where(_h.tvalid, cntv)
-;    if cntv eq 0 then message, 'No valid time periods for the selected stations in the history file'
-;    _h = w_ncdc_select_stations_crop_struct(_h, pv, cntv)
-;    if check_WTIME(t0, OUT_QMS= it0) then begin
-;       pv = where(_h.t1 ge it0, cntv)
-;       if cntv eq 0 then message, 'No valid time periods for the selected stations in the history file'
-;       _h = w_ncdc_select_stations_crop_struct(_h, pv, cntv)
-;    endif
-;    if check_WTIME(t1, OUT_QMS= it1) then begin
-;       pv = where(_h.t0 le it1, cntv)
-;       if cntv eq 0 then message, 'No valid time periods for the selected stations in the history file'
-;       __h = w_ncdc_select_stations_crop_struct(_h, pv, cntv)
-;    endif
-;  endif   
-;  if do_p and _h_not.n_stations ne 0 then d = map->set_point(_h_not.lon, _h_not.lat, SRC=wgs, PSYM=SymCat(16), COLOR='red', SYMSIZE=0.5)
   
   if do_p and stations.n_stations ne 0 then begin
     d = map->set_point(stations.lon, stations.lat, SRC=wgs, PSYM=SymCat(16), COLOR='orange')

@@ -592,14 +592,30 @@ pro TEST_CHECK_TIMESERIE
   
   badTS = [goodTS[0:4],goodTS[6:9],goodTS[11:*]]
   
-  ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
-  
+  ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)  
   if ok eq TRUE then error+=1
   if step.dms ne probableStep.dms then error+=1
   if total(fullTS.qms-goodTS.qms) ne 0 then error+=1
   if N_ELEMENTS(mis) ne 2 then  error+=1
   if mis[0] ne 5 then error+=1
   if mis[1] ne 10 then error+=1  
+  
+  step = MAKE_TIME_STEP(HOUR=2)
+  ts = MAKE_TIME_SERIE(startTime.qms, TIMESTEP=MAKE_TIME_STEP(HOUR=1), NSTEPS=3)
+  ts = [ts, MAKE_TIME_SERIE(startTime.qms + 8*H_QMS, TIMESTEP=step, NSTEPS=9)]
+  goodTS = MAKE_ENDED_TIME_SERIE(startTime.qms, ts[N_ELEMENTS(ts)-1], TIMESTEP=step) 
+  
+  ok = check_TimeSerie(ts, probableStep, FULL_TS=fullTS, IND_MISSING=mis, CONFIDENCE=conf)    
+  if step.dms ne probableStep.dms then error+=1
+  if total(fullTS-goodTS) ne 0 then error+=1
+  if conf lt 0.72 then error+=1
+  
+  step = MAKE_TIME_STEP(HOUR=1)
+  goodTS = MAKE_ENDED_TIME_SERIE(startTime.qms, ts[N_ELEMENTS(ts)-1], TIMESTEP=step) 
+  
+  ok = check_TimeSerie(ts, probableStep, FULL_TS=fullTS, IND_MISSING=mis, CONFIDENCE=conf, FORCE_TIMESTEP=step)    
+  if step.dms ne probableStep.dms then error+=1
+  if total(fullTS-goodTS) ne 0 then error+=1 
   
   if error ne 0 then message, '% TEST_check_TimeSerie NOT passed', /CONTINUE else print, 'TEST_check_TimeSerie passed'
   
