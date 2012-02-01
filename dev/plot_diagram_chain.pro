@@ -1,87 +1,102 @@
-pro plot_diagram_chain
+pro plot_diagram_chain, FILE=file
 
   ;--------------------------
   ; Set up environment
   ;--------------------------
   compile_opt idl2
-
-  file_path = 'C:\Dokumente und Einstellungen\Hinners\Data\NCDC\gsod-552790-99999.dat'
-  
-  data = w_ncdc_read_gsod_file(FILE = file_path)
-  
-  ; save basic information of the station
-  lat  = data.loc_y
-  lon  = data.loc_x
-  height = round(data.elevation)
-  name = data.name
-  vNames = *data.varnames
-  
-  ; save temperature values
-  p = where(vNames eq 'TEMP', cnt)
-  if cnt ne 1 then message, 'Variable not found'
-  varTemp = (*data.vars)[p]
-  temp = *varTemp.data
-  time = *varTemp.time
-  
-  ; save precipitation values  
-  p = where(vNames eq 'PRCP', cnt)
-  if cnt ne 1 then message, 'Variable not found'
-  varTemp = (*data.vars)[p]
-  prcp = *varTemp.data
-
-  ;Crop to the selected period and change time format  
-  t0 = QMS_TIME(year=1980, Month=01, day=01)
-  t1 = QMS_TIME(year=2009, Month=12, day=31)
-  p = where(time ge t0 and time le t1, ndays)
-  if ndays eq 0 then Message, 'No valid data in the timeserie'
-  temp = temp[p]
-  prcp = prcp[p]
-  time = time[p]
-  abs_date = MAKE_ABS_DATE(QMS=time)
-  startTime=STRING((abs_date.year)[0],FORMAT='(I4)')
-  stopTime=STRING((abs_date.year)[n_elements(abs_date.year)-1],FORMAT='(I4)')
-  timeperiod=''+startTime+' - '+stopTime+''  
-  
-  ; search for missing temperature and prcp values
-  p = where(~finite(temp), cnt)
-  if cnt ne 0 then print, 'Info,there are NaN values in the TS'  
-  pok_t = where(finite(temp), cntok_t, COMPLEMENT=pnok_t, NCOMPLEMENT=missingdays_temp) 
-  if missingdays_temp ne 0 then print, STR_equiv(missingdays_temp) + ' missing values in temp'
-  pok_p = where(finite(prcp), cntok_p, COMPLEMENT=pnok_p, NCOMPLEMENT=missingdays_prcp)
-  if missingdays_prcp ne 0 then print, STR_equiv(missingdays_prcp) + ' missing values in prcp'
-  
-  ; diagram of daily values for temperature and precipitation
-  w_TimeLinePlot, temp, time, 'temperature', prcp, time, 'blue',psym2=10,'precipitation', color1='red', $
-    title='daily values of temperature and precipitation, '+name+'', xtitle='year',ytitle ='temperature ['+cgsymbol('deg')+'C]',$
-    newaxis=2, newrange=[min(prcp),max(prcp)], newtitle='precipitation[mm]'
+  @WAVE.inc
     
+  if N_ELEMENTS(FILE) eq 0 then file = DIALOG_PICKFILE(TITLE='Select a NCDC file to read', /MUST_EXIST)
     
-
-  ; calculate monthly precipitation
-  allmonths = abs_date.month
-  nyears = 2009-1980+1  
-  prcp_per_month = FLTARR(12, nyears) 
+  data = w_ncdc_read_gsod_file(FILE = file)
   
-  for y=0, nyears-1 do begin  
-    oneyear = where(abs_date.year EQ 1980+y)                    ; oneyear = indices of one year in abs_date
-    oneyearPrcp = prcp[oneyear]
-    for m = 0,11 do begin
-      onemonth = where(allmonths[oneyear] EQ m+1)               ; onemonth = indices for one month of one year array
-      prcp_per_month[m,y] = total(oneyearPrcp[onemonth],/NAN)
-    endfor
-  endfor
-  precipitation = TOTAL(prcp_per_month, 2) / nyears  
-  ; precipitation = monthly precipitation sum as a mean value of the fixed timeperiod
+  ; accepted percentage of missing days for temperature and prcp per month
+  perc_temp=1
+  perc_prcp=1
+  
+  ; basic information of the station  
+  lat  = data->getProperty('loc_y')
+  lon  = data->getProperty('loc_x')
+  height = round(data->getProperty('elevation'))
+  name = data->getProperty('name')
+  vNames = data->getVarNames()
+  
+  startTime= TIME_TO_STR(time[0], MASK='YYYY')
+  stopTime=TIME_TO_STR(time[nt-1], MASK='YYYY')
+  timeperiod=startTime+' - '+stopTime+'' 
+   
+  ; temperature
+  varObj = data->getVar('TEMP')
+  temp = varObj->getData()
+  time = varObj->getTime(nt)
+  tempvalid = varObj->valid()
+  nvalidtemp = TOTAL(tempvalid)
+  
+  ; precipitation
+  varObj = data->getVar('PRCP')  
+  prcp = varObj->getData()
+  prcpvalid = varObj->valid()
+  nvalidprcp = TOTAL(prcpvalid)  
+   
+  undefine, data
+  
+  ; template for new time unit (month)
+  month0 = MAKE_ABS_DATE(QMS=time[0])
+  month0 = MAKE_ABS_DATE(YEAR=month0.year, MONTH=month0.month, day=1)
+  month1 = MAKE_ABS_DATE(QMS=time[nt-1]+D_QMS)
+  month1 = MAKE_ABS_DATE(YEAR=month1.year, MONTH=month1.month, day=1)
+  monthly_time = MAKE_ENDED_TIME_SERIE(month0, month1, MONTH=1)
+  
+  ; mean temperature(+validity information) and precipitation sum(+validity information) for new time unit
+  TS_AGG, temp, time, monthly_temp, monthly_end_time, NEW_TIME=monthly_time, AGG_METHOD='MEAN'
+  TS_AGG, temp, time, monthly_valid_temp, monthly_end_time, NEW_TIME=monthly_time, AGG_METHOD='N_SIG'
+  TS_AGG, prcp, time, monthly_prcp, monthly_end_time, NEW_TIME=monthly_time, AGG_METHOD='SUM'
+  TS_AGG, prcp, time, monthly_valid_prcp, monthly_end_time, NEW_TIME=monthly_time, AGG_METHOD='N_SIG'
+  
+  ; remove the last element
+  monthly_time= monthly_time[0:N_ELEMENTS(monthly_time)-2]  
+  ndays = GEN_month_days(monthly_time.month, monthly_time.year)
+  monthly_valid_temp = FLOAT(monthly_valid_temp) / ndays
+  monthly_valid_prcp = FLOAT(monthly_valid_prcp) / ndays
 
-  ; calculate monthly temperature
-  temperature = FLTARR(12)
-  for m=0, 11 do begin
-    imonths=where(abs_date.month EQ m+1)
-    temperature[m]=mean(temp[imonths])
-  endfor
-    ; temperature = contains the monthly mean temperature as a mean value of the fixed timeperiod
- 
-  w_climate_diagram, name, precipitation, temperature, lat, lon, height, timeperiod, missingdays_temp, missingdays_prcp, $
-                     STD_PNG=std_png
- 
+  ; cut temp and prcp with corresponding time to valid monthly values
+  i_temp = where(monthly_valid_temp ge perc_temp)
+  valid_monthly_temp= monthly_temp[i_temp]
+  monthly_time_temp = monthly_time[i_temp]
+  i_prcp = where(monthly_valid_prcp ge perc_prcp)
+  valid_monthly_prcp = monthly_prcp[i_prcp]
+  monthly_time_prcp = monthly_time[i_prcp]
+  
+  ; calculate  monthly temperature and features over all years
+   temperature=fltarr(12)
+   max_temp=fltarr(12)
+   min_temp=fltarr(12)
+   valid_years_temp=fltarr(12)
+   for m = 0,11 do begin
+   i_months = where(monthly_time_temp.month eq m+1)
+   temperature[m] = mean(valid_monthly_temp[i_months])
+   max_temp[m] = max(valid_monthly_temp[i_months])
+   min_temp[m] = min(valid_monthly_temp[i_months])
+   valid_years_temp[m] = N_ELEMENTS(i_months)
+   endfor
+   
+   ; calculate monthly precipitation and features over all years
+   precipitation=fltarr(12)
+   max_prcp =fltarr(12)
+   min_prcp=fltarr(12)
+   valid_years_prcp=fltarr(12)  
+   for m = 0,11 do begin
+   i_months = where(monthly_time_prcp.month eq m+1)
+   precipitation [m] = mean(valid_monthly_prcp[i_months])
+   max_prcp[m] = max(valid_monthly_prcp[i_months])
+   min_prcp[m] = min(valid_monthly_prcp[i_months])
+   valid_years_prcp[m] = N_ELEMENTS(i_months)
+   endfor
+    
+   w_climate_diagram, name, precipitation, temperature, lat, lon, height, timeperiod, $
+                     STD_PNG=std_png 
+  
+  return
 end
+; Fehlerbalken
+; errplot, y+0.5, y+0.5, color=0
