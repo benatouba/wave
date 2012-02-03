@@ -33,12 +33,9 @@ function w_ncdc_select_stations_crop_struct, h, p, cnt
     usaf:h.usaf[p] ,$
     wban:h.wban[p] ,$
     name:h.name[p] ,$
-    lon:h.lon[p] ,$
-    lat:h.lat[p] ,$
-    elev:h.elev[p] ,$
-    tvalid:h.tvalid[p] ,$
-    t0:h.t0[p] ,$
-    t1:h.t1[p]  $
+    lon:h.lon[p]   ,$
+    lat:h.lat[p]   ,$
+    elev:h.elev[p]  $
     }
   return, out
 end
