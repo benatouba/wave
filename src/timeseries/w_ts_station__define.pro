@@ -557,9 +557,15 @@ end
 ;   
 ;   Carefull: this change is irreversible, there is no way back to
 ;   the original data afterwards.
-;
+;   
+; :Keywords:
+;    T0: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    T1: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        
 ;-
-pro w_ts_Station::interpol
+pro w_ts_Station::interpol, T0=t0, T1=t1
   
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -570,9 +576,40 @@ pro w_ts_Station::interpol
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
-    _var->interpol
+    _var->interpol, T0=t0, T1=t1
   endfor        
       
+end
+
+;+
+; :Description:
+;   Replaces periods with a value (if omitted, MISSING)
+; 
+; :Params:
+;    value: in, optional
+;           
+;    
+; :Keywords:
+;    T0: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    T1: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        
+;-
+pro w_ts_Station::insertValue, value, T0=t0, T1=t1
+
+   ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  self->setPeriod
+  
+  vNames = self->GetVarNames(COUNT=varCount)  
+  for i=0, varCount-1 do begin
+    _var = self->getVar(vNames[i])
+    _var->insertValue, value, T0=t0, T1=t1
+  endfor   
+
 end
 
 ;+

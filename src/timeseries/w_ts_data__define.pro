@@ -382,6 +382,9 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
     endif else _timestep = timestep
     if ~ CHECK_WTIMESTEP(_timestep, OUT_DMS=dms) then message, WAVE_Std_Message('TIMESTEP', /ARG)
     if dms le 0 then message, 'Timestep le 0?'
+    if dms ge 2419200000LL and dms le 2678400000LL then begin ; We are probably in a monthly timeserie
+      message, 'Monthly timestep not implemented yet'
+    endif    
     self.timestep = dms    
   endif
  
@@ -407,7 +410,7 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   self.data = PTR_NEW(_data, /NO_COPY)
   self.time = PTR_NEW(qms, /NO_COPY)
   
-  if _first then self->setPeriod
+  self->setPeriod
   
 end
 
@@ -606,11 +609,11 @@ pro w_ts_Data::printMissingPeriods
   if ok eq 'No' then return
   
   for e=1, n_ents do begin
-    pent = where(ents eq e)
+    pent = where(ents eq e, cp)
     tent0 = t[min(pent)]
     tent1 = t[max(pent)]
     if tent0 eq tent1 then print, '  ' + TIME_to_STR(tent0) $
-    else  print, '  ' + TIME_to_STR(tent0) + ' -> ' + TIME_to_STR(tent1)
+    else  print, '  ' + TIME_to_STR(tent0) + ' -> ' + TIME_to_STR(tent1) + ' ('+ str_equiv(cp)+' steps)' 
   endfor
     
 end
@@ -637,9 +640,15 @@ end
 ;   
 ;   Carefull: this change is irreversible, there is no way back to
 ;   the original data afterwards.
-;
+;   
+; :Keywords:
+;    T0: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    T1: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        
 ;-
-pro w_ts_Data::interpol
+pro w_ts_Data::interpol, T0=t0, T1=t1
 
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -650,9 +659,23 @@ pro w_ts_Data::interpol
   if cnt eq 0 then message, 'No valid data values'
 
   t = self->getTime(nt)
+  old = self->getdata()
   self->cleanTS, data, time, nt
   new = INTERPOL(data, time, t) 
-   
+  
+  if N_ELEMENTS(T0) ne 0 then begin
+    if ~ check_WTIME(t0, OUT_QMS= it0) then message, WAVE_Std_Message('T0')
+    v = 0 > VALUE_LOCATE(t, it0) < (nt-1)
+    p = v[0] 
+    if p gt 0 then new[0:p-1] = old[0:p-1]
+  endif
+  if N_ELEMENTS(T1) ne 0 then begin
+    if ~ check_WTIME(t1, OUT_QMS= it1) then message, WAVE_Std_Message('T0')
+    v = 0 > VALUE_LOCATE(t, it1) < (nt-1)
+    p = v[0] 
+    if p lt nt-1 then new[p+1:*] = old[p+1:*]
+  endif
+         
   ;Carefull with extrapolating
   ents = LABEL_REGION([0,~self->valid(),0])
   ents = ents[1:N_elements(ents)-2]
@@ -668,6 +691,46 @@ pro w_ts_Data::interpol
   endif
   
   self->addData, new, t, /REPLACE
+
+end
+
+;+
+; :Description:
+;   Replaces periods with a value (if omitted, MISSING)
+; 
+; :Params:
+;    value: in, optional
+;           
+; :Keywords:
+;    T0: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    T1: in, optional
+;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        
+;-
+pro w_ts_Data::insertValue, value, T0=t0, T1=t1
+
+   ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  t = self->getTime(nt)
+  d = self->getdata()
+  
+  if N_ELEMENTS(value) eq 0 then _val = *self.missing else _val = value
+
+  
+  if N_ELEMENTS(T0) ne 0 and N_ELEMENTS(T1) ne 0 then begin
+    if ~ check_WTIME(t0, OUT_QMS= it0) then message, WAVE_Std_Message('T0')
+    v = 0 > VALUE_LOCATE(t, it0) < (nt-1)
+    p0 = v[0] 
+    if ~ check_WTIME(t1, OUT_QMS= it1) then message, WAVE_Std_Message('T0')
+    v = 0 > VALUE_LOCATE(t, it1) < (nt-1)
+    p1 = v[0] 
+    d[p0:p1] = _val
+  endif
+  
+  self->addData, d, t, /REPLACE
 
 end
 
@@ -714,6 +777,30 @@ function w_ts_Data::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
     
   return, out
   
+end
+
+;+
+; :Description:
+;    Makes a copy of the time serie
+; 
+; :Returns:
+;    a copy of the time serie
+;-
+function w_ts_Data::Copy
+
+  out= OBJ_NEW('w_ts_Data', *self.data, *self.time, $
+    NAME=self.name, $
+    DESCRIPTION=self.description, $
+    T0=self.t0, $
+    T1=self.t1, $
+    UNIT=self.unit, $
+    VALIDITY=self.validity, $
+    AGG_METHOD=self.agg_method, $
+    STEP=self.step, $
+    MISSING=*self.missing)
+    
+  return, out
+
 end
 
 ;+
