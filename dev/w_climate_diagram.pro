@@ -47,44 +47,47 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
     h = STRING(height,FORMAT='(I4)')
   endif
   
-  if N_ELEMENTS(max_temp) ne 0 then begin
-    maxitemp=max(max_temp)
-    else begin maxitemp = max(temperature)
-  endif
-  if N_ELEMENTS(min_temp) ne 0 then begin
-    minitemp=min(min_temp)
-    else begin minitemp = min(temperature)
-  endif
+  if N_ELEMENTS(max_temp) ne 0 then $
+    maxitemp=max(max_temp)$
+    else maxitemp = max(temperature)
+
+  if N_ELEMENTS(min_temp) ne 0 then $
+    minitemp=min(min_temp) $
+    else minitemp = min(temperature)
+    
+  if N_ELEMENTS(max_prcp) ne 0 then $
+    maxiprcp=max(max_prcp)$
+    else maxiprcp = max(precipitation)
   
   meanTemp = STRING(mean(temperature),FORMAT='(F4.1)')
   sumPrcp = STRING(total(precipitation), FORMAT='(I4)')
   
   ;trick
   cgDisplay,/PIXMAP  
-  cgbarplot, precipitation, BARCOORDS=x, yrange=[0,(max(precipitation)+max(precipitation)/3)], xstyle=9, YSTYLE=8
+  cgbarplot, precipitation, BARCOORDS=x, xstyle=9, YSTYLE=8,  yrange=[0, maxiprcp], YTICK_get = yt
   WDELETE, !D.WINDOW  
     
   cgbarplot, precipitation, color='blue', barnames=labels, YSTYLE=8, $
-    ytitle='precipitation [mm]', xstyle=9, yrange=[0,(max(precipitation)+max(precipitation)/3)], $
+    ytitle='precipitation [mm]', xstyle=9,  yrange=[0, maxiprcp], $
     position=[0.15, 0.15, 0.85, 0.78], /window
 
   if (N_ELEMENTS(max_prcp) ne 0)  and (N_ELEMENTS(min_prcp) ne 0) then $
     cgerrplot, x, min_prcp, max_prcp, color='blu6', /addcmd
-
     
   cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, color = 'black', /save ,ytitle='temperature ['+cgsymbol('deg')+'C]', /window
   cgplot, x, temperature, color='red', /overplot, /window
   
-  if N_ELEMENTS(max_temp) ne 0  and if N_ELEMENTS(min_temp) ne 0 do begin
+  if (N_ELEMENTS(max_temp) ne 0) and (N_ELEMENTS(min_temp) ne 0) then $
     cgerrplot, x, min_temp, max_temp, color='red',  /addcmd
-  endif
     
-  if N_ELEMENTS(name) ne 0 and if N_ELEMENTS(timeperiod) ne 0 do begin
-    cgtext, 0.15, 0.95,'climate diagram '+name+' (' + timeperiod + ')', /Normal, /Window
-  endif
-  if N_ELEMENTS(lat) ne 0 and if N_ELEMENTS(lon) ne 0 do begin
+  if N_ELEMENTS(name) ne 0 then $
+    cgtext, 0.15, 0.95,'climate diagram '+name+'', /Normal, /window
+  if N_ELEMENTS(timeperiod) ne 0 then $
+     cgtext,0.7, 0.95,'(' + timeperiod + ')', /Normal, /Window
+
+  if (N_ELEMENTS(lat) ne 0) and (N_ELEMENTS(lon) ne 0) and (N_Elements(height) ne 0) then $
     cgtext, 0.15,0.9,'lat ='+_lat+''+ cgsymbol('deg')+' / lon ='+_lon+''+ cgsymbol('deg')+' / '+ h+' m', /Normal, /Window
-  endif
+
   cgtext, 0.15, 0.85, ''+meanTemp+' ' +cgsymbol('deg')+'C, '+sumPrcp+' mm',/Normal, /Window
     
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
