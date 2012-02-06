@@ -74,11 +74,14 @@ pro plot_diagram_chain, FILE=file
    min_temp=fltarr(12)
    valyears_temp=fltarr(12)
    for m = 0,11 do begin
-     i_months = where(monthly_time_temp.month eq m+1)
+     i_months = where(monthly_time_temp.month eq m+1, n_months)
+     if n_months eq 0 then begin print,' no temperature information for all months'
+     endif else begin
      temperature[m] = mean(valid_monthly_temp[i_months])
      max_temp[m] = max(valid_monthly_temp[i_months])
      min_temp[m] = min(valid_monthly_temp[i_months])
      valyears_temp[m] = N_ELEMENTS(i_months)
+     endelse
    endfor
 
    ; calculate monthly precipitation and features over all years
@@ -87,11 +90,14 @@ pro plot_diagram_chain, FILE=file
    min_prcp=fltarr(12)
    valyears_prcp=fltarr(12)  
    for m = 0,11 do begin
-     i_months = where(monthly_time_prcp.month eq m+1)
+     i_months = where(monthly_time_prcp.month eq m+1, n_months)
+     if n_months eq 0 then begin print,' no precipitation information for all months'
+     endif else begin
      precipitation [m] = mean(valid_monthly_prcp[i_months])
      max_prcp[m] = max(valid_monthly_prcp[i_months])
      min_prcp[m] = min(valid_monthly_prcp[i_months])
      valyears_prcp[m] = N_ELEMENTS(i_months)
+     endelse
    endfor
    
   
