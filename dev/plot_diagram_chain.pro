@@ -72,28 +72,31 @@ pro plot_diagram_chain, FILE=file
    temperature=fltarr(12)
    max_temp=fltarr(12)
    min_temp=fltarr(12)
-   valid_years_temp=fltarr(12)
+   valyears_temp=fltarr(12)
    for m = 0,11 do begin
      i_months = where(monthly_time_temp.month eq m+1)
      temperature[m] = mean(valid_monthly_temp[i_months])
      max_temp[m] = max(valid_monthly_temp[i_months])
      min_temp[m] = min(valid_monthly_temp[i_months])
-     valid_years_temp[m] = N_ELEMENTS(i_months)
+     valyears_temp[m] = N_ELEMENTS(i_months)
    endfor
 
    ; calculate monthly precipitation and features over all years
    precipitation=fltarr(12)
    max_prcp =fltarr(12)
    min_prcp=fltarr(12)
-   valid_years_prcp=fltarr(12)  
+   valyears_prcp=fltarr(12)  
    for m = 0,11 do begin
      i_months = where(monthly_time_prcp.month eq m+1)
      precipitation [m] = mean(valid_monthly_prcp[i_months])
      max_prcp[m] = max(valid_monthly_prcp[i_months])
      min_prcp[m] = min(valid_monthly_prcp[i_months])
-     valid_years_prcp[m] = N_ELEMENTS(i_months)
+     valyears_prcp[m] = N_ELEMENTS(i_months)
    endfor
-    
-   w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp 
+   
+  
+   w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
+                       MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
+                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp 
   
 end
