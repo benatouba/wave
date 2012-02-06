@@ -17,7 +17,10 @@
 ;    max_temp: in, optional, array of 12 values with maximal temperature values measured for the respective months
 ;    min_temp: in, optional, array of 12 values with minimal temperature values measured for the respective months
 ;    max_prcp: in, optional, array of 12 values with maximal precipitation values measured for the respective months    
-;    min_prcp: in, optional, array of 12 values with minimal precipitation values measured for the respective months  
+;    min_prcp: in, optional, array of 12 values with minimal precipitation values measured for the respective months
+;    valyears_temp: in, otional, array of 12 values with number of number years of validated temperature for the respective months
+;    valyears_prcp: in, otional, array of 12 values with number of number years of validated precipitation for the respective months
+;    
 ;    PNG: in, optional, type = string
 ;         set to a filename to generate a png output (uses image magick)
 ;    EPS: in, optional, type = string
@@ -26,17 +29,32 @@
 ;             set to a filename to generate a standard png output (without image magick)
 ;
 ; :Example:
-;   IDL> w_climate_diagram, 'Berlin', [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1],$
-;        52.27, 13.18, 58, '1961-1990', STD_PNG=std_png
+;   IDL> w_climate_diagram, [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1], NAME='Berlin',$
+;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990', STD_PNG=std_png
 ;
 ; :History:
 ;     Written by JaH, 2012.
 ;
 ;-
 pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
-                       MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, EPS=eps, PNG=png, STD_PNG=std_png
-    
-  labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                       MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
+                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, EPS=eps, PNG=png, STD_PNG=std_png
+  
+  if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp)ne 0) then begin
+     vt=fltarr(12)
+     vp=fltarr(12)
+   for v= 0,11 do begin
+     vt[v]=String(valyears_temp[v], Format='(I3)')
+     vp[v]=String(valyears_prcp[v],Format ='(I3)')
+   endfor
+;     labels = ['Jan!C !C'+vt[0]+'', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  endif else begin
+     labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  endelse
+     
+  print,vt   
+     
+     
   if N_ELEMENTS(lat) ne 0 then begin
     _lat = STRING(lat,FORMAT='(F7.2)')
   endif
