@@ -94,6 +94,6 @@ pro plot_diagram_chain, FILE=file
      valid_years_prcp[m] = N_ELEMENTS(i_months)
    endfor
     
-   w_climate_diagram, name, precipitation, temperature, lat, lon, height, timeperiod, max_temp, min_temp, max_prcp, min_prcp 
+   w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp 
   
 end
