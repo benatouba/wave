@@ -104,7 +104,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   if N_ELEMENTS(name) ne 0 then $
     cgtext, 0.18, 0.95,'climate diagram '+name+'', /Normal, /window
   if N_ELEMENTS(timeperiod) ne 0 then $
-     cgtext,0.7, 0.95,'(' + timeperiod + ')', /Normal, /Window
+     cgtext,0.68, 0.95,'(' + timeperiod + ')', /Normal, /Window
 
   if (N_ELEMENTS(lat) ne 0) and (N_ELEMENTS(lon) ne 0) and (N_Elements(height) ne 0) then $
     cgtext, 0.18,0.9,'lat ='+_lat+''+ cgsymbol('deg')+' / lon ='+_lon+''+ cgsymbol('deg')+' / '+ h+' m', /Normal, /Window
