@@ -20,10 +20,6 @@ pro plot_diagram_chain, FILE=file
   height = round(data->getProperty('elevation'))
   name = data->getProperty('name')
   vNames = data->getVarNames()
-  
-  startTime= TIME_TO_STR(time[0], MASK='YYYY')
-  stopTime=TIME_TO_STR(time[nt-1], MASK='YYYY')
-  timeperiod=startTime+' - '+stopTime+'' 
    
   ; temperature
   varObj = data->getVar('TEMP')
@@ -37,7 +33,12 @@ pro plot_diagram_chain, FILE=file
   prcp = varObj->getData()
   prcpvalid = varObj->valid()
   nvalidprcp = TOTAL(prcpvalid)  
-   
+
+  ; time period of available weather data
+  startTime= TIME_TO_STR(time[0], MASK='YYYY')
+  stopTime=TIME_TO_STR(time[nt-1], MASK='YYYY')
+  timeperiod=''+startTime+' - '+stopTime+''   
+  
   undefine, data
   
   ; template for new time unit (month)
@@ -73,30 +74,26 @@ pro plot_diagram_chain, FILE=file
    min_temp=fltarr(12)
    valid_years_temp=fltarr(12)
    for m = 0,11 do begin
-   i_months = where(monthly_time_temp.month eq m+1)
-   temperature[m] = mean(valid_monthly_temp[i_months])
-   max_temp[m] = max(valid_monthly_temp[i_months])
-   min_temp[m] = min(valid_monthly_temp[i_months])
-   valid_years_temp[m] = N_ELEMENTS(i_months)
+     i_months = where(monthly_time_temp.month eq m+1)
+     temperature[m] = mean(valid_monthly_temp[i_months])
+     max_temp[m] = max(valid_monthly_temp[i_months])
+     min_temp[m] = min(valid_monthly_temp[i_months])
+     valid_years_temp[m] = N_ELEMENTS(i_months)
    endfor
-   
+
    ; calculate monthly precipitation and features over all years
    precipitation=fltarr(12)
    max_prcp =fltarr(12)
    min_prcp=fltarr(12)
    valid_years_prcp=fltarr(12)  
    for m = 0,11 do begin
-   i_months = where(monthly_time_prcp.month eq m+1)
-   precipitation [m] = mean(valid_monthly_prcp[i_months])
-   max_prcp[m] = max(valid_monthly_prcp[i_months])
-   min_prcp[m] = min(valid_monthly_prcp[i_months])
-   valid_years_prcp[m] = N_ELEMENTS(i_months)
+     i_months = where(monthly_time_prcp.month eq m+1)
+     precipitation [m] = mean(valid_monthly_prcp[i_months])
+     max_prcp[m] = max(valid_monthly_prcp[i_months])
+     min_prcp[m] = min(valid_monthly_prcp[i_months])
+     valid_years_prcp[m] = N_ELEMENTS(i_months)
    endfor
     
-   w_climate_diagram, name, precipitation, temperature, lat, lon, height, timeperiod, $
-                     STD_PNG=std_png 
+   w_climate_diagram, name, precipitation, temperature, lat, lon, height, timeperiod, max_temp, min_temp, max_prcp, min_prcp 
   
-  return
 end
-; Fehlerbalken
-; errplot, y+0.5, y+0.5, color=0
