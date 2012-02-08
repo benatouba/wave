@@ -3,6 +3,7 @@ pro valid_temperature_stations, FILE=file, OUTPUT_DIR=output_dir
   ;--------------------------
   ; Set up environment
   ;--------------------------
+  
   compile_opt idl2
   @WAVE.inc
     
