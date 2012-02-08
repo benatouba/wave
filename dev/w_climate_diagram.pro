@@ -30,7 +30,7 @@
 ;
 ; :Example:
 ;   IDL> w_climate_diagram, [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1], NAME='Berlin',$
-;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990', STD_PNG=std_png
+;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990'
 ;
 ; :History:
 ;     Written by JaH, 2012.
@@ -93,7 +93,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
     position=[0.18, 0.15, 0.85, 0.78], /window
 
   if (N_ELEMENTS(max_prcp) ne 0)  and (N_ELEMENTS(min_prcp) ne 0) then $
-    cgerrplot, x, min_prcp, max_prcp, color='blu6', /addcmd
+    cgerrplot, x, min_prcp, max_prcp, color='dodger blue', /addcmd
     
   cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, color = 'black', /save ,ytitle='temperature ['+cgsymbol('deg')+'C]', /window
   cgplot, x, temperature, color='red', /overplot, /window
