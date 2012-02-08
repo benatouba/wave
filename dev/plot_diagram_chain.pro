@@ -103,6 +103,6 @@ pro plot_diagram_chain, FILE=file
   
    w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
                        MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
-                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp 
+                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp
   
 end
