@@ -59,7 +59,7 @@ function POST_list_files, domain, directory, CNT = cnt, PATTERN = pattern
   
   if ~arg_okay(domain, /NUMERIC) then message, 'Domain is not set'
   
-  if N_ELEMENTS(PATTERN) eq 0 then pattern = 'wrfout*'
+  if N_ELEMENTS(PATTERN) eq 0 then pattern = 'wrfpost*.nc'
     
   fileList = FILE_SEARCH(directory, PATTERN, /EXPAND_ENVIRONMENT)
    
@@ -690,16 +690,20 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
   ; Set Up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+;  ON_ERROR, 2
   
   nvars = vartokeep.n_vars  
   nfiles = N_ELEMENTS(filelist)
   nt = N_ELEMENTS(ts)
   cert = LONARR(nt) ; To check if everything is filled
   
+  do_cache = TRUE
+  
   for f=0, nfiles-1 do begin
   
-    fid = NCDF_OPEN(filelist[f], /NOWRITE)
+    if do_cache then file = caching(filelist[f]) else file = filelist[f]
+  
+    fid = NCDF_OPEN(file, /NOWRITE)
     ginq = NCDF_INQUIRE(fid)
     ;Go threw the dimensions. 
     for i =0, ginq.ndims-1 do begin
@@ -744,7 +748,7 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
       s_var_info = NCDF_VARINQ(fid,vid)
       ndims = s_var_info.ndims
       dims = s_var_info.dim
-      
+
       if vartokeep.acc[v] then begin
         if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,(my_spin_index-1)], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], my_e_index + 2 - my_spin_index] $
               else message, 'Impossible'
@@ -760,7 +764,9 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
          NCDF_VARPUT, tid, vid, var[*,*,1:*], OFFSET=[0,0,ps] ; Diff variable
       endif else if vartokeep.static[v] then begin
           if f eq 0 then begin ; We need to do it just one time...
-          if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], 1] $
+          
+          if ndims eq 2 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]]] $
+           else if ndims eq 3 then NCDF_VARGET, fid, vid, var, OFFSET=[0,0,my_spin_index], COUNT=[dimSizes[dims[0]],dimSizes[dims[1]], 1] $
             else message, 'Impossible'
           NCDF_VARPUT, tid, vid, var
           printf, unit, '   Static field ' + vid + ' filled.'
@@ -792,6 +798,7 @@ pro POST_fill_ncdf, unit, tid, filelist, vartokeep, ts, spin_index, e_index
     printf, unit, FILE_BASENAME(filelist[f]) + ' processed.'
     flush, unit
     NCDF_CLOSE, fid
+    if do_cache then file = caching(filelist[f], /DELETE)
   endfor
   
   dummy = where(VARTOKEEP.found eq TRUE, pnvars)
@@ -1021,21 +1028,21 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   COMPILE_OPT idl2
   @WAVE.inc
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    if N_ELEMENTS(unit) ne 0 then begin
-      printf, unit, ' '
-      printf, unit, ' '
-      printf, unit, '* ERROR : ' + !Error_State.Msg
-      printf, unit, ' '
-      printf, unit, ' '
-      close, unit
-      free_lun, Unit
-    endif
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF 
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    if N_ELEMENTS(unit) ne 0 then begin
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      printf, unit, '* ERROR : ' + !Error_State.Msg
+;      printf, unit, ' '
+;      printf, unit, ' '
+;      close, unit
+;      free_lun, Unit
+;    endif
+;    ok = WAVE_Error_Message(!Error_State.Msg)
+;    RETURN
+;  ENDIF 
   
   ; ---------------
   ; Check the input
@@ -1048,7 +1055,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
   if N_ELEMENTS(END_INDEX) ne 0 then e_index = END_INDEX
    
   if N_ELEMENTS(spin_index) eq 0 then if KEYWORD_SET(CROPPED) then spin_index = 1
-  isHere = STRPOS(filelist[0], '_24h.nc')
+  isHere = STRPOS(filelist[0], '_25h.nc')
   p = WHERE(isHere ne -1, iscropped)  
   if N_ELEMENTS(spin_index) eq 0 then if iscropped then spin_index = 1
   if N_ELEMENTS(spin_index) eq 0 then if domain eq 1 then spin_index = 5 else spin_index = 13
@@ -1074,10 +1081,10 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
     
   ;Parse names for available times wrfout_d01_2008-10-26_12:00:00
   fnames = FILE_BASENAME(fileLIST)
-  month = LONG(STRMID(fnames,16,2))
-  year = LONG(STRMID(fnames,11,4))
-  day = LONG(STRMID(fnames,19,2))
-  hour = LONG(STRMID(fnames,22,2))
+  month = LONG(STRMID(fnames,17,2))
+  year = LONG(STRMID(fnames,12,4))
+  day = LONG(STRMID(fnames,20,2))
+  hour = LONG(STRMID(fnames,23,2))
   ds = QMS_TIME(MONTH=month, year=year, day = day, hour = hour)
   dummy = min(ds, pmin, SUBSCRIPT_MAX=pmax)
   
@@ -1272,8 +1279,7 @@ pro POST_aggregate_directory, domain, directory, START_TIME = start_time, END_TI
     addInfo = ''
     if  vartokeep.static[p] then begin ; We want to turn the static field on
       s = WHERE(DIMSIDS ne 0, c)
-      if c eq N_ELEMENTS(dimsIds) then Message, 'Hmmm, Time dimension not found? '
-      dimsIds = dimsIds[s]
+      if c ne N_ELEMENTS(dimsIds) then dimsIds = dimsIds[s] ; allready static or not ?
       addInfo = '+STATIC+'
     endif    
     
