@@ -1,6 +1,5 @@
 pro valid_temperature_stations, FILE=file, OUTPUT_DIR=output_dir
 
-
   compile_opt idl2
   @WAVE.inc
     
@@ -129,14 +128,14 @@ pro valid_temperature_stations, FILE=file, OUTPUT_DIR=output_dir
   
    w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
                        MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
-                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, STD_PNG=output_dir+'/'+pngfile
+                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp;, STD_PNG=output_dir+'/'+pngfile
 
    ;---------------------------------------------------------------------------------------------------------------------
    ; log file of all stations with at least 3 years of valid temperature information in the time interval 2001-2011
    ;---------------------------------------------------------------------------------------------------------------------    
    
     logfile='NCDC_VALID_TEMP_'+id+'.log'
-    OPENW, lun, output_dir+'/'+ logfile, /GET_LUN
+    OPENW, lun, output_dir+'/'+logfile, /GET_LUN
     header='#######Stations with 3 years valid temperature data in 2001-2011#######'
     descr= 'NAME, ID, START_YEAR, STOP_YEAR, LAT, LON, HEIGHT, PERC_VALID'
     printf, lun, header
