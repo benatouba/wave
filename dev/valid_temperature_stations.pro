@@ -1,30 +1,31 @@
-pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
+
+  ; example:
+  ; valid_temperature_stations, output_dir = '//KLIMA-FS1/hinners/Valid_Stations' , path = file_search('\\KLIMA-FS1\hinners\NCDC\*')
+  ; output_dir (resp. std_png) does not work with backslashes but slashes (/) to place the png-file in the right directory
+  
+pro valid_temperature_stations, OUTPUT_DIR=output_dir, PATH = path, FILE=file
 
   compile_opt idl2
   @WAVE.inc
   
-  ; example for path:
-  ; path = file_search('\\KLIMA-FS1\hinners\NCDC\*')
-
   ; choose file if no keyword is set 
-  if (N_ELEMENTS(FILE) eq 0) and (N_Elements(Path) eq 0) then file = DIALOG_PICKFILE(TITLE='Select a NCDC file to read', /MUST_EXIST)
-  ; does not work anymore - why?
+  if (N_ELEMENTS(FILE) eq 0) and (N_ELEMENTS(PATH) eq 0) then FILE = DIALOG_PICKFILE(TITLE='Select a NCDC file to read', /MUST_EXIST)
   
+  ; choose output directory if no keyword is set
+  if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
   
   ; if a path is set as keyword, all files of the path are tested
-  if N_Elements(Path) ne 0 then begin
-  for nstations= 0,(N_Elements(path)-1) do begin; end of for-loop at the end of the whole procedure
-  file = Path[nstations]   
-
-  ; choose output directory if no keyword is set
-  if N_Elements(output_dir) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+  if N_ELEMENTS(PATH) ne 0 then FILE = PATH
+  
+  ; the chosen file / all files of the path is/are tested
+  for nfile = 0,(N_ELEMENTS(FILE)-1) do begin ; end of for-loop at the end of the whole procedure
+  testfile = FILE[nfile] 
     
-  ;  get data  
-  data = w_ncdc_read_gsod_file(FILE = file)
+  ; get time information
+  data = w_ncdc_read_gsod_file(FILE = testfile)
   vNames = data->getVarNames()
   varObj = data->getVar('TEMP')
   org_time=varObj->getTime(nt)
-  temp = varObj->getData()
   
   ; requested time series of temperature information
   t0=QMS_TIME(year=2001,month=01,day=01)
@@ -33,12 +34,13 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
   if ndays eq 0 then continue
   
   ; requirement: valid temperature information of at least 3 years in time series
+  temp = varObj->getData()
   temp = temp[p]
   tempvalid = varObj->valid()
   tempvalid = tempvalid[p]
   nvalidtemp = TOTAL(tempvalid)
   perc_valid = (nvalidtemp/N_Elements(temp))
-  min_daynr =(3*365) ; or more precise requirement that time series is continuous?
+  min_daynr =(3*365)
   if nvalidtemp lt min_daynr then begin continue
      endif else begin ;end of else-loop at the end of the whole procedure
   
@@ -56,9 +58,10 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
   time = varObj->getTime(nt)
   time = time[p]
   prcpvalid = varObj->valid()
+  prcpvalid = prcpvalid[p]
   nvalidprcp = TOTAL(prcpvalid)  
 
-  ; time period of available weather data
+  ; time period of available weather data in chosen time interval
   startTime= TIME_TO_STR(time[0], MASK='YYYY')
   stopTime=TIME_TO_STR(time[ndays-1], MASK='YYYY')
   timeperiod=''+startTime+' - '+stopTime+''
@@ -88,9 +91,9 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
   
   ; remove the last element
   monthly_time= monthly_time[0:N_ELEMENTS(monthly_time)-2]  
-  ndays = GEN_month_days(monthly_time.month, monthly_time.year)
-  monthly_valid_temp = FLOAT(monthly_valid_temp) / ndays
-  monthly_valid_prcp = FLOAT(monthly_valid_prcp) / ndays
+  n_days = GEN_month_days(monthly_time.month, monthly_time.year)
+  monthly_valid_temp = FLOAT(monthly_valid_temp) / n_days
+  monthly_valid_prcp = FLOAT(monthly_valid_prcp) / n_days
 
   ; cut temp and prcp with corresponding time to valid monthly values
   i_temp = where(monthly_valid_temp ge perc_temp)
@@ -107,7 +110,7 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
    valyears_temp=fltarr(12)
    for m = 0,11 do begin
      i_months = where(monthly_time_temp.month eq m+1, n_months)
-     if n_months eq 0 then begin print,' no temperature information for all months'
+     if n_months eq 0 then begin continue
         endif else begin
         temperature[m] = mean(valid_monthly_temp[i_months])
         max_temp[m] = max(valid_monthly_temp[i_months])
@@ -123,7 +126,7 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
    valyears_prcp=fltarr(12)  
    for m = 0,11 do begin
      i_months = where(monthly_time_prcp.month eq m+1, n_months)
-     if n_months eq 0 then begin print,' no precipitation information for all months'
+     if n_months eq 0 then begin continue
        endif else begin
        precipitation [m] = mean(valid_monthly_prcp[i_months])
        max_prcp[m] = max(valid_monthly_prcp[i_months])
@@ -165,5 +168,4 @@ pro valid_temperature_stations, OUTPUT_DIR=output_dir, Path = Path, FILE=file
 
   endelse
  endfor
- endif
 end
