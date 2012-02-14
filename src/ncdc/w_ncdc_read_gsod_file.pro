@@ -300,8 +300,14 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
   compile_opt idl2
   @WAVE.inc
   
-  ; RETRIEVE file and template
-  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, -1
+  ENDIF
+    
+  ; RETRIEVE file and template  
   if (N_ELEMENTS(file) eq 0) and (N_ELEMENTS(directory) eq 0) then MESSAGE, 'Either of the keywords DIRECTORY or FILE must be set!'
   
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
@@ -323,7 +329,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
     
     nb_entries=N_ELEMENTS(date)
-    if nb_entries eq 0 then message, 'No data in file.'
+    if nb_entries le 2 then message, 'No valid data in file: ' + file_list[t]
     
     stn = ascii_data.stn
     wban = ascii_data.wban
@@ -368,8 +374,8 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
         _var = *(stat_vars[j])
         _d = (_var.data[p])[un]
         var = OBJ_NEW('w_ts_Data', _d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
-          VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing)
-        ncdc_station->addVar, var
+          VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing, TIMESTEP=MAKE_TIME_STEP(day=1))
+        if OBJ_VALID(var) then ncdc_station->addVar, var
       endfor
         
       if (N_ELEMENTS(list_values) eq 0) then list_values = ncdc_station else list_values = [list_values, ncdc_station]
