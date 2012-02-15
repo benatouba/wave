@@ -1,0 +1,11 @@
+domain = 1 ; The domain to process
+input_directory = /home/mowglie/disk/Data/WRF/WRF331 ; where to find the orginal WRF files
+output_directory =  /home/mowglie/disk/WPP_OUT ; where to put the aggregated files
+pressure_levels = 1000, 975, 925, 900, 850, 800, 700, 650, 600, 550, 500, 450, 400, 350, 300, 250, 200, 150, 100, 50 ; pressure levels 
+path_to_variables_2d_file = .  ;variables_2d_wpp.csv
+path_to_variables_3d_file = .  ;variables_3d_wpp.csv
+path_to_variables_soil_file = .  ;variables_soil_wpp.csv
+created_by = Fabien Maussion - fabien.maussion@tu-berlin.de
+institution = Technische Universität Berlin, Institut für Ökologie, Fachgebiet Klimatologie
+title = WRF Regional Atmospheric Reanalysis - Central Asia and Tibet - WET_Standard_V01
+notes = File generated with the output of successive model runs of 36H (first 12 hours discarded for spin-up)

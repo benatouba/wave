@@ -626,46 +626,83 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       dvars = {name:'',unit:'',ndims:0L,description:'',type:'',dims:PTR_NEW(),dimnames:PTR_NEW()}
       
       ;PRCP
-      d1 = self->w_NCDF::get_Var_Info('rainnc', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('rainc')
+      d1 = self->w_NCDF::get_Var_Info('RAINNC', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('RAINC')
       d3 = self->w_NCDF::get_Var_Info('SR')
       if (d1 and d2) then begin
-        var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Accumulated total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Total precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP_NC',unit:'mm',ndims:N_elements(dims),description:'Grid scale precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'RAINNC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step grid scale precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]
-        var = {name:'RAINC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step cumulus precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP_C',unit:'mm',ndims:N_elements(dims),description:'Cumulus precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         if d3 then begin
-          var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Snowfall from fraction of frozen precipitation (step wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          var = {name:'PRCP_FR',unit:'mm',ndims:N_elements(dims),description:'Frozen precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
         endif
-      endif else begin
-        d1 = self->w_NCDF::get_Var_Info('rainnc_step', DIMNAMES=dnames,DIMS=dims)
-        d2 = self->w_NCDF::get_Var_Info('rainc_step')
-        if (d1 and d2) then begin
-          var = {name:'PRCP_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total precipitation',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-          dvars = [dvars,var]
-          if d3 then begin
-            var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Snowfall from fraction of frozen precipitation (step wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-            dvars = [dvars,var]
-          endif
-        endif
-      endelse
-      
+      endif
+            
       ;snowfall
       d1 = self->w_NCDF::get_Var_Info('SNOWNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'SNOWNC_STEP',unit:'mm',ndims:N_elements(dims),description:'Step total grid scale snow and ice',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Grid scale snow and ice (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-      endif  
+      endif
+      ;graupel
+      d1 = self->w_NCDF::get_Var_Info('GRAUPELNC', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'GRAUPEL',unit:'mm',ndims:N_elements(dims),description:'Grid scale graupel (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      ;hail
+      d1 = self->w_NCDF::get_Var_Info('HAILNC', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'HAIL',unit:'mm',ndims:N_elements(dims),description:'Grid scale hail (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;POTEVP
+      d1 = self->w_NCDF::get_Var_Info('POTEVP', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'POTEVAP',unit:'w m-2',ndims:N_elements(dims),description:'Potential evaporation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;pressure
+      d1 = self->w_NCDF::get_Var_Info('P', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('PB') 
+      if (d1 and d2) then begin
+        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+      endif           
+      d1 = self->w_NCDF::get_Var_Info('PRES', DIMNAMES=dnames,DIMS=dims) ;met_em
+      if (d1) then begin
+        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+      endif 
+      
+      ; geopotential, z
+      d1 = self->w_NCDF::get_Var_Info('PH', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('PHB')  
+      if (d1 and d2) then begin
+        dnames = utils_replace_string(dnames, '_stag', '')
+        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]      
+        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]                 
+      endif          
+      d1 = self->w_NCDF::get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
+      if (d1) then begin
+        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]         
+        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]    
+      endif      
         
       ;TK and TC
-      d1= self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
+      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
       d2 = self->w_NCDF::get_Var_Info('P')
-      d3 = self->w_NCDF::get_Var_Info('PB')
+      d3 = self->w_NCDF::get_Var_Info('PB')   
       if (d1 and d2 and d3) then begin
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -675,14 +712,15 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
         var = {name:'T2PBLC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]     
-      endif    
+      endif 
+  
       ;THETA
       if (d1) then begin
         var = {name:'THETA',unit:'K',ndims:N_elements(dims),description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]    
       endif 
-      
-      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims)
+            
+      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims) ;Met em
       if (d1) then begin
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -699,14 +737,14 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       
       ;RH
       d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('P')
-      d3 = self->w_NCDF::get_Var_Info('PB')
-      d4 = self->w_NCDF::get_Var_Info('QVAPOR')
-      if (d1 and d2 and d3 and d4) then begin
+      d2 = self->w_NCDF::get_Var_Info('QVAPOR')
+      d3 = self->w_NCDF::get_Var_Info('P')
+      d4 = self->w_NCDF::get_Var_Info('PB')
+      if (d1 and d2 and d3 and d4)then begin
         var = {name:'RH',unit:'%',ndims:N_elements(dims),description:'Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
-      
+
       ;RH2
       d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
       d2 = self->w_NCDF::get_Var_Info('Q2')
@@ -716,7 +754,42 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
       endif
       
-      ;ter      
+      ;SWUP
+      d1 = self->w_NCDF::get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('ALBEDO')      
+      if (d1 and d2) then begin
+        var = {name:'SWUP',unit:'w m-2',ndims:N_elements(dims),description:'upward short wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;LWUP
+      d1 = self->w_NCDF::get_Var_Info('TSK', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('EMISS')      
+      if (d1 and d2) then begin
+        var = {name:'LWUP',unit:'w m-2',ndims:N_elements(dims),description:'upward long wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;LWDOWN
+      d1 = self->w_NCDF::get_Var_Info('GLW', DIMNAMES=dnames,DIMS=dims)  
+      if (d1) then begin
+        var = {name:'LWDOWN',unit:'w m-2',ndims:N_elements(dims),description:'downward long wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;NETRAD
+      d1 = self->w_NCDF::get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->w_NCDF::get_Var_Info('ALBEDO')        
+      d3 = self->w_NCDF::get_Var_Info('TSK')        
+      d4 = self->w_NCDF::get_Var_Info('EMISS')        
+      d5 = self->w_NCDF::get_Var_Info('GLW')        
+      d6 = self->w_NCDF::get_Var_Info('SWDOWN')        
+      if (d1 and d2 and d3 and d4 and d5 and d6) then begin
+        var = {name:'NETRAD',unit:'w m-2',ndims:N_elements(dims),description:'net radiation at ground surface (+ = downward)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;TER      
       d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
@@ -727,7 +800,6 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
-      
       
       ;lucat      
       d1 = self->w_NCDF::get_Var_Info('LU_INDEX', DIMNAMES=dnames,DIMS=dims)
@@ -766,15 +838,15 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d3 = self->w_NCDF::get_Var_Info('PB')
       d4 = self->w_NCDF::get_Var_Info('QVAPOR')      
       d5 = self->w_NCDF::get_Var_Info('PH')
-      d6 = self->w_NCDF::get_Var_Info('PHB')      
+      d6 = self->w_NCDF::get_Var_Info('PHB')
       if (d1 and d2 and d3 and d4 and d5 and d6) then begin
         var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
       endif
       
-      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims)  
+      d1 = self->w_NCDF::get_Var_Info('PMSL', DIMNAMES=dnames,DIMS=dims) ;MET EM
       if d1 then begin
-        var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -797,37 +869,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'WD10',unit:'degrees',ndims:N_elements(dims),description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
       endif      
-      
-      ;pressure
-      d1 = self->w_NCDF::get_Var_Info('P', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('PB') 
-      if (d1 and d2) then begin
-        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]         
-      endif           
-      d1 = self->w_NCDF::get_Var_Info('PRES', DIMNAMES=dnames,DIMS=dims)
-      if (d1) then begin
-        var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]         
-      endif 
-      
-      ; geopotential, z
-      d1 = self->w_NCDF::get_Var_Info('PH', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('PHB')  
-      if (d1 and d2) then begin
-        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]      
-        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]                 
-      endif          
-      d1 = self->w_NCDF::get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
-      if (d1) then begin
-        var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]         
-        var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]    
-      endif           
-      
+           
       self.ndiagvar = N_ELEMENTS(dvars) - 1
       if self.ndiagvar ne 0 then begin      
         dvars = dvars[1:*]
@@ -854,7 +896,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
     
     undefine, varid, varnames, varndims, varunits, vardescriptions, vartypes
 
-    varid = -1L * (LINDGEN(N_ELEMENTS(u))+1L)
+    varid = -1L * (LINDGEN(N_ELEMENTS(dvars))+1L)
     varnames = dvars.name
     varndims = dvars.ndims
     varunits = dvars.unit
@@ -864,7 +906,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
     if KEYWORD_SET(PRINTVARS) then print, 'WAVE diagnostic variables:'
     if KEYWORD_SET(PRINTVARS) then for i = 0, self.ndiagvar-1 DO print, 'Id: ' + str_equiv(varid[i]) + $
        '. Name: ' + varnames[i] + '. Unit: ' + varunits[i] + '. Ndims: ' + str_equiv(varndims[i])+ $
-         '. Type: ' + VARTYPES[i] + '. Description: ' + str_equiv(vardescriptions[i])
+         '. Type: ' + VARTYPES[i] + '. Description: ' + vardescriptions[i]
     
   endif else if KEYWORD_SET(ALL) then begin
   
@@ -1197,13 +1239,19 @@ end
 ;    a given time period (keywords `T0` and `T1`)
 ;    
 ;    Additionaly to the "standard" variables available in the WRF file,
-;    a few diagnostic variables are computed automatically if requested.
-;    Here is a list of the diagnostic variables (only if requested WRF 
-;    output variables are present. Check the available variables with
+;    a few diagnostic variables are computed automatically.
+;    Here is a list of the diagnostic variables (only if needed WRF 
+;    variables are present. Check the available variables with
 ;    `w_WRF::get_Varlist, /DIAGNOSTIC, /PRINT`) ::
 ;              
-;             prcp: total precipitation (accumulated, unless `/ACC_TO_STEP` is set)
-;             prcp_step: total precipitation (step-wise)
+;             prcp: total precipitation (step-wize) [mm]
+;             snowfall: Grid scale snow and ice (step-wize) [mm]
+;             prcp_c: Cumulus precipitation (step-wize) [mm]
+;             prcp_nc: Grid scale precipitation (step-wize) [mm]
+;             prcp_fr: Frozen precipitation (step-wize) [mm]
+;             graupel: Grid scale graupel (step-wize) [mm]
+;             hail: Grid scale hail (step-wize) (step-wize) [mm]             
+;             potevap:  Potential evaporation (step-wize) [w m-2]             
 ;             rh: Relative Humidity [%]
 ;             rh2: 2m Relative Humidity [%]
 ;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. See `utils_wrf_slp` 
@@ -1221,11 +1269,10 @@ end
 ;             tk: Temperature [K]
 ;             ws10: wind speed at 10m [m.s-1] TODO: rotated to earth coordinates
 ;             wd10: wind direction [degrees] TODO: rotated to earth coordinates
-;             geopotential: Full model geopotential [m2 s-2]
+;             geopotential: Full model geopotential [m2 s-2] (unstaggered)
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
-;             snownc_step: Total STEP WISE grid scale snow and ice [mm]
-;             snowfall: Snowfall (step wize) computed from fraction of frozen precipitation [mm]
+;             
 ;             TODO: umet10: 10m U components of wind rotated to earth coordinates
 ;             TODO: vmet10: 10m v components of wind rotated to earth coordinates
 ;             TODO: umet: U components of wind rotated to earth coordinates
@@ -1338,44 +1385,93 @@ function w_WRF::get_Var, Varid, $
   
   ; Check for the known diagnostic variable names
   case str_equiv(vid) of
-  
+      
     'PRCP': begin
-      value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1, dims=dims, dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+      value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+      _acc_to_step = TRUE
     end
     
-    'PRCP_STEP': begin
-      d1 = self->w_NCDF::get_Var_Info('RAINNC_step')
-      d2 = self->w_NCDF::get_Var_Info('RAINC_step')
-      if d1 and d2 then begin
-        value = self->get_Var('RAINNC_step', time, nt, t0 = t0, t1 = t1,  $
-          dims = dims, $
-          dimnames = dimnames) + self->get_Var('RAINC_step', t0 = t0, t1 = t1)
-        _acc_to_step = FALSE
-      endif else begin
-        d1 = self->w_NCDF::get_Var_Info('RAINNC')
-        d2 = self->w_NCDF::get_Var_Info('RAINC')
-        if d1 and d2 then begin
-          value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
-            dims = dims, $
-            dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
-          _acc_to_step = TRUE
-        endif else Message, 'Precipitation variables not available'
-      endelse
-    end
-    
-    'SNOWNC_STEP': begin
+    'SNOWFALL': begin
       value = self->get_Var('SNOWNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
       _acc_to_step = TRUE
     end
     
-    'SNOWFALL': begin
-      value = self->get_Var('PRCP_STEP', time, nt, t0 = t0, t1 = t1,  $
+    'PRCP_FR': begin
+      value = self->get_Var('PRCP', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
       value *= self->get_Var('SR', t0 = t0, t1 = t1)
       _acc_to_step = FALSE
+    end
+    
+    'PRCP_NC': begin
+      value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE      
+    end
+    
+    'PRCP_C': begin
+      value = self->get_Var('RAINC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'GRAUPEL': begin
+      value = self->get_Var('GRAUPELNC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'HAIL': begin
+      value = self->get_Var('HAILNC', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'POTEVAP': begin
+      value = self->get_Var('POTEVP', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'LWDOWN': begin
+      value = self->get_Var('GLW', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+    end
+    
+    'LWUP': begin
+      value = self->get_Var('TSK', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      e = self->get_Var('EMISS', time, nt, t0 = t0, t1 = t1)
+      value = (5.6704e-8) * e * value^4
+    end
+    
+    'SWUP': begin
+      value = self->get_Var('SWDOWN', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      value *= self->get_Var('ALBEDO', time, nt, t0 = t0, t1 = t1)
+    end
+    
+    'NETRAD': begin
+      value = self->get_Var('SWDOWN', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      swup = self->get_Var('SWUP', time, nt, t0 = t0, t1 = t1)
+      lwup = self->get_Var('LWUP', time, nt, t0 = t0, t1 = t1)
+      lwdown = self->get_Var('LWDOWN', time, nt, t0 = t0, t1 = t1)
+      value += lwdown - swup - lwup
     end
     
     'TK': begin

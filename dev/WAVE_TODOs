@@ -11,7 +11,7 @@ in one single routine
 
 -> use the new w_tplot routine to finally make a nice timeline plot routine
 
--> improve w_QuickPlotVar
+-> improve w_QuickPlot
 Sooooo many possibilities! 
 Allow Time and Z dimensions to be a moving slice
 Keep Aspect ratio when resizing the window

@@ -129,6 +129,13 @@ FUNCTION caching_combine_path_file,path_in,file_in,win=win
    RETURN,new
 END
 
+pro caching_log, text, LOGGER=logger, PRINT=print, QUIET=quiet
+  
+  if KEYWORD_SET(QUIET) then return
+  if N_ELEMENTS(logger) ne 0 then logger->addText, '% CACHING: ' + text, PRINT=print else message, text, /INFO
+  
+end
+
 ;+
 ; NAME:
 ;   caching
@@ -157,7 +164,8 @@ END
 ;   @license: LGPL V2 or later, see LICENSE.txt
 ;-
 
-FUNCTION caching, filename, delete=delete
+FUNCTION caching, filename, delete=delete, cachepath=cachepath, no_zip=no_zip, LOGGER=logger, PRINT=print, QUIET=quiet
+  
   if n_elements(filename) eq 0 then begin
     message, 'no filename given'
   endif
@@ -165,7 +173,33 @@ FUNCTION caching, filename, delete=delete
     message, 'filename: ' + filename + ' does not exist'
   endif
   
- cachepath = "/home/mowglie/cache"
+  if N_ELEMENTS(cachepath) eq 0 then message, 'Set a cachepath'
+  
+  if ~KEYWORD_SET(no_zip) then begin
+    ending = STRSPLIT(filename, '.', /EXTRACT, COUNT=cnt)
+    if cnt ne 0 then begin
+      ending = ending[cnt-1]
+      if str_equiv(ending) eq 'ZIP' then begin
+        origname = caching(filename, delete=delete, cachepath=cachepath, /no_zip, LOGGER=logger, PRINT=print, QUIET=quiet)
+        lfile = utils_replace_string(origname, '.zip', '.sav')
+        if KEYWORD_SET(delete) then begin
+          restore, FILENAME=lfile
+          FILE_DELETE, outname
+          FILE_DELETE, lfile
+          caching_log, 'uncompressed file: ' + outname + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
+          return, origname
+        endif else begin
+          spawn, 'unzip ' + origname + ' -d '+ cachepath, ret, err, EXIT_STATUS=status
+          if err ne '' then Message, 'error on uncomp'
+          outname = STRCOMPRESS((STRSPLIT(ret[1], ':', /EXTRACT))[1], /REMOVE_ALL)
+          if ~ FILE_TEST(outname) then Message, 'error on uncomp filename'
+          save, outname, FILENAME=lfile
+          caching_log, 'file: ' + origname + ' uncompressed', LOGGER=logger, PRINT=print, QUIET=quiet
+          return, outname
+        endelse
+      endif
+    endif
+  endif
    
   _filename = utils_replace_string(filename, '/', '_')
   cachefile = caching_combine_path_file(cachepath, _filename)
@@ -173,12 +207,12 @@ FUNCTION caching, filename, delete=delete
   
   IF KEYWORD_SET(delete) and caching_file_exist(cachefile) THEN BEGIN
     file_delete, cachefile
-    message, 'cachefile: ' + cachefile + ' deleted', /info
+    caching_log, 'cachefile: ' + cachefile + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
     IF caching_file_exist(lockfile) THEN BEGIN
       file_delete, lockfile
-      message, 'lockfile: ' + lockfile + ' deleted', /info
+      caching_log, 'lockfile: ' + lockfile + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
     ENDIF
-    return, ""
+    return, cachefile
   ENDIF
   
   CASE 1 OF
@@ -186,7 +220,7 @@ FUNCTION caching, filename, delete=delete
     caching_file_exist(cachefile) eq 1 and caching_file_exist(lockfile) eq 0: return, cachefile
     caching_file_exist(cachefile) eq 0 and caching_file_exist(lockfile) eq 1: BEGIN
       WHILE caching_file_exist(lockfile) DO BEGIN
-        message, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists, we wait a second', /info
+        caching_log, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists, we wait a second', LOGGER=logger, PRINT=print, QUIET=quiet
         wait,1
       ENDWHILE
       return, cachefile
@@ -204,7 +238,7 @@ FUNCTION caching, filename, delete=delete
     END
     caching_file_exist(cachefile) eq 1 and caching_file_exist(lockfile) ne 0: BEGIN
       WHILE caching_file_exist(lockfile) DO BEGIN
-        message, 'cachefile: '+ cachefile +' exists but also lockfile: '+ lockfile + ' still exists, we wait a second', /info
+        caching_log, 'cachefile: '+ cachefile +' exists but also lockfile: '+ lockfile + ' still exists, we wait a second', LOGGER=logger, PRINT=print, QUIET=quiet
         wait,1
       ENDWHILE
       return, cachefile

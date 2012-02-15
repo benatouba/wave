@@ -1,6 +1,15 @@
-How to make the WAVE work
+WAVE library
 
-1. Have a look to the ./doc folder
-2. Check that all dependencies are respected: TNT (V2.2 SR5 at least), COYOTE (last version)
-3. Add the WAVE folder to your IDL Path
-4. execute '@WAVEstart.mac'
+Copyright:
+Technische Uiversität Berlin
+Institut für Ökologie - Fachgebiet Klimatologie
+Rothenburgstr. 12
+D-12165 Berlin
+Tel.: +49-30-314-71495
+www.klima.tu-berlin.de 
+
+Overview, installation and tutorials: 
+http://www.klima.tu-berlin.de/index.php?show=wave_start&lan=de
+
+Online Documentation : 
+http://www.klima.tu-berlin.de/intranet/wave_doc/index.html

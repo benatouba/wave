@@ -1,141 +1,76 @@
 ; docformat = 'rst'
 ;+
-;  The WAVE library WRF Post-Processor
-;
-;
-; :Properties:
-;
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
+;  WRF Product-Processor
+;  
 ; :History:
-;     Written by FaM, 201.
-;
-;       Modified::
+;     Written by FaM, 2012.
 ;
 ;-
 
-PRO w_WPP__Define
+
+
+Function w_WPP::Init, FILE=file, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  struct = { w_WPP                             ,  $
-    input_file: ''                   ,  $
-    input_directory: ''              ,  $ ; where to find the orginal WRF files
-    output_directory:  ''            ,  $ ; where to find the aggregated files
-    of_vardef_directory: ''          ,  $ ; where to find the outut variables *.wdef files
-    if_pattern: ''                   ,  $ ; input files search pattern
-    of_preffix: ''                   ,  $ ; aggregated files preffix
-    domains: PTR_NEW()               ,  $ ; domains to process
-    input_hours:0L                   ,  $ ; effective output per file
-    static_file_vars: PTR_NEW()      ,  $ ; variables to put in the one and only domain static file
-    file_vars: PTR_NEW()             ,  $ ; time-dependant variables to add to ALL the aggregated files
-    file_static_vars: PTR_NEW()      ,  $ ; static variables to add to ALL the aggregated files
-    pressure_levels: PTR_NEW()       ,  $ ; pressure levels of the pressure levels files
-    npressure_levels: 0L       ,  $ ; pressure levels of the pressure levels files
-    obsolete_attributes: PTR_NEW()   ,  $ ; attributes to remove when copying the file
-    comment_attribute: ''            ,  $ ; attribute to add when copying the file
-    vardefs: PTR_NEW()           ,  $
-    n_vardefs: 0L                  $
-    }
-    
-  struct = {w_WPP_vardef,       $
-    file_name: '',       $
-    do_pres: FALSE,       $
-    dimensions: PTR_NEW(),       $
-    ndimensions: 0L,       $
-    variables: PTR_NEW(),       $
-    nvariables: 0L,       $
-    unstagger: FALSE,       $
-    agg_steps_default: PTR_NEW(),       $
-    nagg_steps_default: 0L,       $
-    agg_method: ''       $
-    }
-END
-
-Function w_WPP::Init, FILE = file
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
-    RETURN, 0
-  ENDIF
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel
+;    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+;    RETURN, 0
+;  ENDIF
   
   ;******************
   ; Check arguments *
   ;******************
-  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select the input.wpp file', /MUST_EXIST, FILTER='*.wpp')
+  if not KEYWORD_SET(file) then file = DIALOG_PICKFILE(TITLE='Please select the namelist.wpp file', /MUST_EXIST, FILTER='*.wpp')
   if file eq '' then MESSAGE, WAVE_Std_Message(/FILE)
   
   self.input_file = file
   if ~ self->_Parse_Inputfile() then MESSAGE, 'Unable to parse the input file correctly. Please check it.'
-  if ~ self->_Parse_VarDefs() then MESSAGE, 'Unable to parse the variable definitions correctly. Please check it.'
+  
+  logf = self.output_directory + '/wpp_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, $
+        DELETE_ON_DESTROY=0, TIMESTAMP=0)
+  
+  self.do_cache = 1B
+  self.cachepath = self.output_directory + '/cache'
+  FILE_MKDIR, self.cachepath
+  
+  self.Logger->AddText, 'WPP logfile ' + self.title + ' - Domain ' + str_equiv(self.domain), PRINT=print
+  self.Logger->AddText, '', PRINT=print  
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, 'Output directory: ' + self.output_directory, PRINT=print
+  self.Logger->AddText, 'Listing files in: ' + self.input_directory + ' ...'  , PRINT=print
+  
+  self->_list_files
+  if self.n_ifiles eq 0 then MESSAGE, 'No files found'    
+  self.Logger->AddText, 'Found ' + str_equiv(self.n_ifiles) + ' files', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /QUIET) else file = (*self.ifiles)[0]
+  self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE, /QUIET)
+  
+  self.Logger->AddText, 'Parse variable definitions ...', PRINT=print
+  
+  self->_Parse_VarDefFile, self.v2d_file, '2d', PRINT=print
+  self->_Parse_VarDefFile, self.v3d_file, '3d_eta', PRINT=print
+  self->_Parse_VarDefFile, self.v3d_file, '3d_press', PRINT=print
+  self->_Parse_VarDefFile, self.vsoil_file, '3d_soil', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '+----------------------------+', PRINT=print
+  self.Logger->AddText, '+ Initialisation successfull +', PRINT=print
+  self.Logger->AddText, '+----------------------------+', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->Flush
+  
+  OBJ_DESTROY, self.active_wrf
   
   return, 1
-  
-end
-
-;+
-; :Description:
-;    Destroy function.
-;
-;-
-pro w_WPP::_destroyInputParams
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  self.input_file = ''
-  self.input_directory = ''
-  self. output_directory =  ''
-  self.of_vardef_directory = ''
-  self.if_pattern = ''
-  self.of_preffix = ''
-  PTR_FREE, self.domains
-  self.input_hours =0L
-  PTR_FREE, self.static_file_vars
-  PTR_FREE, self.file_vars
-  PTR_FREE, self.file_static_vars
-  PTR_FREE, self.pressure_levels
-  PTR_FREE, self.obsolete_attributes
-  self.comment_attribute = ''
-  
-END
-
-;+
-; :Description:
-;   utilitary routine to properly destroy the pointers.
-;
-; :History:
-;     Written by FaM, 2011.
-;-
-pro w_WPP::_destroyVardefs
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  if PTR_VALID(self.vardefs) then begin
-    vardefs = *self.vardefs
-    for i = 0, N_ELEMENTS(vardefs) - 1 do begin
-      ptr_free, (vardefs[i]).dimensions
-      ptr_free, (vardefs[i]).variables
-      ptr_free, (vardefs[i]).agg_steps_default
-    endfor
-  endif
-  ptr_free, self.vardefs
-
-  self.n_vardefs = 0L
   
 end
 
@@ -149,9 +84,14 @@ pro w_WPP::Cleanup
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
-  
-  self->_destroyInputParams
-  self->_destroyVardefs
+    
+  OBJ_DESTROY, self.active_wrf
+  ptr_free, self.active_time
+  ptr_free, self.active_index
+  ptr_free, self.pressure_levels
+  ptr_free, self.vars
+  ptr_free, self.ifiles
+  OBJ_DESTROY, self.Logger
   
 END
 
@@ -161,18 +101,12 @@ Function w_WPP::_Parse_Inputfile
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    self->_destroyInputParams
-    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
-    RETURN, 0
-  ENDIF
-  
-  ; Set default values
-  self.if_pattern = 'wrfpost_*_25h'
-  self.of_preffix = 'wrf_agg'
-  self.input_hours = 24L
+;  Catch, theError
+;  IF theError NE 0 THEN BEGIN
+;    Catch, /Cancel    
+;    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
+;    return, 0
+;  ENDIF
   
   ; Open the file and loop over the lines
   OPENR, lun, self.input_file, /GET_LUN
@@ -180,62 +114,77 @@ Function w_WPP::_Parse_Inputfile
     line = ''
     readf, lun, line
     if line eq '' then continue
-    line = (STRSPLIT(line, ';', /EXTRACT, /PRESERVE_NULL))[0] ; before the comments is interesting
+    line = (STRSPLIT(line, ';', /EXTRACT, /PRESERVE_NULL))[0] ; before the comment
     if line eq '' then continue
     line = STRSPLIT(line, '=', /EXTRACT)
-    if N_ELEMENTS(line) ne 2 then continue ; we just have one = sign
+    if N_ELEMENTS(line) ne 2 then continue ; we just accept one = sign
     key = str_equiv(line[0])
-    val = STRCOMPRESS(line[1], /REMOVE_ALL)
+    val = line[1]
     
     case (key) of
+      'DOMAIN': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        self.domain = LONG(val)
+      end
       'INPUT_DIRECTORY': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
         if FILE_TEST(val, /DIRECTORY) then self.input_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
       'OUTPUT_DIRECTORY': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
         if FILE_TEST(val, /DIRECTORY) then self.output_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
-      'OF_VARDEF_DIRECTORY': begin
-        if FILE_TEST(val, /DIRECTORY) then self.of_vardef_directory = utils_clean_path(val, /MARK_DIRECTORY)
+      'PATH_TO_VARIABLES_2D_FILE': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        if FILE_TEST(val) then self.v2d_file = utils_clean_path(val)
+        if val eq '.' then begin
+          _val = FILE_DIRNAME(self.input_file)+'/variables_2d_wpp.csv'
+          if FILE_TEST(_val) then self.v2d_file = utils_clean_path(_val)
+        endif
       end
-      'IF_PATTERN': begin
-        self.if_pattern = val
+      'PATH_TO_VARIABLES_3D_FILE': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        if FILE_TEST(val) then self.v3d_file = utils_clean_path(val)
+        if val eq '.' then begin
+          _val = FILE_DIRNAME(self.input_file)+'/variables_3d_wpp.csv'
+          if FILE_TEST(_val) then self.v3d_file = utils_clean_path(_val)
+        endif
       end
-      'OF_PREFFIX': begin
-        self.of_preffix = val
+      'PATH_TO_VARIABLES_SOIL_FILE': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        if FILE_TEST(val) then self.vsoil_file = utils_clean_path(val)
+        if val eq '.' then begin
+          _val = FILE_DIRNAME(self.input_file)+'/variables_soil_wpp.csv'
+          if FILE_TEST(_val) then self.vsoil_file = utils_clean_path(_val)
+        endif
       end
-      'DOMAINS': begin
-        val = LONG(val)
-        if N_ELEMENTS(val) ne 0 then self.domains = PTR_NEW(val)
-      end
-      'INPUT_HOURS': begin
-        val = LONG(val)
-        if N_ELEMENTS(val) eq  1 then self.input_hours = val
-      end
-      'STATIC_FILE_VARS': begin
-        val = STRSPLIT(val, ',', /EXTRACT)
-        if N_ELEMENTS(val) ne 0 then self.static_file_vars = PTR_NEW(val)
-      end
-      'FILE_VARS': begin
-        val = STRSPLIT(val, ',', /EXTRACT)
-        if N_ELEMENTS(val) ne 0 then self.file_vars = PTR_NEW(val)
-      end
-      'FILE_STATIC_VARS': begin
-        val = STRSPLIT(val, ',', /EXTRACT)
-        if N_ELEMENTS(val) ne 0 then self.file_static_vars = PTR_NEW(val)
+      'OUTPUT_DIRECTORY': begin
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        if FILE_TEST(val, /DIRECTORY) then self.output_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
       'PRESSURE_LEVELS': begin
-        val = LONG(val)
+        val = STRCOMPRESS(val,/REMOVE_ALL)
+        val = LONG(STRSPLIT(val, ',', /EXTRACT))
         if N_ELEMENTS(val) ne 0 then begin
+          self.n_pressure_levels = N_ELEMENTS(val)
           self.pressure_levels = PTR_NEW(val)
-          self.npressure_levels = N_ELEMENTS(val)
         endif
       end
-      'OBSOLETE_ATTRIBUTES': begin
-        val = STRSPLIT(val, ',', /EXTRACT)
-        if N_ELEMENTS(val) ne 0 then self.file_static_vars = PTR_NEW(val)
+      'CREATED_BY': begin
+        val = GEN_strtrim(val, /LEADING)
+        self.created_by = val
       end
-      'OBSOLETE_ATTRIBUTES': begin
-        if N_ELEMENTS(val) eq 1 then self.comment_attribute = val
+      'INSTITUTION': begin
+        val = GEN_strtrim(val, /LEADING)
+        self.institution = val
+      end
+      'TITLE': begin
+        val = GEN_strtrim(val, /LEADING)
+        self.title = val
+      end
+      'NOTES': begin
+        val = GEN_strtrim(val, /LEADING)
+        self.notes = val
       end
       else:
     endcase
@@ -243,320 +192,494 @@ Function w_WPP::_Parse_Inputfile
   FREE_LUN, lun
   
   ; Check
-  if self.input_directory eq '' then Message, ''
-  if self.output_directory eq  '' then Message, ''
-  if self.of_vardef_directory eq '' then Message, ''
-  if self.if_pattern eq '' then Message, ''
-  if self.of_preffix eq '' then Message, ''
-  if self.input_hours eq 0 then Message, ''
+  if self.domain eq 0 then Message, 'No'
+  if self.input_directory eq '' then Message, 'No'
+  if self.output_directory eq  '' then Message, 'No'
+  if self.v2d_file eq '' then Message, 'No'
+  if self.v3d_file eq  '' then Message, 'No'
+  if self.vsoil_file eq '' then Message, 'No'
   
   return, 1
   
 end
 
-Function w_WPP::_Parse_VarDefFile, file
+pro w_WPP::_Parse_VarDefFile, file, type, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
-    RETURN, AAA
-  ENDIF
+  csv = READ_CSV(file, COUNT=cnt)
+  if cnt lt 2 then return ; nothing to do
   
-  ; Set default values
-  vardef = {w_WPP_vardef}
-  vardef.unstagger = FALSE
-  vardef.agg_steps_default = PTR_NEW('STEP')
-  is_pres = FALSE
-  vardef.nagg_steps_default = 1
+  ; ignore the first line (header)
+  vardefs = REPLICATE({w_WPP_var}, cnt-1)
+  vardefs.name = STRLOWCASE(str_equiv(csv.FIELD1[1:*]))
+  vardefs.agg_method = STRLOWCASE(str_equiv(csv.FIELD2[1:*]))
+  if type eq '3d_press' then begin 
+   p = where(STRLOWCASE(str_equiv(csv.FIELD3[1:*])) eq 'yes', cp)
+   topress = BYTARR(cnt-1)
+   if cp ne 0 then topress[p] = 1 
+   if TOTAL(topress) eq 0 then return
+  endif
   
-  
-  ; Open the file and loop over the lines
-  OPENR, lun, file, /GET_LUN
-  while ~ eof(lun) do begin
-    line = ''
-    readf, lun, line
-    if line eq '' then continue
-    line = (STRSPLIT(line, ';', /EXTRACT, /PRESERVE_NULL))[0] ; before the comments is interesting
-    if line eq '' then continue
-    line = STRSPLIT(line, '=', /EXTRACT)
-    if N_ELEMENTS(line) ne 2 then continue ; we just have one = sign
-    key = str_equiv(line[0])
-    val = STRCOMPRESS(line[1], /REMOVE_ALL)
+  for i=0, N_ELEMENTS(vardefs) - 1 do begin
+    v = vardefs[i]
+    ok = self.active_wrf->get_Var_Info(v.name, units = unit, $
+      description = description, $
+      varname = varname, $
+      dims = dims, $
+      dimnames = dimnames)
+            
+    if ~ ok then begin
+      print, 'VARIABLE: ' + v.name + ' not found.'
+      if N_ELEMENTS(inds) eq 0 then inds = i else inds=[inds,i]
+      continue
+    endif
+    if type eq '3d_press' then if ~topress[i] then if N_ELEMENTS(inds) eq 0 then inds = i else inds=[inds,i]
     
-    case (key) of
-      'FILE_NAME': begin
-        dummy = STRSPLIT(STRLOWCASE(val), '.', COUNT=cnt, /EXTRACT)
-        if cnt eq 2 then begin
-          if dummy[1] eq 'sfc' or dummy[1] eq 'press' then vardef.file_name = STRLOWCASE(val)
-          if dummy[1] eq 'press' then vardef.do_pres = TRUE
-        endif
-      end
-      'DIMENSIONS': begin
-        val = STRSPLIT(val, ',', /EXTRACT, COUNT=cnt)
-        if cnt ne 0 then begin
-          vardef.dimensions = PTR_NEW(val)
-          vardef.ndimensions = N_ELEMENTS(val)
-        endif
-      end
-      'VARIABLES': begin
-        val = STRSPLIT(val, ',', /EXTRACT, COUNT=cnt)
-        if cnt ne 0 then begin
-          vardef.variables = PTR_NEW(val)
-          vardef.nvariables = N_ELEMENTS(val)
-        endif
-      end
-      'UNSTAGGER': begin
-        if str_equiv(val) eq 'TRUE' then vardef.unstagger = TRUE
-      end
-      'AGG_STEPS_DEFAULT': begin
-        val = str_equiv(STRSPLIT(val, ',', /EXTRACT, COUNT=cnt))
-        cc = 0
-        for i=0, cnt-1 do begin
-          p = where(['STEP','DAILY'] eq val[i], cntt)
-          cc += cntt
-        endfor
-        if cc ne 0 then begin 
-         vardef.agg_steps_default = PTR_NEW(val)
-         vardef.nagg_steps_default = N_ELEMENTS(val)         
-        endif
-      end
-      'AGG_METHOD': begin
-        val = str_equiv(val)
-        p = where(['MEAN','SUM','WIND'] eq val, cnt)
-        if cnt ne 0 then vardef.agg_method = val
-      end
-      else:
-    endcase
-  endwhile
-  FREE_LUN, lun
-  
-  ; Check
-  mes = 'Parsing of ' + file + ' failed'
-  if ~PTR_VALID(vardef.variables) then Message, mes
-  if ~PTR_VALID(vardef.dimensions) then Message, mes
-  if ~PTR_VALID(vardef.agg_steps_default) then Message, mes
-  if vardef.file_name eq  '' then Message, mes
-  if vardef.agg_method eq  '' then Message, mes
-  
-  return, vardef
-  
-end
-
-Function w_WPP::_Parse_VarDefs
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    self->_destroyVardefs
-    RETURN, 0
-  ENDIF
-  
-  fileList = FILE_SEARCH(self.of_vardef_directory, '*.wdef', /EXPAND_ENVIRONMENT, COUNT=cnt)
-  if cnt eq 0 then MESSAGE, 'No *.wdef files found'
-  
-  for i=0, cnt-1 do begin
-    vdef = self->_Parse_VarDefFile(fileList[i])
-    if N_ELEMENTS(vdef) eq 0 then continue    
-    if self.n_vardefs eq 0 then begin
-      self.n_vardefs = 1
-      self.vardefs = PTR_NEW(vdef, /NO_COPY)
-    endif else begin
-      temp = *self.vardefs
-      np = self.n_vardefs
-      ptr_free, self.vardefs
-      temp = [temp, vdef]
-      self.vardefs = PTR_NEW(temp, /NO_COPY)
-      self.n_vardefs = np + 1
-    endelse
+    v.description = STRLOWCASE(description)
+    v.unit = STRLOWCASE(unit)
+    v.type = type 
+    matches = Where(StrMatch(dimnames, '*_stag'), count)
+    if count eq 1 and type ne '3d_soil' then v.unstagger = TRUE
+    vardefs[i] = v
+    
   endfor
   
-  if self.n_vardefs eq 0 then MESSAGE, 'Not a single *.wdef file found'
+  if N_ELEMENTS(inds) ne 0 then utils_array_remove, inds, vardefs
   
-  return, 1
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '+ For type: ' + type + ', found ' + str_equiv(N_ELEMENTS(vardefs)) + ' variables', PRINT=print
+  self.Logger->AddText, 'NAME            DESCRIPTION                                       UNIT       AGG_METHOD', PRINT=print
+  for i=0, N_ELEMENTS(vardefs) - 1 do begin
+     v = vardefs[i]
+     ns = '                                                                                  '
+     STRPUT, ns, v.name, 1
+     STRPUT, ns, v.description, 17
+     STRPUT, ns, v.unit, 67
+     STRPUT, ns, v.agg_method, 78
+     self.Logger->AddText, ns, PRINT=print
+  endfor
+  
+  if self.n_vars eq 0 then begin
+    self.n_vars = N_ELEMENTS(vardefs)
+    self.vars = PTR_NEW(vardefs, /NO_COPY)
+  endif else begin
+    vardefs = [*self.vars, vardefs]
+    PTR_FREE, self.vars
+    self.n_vars = N_ELEMENTS(vardefs)
+    self.vars = PTR_NEW(vardefs, /NO_COPY)
+  endelse
   
 end
 
-pro w_WPP::_define_out_file, vdef,  year, template, wrftemplate, timeserie, daytimeserie, FORCE=force, PATH=path
-  
+pro w_WPP::_list_files
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
   
-  for j=0, vdef.nagg_steps_default-1 do begin
+  ;wrfpost_d01_2005-09-21_00-00-00_25h.nc
   
-    aggstep = STRLOWCASE((*vdef.agg_steps_default)[j])
-    do_day = str_equiv(aggstep) eq 'DAILY'
+  pattern = 'wrfpost_d'+STRING(self.domain, FORMAT='(I02)')+'*.{zip,nc}'  
+  filelist = FILE_SEARCH(self.input_directory, pattern, /EXPAND_ENVIRONMENT, COUNT=cnt)
+  self.n_ifiles = cnt
+  ptr_free, self.ifiles
+  if cnt ne 0 then self.ifiles = PTR_NEW(filelist, /NO_COPY)
+  
+end
+
+pro w_WPP::_set_active_var, var, year
+
+  case (self.domain) of
+    1: begin 
+      dom_str = 'd30km'
+    end
+    2:  begin 
+      dom_str = 'd10km'
+    end    
+    else: begin
+      dom_str = 'd02km'    
+    end
+  endcase
+  
+  f_dir = dom_str+'/h/'+var.type
+  f_name = utils_replace_string(f_dir, '/', '_') + '_' + var.name + '_' + STRING(year, FORMAT='(I4)') + '.nc'
+  f_path = utils_clean_path(self.output_directory + '/products/'+ f_dir + '/' + f_name)
+  l_path = utils_clean_path(self.output_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
+  f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
+  f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
+  
+  FILE_MKDIR, FILE_DIRNAME(f_log)
+  FILE_MKDIR, FILE_DIRNAME(f_path)
+  FILE_MKDIR, FILE_DIRNAME(l_path)
+  
+  self.active_lfile = l_path
+  self.active_lncfile = f_log
+  self.active_ofile = f_path
+  self.active_var = var
+  
+end
+
+pro w_WPP::_define_file, FORCE=force, PRINT=print
+  
+  case (self.active_var.type) of
+    '2d': begin
+       nz = 0    
+       type_str = '2d'
+    end
+    '3d_eta': begin
+       z_dim_name = 'eta'
+       nz = self.active_wrf->get_Dim('bottom_top')
+       self.active_wrf->get_Time, dum, dumy, t0
+       z = self.active_wrf->get_var('ZNU', t0=t0, t1=t0)
+       type_str = '3d/eta'
+       z_var_name = 'eta'
+       z_var_long_name = 'Eta Levels (mass points)'
+       z_var_units = ''       
+    end
+    '3d_press': begin
+       z_dim_name = 'pressure'
+       nz = self.n_pressure_levels
+       type_str = '3d/press'
+       z = *self.pressure_levels
+       z_var_name = 'pressure'
+       z_var_long_name = 'Pressure Levels'
+       z_var_units = 'hPa'      
+    end
+    '3d_soil': begin
+       z_dim_name = 'soil'
+       nz = self.active_wrf->get_Dim('soil_layers_stag')
+       type_str = '3d/soil'
+       self.active_wrf->get_Time, dum, dumy, t0
+       z = TOTAL(self.active_wrf->get_var('DZS', t0=t0, t1=t0),/CUMULATIVE)
+       z_var_name = 'soil'
+       z_var_long_name = 'depths of lower boundaries of soil layers'
+       z_var_units = 'm'      
+    end
+    else: message, 'Type not ok'
+  endcase
+  
+  case (self.domain) of
+    1: begin 
+      nested_string = 'NO'
+      grid_string = '30km'
+      h=3
+    end
+    2:  begin 
+      nested_string = 'YES'
+      grid_string = '10km'
+      h=1
+    end    
+    else: begin
+      nested_string = 'YES'
+      grid_string = '02km'
+      h=1
+    end
+  endcase
+      
+  x_dim_name = 'west_east'
+  y_dim_name = 'south_north'
+  t_dim_name = 'time'
     
-    path = self.output_directory + '/wrf_agg.'+vdef.file_name+'.'+str_equiv(year)+'.'+aggstep+'.nc'
-    if FILE_TEST(path) and KEYWORD_SET(FORCE) then FILE_DELETE, path  
-    if FILE_TEST(path) then return    
+  ; Coordinates
+  self.active_wrf->getProperty, tnt_c=tnt_c
+  nx = tnt_c.nx
+  ny = tnt_c.ny
+  proj = tnt_c.proj
+  x = INDGEN(nx, /LONG) * tnt_c.dx + tnt_c.x0
+  y = INDGEN(ny, /LONG) * tnt_c.dy + tnt_c.y1  
+  self.active_wrf->get_lonLat, lon, lat
+  proj_envi_string = tnt_c.proj.envi
+  proj_name = tnt_c.proj.name
+  datum = tnt_c.proj.datum.name
+  
+  tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
+  time = LONG( (*self.active_time-tref) / (MAKE_TIME_STEP(hour=1)).dms)
+  timestep_string = str_equiv(h) + ' hours'
+  
+  dObj = Obj_New('NCDF_FILE', self.active_ofile, /CREATE, /TIMESTAMP, /NETCDF4_FORMAT, CLOBBER=force, ErrorLoggerName=self.active_lncfile)
+  IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
+  dObj->SetMode, /DEFINE
+  
+  ; Dimensions  
+  dObj->WriteDim, t_dim_name, self.active_n_time
+  dObj->WriteDim, x_dim_name, nx
+  dObj->WriteDim, y_dim_name, ny
+  if nz ne 0 then dObj->WriteDim, z_dim_name, nz
+  
+  ; Global attributes
+  dObj->WriteGlobalAttr, 'TITLE', self.title
+  dObj->WriteGlobalAttr, 'DATA_NOTES', self.notes
+  dObj->WriteGlobalAttr, 'WRF_VERSION', self.active_wrf->get_Gatt('TITLE') 
+  dObj->WriteGlobalAttr, 'CREATED_BY', self.created_by
+  dObj->WriteGlobalAttr, 'INSTITUTION', self.institution  
+  dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME())
+  dObj->WriteGlobalAttr, 'SOFTWARE_NOTES', 'IDL V' + !VERSION.RELEASE + ', WAVE post V0.1' 
+  dObj->WriteGlobalAttr, 'PROJECTION', proj_name 
+  dObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string
+  dObj->WriteGlobalAttr, 'DATUM', datum
+  dObj->WriteGlobalAttr, 'GRID_SPACING', grid_string
+  dObj->WriteGlobalAttr, 'TIMESTEP', timestep_string
+  dObj->WriteGlobalAttr, 'NESTED', nested_string
+  dObj->WriteGlobalAttr, 'TIME_ZONE', 'UTC'
+  
+  ; Variables
+  vn = 'time'
+  dObj->WriteVarDef, vn, t_dim_name, DATATYPE='LONG'
+  dObj->WriteVarAttr, vn, 'long_name', 'Time'
+  dObj->WriteVarAttr, vn, 'units', 'hours since 2000-01-01 00:00:00'
+  vn = 'west_east'
+  dObj->WriteVarDef, vn, x_dim_name, DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'x-coordinate in Cartesian system'
+  dObj->WriteVarAttr, vn, 'units', 'm'
+  vn = 'south_north'
+  dObj->WriteVarDef, vn, y_dim_name, DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'y-coordinate in Cartesian system'
+  dObj->WriteVarAttr, vn, 'units', 'm'  
+  vn = 'lon'
+  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'Longitude'
+  dObj->WriteVarAttr, vn, 'units', 'degrees_east'
+  vn = 'lat'
+  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'Latitude'
+  dObj->WriteVarAttr, vn, 'units', 'degrees_north'
+  if nz ne 0 then begin
+    vn = z_var_name
+    dObj->WriteVarDef, vn, z_dim_name, DATATYPE='FLOAT'
+    dObj->WriteVarAttr, vn, 'long_name', z_var_long_name
+    dObj->WriteVarAttr, vn, 'units', z_var_units
+  endif
+  
+  ;Actual variable
+  if nz eq 0 then dims = [x_dim_name,y_dim_name,t_dim_name] $
+   else dims = [x_dim_name,y_dim_name,z_dim_name,t_dim_name]   
+  vn = self.active_var.name
+  dObj->WriteVarDef, vn, dims, DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', self.active_var.description
+  dObj->WriteVarAttr, vn, 'units', self.active_var.unit
+  dObj->WriteVarAttr, vn, 'agg_method', self.active_var.agg_method
+  
+  ; Fill with data
+  dObj->SetMode, /DATA
+  dObj->WriteVarData, 'time', time   
+  dObj->WriteVarData, 'west_east', x  
+  dObj->WriteVarData, 'south_north', y  
+  dObj->WriteVarData, 'lon', lon  
+  dObj->WriteVarData, 'lat', lat  
+  if nz ne 0 then dObj->WriteVarData, z_var_name, z  
+  
+  Obj_Destroy, dObj
+  
+  ;Checks
+  flag = 'ACTIVE'
+  data_check = BYTARR(self.active_n_time)
+  save, flag, data_check, FILENAME=self.active_lfile
+  
+  ;log
+  self.logger->addText, ' new file: ' + self.active_ofile, PRINT=print
+  self.logger->flush
+  
+end
+
+pro w_WPP::_add_var_to_file, PRINT=print
+
+  self.logger->addText, '   Do var : ' + self.active_var.name + ' ' + self.active_var.type, PRINT=print
+  self.logger->flush    
+  
+  ;Check for time ok
+  ; flag, time, data_check, FILENAME=l_path
+  restore, FILENAME=self.active_lfile
+  if flag ne 'ACTIVE' then message, 'flag?'
+  if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
+  p0 = min(*self.active_index)
+  
+  ; Vardata
+  if self.active_var.type eq '3d_press' then pressure_levels = *self.pressure_levels
+  data = self.active_wrf->get_var(self.active_var.name, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
+  
+  case (self.active_var.type) of
+    '2d': begin 
+     data = data[*,*,1:*]
+     offset=[0,0,p0]
+    end
+    else:  begin 
+     data = data[*,*,*,1:*]
+     offset=[0,0,0,p0]
+    end
+  endcase
+      
+  dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /MODIFY, ErrorLoggerName=self.active_lncfile)
+  IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'  
+  
+  ; Fill with data
+  dObj->SetMode, /DATA
+  dObj->WriteVarData, self.active_var.name, data, OFFSET=offset  
+  Obj_Destroy, dObj
+  
+  ;Checks
+  flag = 'ACTIVE'
+  data_check[*self.active_index] = 1
+  if TOTAL(data_check) eq N_ELEMENTS(data_check) then flag = 'DONE'
+  save, flag, data_check, FILENAME=self.active_lfile
     
-    elog_ = '/home/mowglie/'+'log_'+str_equiv(LONG64(SYSTIME(/SECONDS)-1.3214766E+09))+'.wrf_agg.'+vdef.file_name+'.'+str_equiv(year)+'.'+aggstep+'.log'
+end
+
+
+pro w_WPP::process, year, PRINT=print
+
+  @WAVE.inc
+  year = 2005
+  
+  OBJ_DESTROY, self.active_wrf
+  ptr_free, self.active_time
+  ptr_free, self.active_index
+  
+  self.logger->addText, 'Start to process year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '', PRINT=print
     
-    dObj = Obj_New('NCDF_FILE', path, /CREATE, /CLOBBER, /TIMESTAMP, ErrorLoggerName=elog_)
-    IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
-    
-    ; Find all the global attributes in the source file and copy them.
-    attrNames = template->GetGlobalAttrNames(COUNT=attrCount)
-    FOR k=0,attrCount-1 DO BEGIN
-      template->CopyGlobalAttrTo, attrNames[k], dObj
-    ENDFOR
-    
-    ; Find all the dimensions in the source file and copy them.
-    if do_day then nt = N_ELEMENTS(daytimeserie) else nt = N_ELEMENTS(timeserie)
-    dObj->WriteDim, 'time', nt
-    dObj->WriteDim, 'DateStrLen', 19
-    
-    dimNames = template->GetDimNames(COUNT=dimCount)
-    mydimNames = *(vdef.dimensions)
-    
-    FOR k=0,dimCount-1 DO BEGIN
-      dn = dimNames[k]
-      if str_equiv(dn) eq 'TIME' then continue
-      p = where(str_equiv(mydimNames) eq str_equiv(dn), cnt)
-      if cnt ne 0 then template->CopyDimTo, dn, dObj
-    ENDFOR
-    p = where(str_equiv(mydimNames) eq str_equiv('pressure_levels'), cnt)
-    if cnt ne 0 then begin
-      dObj->WriteDim, 'pressure_levels', self.npressure_levels
+  ; Time
+  if self.domain eq 1 then h=3 else h=1
+  t0 = QMS_TIME(year=year,month=1,day=1,hour=h)
+  t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+  time = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(HOUR=h), NSTEPS=nt)
+  self.active_n_time = nt
+  PTR_FREE, self.active_time
+  self.active_time = PTR_NEW(time)
+  
+  ; Find necessary data
+  GEN_date_doy, ret, ntofind, YEAR=year, month=12, day=31
+  pattern = '*wrfpost_d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
+  matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
+  ;  if nfiles ne ntofind then Message, 'Not enough original files to aggregate'
+  files = (*self.ifiles)[matches]
+  
+  ; Define
+  ; Tpl Object  
+  if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[0]
+  self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
+ 
+  self.logger->addText, 'Generating product files ...', PRINT=print
+  self.logger->flush
+  
+  vars = (*self.vars)
+  for i=0, self.n_vars-1 do begin
+    self->_set_active_var, vars[i], year
+    self->_define_file, /FORCE, PRINT=print
+  endfor
+  
+  self.logger->addText, 'Done generating product files', PRINT=print
+  self.logger->addText, '', PRINT=print
+
+  self.logger->addText, 'Now start to fill with data ...', PRINT=print
+  self.logger->flush
+  
+  for f=0, N_ELEMENTS(files)-1 do begin
+  
+    if f ne 0 then begin
+      if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[f]
+      self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
     endif
     
-    ; Define time variable
-    template->CopyVarDefTo, 'Times', dObj
-    vn = 'XLAT'
-    template->CopyVarDefTo, vn, dObj
-    varAttrNames = template->GetVarAttrNames(vn, COUNT=varAttrCount)
-    FOR k=0,varAttrCount-1 DO BEGIN
-      template->CopyVarAttrTo, vn, varAttrNames[k], dObj
-    ENDFOR
-    template->CopyVarDataTo, vn, dObj
-    vn = 'XLONG'
-    template->CopyVarDefTo, vn, dObj
-    varAttrNames = template->GetVarAttrNames(vn, COUNT=varAttrCount)
-    FOR k=0,varAttrCount-1 DO BEGIN
-      template->CopyVarAttrTo, vn, varAttrNames[k], dObj
-    ENDFOR
-    template->CopyVarDataTo, vn, dObj
+    self.active_wrf->get_time, wtime, wnt, wt0, wt1
+    if self.domain eq 1 then if wnt ne 9 then Message, 'Times in original WRF file?'
+    if self.domain ge 2 then if wnt ne 25 then Message, 'Times in original WRF file?'
     
-    dObj->WriteVarDef, 'WCHECK', 'time', DATATYPE='LONG'
+    ;Check for time ok
+    p0 = where(*self.active_time eq wtime[1], cnt)
+    if cnt ne 1 then Message, 'T0 not found?'
+    p1 = where(*self.active_time eq wt1, cnt)
+    if cnt ne 1 then Message, 'T1 not found?'
+    nt = p1-p0+1
+    if self.domain eq 1 then if nt ne 8 then Message, 'Times?'
+    if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
     
-    myVars = *vdef.variables
-    for k=0, vdef.nvariables-1 do begin
-      ok = wrftemplate->get_Var_Info(myVars[k], $
-        units = units, $
-        description = description, $
-        varname = varname , $ ;
-        dims = dims, $ ;
-        dimnames = dimnames)
-      if ~ok then message, 'var not ok'
-      ; Define a variable for the file.
-      dObj->WriteVarDef, myVars[k], mydimNames, DATATYPE='FLOAT', OBJECT=dataObj
-      IF Obj_Valid(dataObj) EQ 0 THEN Message, 'Invalid data object returned.'
-      ; Define variable attributes.
-      dObj->WriteVarAttr, dataObj, 'description', description
-      dObj->WriteVarAttr, dataObj, 'units', units
-    endfor ; k=0, vdef.nvariables-1
-    ; Sync the file by writing memory to disk.
-    dObj->Sync
-    Obj_Destroy, dObj
-  endfor   ;j=0, vdef.nagg_steps_default-1
+    PTR_FREE, self.active_index
+    self.active_index = PTR_NEW(INDGEN(nt)+p0)
+    self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[p0], /NOTIME)+  '...', PRINT=print
+    self.logger->flush
+    
+    vars = (*self.vars)
+    for i=0, self.n_vars-1 do begin
+      self->_set_active_var, vars[i], year
+      self->_add_var_to_file, PRINT=print
+    endfor
+    OBJ_DESTROY, self.active_wrf
+    
+    if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+    
+  endfor
+  FILE_DELETE, cachepath, /RECURSIVE
+  
+  ;final check
+  vars = (*self.vars)
+  for i=0, self.n_vars-1 do begin
+    self->_set_active_var, vars[i], year
+    restore, FILENAME=self.active_lfile
+    if flag ne 'DONE' then message, 'noooo'
+  endfor
+
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '+----------------------------------+', PRINT=print
+  self.Logger->AddText, '+ Processing year '+STRING(year,FORMAT='(I4)')+' successfull +', PRINT=print
+  self.Logger->AddText, '+----------------------------------+', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->Flush
+  
+  self.active_n_time = 0
+  PTR_FREE, self.active_time
+  PTR_FREE, self.active_index
   
 end
 
-pro w_WPP::aggregate, YEAR=year, MONTH=month
-  
+
+PRO w_WPP__Define
+
+  ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  domain = 1
-  if N_ELEMENTS(year) ne 1 then Message, 'YEAR please'
+  COMPILE_OPT IDL2
   
-  filelist = FILE_SEARCH(self.input_directory, 'wrfpost*.nc', /EXPAND_ENVIRONMENT, COUNT=cnt)
-  isHere = STRPOS(filelist, 'd0' + str_equiv(domain))
-  p = WHERE(isHere ne -1, cnt)
-  if cnt ne 0 then filelist = filelist[p] else fileList = ''
-  fileList = fileList[SORT(fileList)]
-  if N_ELEMENTS(fileList) le 1 then message, 'No files?'
-  
-  ; Now get a std file
-  template = OBJ_NEW('NCDF_File', fileList[0])
-  wrf =  OBJ_NEW('w_WRF', FILE= fileList[0])
-  wrf->get_time, time
-  tstep = time[1]-time[0]
-  t0 = QMS_TIME(year=year, month=1, day=1, hour=tstep/H_QMS)
-  t1 = QMS_TIME(year=year+1, month=1, day=1, hour=0)
-  timeserie = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(DMS=tstep), NSTEPS=nt)
-  t0 = QMS_TIME(year=year, month=1, day=1, hour=0)
-  t1 = QMS_TIME(year=year, month=12, day=31, hour=0)
-  daytimeserie = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(day=1), NSTEPS=nd)
-  
-  for i=0, self.n_vardefs-1 do begin  
-      vdef = (*self.vardefs)[i]   
-      self->_define_out_file, vdef, year, template, wrf, timeserie, daytimeserie
-  endfor
-  
-  for f=0, cnt-1 do begin
-    file = caching(filelist[f])
-    wrfo = OBJ_NEW('w_WRF', FILE=file)
-    wrfo->get_time, wtime, wnt, wt0, wt1
+  struct = {w_WPP_var    ,       $
+    name:      ''        ,       $
+    description: ''      ,       $
+    unit: ''             ,       $
+    unstagger: FALSE     ,       $
+    agg_method: ''       ,       $
+    type: ''                     $
+    }
     
-    for i=0, self.n_vardefs-1 do begin
-    
-      vdef = (*self.vardefs)[i]
-      
-      for j=0, vdef.nagg_steps_default-1 do begin
-      
-        aggstep = STRLOWCASE((*vdef.agg_steps_default)[j])
-        do_day = str_equiv(aggstep) eq 'DAILY'
-        opath = self.output_directory + '/wrf_agg.'+vdef.file_name+'.'+str_equiv(year)+'.'+aggstep+'.nc'
-        
-        wto_fill = OBJ_NEW('w_WRF', file=opath)
-        to_fill = OBJ_NEW('NCDF_FILE', opath, /MODIFY)
-        
-        if DO_DAY then time_to_fill = DAYTIMESERIE else time_to_fill = TIMESERIE
-        pok = where(time_to_fill eq wt1, cntok)
-        if cntok ne 1 then begin
-          undefine, wto_fill, to_fill
-          continue
-        endif
-        if do_day then pok-=1 else pok = where(time_to_fill eq wtime[1], cntok)
-        
-        myVars = [*vdef.variables, 'Times']
-        for k=0, vdef.nvariables-1 do begin
-          if vdef.do_pres then pl = *self.pressure_levels else undefine, pl
-          var = wrfo->get_Var(myVars[k], PRESSURE_LEVELS=pl)
-          dims = SIZE(var, /DIMENSIONS)
-          nd = N_ELEMENTS(dims)
-          if nd eq 1 then var = reform(var[1:*])
-          if nd eq 2 then var = reform(var[*,1:*])
-          if nd eq 3 then var = reform(var[*,*,1:*])
-          if nd eq 4 then var = reform(var[*,*,*,1:*])
-          if do_day and nd eq 3 then var = utils_AVERAGE(var, 3)
-          if do_day and nd eq 4 then var = utils_AVERAGE(var, 4)
-          
-          dims = SIZE(var, /DIMENSIONS)
-          ndims = N_ELEMENTS(dims)
-          if ndims eq 1 then OFFSET=[pok]
-          if ndims eq 2 then OFFSET=[0,0,pok]
-          if ndims eq 3 then OFFSET=[0,0,pok]
-          if ndims eq 4 then OFFSET=[0,0,0,pok]
-          to_fill->WriteVarData, myVars[k], var, OFFSET=OFFSET
-        endfor
-        to_fill->Sync
-        undefine, wto_fill, to_fill
-      endfor
-    endfor
-    undefine, wrfo
-    file = caching(filelist[f], /DELETE)
-  endfor
-    
-  undefine, template, wrf
-  
-end
+  struct = { w_WPP                   ,  $
+    input_file: ''                   ,  $
+    domain: 0L                       ,  $
+    input_directory: ''              ,  $ ; where to find the orginal WRF files
+    output_directory:  ''            ,  $ ; where to put the aggregated files
+    v2d_file: ''                     ,  $ ; input file 
+    v3d_file: ''                     ,  $ ; input file 
+    vsoil_file: ''                   ,  $ ; input file 
+    created_by: ''                   ,  $ ; input file 
+    institution: ''                  ,  $ ; input file 
+    title: ''                        ,  $ ; input file 
+    notes: ''                        ,  $ ; input file 
+    do_cache: 0B                     ,  $ ; input file 
+    cachepath: ''                    ,  $ ; input file 
+    logger: OBJ_NEW()                ,  $ ; input file 
+    active_wrf: OBJ_NEW()            ,  $ ; w_WRF fill object
+    active_var: {w_WPP_var}          ,  $ ; 
+    active_ofile: ''                 ,  $ ; 
+    active_lfile: ''                 ,  $ ; 
+    active_lncfile: ''               ,  $ ; 
+    active_time: PTR_NEW()           ,  $ ; 
+    active_index: PTR_NEW()          ,  $ ; 
+    active_n_time: 0L                ,  $ ; 
+    n_ifiles:0L                      ,  $ ; 
+    ifiles:            PTR_NEW()     ,  $ ; found files in the input directory
+    n_pressure_levels:0L             ,  $ ; 
+    pressure_levels:  PTR_NEW()      ,  $ ; pressure levels of the pressure levels files
+    n_vars:0L                        ,  $ ; 
+    vars:             PTR_NEW()         $ ;
+    }
+   
+END

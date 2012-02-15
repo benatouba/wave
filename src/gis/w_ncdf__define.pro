@@ -730,7 +730,7 @@ end
 
 ;+
 ; :Description:
-;    Extracts the desired variable from the NCDF file.
+;    Extracts the desired attribute from the NCDF file.
 ;
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -803,6 +803,84 @@ function w_NCDF::get_Gatt_Info, attid, OUT_ID = out_id
     p = WHERE(str_equiv(*self.gattNames) eq str_equiv(attid), cnt)
     if cnt ne 0 then out_id = (*self.gattNames)[p[0]] else return, FALSE
   endif else MESSAGE, WAVE_Std_Message('attid', /ARG)
+   
+  return, TRUE
+  
+end
+
+;+
+; :Description:
+;    Extracts the desired dimension from the NCDF file.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    attid: in, required, type = long/str
+;           the netCDF dimension ID, or the name of the dimension
+;           (CASE INDEPENDENT)
+;       
+; :Keywords:
+;
+; :Returns:
+;    The dimension
+;
+; :History:
+;     Written by FaM, 2010.
+;-
+function w_NCDF::get_Dim, dimid 
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  ON_ERROR, 2  
+  
+  if ~self->get_Dim_Info(dimid, OUT_id=outid) then Message, '$dimid is not a correct dimension ID'
+  
+  return, (*self.dimSizes)[outid]
+  
+end
+
+;+
+; :Description:
+;    This function checks if an dimension ID is valid and returns 1 if it is.
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    attid: in, required, type = string/ integer
+;           the dimension ID (string or integer) to check
+;
+; :Keywords:
+;   dimid: out, type = string
+;          the netcdf dimension ID (string)
+; :Returns:
+;         1 if the attribute id is valid, 0 if not
+;
+;       Modified::
+;         Written by FaM, 2010.
+;
+;-
+function w_NCDF::get_Dim_Info, dimid, OUT_ID = out_id
+                        
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, FALSE
+  ENDIF
+  out_id = -1
+  
+  if arg_okay(dimid, TYPE=IDL_STRING, /SCALAR) then begin
+    p = WHERE(str_equiv(*self.dimNames) eq str_equiv(dimid), cnt)
+    if cnt ne 0 then out_id = p[0] else return, FALSE
+  endif else MESSAGE, WAVE_Std_Message('dimid', /ARG)
    
   return, TRUE
   
@@ -1009,7 +1087,7 @@ PRO w_NCDF::dump, FILE = file
     sAtt_info = NCDF_attINQ(sid, sName, /GLOBAL)
     NCDF_ATTGET, sid, sName, sValue, /GLOBAL
     
-    text = '       ' + sName + ' = ' + str_equiv(sValue)
+    text = '       ' + sName + ' = ' + STRING(sValue)
     printf, lu, text
 
   endfor ; Att OK

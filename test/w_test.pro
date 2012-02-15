@@ -3091,15 +3091,15 @@ pro TEST_WRF_AGG_MASSGRID
     dom1 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
     dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
     
-    d2pcp = (dom2->get_var('prcp'))[*,*,36]
-    d1pcp = dom2->map_gridded_data((dom1->get_var('prcp'))[*,*,12], dom1)
+    d2pcp = total(dom2->get_var('prcp'),3)
+    d1pcp = dom2->map_gridded_data(total(dom1->get_var('prcp'),3), dom1)
     
     d2pcp = UTILS_aggregate_Grid_data(d2pcp, 3)
     d1pcp = UTILS_aggregate_Grid_data(d1pcp, 3)
     
     ok = DOM2->define_subset()
     ok = DOM1->define_subset(GRID=dom2)
-    orig = (DOM1->get_var('prcp'))[*,*,12]
+    orig = total(DOM1->get_var('prcp'),3)
     
     if max(abs(d1pcp - d2pcp)) gt 0.2 then error +=1
     if max(abs(d1pcp - orig[1:48,1:48])) gt 0.001 then error +=1
@@ -3346,8 +3346,6 @@ pro TEST_WRF_GETVAR
     totest=geo->get_Var(wrf_v)
     ref=geo->w_geo_nc::get_Var('SCB_DOM')
     if total(ABS(totest - ref[*,*,0])) ne 0 then error+=1
-    
-    
         
     ; GEO get_Var    
     all = wrf->w_geo_nc::get_Var('P')    
@@ -3360,42 +3358,31 @@ pro TEST_WRF_GETVAR
     ok = wrf->define_subset(CROPBORDER=5)    
     levs = wrf->w_geo_nc::get_Var('P', ZLEVELS=[2,5], T0=time[2], T1=time[4])
     if total(ABS(all[5:nx-6,5:ny-6,2:5,2:4] - levs)) ne 0 then error+=1    
-    ok = wrf->define_subset()    
+    ok = wrf->define_subset()
     
-    ;PRCP    
-    rainnc_ref = wrf->w_NCDF::get_var('RAINNC')
-    rainc_ref = wrf->w_NCDF::get_var('RAINC')    
-    tot_ref = rainc_ref + rainnc_ref
-    step_ref = utils_acc_to_step(tot_ref)    
-    mytot = wrf->get_var('PRCP')
-    if TOTAL(ABS(tot_ref-mytot)) ne 0 then error += 1    
-    mystep = wrf->get_var('PRCP_STEP')
-    if TOTAL(ABS(step_ref-mystep)) ne 0 then error += 1    
-    mytot = wrf->get_var('PRCP', t1 = time[0])
-    if TOTAL(ABS(mytot)) ne 0 then error += 1    
-    mytot = wrf->get_var('PRCP', t0 = time[8], t1 = time[10])
-    if TOTAL(ABS(tot_ref[*,*,8:10]-mytot)) ne 0 then error += 1  
-    !QUIET = 1  
-    mystep = wrf->get_var('PRCP_STEP', t0 = time[8], t1 = time[10])
-    !QUIET = 0  
-    if TOTAL(ABS(step_ref[*,*,9:10]-mystep[*,*,1:*])) ne 0 then error += 1    
     
-    ; Snowfall
-;    frommod = wrf->get_var('SNOWNC_STEP')
-;    fromfr = wrf->get_var('SNOWFALL')
-;    p = where(TOTAL(frommod,3) gt TOTAL(fromfr,3), cnt)
-;    w_QuickPlot, TOTAL(frommod,3) - TOTAL(fromfr,3)
-;    if cnt ne 0 then error += 1
-;    HFX = wrf->get_var('HFX')
-;    LH = wrf->get_var('LH')
-;    ACHFX = wrf->get_var('ACHFX', /ACC_TO_STEP) / (3.*60.*60.)
-;    ACLHF = wrf->get_var('ACLHF', /ACC_TO_STEP)    
-;    wrf->QuickPlotVar, 'ACHFX'
-;    wrf->QuickPlotVar, 'HFX'    
-;     w_QuickPlot, ACHFX
-;    return
+    ;PRCP and so
+    all = wrf->w_geo_nc::get_Var('RAINNC') +  wrf->w_geo_nc::get_Var('RAINC')
+    mine = wrf->get_Var('PRCP', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    all = wrf->w_geo_nc::get_Var('RAINNC')
+    mine = wrf->get_Var('PRCP_NC', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    all = wrf->w_geo_nc::get_Var('RAINC')
+    mine = wrf->get_Var('PRCP_C', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    all = wrf->w_geo_nc::get_Var('SNOWNC')
+    mine = wrf->get_Var('SNOWFALL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    all = wrf->w_geo_nc::get_Var('POTEVP')
+    mine = wrf->get_Var('POTEVAP', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    all = wrf->w_geo_nc::get_Var('GRAUPELNC')
+    mine = wrf->get_Var('GRAUPEL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    
     ncldir = TEST_file_directory() + 'WRF/ncl_out/'
-   
+       
     ; TK    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     tk_wrf = wrf->get_Var('tk', T0 = t0, T1 = t0)
