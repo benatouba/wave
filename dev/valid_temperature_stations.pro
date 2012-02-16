@@ -1,22 +1,24 @@
 ;+
 ; :Description:
-;    This procedure checks a ncdc-file or all ncdc-files of a path if their weather information lies in a chosen time interval
-;    and contains a minimal number of valid temperature measurements. In this case the information of the ncdc-file
-;    and a corresponding climate diagram are stored in a chosen output directory.
+;    This procedure checks a ncdc file or all ncdc files of a path if their weather information lies in a chosen time interval
+;    and contains a minimal number of valid temperature measurements. All files meeting these requirements are filtered and a new
+;    folder "NCDC_filtered" is created in a chosen output directory. The new folder contains a "data" subfolder in which the
+;    filtered NCDC files are stored and a "png" subfolder in which the corresponding climate diagrams for all filtered NCDC files
+;    are stored. As well a csv file is generated which lists all filtered ncdc files and their station information.
 ;  
 ; :Parameters:
 ;    startpoint : in, required, startpoint of timeinterval, set as 'DD.MM.YYYY'
 ;    endpoint : in, required, endpoint of timeinterval, set as 'DD.MM.YYYY'
-;    min_daynumber: minimal number of valid temperature measurements which are supposed to lie in the timeinterval
+;    min_daynumber: in, required, minimal number of valid temperature measurements which are supposed to lie in the time interval
 ; 
 ; :Keywords:
-;   Output_Dir : in, optional, output directory in which the files which meet the requirements are stored.
+;   Output_Dir : in, optional, output directory in which the new folder "NCDC_filtered" with the filtered files is stored.
 ;   Path : in, optional, input directory contaning all files which are tested. If no path is set as a keyword,
-;          a window opens to select a file
+;   a window opens to select a file
 ;   
 ; :Example:
 ;     valid_temperature_stations,'01.01.2001', '31.12.2011', (3*365), OUTPUT_DIR = '//KLIMA-FS1/hinners/Valid_Stations', $
-;     PATH = '\\KLIMA-FS1\hinners\NCDC\*'
+;     PATH = '\\KLIMA-FS1\hinners\NCDC\*' 
 ;
 ; :History:
 ;     Written by JaH, 2012.
@@ -35,6 +37,7 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
   
   ; the chosen file / all files of the path is/are tested
   file = file_search(PATH)
+  filtered_files = 0
   for nfile = 0,(N_ELEMENTS(file)-1) do begin ; end of for-loop at the end of the whole procedure
     testfile = file[nfile]
     
@@ -51,7 +54,7 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
     p = where(org_time ge t0 and org_time le t1, ndays)
     if ndays eq 0 then continue
     
-    ; requirement: valid temperature information of at least 3 years in time series
+    ; requirement: valid temperature information of at least min_daynumber in time series
     varObj = data->getVar('TEMP')
     temp = varObj->getData()
     temp = temp[p]
@@ -91,12 +94,13 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
       var=var[p]
       varvalid=varObj->valid()
       varvalid=varvalid[p]
-      nval[nvar]=String(total(varvalid), FORMAT='(I6)')
-      name_nval[var]='VALID_DAYS_'+String(vNames[nvar])
-      percval[nvar]=String((nval[nvar]/N_Elements(var)), FORMAT='(F5.3)')
+      n_val= total(varvalid)
+      nval[nvar]=String(n_val, FORMAT='(I6)')
+      name_nval[nvar]='VALID_DAYS_'+String(vNames[nvar])
+      percval[nvar]=String((n_val/N_Elements(var)), FORMAT='(F5.3)')
       name_percVal[nvar]='PERC_VALID_'+String(vNames[nvar])
     endfor
-    
+
     undefine, data
     
     ; ----------------------------------------------------------------------------------------------------------------------------
@@ -171,20 +175,23 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
     ;----------------------------------------------------------------------------------------------------------------------------
     ; csv file of all stations with at least 3 years of valid temperature information in the time interval 2001-2011
     ;----------------------------------------------------------------------------------------------------------------------------
-   
-    FILE_MKDIR,output_dir+'/NCDC_filtered/data'
-    FILE_COPY, testfile, output_dir+'/NCDC_filtered/data/'+id+'.dat', /OVERWRITE
-    csvfile=output_dir+'/NCDC_filtered/info_of_filtered_stations.csv'
-    OPENW, lun, csvfile, /GET_LUN
-    header= 'NAME, ID, START_YEAR, STOP_YEAR, LAT, LON, HEIGHT , '+name_nval[0]+','+name_percval[0]+' , '+name_nval[1]+','+name_percval[1]+' , '+name_nval[2]+','+name_percval[2]+' , '+name_nval[3]+','+name_percval[3]+' , '+name_nval[4]+','+name_percval[4]+' , '+name_nval[5]+','+name_percval[5]+' , '+name_nval[6]+','+name_percval[6]+' , '+name_nval[7]+','+name_percval[7]+' , '+name_nval[8]+','+name_percval[8]+' , '+name_nval[9]+','+name_percval[9]+''
-    printf, lun, header
-    free_lun, lun
-    
+    filtered_files = filtered_files+1
     startYear = STRING(startTime,FORMAT='(I4)')
     stopYear = STRING(stopTime,FORMAT='(I4)')
     lat = STRING(lat,FORMAT='(F7.2)')
     lon = STRING(lon,FORMAT='(F7.2)')
-    height = STRING(height,FORMAT='(I4)')
+    height = STRING(height,FORMAT='(I4)')  
+    
+    FILE_MKDIR,output_dir+'/NCDC_filtered/data'
+    FILE_COPY, testfile, output_dir+'/NCDC_filtered/data/'+id+'.dat', /OVERWRITE
+    csvfile=output_dir+'/NCDC_filtered/info_on_filtered_stations.csv'
+    started_header = 0
+    if filtered_files eq 1 then begin
+       OPENW, lun, csvfile, /GET_LUN
+      header= 'NAME, ID, START_YEAR, STOP_YEAR, LAT, LON, HEIGHT , '+name_nval[0]+','+name_percval[0]+' , '+name_nval[1]+','+name_percval[1]+' , '+name_nval[2]+','+name_percval[2]+' , '+name_nval[3]+','+name_percval[3]+' , '+name_nval[4]+','+name_percval[4]+' , '+name_nval[5]+','+name_percval[5]+' , '+name_nval[6]+','+name_percval[6]+' , '+name_nval[7]+','+name_percval[7]+' , '+name_nval[8]+','+name_percval[8]+' , '+name_nval[9]+','+name_percval[9]+''
+      printf, lun, header
+      free_lun, lun
+    endif
     
     stat_info=''+name+', '+id+', '+StartYear+', '+StopYear+', '+lat+', '+lon+', '+height+' , '+nval[0]+','+percval[0]+' , '+nval[1]+','+percval[1]+' , '+nval[2]+','+percval[2]+' , '+nval[3]+','+percval[3]+' , '+nval[4]+','+percval[4]+' , '+nval[5]+','+percval[5]+' , '+nval[6]+','+percval[6]+' , '+nval[7]+','+percval[7]+' , '+nval[8]+','+percval[8]+' , '+nval[9]+','+percval[9]+''
     OPENU, lun, csvfile, /GET_LUN, /APPEND
@@ -192,5 +199,5 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
     free_lun, lun
     
   endfor
-  
+ 
 end
