@@ -43,10 +43,10 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp)ne 0) then begin
      vt=strarr(12)
      vp=strarr(12)
-   for v= 0,11 do begin
-     vt[v]=String(valyears_temp[v], Format='(I2)')
-     vp[v]=String(valyears_prcp[v],Format ='(I2)')
-   endfor
+     for v= 0,11 do begin
+        vt[v]=String(valyears_temp[v], Format='(I2)')
+        vp[v]=String(valyears_prcp[v],Format ='(I2)')
+        endfor
      labels = ['Jan!C !C'+vt[0]+'!C'+vp[0]+'', 'Feb!C !C'+vt[1]+'!C'+vp[1]+'', 'Mar!C !C'+vt[2]+'!C'+vp[2]+'',$
                'Apr!C !C'+vt[3]+'!C'+vp[3]+'', 'May!C !C'+vt[4]+'!C'+vp[4]+'', 'Jun!C !C'+vt[5]+'!C'+vp[5]+'', $
                'Jul!C !C'+vt[6]+'!C'+vp[6]+'', 'Aug!C !C'+vt[7]+'!C'+vp[7]+'', 'Sep!C !C'+vt[8]+'!C'+vp[8]+'', $
@@ -54,9 +54,6 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   endif else begin
      labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   endelse
-     
-   
-     
      
   if N_ELEMENTS(lat) ne 0 then begin
     _lat = STRING(lat,FORMAT='(F7.2)')
@@ -83,7 +80,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   meanTemp = STRING(mean(temperature),FORMAT='(F4.1)')
   sumPrcp = STRING(total(precipitation), FORMAT='(I4)')
   
-  ;trick
+  ; trick
   cgDisplay,/PIXMAP  
   cgbarplot, precipitation, BARCOORDS=x, xstyle=9, YSTYLE=8,  yrange=[0, maxiprcp], YTICK_get = yt
   WDELETE, !D.WINDOW  
@@ -93,18 +90,16 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
     position=[0.18, 0.15, 0.85, 0.78], /window
 
   if (N_ELEMENTS(max_prcp) ne 0)  and (N_ELEMENTS(min_prcp) ne 0) then $
-    cgerrplot, x, min_prcp, max_prcp, color='dodger blue', /addcmd
+     cgerrplot, x, min_prcp, max_prcp, color='dodger blue', /addcmd
     
   cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, color = 'black', /save ,ytitle='temperature ['+cgsymbol('deg')+'C]', /window
   cgplot, x, temperature, color='red', /overplot, /window
   
   if (N_ELEMENTS(max_temp) ne 0) and (N_ELEMENTS(min_temp) ne 0) then $
-    cgerrplot, x, min_temp, max_temp, color='red',  /addcmd
+     cgerrplot, x, min_temp, max_temp, color='red',  /addcmd
     
-  if N_ELEMENTS(name) ne 0 then $
-    cgtext, 0.18, 0.95,'climate diagram '+name+'', /Normal, /window
-  if N_ELEMENTS(timeperiod) ne 0 then $
-     cgtext,0.68, 0.95,'(' + timeperiod + ')', /Normal, /Window
+  if (N_ELEMENTS(name) ne 0) and (N_ELEMENTS(timeperiod) ne 0) then $
+     cgtext, 0.18, 0.95,'climate diagram '+name+' (' + timeperiod + ')', /Normal, /window
 
   if (N_ELEMENTS(lat) ne 0) and (N_ELEMENTS(lon) ne 0) and (N_Elements(height) ne 0) then $
     cgtext, 0.18,0.9,'lat ='+_lat+''+ cgsymbol('deg')+' / lon ='+_lon+''+ cgsymbol('deg')+' / '+ h+' m', /Normal, /Window
@@ -112,8 +107,8 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   cgtext, 0.18, 0.85, ''+meanTemp+' ' +cgsymbol('deg')+'C, '+sumPrcp+' mm',/Normal, /Window
   
   if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp) ne 0) then begin
-  cgtext,0.03, 0.066, 'val. years T.', /Normal, /Window
-  cgtext, 0.03,0.04,'val. years P.', /Normal, /Window
+    cgtext,0.03, 0.066, 'val. years T.', /Normal, /Window
+    cgtext, 0.03,0.04,'val. years P.', /Normal, /Window
   endif
     
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
