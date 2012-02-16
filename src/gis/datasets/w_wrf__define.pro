@@ -1273,10 +1273,7 @@ end
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
 ;             
-;             TODO: umet10: 10m U components of wind rotated to earth coordinates
-;             TODO: vmet10: 10m v components of wind rotated to earth coordinates
-;             TODO: umet: U components of wind rotated to earth coordinates
-;             TODO: vmet: V components of wind rotated to earth coordinates
+;             TODO: umet10,vmet10,umet,vmet  components of wind rotated to earth coordinates
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
