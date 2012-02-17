@@ -50,9 +50,9 @@ Function w_WPP::Init, FILE=file, PRINT=print
   self.Logger->AddText, 'Found ' + str_equiv(self.n_ifiles) + ' files', PRINT=print
   self.Logger->AddText, '', PRINT=print
   
-  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /QUIET) else file = (*self.ifiles)[0]
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
-  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE, /QUIET)
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE)
   
   self.Logger->AddText, 'Parse variable definitions ...', PRINT=print
   
@@ -85,13 +85,14 @@ pro w_WPP::Cleanup
   @WAVE.inc
   COMPILE_OPT IDL2
     
-  OBJ_DESTROY, self.active_wrf
+  obj_destroy, self.active_wrf
   ptr_free, self.active_time
   ptr_free, self.active_index
   ptr_free, self.pressure_levels
   ptr_free, self.vars
   ptr_free, self.ifiles
-  OBJ_DESTROY, self.Logger
+  obj_destroy, self.logger
+  file_delete, self.cachepath, /RECURSIVE
   
 END
 
@@ -170,6 +171,10 @@ Function w_WPP::_Parse_Inputfile
           self.pressure_levels = PTR_NEW(val)
         endif
       end
+      'PROJECT_ACRONYM': begin
+        val = GEN_strtrim(val, /ALL)
+        self.project_acronym = val
+      end
       'CREATED_BY': begin
         val = GEN_strtrim(val, /LEADING)
         self.created_by = val
@@ -198,6 +203,7 @@ Function w_WPP::_Parse_Inputfile
   if self.v2d_file eq '' then Message, 'No'
   if self.v3d_file eq  '' then Message, 'No'
   if self.vsoil_file eq '' then Message, 'No'
+  if self.project_acronym eq '' then Message, 'No'
   
   return, 1
   
@@ -232,7 +238,7 @@ pro w_WPP::_Parse_VarDefFile, file, type, PRINT=print
       dimnames = dimnames)
             
     if ~ ok then begin
-      print, 'VARIABLE: ' + v.name + ' not found.'
+      self.Logger->AddText, 'VARIABLE: ' + v.name + ' not found.', PRINT=print
       if N_ELEMENTS(inds) eq 0 then inds = i else inds=[inds,i]
       continue
     endif
@@ -305,8 +311,8 @@ pro w_WPP::_set_active_var, var, year
   endcase
   
   f_dir = dom_str+'/h/'+var.type
-  f_name = utils_replace_string(f_dir, '/', '_') + '_' + var.name + '_' + STRING(year, FORMAT='(I4)') + '.nc'
-  f_path = utils_clean_path(self.output_directory + '/products/'+ f_dir + '/' + f_name)
+  f_name = self.project_acronym + '_' + utils_replace_string(f_dir, '/', '_') + '_' + var.name + '_' + STRING(year, FORMAT='(I4)') + '.nc'
+  f_path = utils_clean_path(self.output_directory + '/'+ self.project_acronym +'/'+ f_dir + '/' + f_name)
   l_path = utils_clean_path(self.output_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
   f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
   f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
@@ -485,9 +491,6 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
 end
 
 pro w_WPP::_add_var_to_file, PRINT=print
-
-  self.logger->addText, '   Do var : ' + self.active_var.name + ' ' + self.active_var.type, PRINT=print
-  self.logger->flush    
   
   ;Check for time ok
   ; flag, time, data_check, FILENAME=l_path
@@ -527,20 +530,11 @@ pro w_WPP::_add_var_to_file, PRINT=print
     
 end
 
+function w_WPP::check_files, year, FILES=files
 
-pro w_WPP::process, year, PRINT=print
+  if ~arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('YEAR', /ARG)
 
-  @WAVE.inc
-  year = 2005
-  
-  OBJ_DESTROY, self.active_wrf
-  ptr_free, self.active_time
-  ptr_free, self.active_index
-  
-  self.logger->addText, 'Start to process year ' + str_equiv(year) + ' ...', PRINT=print
-  self.logger->addText, '', PRINT=print
-    
-  ; Time
+  ;Time
   if self.domain eq 1 then h=3 else h=1
   t0 = QMS_TIME(year=year,month=1,day=1,hour=h)
   t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
@@ -553,9 +547,29 @@ pro w_WPP::process, year, PRINT=print
   GEN_date_doy, ret, ntofind, YEAR=year, month=12, day=31
   pattern = '*wrfpost_d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
-  ;  if nfiles ne ntofind then Message, 'Not enough original files to aggregate'
-  files = (*self.ifiles)[matches]
   
+  if nfiles ne ntofind then return, 0
+  files = (*self.ifiles)[matches]
+  return, 1
+  
+end
+
+
+pro w_WPP::process, year, PRINT=print
+
+  @WAVE.inc
+  
+  OBJ_DESTROY, self.active_wrf
+  ptr_free, self.active_time
+  ptr_free, self.active_index
+  
+  logt0 = SYSTIME(/SECONDS)
+  
+  if ~ self->check_files(year, FILES=files) then Message, 'Not enough files to aggregate year : ' + str_equiv(year)
+   
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '', PRINT=print
+       
   ; Define
   ; Tpl Object  
   if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[0]
@@ -578,6 +592,8 @@ pro w_WPP::process, year, PRINT=print
   
   for f=0, N_ELEMENTS(files)-1 do begin
   
+    logti = SYSTIME(/SECONDS)
+  
     if f ne 0 then begin
       if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[f]
       self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
@@ -597,8 +613,12 @@ pro w_WPP::process, year, PRINT=print
     if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
     
     PTR_FREE, self.active_index
-    self.active_index = PTR_NEW(INDGEN(nt)+p0)
-    self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[p0], /NOTIME)+  '...', PRINT=print
+    self.active_index = PTR_NEW(INDGEN(nt)+p0[0])
+    
+    self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[p0], /NOTIME)+ $
+             ' . Indexes in file : [' + str_equiv(min(*self.active_index)) + ',' + $
+                str_equiv(max(*self.active_index)) + '] from ' + str_equiv(self.active_n_time-1) + $
+                   ' ...', PRINT=print                   
     self.logger->flush
     
     vars = (*self.vars)
@@ -610,9 +630,14 @@ pro w_WPP::process, year, PRINT=print
     
     if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
     
+    delta =  LONG(SYSTIME(/SECONDS) - logti)
+    deltam =  delta / 60L 
+    deltas =  delta-(deltaM*60L)
+   
+    self.logger->addText, ' Done. Needed: ' + TIME_to_STR(deltaM) + ' minutes, ' + TIME_to_STR(deltaS) + ' seconds.', PRINT=print
+    self.logger->flush
   endfor
-  FILE_DELETE, cachepath, /RECURSIVE
-  
+    
   ;final check
   vars = (*self.vars)
   for i=0, self.n_vars-1 do begin
@@ -620,7 +645,15 @@ pro w_WPP::process, year, PRINT=print
     restore, FILENAME=self.active_lfile
     if flag ne 'DONE' then message, 'noooo'
   endfor
-
+  
+  delta =  LONG(SYSTIME(/SECONDS) - logt0)
+  deltah =  delta / 60L / 60L
+  deltam =  (delta-(deltaH*60L*60L)) / 60L 
+  deltas =  delta-(deltaH*60L*60L)-(deltaM*60L)
+  
+  self.logger->addText, '', PRINT=print
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
+  self.logger->addText, 'Time needed: ' + TIME_to_STR(deltaH) + ' hours, ' + TIME_to_STR(deltaM) + ' minutes, ' + TIME_to_STR(deltaS) + ' seconds.', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, '+----------------------------------+', PRINT=print
@@ -659,6 +692,7 @@ PRO w_WPP__Define
     v2d_file: ''                     ,  $ ; input file 
     v3d_file: ''                     ,  $ ; input file 
     vsoil_file: ''                   ,  $ ; input file 
+    project_acronym: ''              ,  $ ; input file 
     created_by: ''                   ,  $ ; input file 
     institution: ''                  ,  $ ; input file 
     title: ''                        ,  $ ; input file 

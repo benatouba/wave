@@ -303,7 +303,7 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   endfor
 
   ; Axes Circles
-  for i=1, npercsteps do cgPlotS, w_windcircle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, LINESTYLE = 1, COLOR=FSC_Color('dark grey'), /NORMAL
+  for i=1, npercsteps do cgPlotS, w_windcircle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
   
   ; Axes
   x_radius = max_radius*rx
@@ -311,12 +311,12 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   as = _charsize * 1.
   delta_x = as * rx * 0.005
   delta_y = as * ry * 0.02
-  cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, LINESTYLE = 1, COLOR=FSC_Color('dark grey'), /NORMAL
-  cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, LINESTYLE = 1, COLOR=FSC_Color('dark grey'), /NORMAL
-  cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=FSC_Color('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
-  cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=FSC_Color('dark grey'),WINDOW=window, ALIGNMENT=1., /NORMAL, CHARSIZE=as
-  cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=FSC_Color('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
-  cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=FSC_Color('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
+  cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
+  cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=cgColor('dark grey'),WINDOW=window, ALIGNMENT=1., /NORMAL, CHARSIZE=as
+  cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
+  cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
   
   ; Ticks
   case (ticks_angle) of
@@ -333,12 +333,12 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   for i=1, npercsteps do begin
     xt = xcenter + Cos(angle_ticks) * rx * step_radius*i
     yt = ycenter + Sin(angle_ticks) * ry * step_radius*i
-    cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, COLOR=FSC_Color('dark grey'), /NORMAL, CHARSIZE=_charsize
+    cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, COLOR=cgColor('dark grey'), /NORMAL, CHARSIZE=_charsize
   endfor
   
   ; White center circle
   cir = w_windcircle(xcenter, ycenter, step_radius/10., nPts=361, ELL_FACTOR=_wf)
-  cgColorFill, cir[0,*], cir[1,*], WINDOW=window, COLOR=FSC_Color('white'), /NORMAL
+  cgColorFill, cir[0,*], cir[1,*], WINDOW=window, COLOR=cgColor('white'), /NORMAL
   cgPlotS, cir, WINDOW=window, /NORMAL
     
   ; Title

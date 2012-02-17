@@ -1273,7 +1273,7 @@ end
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
 ;             
-;             TODO: umet10,vmet10,umet,vmet  components of wind rotated to earth coordinates
+;             TODO: umet10, vmet10, umet, vmet, components of wind rotated to earth coordinates
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -1401,7 +1401,9 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('PRCP', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
-      value *= self->get_Var('SR', t0 = t0, t1 = t1)
+      sr = self->get_Var('SR', t0 = t0, t1 = t1)
+      ptm = where(sr gt (MACHAR()).EPS and value gt (MACHAR()).EPS, cntp)
+      if cntp ne 0 then value[ptm] = sr[ptm] * value[ptm] 
       _acc_to_step = FALSE
     end
     

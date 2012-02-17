@@ -1,119 +1,40 @@
-FUNCTION caching_file_exist,filename
 ;+
-; NAME:
-;          caching_file_exist
-;
-;
-; PURPOSE:
-;          return 1 if filename exists, 0 if not
-;
-;
-; CATEGORY:
-;          file handling
-;
-;
-; CALLING SEQUENCE:
-;          caching_file_exist(filename)
-;
-; 
-; INPUTS:
-;          filename: name of file 
-;
-;
-; OPTIONAL INPUTS:
-;          none
-;
-; 
-; KEYWORD PARAMETERS:
-;          none
-;
-;
-; OUTPUTS:
-;          1 if filename exists, 0 if not
-;
-;
-; OPTIONAL OUTPUTS:
-;          none
-;
-;
-; COMMON BLOCKS:
-;          none
-;
-;
-; SIDE EFFECTS:
-;          one LUN is temporarily used
-;
-;
-; RESTRICTIONS:
-;          none
-;
-;
-; PROCEDURE:
-;          an attempt to open the file with a read is undertaken, if
-;          the attempt succeeds, the file exists.
-;
-;
-; EXAMPLE:
-;          if (caching_file_exist("/etc/services")) then begin
-;             print,'/etc/services exists'
-;          endif
-;
-;
-; MODIFICATION HISTORY:
-;          Version 1.0, 1997/10/06, Joern Wilms
+; :Description:
+;   This function creates a copy of a NCDF or ZIP file
+;   on a local storage and unzips the file if needed. 
+;   This routine HAVE to be called if the original file is zipped or 
+;   if the original file is located on a network storage.
+;       
+; :Author:
+;   FaM
+;  
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Last modification: 12 Jan 2012
+;     Inspired from:: 
+;       caching.pro, 2011 R.Bauer
+;       Copyright (c) 1998, Forschungszentrum Juelich GmbH ICG-3
+;       
 ;-
-   openr,unit,filename,/get_lun,error=err
-   IF (err EQ 0) THEN free_lun,unit
-   return,(err EQ 0)
-END 
-; 
-; Copyright (c) 1998, Forschungszentrum Juelich GmbH ICG-3
-; All rights reserved.
-; Unauthorized reproduction prohibited.
-;
+
 ;+
-; USERLEVEL:
-;   TOPLEVEL
+; :Description:
+;    This function will combine path and file, change '\' to '/' and add '/' to the path if necessary
 ;
-; NAME:
-;   combine_path_file
+; :Params:
+;    path_in: in, required, type=string
+;             directory path
+;    file_in: in, required, type=string
+;             file name
+;             
+; :Returns:
+;    correct combination of path and file
 ;
-; PURPOSE:
-;   This function will combine path and file, change '\' to '/' and add '/' to the path if necessaray
-;
-; CATEGORY:
-;   PROG_TOOLS/STRINGS
-;
-; CALLING SEQUENCE:
-;   result=combine_path_file(path,file)
-;
-; INPUTS:
-;   path,file : scalar strings
-;
-; OUTPUTS:
-;    result: correct combination of path and file
-;
-; SIDE EFFECTS
-;   will resolve multiple // into /
-;
-; EXAMPLE:
-;   result=combine_path_file('d:\/temp','test.xxx')
-;   will return result:'d:/temp/test.xxx'
-;
-;   result=combine_path_file('d:\/temp','')
-;   will return result:'d:/temp/'
-;
-;   result=combine_path_file('','test.pro')
-;   will return result: 'test.pro'
-;
-; MODIFICATION HISTORY:
-;   Written by Franz Rohrer Aug 1998
-;   Modified June 2001 : path and file are converted to scalars prior to handling
-;   2002-04-13 : Syntax changed to replace_string() (saves 30 lines)
-;   2002-04-24 : FR special handling of '\\' at the begin of the path reintroduced
 ;-
-FUNCTION caching_combine_path_file,path_in,file_in,win=win
-   if keyword_set(win) eq 0 then win=0
+function caching_combine_path_file, path_in, file_in
+   
    path=path_in[0]
    file=file_in[0]
    flag=''
@@ -121,83 +42,119 @@ FUNCTION caching_combine_path_file,path_in,file_in,win=win
      path=strmid(path,2)
      flag='\\'
    endif
-   IF STRLEN(path) GT 0 THEN  new=path+'/'+file ELSE new=file
+   if strlen(path) gt 0 then  new=path+'/'+file else new=file
    new=utils_replace_string(new,'\','/')
    new=utils_replace_string(new,'//','/')
-   if win then new=utils_replace_string(new,'/','\')
    new=flag+new
-   RETURN,new
-END
-
-pro caching_log, text, LOGGER=logger, PRINT=print, QUIET=quiet
-  
-  if KEYWORD_SET(QUIET) then return
-  if N_ELEMENTS(logger) ne 0 then logger->addText, '% CACHING: ' + text, PRINT=print else message, text, /INFO
-  
+   
+   return,new
+   
 end
 
 ;+
-; NAME:
-;   caching
+; :Description:
+;    Logs a message
+;    
+; :Params:
+;    text: in, required, type=string
+;          the message
 ;
-; PURPOSE:
-;   This routine creates a cache file of a file on a local storage.
-;   If no env var CACHE is given it creates the cache dir in the /tmp folder
-;
-; CATEGORY:
-;   CASE_TOOLS
-;
-; CALLING SEQUENCE:
-;   result=caching(filename)
-;
-; INPUTS:
-;   filename: file to cache
-;
-; KEYWORDS:
-;   delete: if set it deletes the existing cache file and also the lock file
-;
-; EXAMPLE:
-;   result=caching(filename)
-;
-; MODIFICATION HISTORY:
-;   @copyright: 2011 R.Bauer
-;   @license: LGPL V2 or later, see LICENSE.txt
+; :Keywords:
+;    LOGGER: in, optional, type={ErrorLogger}
+;            the logger to log into
+;    PRINT: in, optional, type=BOOLEAN
+;           if the logging must occur on the console, too
+;    QUIET: in, optional, type=BOOLEAN
+;           shut up
+;             
 ;-
+pro caching_log, text, LOGGER=logger, PRINT=print, QUIET=quiet
 
-FUNCTION caching, filename, delete=delete, cachepath=cachepath, no_zip=no_zip, LOGGER=logger, PRINT=print, QUIET=quiet
+  ON_ERROR, 2
+
+  if KEYWORD_SET(QUIET) then return
   
-  if n_elements(filename) eq 0 then begin
-    message, 'no filename given'
-  endif
-  if not caching_file_exist(filename) then begin
-    message, 'filename: ' + filename + ' does not exist'
-  endif
+  if N_ELEMENTS(logger) ne 0 then begin
+    logger->addText, '% CACHING: ' + text, PRINT=print
+  endif else message, text, /INFO
   
-  if N_ELEMENTS(cachepath) eq 0 then message, 'Set a cachepath'
+end
+
+
+;+
+; :Description:
+;    This function creates a copy of a NCDF or ZIP file
+;   on a local storage and unzips the file if needed. 
+;   This routine HAVE to be called if the original file is zipped or 
+;   if the original file is located on a network storage.
+;
+; :Params:
+;    filename: in, required, type=STRING
+;              the path to the file to cache
+;
+; :Keywords:
+;    DELETE: in, optional, type=BOOLEAN
+;            set this keyword to delete the cached file
+;    CACHEPATH: in, required, type=STRING
+;               path to the cache directory (if the directory doesnt exist, it will be created)
+;    LOGGER: in, optional, type={ErrorLogger}
+;            the logger to log into
+;    PRINT: in, optional, type=BOOLEAN
+;           if the logging must occur on the console, too
+;    QUIET: in, optional, type=BOOLEAN, default=1
+;            set this keyword to 0 to log the caching actions
+;    NO_ZIP: in, optional, type=BOOLEAN
+;            set this keyword to prevent unzipping the file (should not be set normally)
+; :Returns:
+;   The path to the cached file
+;
+; :Examples:
+;   Cache the file and delete it::
+;    IDL> ofile ='/cfs/nas2/UAC/Standard_V0_d01/2010/2010.02.20/7a7cd512-3f40-11e1-9aff-00151728ccc9.415/wrfpost_d01_2010-02-20_00-00-00_25h.zip'
+;    IDL> f = caching(ofile, CACHEPATH='/home/mowglie/cache')
+;    IDL> print, f
+;    /home/mowglie/cache/wrfpost_d01_2010-02-20_00-00-00_25h.nc
+;    IDL> f = caching(ofile, CACHEPATH='/home/mowglie/cache', /DELETE)
+;    
+;-
+function caching, filename, DELETE=delete, CACHEPATH=cachepath, LOGGER=logger, PRINT=print, QUIET=quiet, NO_ZIP=no_zip
   
-  if ~KEYWORD_SET(no_zip) then begin
-    ending = STRSPLIT(filename, '.', /EXTRACT, COUNT=cnt)
-    if cnt ne 0 then begin
-      ending = ending[cnt-1]
-      if str_equiv(ending) eq 'ZIP' then begin
-        origname = caching(filename, delete=delete, cachepath=cachepath, /no_zip, LOGGER=logger, PRINT=print, QUIET=quiet)
-        lfile = utils_replace_string(origname, '.zip', '.sav')
-        if KEYWORD_SET(delete) then begin
-          restore, FILENAME=lfile
-          FILE_DELETE, outname
-          FILE_DELETE, lfile
-          caching_log, 'uncompressed file: ' + outname + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
-          return, origname
-        endif else begin
-          spawn, 'unzip ' + origname + ' -d '+ cachepath, ret, err, EXIT_STATUS=status
-          if err ne '' then Message, 'error on uncomp'
-          outname = STRCOMPRESS((STRSPLIT(ret[1], ':', /EXTRACT))[1], /REMOVE_ALL)
-          if ~ FILE_TEST(outname) then Message, 'error on uncomp filename'
-          save, outname, FILENAME=lfile
-          caching_log, 'file: ' + origname + ' uncompressed', LOGGER=logger, PRINT=print, QUIET=quiet
+  ON_ERROR, 2
+  
+  if n_elements(filename) eq 0 then message, WAVE_Std_Message('filename', /ARG)
+  if not file_test(filename) then message, 'filename: ' + filename + ' does not exist'
+  if n_elements(cachepath) eq 0 then message, 'set a cachepath'  
+  if ~ FILE_TEST(cachepath) then FILE_MKDIR, cachepath
+  if ~ FILE_TEST(cachepath, /DIRECTORY) then message, '$CACHEPATH must be a directory'  
+  if n_elements(quiet) eq 0 then quiet = 1    
+  
+  ending = strsplit(filename, '.', /extract, count=cnt)
+  if cnt eq 0 then Message, 'Type not recognized (must be .nc or .zip): ' + filename
+  
+  if ~keyword_set(no_zip) then begin
+    ending = ending[cnt-1]
+    if str_equiv(ending) eq 'ZIP' then begin
+      origname = caching(filename, /NO_ZIP, delete=delete, cachepath=cachepath, logger=logger, print=print, quiet=quiet)
+      lfile = utils_replace_string(origname, '.zip', '.sav')
+      if keyword_set(delete) then begin
+        if ~ FILE_TEST(lfile) then message, 'Something went wrong. Did you try to delete the file before caching it?' 
+        restore, filename=lfile
+        file_delete, outname, lfile
+        caching_log, 'uncompressed file: ' + outname + ' deleted', logger=logger, print=print, quiet=quiet
+        return, origname
+      endif else begin
+        if FILE_TEST(lfile) then begin ; Already here
+          restore, filename=lfile
           return, outname
-        endelse
-      endif
+        endif
+        spawn, 'unzip ' + origname + ' -d '+ cachepath, ret, err, exit_status=status
+        if err[0] ne '' then message, 'Error on uncompress: ' + err
+        outname = strcompress((strsplit(ret[1], ':', /extract))[1], /remove_all)
+        if ~ file_test(outname) then message, 'Error on uncompress filename'
+        save, outname, filename=lfile
+        caching_log, 'file: ' + origname + ' uncompressed', logger=logger, print=print, quiet=quiet
+        return, outname
+      endelse
     endif
   endif
    
@@ -205,46 +162,47 @@ FUNCTION caching, filename, delete=delete, cachepath=cachepath, no_zip=no_zip, L
   cachefile = caching_combine_path_file(cachepath, _filename)
   lockfile = caching_combine_path_file(cachepath, _filename + '.lck')
   
-  IF KEYWORD_SET(delete) and caching_file_exist(cachefile) THEN BEGIN
+  if keyword_set(delete) and file_test(cachefile) then begin
     file_delete, cachefile
-    caching_log, 'cachefile: ' + cachefile + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
-    IF caching_file_exist(lockfile) THEN BEGIN
+    caching_log, 'cachefile: ' + cachefile + ' deleted', logger=logger, print=print, quiet=quiet
+    if file_test(lockfile) then begin
       file_delete, lockfile
-      caching_log, 'lockfile: ' + lockfile + ' deleted', LOGGER=logger, PRINT=print, QUIET=quiet
-    ENDIF
+      caching_log, 'lockfile: ' + lockfile + ' deleted', logger=logger, print=print, quiet=quiet
+    endif
     return, cachefile
-  ENDIF
+  endif
   
-  CASE 1 OF
-    ; ORDER is important!!!
-    caching_file_exist(cachefile) eq 1 and caching_file_exist(lockfile) eq 0: return, cachefile
-    caching_file_exist(cachefile) eq 0 and caching_file_exist(lockfile) eq 1: BEGIN
-      WHILE caching_file_exist(lockfile) DO BEGIN
-        caching_log, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists, we wait a second', LOGGER=logger, PRINT=print, QUIET=quiet
+  case 1 of
+    ; order is important!!!
+    file_test(cachefile) eq 1 and file_test(lockfile) eq 0: return, cachefile
+    file_test(cachefile) eq 0 and file_test(lockfile) eq 1: begin
+      while file_test(lockfile) do begin
+        caching_log, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists, we wait a second', logger=logger, print=print, quiet=quiet
         wait,1
-      ENDWHILE
+      endwhile
       return, cachefile
-    END
-    caching_file_exist(cachefile) eq 0: BEGIN
+    end
+    file_test(cachefile) eq 0: begin
       openw,lun,lockfile, /get_lun
       free_lun,lun
       file_copy, filename, cachefile
       ; if it was deleted by someone else
-      if caching_file_exist(lockfile) then file_delete, lockfile
-      if not caching_file_exist(cachefile) then begin
+      if file_test(lockfile) then file_delete, lockfile
+      if not file_test(cachefile) then begin
         message, "someone has to early deleted your cache file: " + cachefile
       endif
       return, cachefile
-    END
-    caching_file_exist(cachefile) eq 1 and caching_file_exist(lockfile) ne 0: BEGIN
-      WHILE caching_file_exist(lockfile) DO BEGIN
-        caching_log, 'cachefile: '+ cachefile +' exists but also lockfile: '+ lockfile + ' still exists, we wait a second', LOGGER=logger, PRINT=print, QUIET=quiet
+    end
+    file_test(cachefile) eq 1 and file_test(lockfile) ne 0: begin
+      while file_test(lockfile) do begin
+        caching_log, 'cachefile: '+ cachefile +' exists but also lockfile: '+ lockfile + ' still exists, we wait a second', logger=logger, print=print, quiet=quiet
         wait,1
-      ENDWHILE
+      endwhile
       return, cachefile
-    END
-    ELSE: BEGIN
+    end
+    else: begin
       message, "something is going really bad"
-    END
-  ENDCASE
-END
+    end
+  endcase
+  
+end
