@@ -40,20 +40,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
                        MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
                        VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, EPS=eps, PNG=png, STD_PNG=std_png
   
-  if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp)ne 0) then begin
-     vt=strarr(12)
-     vp=strarr(12)
-     for v= 0,11 do begin
-        vt[v]=String(valyears_temp[v], Format='(I2)')
-        vp[v]=String(valyears_prcp[v],Format ='(I2)')
-        endfor
-;     labels = ['Jan!C !C'+vt[0]+'!C'+vp[0]+'', 'Feb!C !C'+vt[1]+'!C'+vp[1]+'', 'Mar!C !C'+vt[2]+'!C'+vp[2]+'',$
-;               'Apr!C !C'+vt[3]+'!C'+vp[3]+'', 'May!C !C'+vt[4]+'!C'+vp[4]+'', 'Jun!C !C'+vt[5]+'!C'+vp[5]+'', $
-;               'Jul!C !C'+vt[6]+'!C'+vp[6]+'', 'Aug!C !C'+vt[7]+'!C'+vp[7]+'', 'Sep!C !C'+vt[8]+'!C'+vp[8]+'', $
-;               'Oct!C !C'+vt[9]+'!C'+vp[9]+'', 'Nov!C !C'+vt[10]+'!C'+vp[10]+'', 'Dec!C !C'+vt[11]+'!C'+vp[11]+'']
-  endif else begin
      labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  endelse
      
   if N_ELEMENTS(lat) ne 0 then begin
     _lat = STRING(lat,FORMAT='(F7.2)')
@@ -107,20 +94,25 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   cgtext, 0.18, 0.85, ''+meanTemp+' ' +cgsymbol('deg')+'C, '+sumPrcp+' mm',/Normal, /Window
   
   if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp) ne 0) then begin
-    cgtext,-4.5,-19, 'val. years T.!Cval. years P.', /DATA, /Window
-    cgtext,0.8,-19, ''+vt[0]+'!C'+vp[0]+'', /DATA, /Window
-    cgtext,2.3,-19, ''+vt[1]+'!C'+vp[1]+'', /DATA, /Window
-    cgtext,3.9,-19, ''+vt[2]+'!C'+vp[2]+'', /DATA, /Window
-    cgtext,5.35,-19, ''+vt[3]+'!C'+vp[3]+'', /DATA, /Window
-    cgtext,6.85,-19, ''+vt[4]+'!C'+vp[4]+'', /DATA, /Window
-    cgtext,8.5,-19, ''+vt[5]+'!C'+vp[5]+'', /DATA, /Window
-    cgtext,10.2,-19, ''+vt[6]+'!C'+vp[6]+'', /DATA, /Window
-    cgtext,11.7,-19, ''+vt[7]+'!C'+vp[7]+'', /DATA, /Window
-    cgtext,13.4,-19, ''+vt[8]+'!C'+vp[8]+'', /DATA, /Window
-    cgtext,14.95,-19, ''+vt[9]+'!C'+vp[9]+'', /DATA, /Window
-    cgtext,16.55,-19, ''+vt[10]+'!C'+vp[10]+'', /DATA, /Window
-    cgtext,17.95,-19, ''+vt[11]+'!C'+vp[11]+'', /DATA, /Window
-
+     vt=strarr(12)
+     vp=strarr(12)
+     for v= 0,11 do begin
+        vt[v]=String(valyears_temp[v], Format='(I2)')
+        vp[v]=String(valyears_prcp[v],Format ='(I2)')
+     endfor
+     cgtext,-4.5,-19, 'val. years T.!Cval. years P.', /DATA, /Window
+     cgtext,0.8,-19, ''+vt[0]+'!C'+vp[0]+'', /DATA, /Window
+     cgtext,2.3,-19, ''+vt[1]+'!C'+vp[1]+'', /DATA, /Window
+     cgtext,3.9,-19, ''+vt[2]+'!C'+vp[2]+'', /DATA, /Window
+     cgtext,5.35,-19, ''+vt[3]+'!C'+vp[3]+'', /DATA, /Window
+     cgtext,6.85,-19, ''+vt[4]+'!C'+vp[4]+'', /DATA, /Window
+     cgtext,8.5,-19, ''+vt[5]+'!C'+vp[5]+'', /DATA, /Window
+     cgtext,10.2,-19, ''+vt[6]+'!C'+vp[6]+'', /DATA, /Window
+     cgtext,11.7,-19, ''+vt[7]+'!C'+vp[7]+'', /DATA, /Window
+     cgtext,13.4,-19, ''+vt[8]+'!C'+vp[8]+'', /DATA, /Window
+     cgtext,14.95,-19, ''+vt[9]+'!C'+vp[9]+'', /DATA, /Window
+     cgtext,16.55,-19, ''+vt[10]+'!C'+vp[10]+'', /DATA, /Window
+     cgtext,17.95,-19, ''+vt[11]+'!C'+vp[11]+'', /DATA, /Window
   endif
     
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
