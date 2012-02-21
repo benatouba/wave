@@ -329,7 +329,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
     
     nb_entries=N_ELEMENTS(date)
-    if nb_entries le 2 then message, 'No valid data in file: ' + file_list[t]
+    if nb_entries le 2 then continue ;print, 'No valid data in file: ' + file_list[t] 
     
     stn = ascii_data.stn
     wban = ascii_data.wban
@@ -362,6 +362,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       un = uniq(_t, sort(_t))
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
+      print, sname,s_id
       
       ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
          ID=s_id, $ ; Station ID
@@ -379,12 +380,13 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       endfor
         
       if (N_ELEMENTS(list_values) eq 0) then list_values = ncdc_station else list_values = [list_values, ncdc_station]
-      
+      undefine, stat_vars
     endfor
         
   endfor
   
-  undefine, stat_vars
+  nbstat=N_ELEMENTS(list_values)
+  print, nbstat + ' stations were read and saved in structure.'
   return, list_values
   
 end
