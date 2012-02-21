@@ -30,7 +30,8 @@
 ;
 ; :Example:
 ;   IDL> w_climate_diagram, [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1], NAME='Berlin',$
-;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990'
+;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990', VALYEARS_TEMP=[30,30,30,30,30,30,30,30,30,30,30,30],$
+;        VALYEARS_PRCP=[30,30,30,30,30,30,30,30,30,30,30,30]
 ;
 ; :History:
 ;     Written by JaH, 2012.
