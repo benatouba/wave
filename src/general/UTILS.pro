@@ -599,11 +599,15 @@ function utils_acc_to_step, accumulated
       n = siz[2]
       tempsubs = accumulated * 0.
       tempsubs[*,*,1:n-1] = accumulated[*,*,0:n-2]
-      return, accumulated - tempsubs   
+      out = accumulated - tempsubs  
+      out[*,*,0] = 0
+      return, out 
   endif else if N_ELEMENTS(siz) eq 1 then begin
       n = siz[0]
       tempsubs = accumulated * 0
       tempsubs[1:n-1] = accumulated[0:n-2]
+      out = accumulated - tempsubs  
+      out[0] = 0
       return, accumulated - tempsubs 
   endif else begin
       Message, WAVE_Std_Message('accumulated', /NDIMS)

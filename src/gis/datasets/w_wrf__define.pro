@@ -68,20 +68,9 @@ PRO w_WRF__Define
   struct = { w_WRF                    ,  $
             INHERITS w_Grid2D         ,  $
             INHERITS w_GEO_nc         ,  $
-            type:               ''    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
-            version:            ''    ,  $ ; WRF version
-            hstep:         {TIME_STEP},  $ ; Time step of the file
+            type:               ''    ,  $ ; type of active file: PRO, AGG, WRF, GEO, MET or INP
             ndiagvar:               0L,  $ ; Number of diagnostic variables
-            diagVars:        PTR_NEW(),  $ ; Diagnostic Variables (derived from WRF output)
-            dom:                    0L,  $ ; id of the considered nested domain
-            west_east:              0L,  $ ; original X dimension (unstaggered)
-            south_north:            0L,  $ ; original Y dimension (unstaggered)
-            bottom_top:             0L,  $ ; original Z dimension (unstaggered)
-            dx:                     0D,  $ ; grid spacing in m
-            dy:                     0D,  $ ; grid spacing in m
-            i_parent_start:         0L,  $ ; i index of the start point in parent domain
-            j_parent_start:         0L,  $ ; j index of the start point in parent domain
-            parent_grid_ratio:      0L   $ ; ratio to parent
+            diagVars:        PTR_NEW()   $ ; Diagnostic Variables (derived from WRF output)
             }
     
 END
@@ -186,33 +175,54 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   ;************
   ; GRID info *
   ;************      
-  center_lat = self->get_Gatt('CEN_LAT')
-  center_lon = self->get_Gatt('CEN_LON')  
-  ; Get easting and northings from dom center
-  GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj    
-  nx = self.west_east
-  ny = self.south_north
-  x0 =  - (nx-1) / 2. * self.dx + e ; UL corner
-  y0 =    (ny-1) / 2. * self.dy + n ; UL corner
+  if self.type eq 'PRO' then begin
+    x = self->get_Var('west_east')
+    y = self->get_Var('south_north')         
+    nx = N_ELEMENTS(x)        
+    ny = N_ELEMENTS(y)              
+    dx = x[1]-x[0] ;TODO CHANGE this!!
+    dy = y[1]-y[0] ;TODO CHANGE this!!
+    x0 = min(x)             
+    y0 = max(y) 
+  endif else begin
+    center_lat = self->get_Gatt('CEN_LAT')
+    center_lon = self->get_Gatt('CEN_LON')
+    ; Get easting and northings from dom center
+    GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj
+    nx = self->get_Gatt('WEST-EAST_GRID_DIMENSION')-1
+    ny = self->get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1
+    dx = self->get_Gatt('DX')
+    dy = self->get_Gatt('DY')
+    x0 =  - (nx-1) / 2. * dx + e ; UL corner
+    y0 =    (ny-1) / 2. * dy + n ; UL corner
+  endelse
+  
   if FIRSTCALL then begin
     IF NOT self->w_Grid2D::Init(  nx = nx                , $
                                   ny = ny                , $
-                                  dx = self.DX           , $
-                                  dy = self.dy           , $
+                                  dx = dx                , $
+                                  dy = dy                , $
                                   x0 = x0                , $
                                   y0 = y0                , $
-                                  proj = self.tnt_c.proj) THEN RETURN, 0  
+                                  proj = self.tnt_c.proj) THEN RETURN, 0
+    ;Temporary test
+    self->Get_LonLat, gislon, gislat
+    self->get_ncdf_coordinates, lon, lat
+    if max(abs(gislon-lon)) gt 1e-4 then Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon)))
+    if max(abs(gislat-lat)) gt 1e-4 then Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat)))
+    
   endif else begin
    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
                                    ny = ny                , $
-                                   dx = self.DX           , $
-                                   dy = self.DY           , $
+                                   dx = dx                , $
+                                   dy = dy                , $
                                    x0 = x0                , $
                                    y0 = y0                , $
                                    proj = self.tnt_c.proj) THEN RETURN, 0  
   endelse
   
-  IF NOT self->set_ROI(SHAPE=shape,  $
+  
+  if not self->set_ROI(SHAPE=shape,  $
     POLYGON=polygon, MASK=mask,  $
     CROPBORDER=cropborder,  $
     GRID=grid,    $
@@ -295,83 +305,75 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
   if isHere ne -1 then ftype = 'REAL'
   isHere = STRPOS(str_equiv(self.fname), 'AGG')
   if isHere ne -1 then ftype = 'AGG'    
+  isHere = self->get_Gatt_Info('PROJ_ENVI_STRING')
+  if isHere eq 1 then ftype = 'PRO'  
   if ftype eq '' then message, 'Input file not recognized as a known WRF product.'
   self.type = ftype
-  self.version = str_equiv(title)
   meta = str_equiv(title)
   
   ;*******
   ; Time *
   ;*******
   ; Done by w_GEO_nc
-  if self.nt gt 1 then begin
-   if ~check_TimeSerie(*self.time, hstep) then Message, 'Time serie in the file is not regular.'
-    self.hstep = hstep
-  endif else if self.nt eq 1 then begin
-    self.hstep = MAKE_TIME_STEP()
-  endif else MESSAGE, 'Problem by reading time.'
-   
-  ; NESTING
-  self.i_parent_start = self->get_Gatt('i_parent_start')
-  self.j_parent_start = self->get_Gatt('j_parent_start')
-  self.parent_grid_ratio = self->get_Gatt('parent_grid_ratio')
-  self.dom = self->get_Gatt('grid_id')
-  self.dx = self->get_Gatt('DX')
-  self.dy = self->get_Gatt('DY')
-  self.west_east = self->get_Gatt('WEST-EAST_GRID_DIMENSION')-1 ;stag
-  self.south_north  = self->get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1 ;stag
-  self.bottom_top = (self->get_Gatt('bottom-top_grid_dimension')-1) > 1
-    
-  ; Projection
-  center_lat = self->get_Gatt('CEN_LAT')
-  center_lon = self->get_Gatt('CEN_LON')
-  moad_cen_lat = self->get_Gatt('MOAD_CEN_LAT')
-  stand_lon = self->get_Gatt('STAND_LON')
-  truelat1 = self->get_Gatt('TRUELAT1')
-  truelat2 = self->get_Gatt('TRUELAT2')
-  proj_id = self->get_Gatt('MAP_PROJ')
+  if self.nt gt 1 then if ~check_TimeSerie(*self.time) then Message, 'Time serie in the file is not regular.'
   
-  GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
-  switch proj_id of
-    1: begin
-      ; 4 - Lambert Conformal Conic
-      ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
-      envi_proj = 4
-      proj_param = str_equiv(envi_proj) + ', ' + $                      ;proj_id
-                  STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
-                  STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
-                  STRING(moad_cen_lat, FORMAT='(F16.8)') + ', ' + $     ;lat0
-                  STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
-                  '0.0' + ', ' + $                                      ;x0
-                  '0.0' + ', ' + $                                      ;y0
-                  STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;sp1
-                  STRING(truelat2, FORMAT='(F16.8)') + ', ' + $         ;sp2
-                  'WGS-84' + ', ' + $                                   ;datum
-                  'WRF Lambert Conformal'                               ;name
-      break
-    end
-    2: begin
-      ; 31- Polar Stereographic
-      ;   a, b, lat0, lon0, x0, y0, [datum], name
-      envi_proj = 31
-      proj_param = str_equiv(envi_proj) + ', ' + $                      ;proj_id
-                  STRING(ell.a, FORMAT='(F16.8)')+ ', ' + $             ;a
-                  STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
-                  STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;lat0
-                  STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
-                  '0.0' + ', ' + $                                      ;x0
-                  '0.0' + ', ' + $                                      ;y0
-                  'WGS-84' + ', ' + $                                   ;datum
-                  'WRF Polar Stereographic'                             ;name
-      break
-    end
-    else: Message, 'Projection currently not supported.'
-
-  endswitch
+  ; Projection
+  if self.type eq 'PRO' then begin  
+    ; Make the projection
+    GIS_make_proj, ret, proj, PARAM=STRING(self->get_Gatt('PROJ_ENVI_STRING'))
+    self.tnt_c.proj = proj      
+  endif else begin
+    center_lat = self->get_Gatt('CEN_LAT')
+    center_lon = self->get_Gatt('CEN_LON')
+    moad_cen_lat = self->get_Gatt('MOAD_CEN_LAT')
+    stand_lon = self->get_Gatt('STAND_LON')
+    truelat1 = self->get_Gatt('TRUELAT1')
+    truelat2 = self->get_Gatt('TRUELAT2')
+    proj_id = self->get_Gatt('MAP_PROJ')
+    GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
+    switch proj_id of
+      1: begin
+        ; 4 - Lambert Conformal Conic
+        ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
+        envi_proj = 4
+        proj_param = str_equiv(envi_proj) + ', ' + $                      ;proj_id
+          STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
+          STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
+          STRING(moad_cen_lat, FORMAT='(F16.8)') + ', ' + $     ;lat0
+          STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
+          '0.0' + ', ' + $                                      ;x0
+          '0.0' + ', ' + $                                      ;y0
+          STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;sp1
+          STRING(truelat2, FORMAT='(F16.8)') + ', ' + $         ;sp2
+          'WGS-84' + ', ' + $                                   ;datum
+          'WRF Lambert Conformal'                               ;name
+        break
+      end
+      2: begin
+        ; 31- Polar Stereographic
+        ;   a, b, lat0, lon0, x0, y0, [datum], name
+        envi_proj = 31
+        proj_param = str_equiv(envi_proj) + ', ' + $                      ;proj_id
+          STRING(ell.a, FORMAT='(F16.8)')+ ', ' + $             ;a
+          STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
+          STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;lat0
+          STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
+          '0.0' + ', ' + $                                      ;x0
+          '0.0' + ', ' + $                                      ;y0
+          'WGS-84' + ', ' + $                                   ;datum
+          'WRF Polar Stereographic'                             ;name
+        break
+      end
+      else: Message, 'Projection currently not supported.'
+      
+    endswitch
     
-  ; Make the projection
-  GIS_make_proj, ret, proj, PARAM=proj_param
-  self.tnt_c.proj = proj
+    ; Make the projection
+    GIS_make_proj, ret, proj, PARAM=proj_param
+    self.tnt_c.proj = proj
+    
+  endelse
+    
   
   ;***********************
   ; Diagnostic variables *
@@ -424,25 +426,6 @@ END
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;
-;    cropped: out
-;             type of the cropping    
-;    type: out, type = string
-;          type of active file: AGG, WRF, GEO, MET or INP
-;    version: out, type = string
-;             WRF version
-;    hstep: out, type = {TIME_STEP} 
-;           Time step of the file
-;    bottom_top: out, type = long
-;                original Z dimension (unstaggered)
-;    dom: out, type = long
-;         id of the considered nested domain
-;    i_parent_start: out, type = long
-;                    i index of the start point in parent domain
-;    j_parent_start: out, type = long
-;                    j index of the start point in parent domain
-;    parent_grid_ratio: out, type = long
-;                       ratio to parent
 ;    
 ;    _Ref_Extra: out
 ;                all parent classed property
@@ -451,15 +434,6 @@ END
 ;     Written by FaM, 2010.
 ;-      
 PRO w_WRF::GetProperty,  $
-    cropped = cropped         ,  $ ;
-    type=type    ,  $ ; type of active file: AGG, WRF, GEO, MET or INP
-    version=version    ,  $ ; WRF version
-    hstep=hstep,  $ ; Time step of the file
-    bottom_top = bottom_top,  $ ; original Z dimension (unstaggered)           
-    dom = dom,  $ ; id of the considered nested domain
-    i_parent_start = i_parent_start,  $ ; i index of the start point in parent domain
-    j_parent_start = j_parent_start,  $ ; j index of the start point in parent domain
-    parent_grid_ratio = parent_grid_ratio,  $ ; ratio to parent
     _Ref_Extra=extra
     
   ; SET UP ENVIRONNEMENT
@@ -472,16 +446,6 @@ PRO w_WRF::GetProperty,  $
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN
   ENDIF
-      
-  IF Arg_Present(cropped) NE 0 THEN cropped = self.cropped
-  IF Arg_Present(type) NE 0 THEN type = self.type
-  IF Arg_Present(version) NE 0 THEN version = self.version
-  IF Arg_Present(dom) NE 0 THEN dom = self.dom
-  IF Arg_Present(i_parent_start) NE 0 THEN i_parent_start = self.i_parent_start
-  IF Arg_Present(hstep) NE 0 THEN hstep = self.hstep
-  IF Arg_Present(bottom_top) NE 0 THEN bottom_top = self.bottom_top
-  IF Arg_Present(j_parent_start) NE 0 THEN j_parent_start = self.j_parent_start
-  IF Arg_Present(parent_grid_ratio) NE 0 THEN parent_grid_ratio = self.parent_grid_ratio
   
   self->w_Grid2D::GetProperty, _Extra=extra
   self->w_GEO_nc::GetProperty, _Extra=extra
@@ -1356,6 +1320,8 @@ function w_WRF::get_Var, Varid, $
   ON_ERROR, 2
   
   undefine, count, offset
+  
+  if self.type eq 'PRO' and N_ELEMENTS(Varid) eq 0 then varid = self.Nvars-1
   
   ;Some check
   if str_equiv(Varid) eq 'SLP' and ~self->get_Var_Info('SLP') then varid = 'SLP_B'

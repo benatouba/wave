@@ -43,6 +43,10 @@ Function w_WPP::Init, FILE=file, PRINT=print
   self.Logger->AddText, '', PRINT=print  
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, 'Output directory: ' + self.output_directory, PRINT=print
+  self.Logger->AddText, 'Compression level: ' + str_equiv(self.compress_level), PRINT=print
+  t = (self.shuffle EQ 1) ? 'yes' : 'no'
+  self.Logger->AddText, 'Shuffle: ' + t, PRINT=print
+  
   self.Logger->AddText, 'Listing files in: ' + self.input_directory + ' ...'  , PRINT=print
   
   self->_list_files
@@ -170,6 +174,14 @@ Function w_WPP::_Parse_Inputfile
           self.n_pressure_levels = N_ELEMENTS(val)
           self.pressure_levels = PTR_NEW(val)
         endif
+      end
+      'COMPRESS_LEVEL': begin
+        val = LONG(GEN_strtrim(val, /ALL))
+        if val ge 0 and val le 9 then self.compress_level = val
+      end
+      'SHUFFLE': begin
+        val = LONG(GEN_strtrim(val, /ALL))
+        if val eq 1 then self.shuffle = 1
       end
       'PROJECT_ACRONYM': begin
         val = GEN_strtrim(val, /ALL)
@@ -372,16 +384,19 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
       nested_string = 'NO'
       grid_string = '30km'
       h=3
+      nt_per_day = 8
     end
     2:  begin 
       nested_string = 'YES'
       grid_string = '10km'
       h=1
+      nt_per_day = 24
     end    
     else: begin
       nested_string = 'YES'
       grid_string = '02km'
       h=1
+      nt_per_day = 24
     end
   endcase
       
@@ -400,9 +415,6 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   proj_envi_string = tnt_c.proj.envi
   proj_name = tnt_c.proj.name
   datum = tnt_c.proj.datum.name
-  
-  tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
-  time = LONG( (*self.active_time-tref) / (MAKE_TIME_STEP(hour=1)).dms)
   timestep_string = str_equiv(h) + ' hours'
   
   dObj = Obj_New('NCDF_FILE', self.active_ofile, /CREATE, /TIMESTAMP, /NETCDF4_FORMAT, CLOBBER=force, ErrorLoggerName=self.active_lncfile)
@@ -410,26 +422,32 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->SetMode, /DEFINE
   
   ; Dimensions  
-  dObj->WriteDim, t_dim_name, self.active_n_time
+  dObj->WriteDim, t_dim_name, /UNLIMITED
   dObj->WriteDim, x_dim_name, nx
   dObj->WriteDim, y_dim_name, ny
   if nz ne 0 then dObj->WriteDim, z_dim_name, nz
   
   ; Global attributes
-  dObj->WriteGlobalAttr, 'TITLE', self.title
-  dObj->WriteGlobalAttr, 'DATA_NOTES', self.notes
-  dObj->WriteGlobalAttr, 'WRF_VERSION', self.active_wrf->get_Gatt('TITLE') 
-  dObj->WriteGlobalAttr, 'CREATED_BY', self.created_by
-  dObj->WriteGlobalAttr, 'INSTITUTION', self.institution  
-  dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME())
-  dObj->WriteGlobalAttr, 'SOFTWARE_NOTES', 'IDL V' + !VERSION.RELEASE + ', WAVE post V0.1' 
-  dObj->WriteGlobalAttr, 'PROJECTION', proj_name 
-  dObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string
-  dObj->WriteGlobalAttr, 'DATUM', datum
-  dObj->WriteGlobalAttr, 'GRID_SPACING', grid_string
-  dObj->WriteGlobalAttr, 'TIMESTEP', timestep_string
-  dObj->WriteGlobalAttr, 'NESTED', nested_string
-  dObj->WriteGlobalAttr, 'TIME_ZONE', 'UTC'
+  dObj->WriteGlobalAttr, 'TITLE', self.title, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'DATA_NOTES', self.notes, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'WRF_VERSION', STRING(self.active_wrf->get_Gatt('TITLE')), DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'CREATED_BY', self.created_by, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'INSTITUTION', self.institution , DATATYPE='CHAR' 
+  dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'SOFTWARE_NOTES', 'IDL V' + !VERSION.RELEASE + ', WAVE post V0.1' , DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'PROJECTION', proj_name , DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'DATUM', datum, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'GRID_SPACING', grid_string, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'TIMESTEP', timestep_string, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'NESTED', nested_string, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'TIME_ZONE', 'UTC', DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'GRID_INFO', 'Grid spacing: Global Attributes DX and DY (unit: m), ' + $
+                                       'Down left corner: Global Attributes X0 and Y0 (unit: m) ', DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'DX', tnt_c.dx, DATATYPE='FLOAT'
+  dObj->WriteGlobalAttr, 'DY', tnt_c.dy, DATATYPE='FLOAT'
+  dObj->WriteGlobalAttr, 'X0', min(x), DATATYPE='FLOAT'
+  dObj->WriteGlobalAttr, 'Y0', min(y), DATATYPE='FLOAT'
   
   ; Variables
   vn = 'time'
@@ -459,18 +477,22 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
     dObj->WriteVarAttr, vn, 'units', z_var_units
   endif
   
-  ;Actual variable
-  if nz eq 0 then dims = [x_dim_name,y_dim_name,t_dim_name] $
-   else dims = [x_dim_name,y_dim_name,z_dim_name,t_dim_name]   
-  vn = self.active_var.name
-  dObj->WriteVarDef, vn, dims, DATATYPE='FLOAT'
+  ;Actual variable 
+  if nz eq 0 then begin
+    dims = [x_dim_name,y_dim_name,t_dim_name]
+    if self.compress_level ne 0 then chunk_dimensions = [nx, ny, nt_per_day]
+  endif else begin
+    dims = [x_dim_name,y_dim_name,z_dim_name,t_dim_name]
+    if self.compress_level ne 0 then chunk_dimensions = [nx, ny, nz, nt_per_day]
+  endelse
+  vn = self.active_var.name  
+  dObj->WriteVarDef, vn, dims, DATATYPE='FLOAT', GZIP=self.compress_level, SHUFFLE=self.shuffle, CHUNK_DIMENSIONS=chunk_dimensions
   dObj->WriteVarAttr, vn, 'long_name', self.active_var.description
   dObj->WriteVarAttr, vn, 'units', self.active_var.unit
   dObj->WriteVarAttr, vn, 'agg_method', self.active_var.agg_method
   
   ; Fill with data
   dObj->SetMode, /DATA
-  dObj->WriteVarData, 'time', time   
   dObj->WriteVarData, 'west_east', x  
   dObj->WriteVarData, 'south_north', y  
   dObj->WriteVarData, 'lon', lon  
@@ -493,11 +515,14 @@ end
 pro w_WPP::_add_var_to_file, PRINT=print
   
   ;Check for time ok
-  ; flag, time, data_check, FILENAME=l_path
+  ; flag, data_check, FILENAME=l_path
   restore, FILENAME=self.active_lfile
   if flag ne 'ACTIVE' then message, 'flag?'
   if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
   p0 = min(*self.active_index)
+  
+  tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
+  time = LONG(((*self.active_time)[*self.active_index]-tref) / (MAKE_TIME_STEP(hour=1)).dms)
   
   ; Vardata
   if self.active_var.type eq '3d_press' then pressure_levels = *self.pressure_levels
@@ -519,6 +544,7 @@ pro w_WPP::_add_var_to_file, PRINT=print
   
   ; Fill with data
   dObj->SetMode, /DATA
+  dObj->WriteVarData, 'time', time, OFFSET=offset  
   dObj->WriteVarData, self.active_var.name, data, OFFSET=offset  
   Obj_Destroy, dObj
   
@@ -549,7 +575,11 @@ function w_WPP::check_files, year, FILES=files
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
   
   if nfiles ne ntofind then return, 0
-  files = (*self.ifiles)[matches]
+  
+  files = (*self.ifiles)[matches]  
+  files = files[UNIQ(files,SORT(files))]      
+  if N_ELEMENTS(files) ne ntofind then return, 0
+  
   return, 1
   
 end
@@ -634,7 +664,7 @@ pro w_WPP::process, year, PRINT=print
     deltam =  delta / 60L 
     deltas =  delta-(deltaM*60L)
    
-    self.logger->addText, ' Done. Needed: ' + TIME_to_STR(deltaM) + ' minutes, ' + TIME_to_STR(deltaS) + ' seconds.', PRINT=print
+    self.logger->addText, ' Done. Needed: ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
     self.logger->flush
   endfor
     
@@ -643,7 +673,7 @@ pro w_WPP::process, year, PRINT=print
   for i=0, self.n_vars-1 do begin
     self->_set_active_var, vars[i], year
     restore, FILENAME=self.active_lfile
-    if flag ne 'DONE' then message, 'noooo'
+    if flag ne 'DONE' then print, 'noooo'
   endfor
   
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
@@ -653,7 +683,7 @@ pro w_WPP::process, year, PRINT=print
   
   self.logger->addText, '', PRINT=print
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
-  self.logger->addText, 'Time needed: ' + TIME_to_STR(deltaH) + ' hours, ' + TIME_to_STR(deltaM) + ' minutes, ' + TIME_to_STR(deltaS) + ' seconds.', PRINT=print
+  self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, '+----------------------------------+', PRINT=print
@@ -697,6 +727,8 @@ PRO w_WPP__Define
     institution: ''                  ,  $ ; input file 
     title: ''                        ,  $ ; input file 
     notes: ''                        ,  $ ; input file 
+    compress_level: 0L               ,  $ ; input file 
+    shuffle: 0B                      ,  $ ; input file 
     do_cache: 0B                     ,  $ ; input file 
     cachepath: ''                    ,  $ ; input file 
     logger: OBJ_NEW()                ,  $ ; input file 
