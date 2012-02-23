@@ -1,7 +1,13 @@
-pro post_compress_wrf, input_dir, CACHE=cache
-
+pro post_compress_wrf, input_dir, CACHE=cache, PATTERN=pattern
+   
+  if N_ELEMENTS(PATTERN) eq 0 then pattern = 'wrfpost_d*_25h.nc'
+    
+  fileList = FILE_SEARCH(input_dir, pattern, /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, COUNT=nfiles)
   
-  fileList = FILE_SEARCH(input_dir, 'wrfpost_d*_25h.nc', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, COUNT=nfiles)
+  t = StrMatch(fileList, '*.zip')   
+  p = where(t ne 1, nfiles)
+  if nfiles eq 0 then return
+  fileList = fileList[p]
   
   if N_ELEMENTS(CACHE) eq 0 then CD, CURRENT=_d else _d = cache
   
@@ -25,9 +31,16 @@ pro post_compress_wrf, input_dir, CACHE=cache
     file = fileList[i]
     odir = FILE_DIRNAME(file, /MARK_DIRECTORY)
     bname = FILE_BASENAME(file)
-    bzipname = utils_replace_string(bname, '.nc', '.zip')
-    
-    lfile =  _d + bname
+    test_nc = where(BYTE(bname) eq BYTE('.'), cnt)
+    if cnt eq 0 then begin
+      bzipname = bname + '.zip'
+      bname = bname + '.nc'  
+      lfile =  _d + bname 
+    endif else begin
+      bzipname = utils_replace_string(bname, '.nc', '.zip')
+      lfile =  _d + bname
+    endelse
+
     cfile = _d + bzipname
     
     cd,  _d    

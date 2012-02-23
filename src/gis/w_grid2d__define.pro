@@ -1545,7 +1545,8 @@ end
 ;                   polygons or shapes. Valid values include::
 ;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
 ;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
-;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set. This is the default.
+;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
+;                       * 3 = Pixel center point is used to test the appartenance to the ROI. This is the default!
 ;
 ; :Returns:
 ;   1 if the ROI has been set correctly, 0 if not
@@ -1585,6 +1586,8 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   do_border = N_ELEMENTS(CROPBORDER) ne 0
   do_corner = N_ELEMENTS(CORNERS) ne 0
   
+  if N_ELEMENTS(ROI_MASK_RULE) eq 0 then _roi_mask_rule = 3 else _roi_mask_rule = roi_mask_rule
+  
   check_k = [do_shape, do_polygon, do_mask, do_border, do_grid, do_corner]
   if total(check_k) eq 0 then begin
     self->Destroy_ROI
@@ -1596,18 +1599,26 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   
   if do_shape then begin
     self->transform_shape, shape, x, y, conn, SHP_SRC = SRC, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
-    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'    
+    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'
     index = 0
-    while index lt N_ELEMENTS(conn) do begin      
+    if _roi_mask_rule eq 3 then utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
+    while index lt N_ELEMENTS(conn) do begin
       nbElperConn = conn[index]
       idx = conn[index+1:index+nbElperConn]
-      index += nbElperConn + 1      
-      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
-      if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=roi_mask_rule) $
-       else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=roi_mask_rule)
+      index += nbElperConn + 1
+      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])         
+      if _roi_mask_rule eq 3 then begin
+        if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+        cont = roi->ContainsPoints(i, j) 
+        p_in = where(cont ge 1, cnt_in)
+        if cnt_in ne 0 then _mask[p_in] = 1
+      endif else begin      
+        if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
+        else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
+      endelse
       OBJ_DESTROY, roi
-    endwhile       
-    _mask = _mask < 1B    
+    endwhile
+    _mask = _mask < 1B
   endif
   
   if do_mask then begin
