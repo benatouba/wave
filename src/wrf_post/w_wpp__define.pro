@@ -714,7 +714,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   if theError ne 0 then begin
     catch, /cancel 
     self.logger->addError
-    return, 0
+    return
   endif
   
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
