@@ -607,6 +607,12 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   
   NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
   
+  ; Is the variable scaled ?
+  is_scale = self->get_VAtt_Info(varid, 'scale_factor')
+  if is_scale then value *= self->get_VAtt(varid, 'scale_factor') 
+  is_offset = self->get_VAtt_Info(varid, 'add_offset')
+  if is_offset then value += self->get_VAtt(varid, 'add_offset') 
+  
   if N_ELEMENTS(count) ne 0 then begin ;Check if we have to change the variable metadata
     pr = where(count le 1, cnt)
     if cnt eq N_ELEMENTS(dimnames) then dimnames = '' else if cnt ne 0 then utils_array_remove, pr, dimnames
