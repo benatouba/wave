@@ -25,10 +25,13 @@ pro skewt_logp_diagram, temperature, pressure
   endfor
   
   ; include the slope of the t-axis in the temperature values
-  temp = temperature + (1/tan(45))* pressure
+  temprange = 40+60
+  pressrange= 1000
+  temp = temperature + (1/tan(45))* pressure * (temprange/pressrange)
 
   
-  cgplot, temp, pressure, position=[0.13, 0.15, 0.85, 0.85], color = 'blue', yrange= [1000,10], xrange=[-60, 40], ytitle='pressure [hPa]',$
+  cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], color = 'blue', yrange= [1000,0], xrange=[-60, 40], ytitle='pressure [hPa]',$
   xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-log(p)-diagram !C', thick=1.5, /window, yticklen=1
   for nda = 0,5 do cgplot, T[nda,*], p, /overplot, /window
-end
+  cgplot, temp, pressure, color='red', /Overplot, /Window
+  end
