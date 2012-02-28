@@ -5,19 +5,46 @@
   ; Data in:
   ; restore, filename='\\klima-fs1\hinners\skew-t-log-p\test_data_pt.sav'
   
-function skewt_logp_diagram_skewY, x, y, ANGLE=angle
+function skewt_logp_diagram_skewY_old, x, y, xrange, yrange, ANGLE=angle
 
    if N_ELEMENTS(ANGLE) eq 0 then angle = 0.
-
-   _y = (1000.-y)/1000.
-   _x = (x + 60.) / 100.
-
-  _x =  _x + _y * tan(angle*!PI/180.)
+   
+   ; Convert the data coordinates into NORMAL coordinates ([0.,1.])   
+   dx = float(max(xrange)-min(xrange))
+   dy = float(max(yrange)-min(yrange))        
+   _x = (float(x) - min(xrange))/dx
+   _y = - (float(y) - max(yrange))/dy ; minus is because we are inverted
+   
+   
+  ; Make the trigonometry in normal coordinates
+  _delta =  _y * tan(angle*!PI/180.)
   
-  return, _x * 100. - 60.
+  ; go back to data coordinates  
+  return, (_x + _delta) * dx + min(xrange)
 
 
 end
+
+  
+function skewt_logp_diagram_skewY, x, y, xrange, yrange, ANGLE=angle
+
+  if N_ELEMENTS(ANGLE) eq 0 then angle = 0.
+   
+   ; Convert the data coordinates into NORMAL coordinates ([0.,1.])   
+  r =  CONVERT_COORD(X, Y, /DATA, /TO_NORMAL)
+   
+  ; Make the trigonometry in normal coordinates
+  _delta =  r[1,*] * tan(angle*!PI/180.)
+  
+  ; go back to data coordinates  
+  _x  = r[0,*] + _delta
+  r = CONVERT_COORD(_x, r[1,*], /TO_DATA, /NORMAL)
+  
+  return, r[0,*]
+
+
+end
+
 
 pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
 
@@ -39,21 +66,21 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
     T_0 = T_0 + 20
   endfor
   
-  T_iso = INDGEN(6)*20-60
   
   
-  ; include the slope of the t-axis in the temperature values
-  temprange = 40+60
-  pressrange= 1000
-
+  xrange= [-20, 80]
+  yrange= [1000,100]
   
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle), pressure, position=[0.13, 0.15, 0.85, 0.85], color = 'blue', yrange= [1000,100], xrange=[-60, 40], ytitle='pressure [hPa]',$
-           xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-log(p)-diagram !C', thick=2., /window, yticklen=1, YSTYLE=1
+  T_iso = INDGEN(10)*20 - 100
   
-  yps =   [0,1000]
-  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, ANGLE=angle), yps, /window, /DATA, NOCLIP=0
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, xrange, yrange, ANGLE=angle), pressure, position=[0.13, 0.15, 0.85, 0.85], color = 'blue', $
+            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]',$
+           xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-log(p)-diagram !C', thick=2., yticklen=1, YSTYLE=1, XSTYLE=1, /WINDOW
+  
+  yps = [0,1000]
+  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, xrange, yrange, ANGLE=angle), yps, /DATA, NOCLIP=0, /WINDOW
    
-  for nda = 0,20 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /window, /DATA, NOCLIP=0, LINESTYLE=5, color='brown'
+  for nda = 0,20 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, xrange, yrange, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', /WINDOW
 
 
 end
