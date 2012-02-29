@@ -56,14 +56,14 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
   Cp = 28.964 ; J/mol*K ; is this a generally accepted value ?
   
   ; sample parameters for dry adiabates
-  p_0 = 1000 ; hPa
-  T_0 = -60
+  p_0 = 1000. ; hPa
+  T_0 = 213.15
   p = findgen(1000)
  
   ; dry adiabate formula
   T_adiab = fltarr(21,N_ELEMENTS(p))  
   for nda = 0,20 do begin
-    T_adiab[nda, *] = (T_0+273.15) * (p/p_0)^(R/Cp) - 273.15
+    T_adiab[nda, *] = (T_0) * (p/p_0)^(R/Cp) - 273.15
     T_0 = T_0 + 20
   endfor
   
@@ -74,6 +74,21 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
   xrange= [-20, 80]
   yrange= [1000,100]
   
+
+  ; moist adiabate formula
+  a = 0.28571 ;  a, b unc c = vereinfachte Werte aus Buch Meteorology for Sc. & Eng., S. 109
+  b = (1.35*10^7)
+  c = 2488.4
+  T0 = 253.15
+  r_s = [0.78, 3.77, 14.91, 51.43] ; Werte aus Tabelle 5.1,S.97 im Buch Meteorology for Sc. & Eng.
+  T_moistadiab = fltarr(4, N_Elements(p))
+  for nma = 0,3 do begin
+    T_moistadiab[nma,*] = (T0 + ( p - p_0) * ((a*T0 + c*r_s[nma]) / ( p_0 * (1 + b*r_s[nma]/T0) )) ) - 273.15
+    T0 = T0 + 20
+  endfor 
+  
+  print, T_moistadiab
+
   WINDOW=1 
   cgWindow, WXSIZE=wxsize, WYSIZE=wysize
 ;  cgDisplay,  wxsize, wysize
@@ -93,6 +108,9 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
    
   for nda = 0,20 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
   cgControl, EXECUTE=1
-;  wdelete, xwin 
+  for nma = 0,3 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, $
+  color='darkgreen', WINDOW=window
+  cgControl, EXECUTE=1
+ ; wdelete, xwin 
 
 end
