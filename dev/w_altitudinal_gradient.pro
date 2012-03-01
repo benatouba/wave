@@ -21,7 +21,7 @@ pro w_altitudinal_gradient, var, height, out_arr, KERNEL_SIZE=kernel_size, STD_V
   if N_ELEMENTS(VALID_MASK) ne 0 then lr_arr[ngrid:ncol-1-ngrid, ngrid:nrow-1-ngrid, *]=VALID_MASK[ngrid:ncol-1-ngrid, ngrid:nrow-1-ngrid, *] else $
     lr_arr[ngrid:ncol-1-ngrid, ngrid:nrow-1-ngrid, *]=1
     
-  out_arr=FLTARR(ncol,nrow,ntime)-0.0098
+  out_arr=FLTARR(ncol,nrow,ntime)-STD_VAL
   
   for i=0, N_ELEMENTS(height[*,*,0])-1 do begin
   
@@ -46,12 +46,11 @@ pro w_altitudinal_gradient, var, height, out_arr, KERNEL_SIZE=kernel_size, STD_V
     
     
     for k=0, ntime-1 do begin
-      subcol=subarr_inds[0,vacc]
-      subrow=subarr_inds[1,vacc]
+    
       subtime=subarr_inds[2,vacc]
       st_lp=where(subtime eq k, cntok)
       
-      if cntok lt 5 then lr_new=STD_VAL else begin
+      if cntok lt 5 then lr_new=STD_VAL else begin    ; how many points per kernel should be valid? 
       
         if KEYWORD_SET(MEAN) then begin
           lr_subarr=(subarr_var[vacc[st_lp]]-var[i])/(subarr_height[vacc[st_lp]]-height[i])
@@ -60,11 +59,10 @@ pro w_altitudinal_gradient, var, height, out_arr, KERNEL_SIZE=kernel_size, STD_V
         
           lr_new=regress(subarr_height[vacc[st_lp]], subarr_var[vacc[st_lp]], CORRELATION=lr_corr)
           r2=lr_corr*lr_corr
-          if r2 lt 0.95 then lr_new=STD_VAL
+          if r2 lt 0.95 then lr_new=STD_VAL           ; check significance, when to overwrite value?
         endelse
         
         if (N_ELEMENTS(CLIP_MIN) ne 0) then if (lr_new lt CLIP_MIN) then lr_new=CLIP_MIN
-        
         if (N_ELEMENTS(CLIP_MAX) ne 0) then if (lr_new gt CLIP_MAX) then lr_new=CLIP_MAX
         
         out_arr[curcol, currow, k]=lr_new
