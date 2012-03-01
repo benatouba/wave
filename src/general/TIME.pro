@@ -2191,6 +2191,16 @@ end
 ;              the associated time (same size as agg)
 ;
 ; :Keywords:
+;    AGG_WS: out, optional
+;            the aggregated wind speed array
+;    AGG_WD: out, optional
+;            the aggregated wind direction array
+;    AGG_U: out, optional
+;            the aggregated wind u array
+;    AGG_V: out, optional
+;            the aggregated wind v array
+;    AGG_TIME: out, optional
+;             the aggregated time array
 ;    UV: in, optional
 ;        set this keyword to indicate that the wind input in is UV
 ;    WSWD: in, optional
@@ -2214,12 +2224,13 @@ end
 ; 
 ;
 ; :History:
-;     Written by FaM, 2011.
+;     Written by FaM, 2012.
 ;-
-pro TS_AGG_WIND, wind_data1, wind_data2, time, agg_ws, agg_wd, agg_u, agg_v, agg_time, UV=uv, WSWD=wswd, $
-     MISSING=missing, DAY=day, HOUR=hour, NEW_TIME=new_time, DOUBLE=double
+pro TS_AGG_WIND, wind_data1, wind_data2, time, $
+                       AGG_WS=AGG_WS, AGG_WD=agg_wd, AGG_U=agg_u, AGG_V=agg_v, AGG_TIME=agg_time, $
+                        UV=uv, WSWD=wswd, MISSING=missing, DAY=day, HOUR=hour, NEW_TIME=new_time, DOUBLE=double
     
-    
+     
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
@@ -2261,7 +2272,7 @@ pro TS_AGG_WIND, wind_data1, wind_data2, time, agg_ws, agg_wd, agg_u, agg_v, agg
   undefine, agg_u, agg_v ; no need
   
   ; Now back to UV
-  MET_ws_wd_to_u_v, ret, agg_ws, agg_wd, U=agg_u, V=agg_v
+  if ARG_PRESENT(agg_u) or ARG_PRESENT(agg_v) then MET_ws_wd_to_u_v, ret, agg_ws, agg_wd, U=agg_u, V=agg_v
 
   
 end
@@ -2415,7 +2426,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
         tp = reform(_data[*,*,a:b], siz[1], siz[2], b-a+1)
         if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 3)
         case str_equiv(am) of
-          'NONE': agg[*,*,i] = tp[*,*,b-a+1]
+          'NONE': agg[*,*,i] = tp[*,*,n_y-1]
           'MIN': agg[*,*,i] = min(tp, /NAN, DIMENSION=3)
           'MAX': agg[*,*,i] = max(tp, /NAN, DIMENSION=3)
           'MEAN': begin
@@ -2439,7 +2450,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
         tp = reform(_data[*,*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
         if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 4)
         case str_equiv(am) of
-          'NONE': agg[*,*,*,i] = tp[*,*,*,a-b+1]
+          'NONE': agg[*,*,*,i] = tp[*,*,*,n_y-1]
           'MIN': agg[*,*,*,i] = min(tp, /NAN, DIMENSION=4)
           'MAX': agg[*,*,*,i] = max(tp, /NAN, DIMENSION=4)
           'MEAN': begin
@@ -2464,6 +2475,114 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
 
   agg_time = qms2[1: nnt-1]
   if WAS_ABSDATE then agg_time = MAKE_ABS_DATE(QMS=agg_time)
+  
+end
+
+;+
+; :Description:
+; 
+;    Same as TS_AGG_GRID but only for wind vectors. Input can be of the 
+;    form WS-WD or U-V, but it MUST be specified by one and only one of
+;    the dedicated keywords.    
+;
+; :Params:
+;    wind_data1: in, required, type = array
+;                the data serie to aggregate. Depending on the keywords UV or WSWD,
+;                it is either U or WS 
+;    wind_data2: in, required, type = array
+;                the data serie to aggregate. Depending on the keywords UV or WSWD,
+;                it is either V or WS 
+;    time: in, required, type = {ABS_DATE}/qms
+;          the associated time (same size as data)
+;    agg_ws: out, type = array
+;            the aggregated data (wind speed)
+;    agg_time: out, type = {ABS_DATE}/qms
+;              the associated time (same size as agg)
+;
+; :Keywords:
+;    AGG_WS: out, optional
+;            the aggregated wind speed array
+;    AGG_WD: out, optional
+;            the aggregated wind direction array
+;    AGG_U: out, optional
+;            the aggregated wind u array
+;    AGG_V: out, optional
+;            the aggregated wind v array
+;    AGG_TIME: out, optional
+;             the aggregated time array
+;    UV: in, optional
+;        set this keyword to indicate that the wind input in is UV
+;    WSWD: in, optional
+;          set this keyword to indicate that the wind input in is WS, WD   
+;    MISSING: in, optional, default = NaN
+;             if no valid value is found within an interval, the missing
+;             value is assigned the the statistics
+;    DAY: in, optional, default = none
+;         set to an day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
+;    HOUR: in, optional, default = none
+;         set to an hourly interval (e.g: 1, or 6) to compute 
+;         hourly or six-hourly statistics
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;              ignored if `DAY` or `HOUR` are set. set this value to 
+;              any time serie of n+1 elements. The ouptut will contain
+;              n elements of the statistics for each interval [t, t+1]
+;              (t excluded)
+;    DOUBLE: in, optional
+;            set this keyword to compute in double precision
+; 
+;
+; :History:
+;     Written by FaM, 2012.
+;-
+pro TS_AGG_GRID_WIND, wind_data1, wind_data2, time, $
+                       AGG_WS=AGG_WS, AGG_WD=agg_wd, AGG_U=agg_u, AGG_V=agg_v, AGG_TIME=agg_time, $
+                        UV=uv, WSWD=wswd, MISSING=missing, DAY=day, HOUR=hour, NEW_TIME=new_time, DOUBLE=double
+    
+    
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  on_Error, 2
+  
+  ; Check args
+  if KEYWORD_SET(UV) then _uv = TRUE else _uv = FALSE
+  if KEYWORD_SET(WSWD) then _wswd = TRUE else _wswd = FALSE
+  if (_wswd and _uv) or (~_wswd and ~_uv) then Message, WAVE_Std_Message(/NARG)
+  if ~ array_processing(wind_data1, wind_data2) then message, '$DATA arrays must have same number of elements'
+  
+  if _uv then begin
+    u = wind_data1
+    v = wind_data2
+    MET_u_v_to_ws_wd, ret, u, v, WS=ws, WD=wd
+  endif 
+  if _wswd then begin
+    ws = wind_data1
+    wd = wind_data2
+    MET_ws_wd_to_u_v, ret, ws, wd, U=u, V=v
+  endif
+  
+  TS_AGG_GRID, ws, time, agg_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+               DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+            
+  ; Temporary vector means
+  TS_AGG_GRID, u, time, agg_u, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+               DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+  TS_AGG_GRID, v, time, agg_v, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+               DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double           
+  MET_u_v_to_ws_wd, ret, agg_u, agg_v, WD=agg_wd
+  
+  p = where(agg_wd lt 0.,cnt) ;for missing values
+  if cnt gt 0 then begin
+  TS_AGG_GRID, wd, time, dummy_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+               DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+   agg_wd[p] = dummy_ws[p]
+  endif
+  undefine, agg_u, agg_v ; no need
+  
+  ; Now back to UV
+  if ARG_PRESENT(agg_u) or ARG_PRESENT(agg_v) then MET_ws_wd_to_u_v, ret, agg_ws, agg_wd, U=agg_u, V=agg_v
+
   
 end
 
