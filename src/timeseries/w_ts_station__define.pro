@@ -740,7 +740,7 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
   text += vNames[nvar- 1]  + '"'
   printf, id, text
   
-  text = '"-","'
+  text = '"DESCRIPTION","'
   for i = 0, nvar - 2 do text +=descriptions[i] + sep
   text += descriptions[nvar- 1]  + '"'
   printf, id, text
@@ -750,7 +750,7 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
   text += units[nvar- 1]  + '"'
   printf, id, text
   
-  text = '"-","'
+  text = '"STRING","'
   for i = 0, nvar - 2 do text +=types[i] + sep
   text += types[nvar- 1]  + '"'
   printf, id, text

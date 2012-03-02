@@ -92,8 +92,8 @@ function w_aws_read_data_file_auto_template, file
   if nf ne N_ELEMENTS(var_type) then message, 'Types and variables do not match.'
   types = LONARR(nf)  
   for i = 0, nf-1 do begin
-     strs = [''        , 'string'  ,'long'  ,'float'  ,'int'   ,'integer','double']
-     idlt = [IDL_STRING,IDL_STRING,IDL_LONG,IDL_FLOAT,IDL_LONG,IDL_LONG ,IDL_DOUBLE]
+     strs = ['-'       ,''        , 'string'  ,'long'  ,'float'  ,'int'   ,'integer','double']
+     idlt = [IDL_STRING,IDL_STRING,IDL_STRING,IDL_LONG,IDL_FLOAT,IDL_LONG,IDL_LONG ,IDL_DOUBLE]
      p = where(str_equiv(strs) eq str_equiv(var_type[i]), cnt)
      if cnt eq 1 then  types[i] = idlt[p] else types[i] = IDL_FLOAT  
   endfor
