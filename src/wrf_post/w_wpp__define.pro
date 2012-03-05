@@ -75,6 +75,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
   if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE)  
   self.Logger->AddText, 'Parse variable definitions ...', PRINT=print  
+  if ~ self->_Parse_VarDefFile(self.vstatic_file, 'static', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.vstatic_file
   if ~ self->_Parse_VarDefFile(self.v2d_file, '2d', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.v2d_file 
   if ~ self->_Parse_VarDefFile(self.v3d_file, '3d_eta', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.v3d_file
   if self.n_pressure_levels ne 0 then if ~ self->_Parse_VarDefFile(self.v3d_file, '3d_press', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.v3d_file
@@ -111,9 +112,9 @@ pro w_WPP::Cleanup
   ptr_free, self.active_time
   ptr_free, self.active_index
   ptr_free, self.ifiles
-  ptr_free, self.pressure_levels
-  ptr_free, self.vars 
-  
+  ptr_free, self.pressure_levels 
+  undefine, *self.vars
+  ptr_free, self.vars   
   file_delete, self.cachepath, /RECURSIVE
   
 END
@@ -183,6 +184,13 @@ function w_WPP::_Parse_Namelist
         if val eq '.' then begin
           _val = FILE_DIRNAME(self.namelist_file)+'/variables_soil_wpp.csv'
           if FILE_TEST(_val) then self.vsoil_file = utils_clean_path(_val)
+        endif
+      end
+      'PATH_TO_VARIABLES_STATIC_FILE': begin
+        if FILE_TEST(val) then self.vstatic_file = utils_clean_path(val)
+        if val eq '.' then begin
+          _val = FILE_DIRNAME(self.namelist_file)+'/variables_static_wpp.csv'
+          if FILE_TEST(_val) then self.vstatic_file = utils_clean_path(_val)
         endif
       end
       'OUTPUT_DIRECTORY': begin
@@ -362,8 +370,11 @@ end
 ;    to process, generate the active file paths, etc.
 ;        
 ;-
-pro w_WPP::_set_active_var, var, year
+pro w_WPP::_set_active_var, var, year, obj
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
   ON_ERROR, 2
 
   case (self.domain) of
@@ -378,9 +389,11 @@ pro w_WPP::_set_active_var, var, year
     end
   endcase
   
-  f_dir = dom_str+'/h/'+var.type
-  f_name = self.project_acronym + '_' + utils_replace_string(f_dir, '/', '_') + '_' + var.name + '_' + STRING(year, FORMAT='(I4)') + '.nc'
-  f_path = utils_clean_path(self.output_directory + '/'+ self.project_acronym +'/'+ f_dir + '/' + f_name)
+  if var.type eq 'static' then f_dir = dom_str+'/'+var.type else f_dir = dom_str+'/h/'+var.type
+  if var.type eq 'static' then yr_str = '' else yr_str = '_' + STRING(year, FORMAT='(I4)')
+  
+  f_name = self.project_acronym + '_' + utils_replace_string(f_dir, '/', '_') + '_' + var.name + yr_str + '.nc'
+  f_path = utils_clean_path(self.output_directory + '/products/'+ f_dir + '/' + f_name)
   l_path = utils_clean_path(self.output_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
   f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
   f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
@@ -393,6 +406,7 @@ pro w_WPP::_set_active_var, var, year
   self.active_ncloggerfile = f_log
   self.active_ofile = f_path
   self.active_var = var
+  if N_ELEMENTS(obj) ne 0 then self.active_dObj = obj
   
 end
 
@@ -405,23 +419,33 @@ end
 ;           set this keyword to overwrite existing NCDF files in the directory
 ;    PRINT: in, optional, type=boolean, default=1
 ;           if set (default), the log messages are printed in the console as well
+; 
+; :Returns:
+;    the ncdf_file object
 ;
 ;-
-pro w_WPP::_define_file, FORCE=force, PRINT=print
+function w_WPP::_define_file, FORCE=force, PRINT=print
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
   ON_ERROR, 2
   
+  static = FALSE
+  
   case (self.active_var.type) of
+    'static': begin
+       nz = 0    
+       static = TRUE
+    end
     '2d': begin
        nz = 0    
-       type_str = '2d'
     end
     '3d_eta': begin
        z_dim_name = 'eta'
        nz = self.active_wrf->get_Dim('bottom_top')
        self.active_wrf->get_Time, dum, dumy, t0
        z = self.active_wrf->get_var('ZNU', t0=t0, t1=t0)
-       type_str = '3d/eta'
        z_var_name = 'eta'
        z_var_long_name = 'Eta Levels (mass points)'
        z_var_units = ''       
@@ -429,16 +453,15 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
     '3d_press': begin
        z_dim_name = 'pressure'
        nz = self.n_pressure_levels
-       type_str = '3d/press'
        z = *self.pressure_levels
        z_var_name = 'pressure'
        z_var_long_name = 'Pressure Levels'
-       z_var_units = 'hPa'      
+       z_var_units = 'hPa'   
+       missing = -9999.   
     end
     '3d_soil': begin
        z_dim_name = 'soil'
        nz = self.active_wrf->get_Dim('soil_layers_stag')
-       type_str = '3d/soil'
        self.active_wrf->get_Time, dum, dumy, t0
        z = TOTAL(self.active_wrf->get_var('DZS', t0=t0, t1=t0),/CUMULATIVE)
        z_var_name = 'soil'
@@ -447,6 +470,11 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
     end
     else: message, 'Type not ok'
   endcase
+  
+  if static and FILE_TEST(self.active_ofile) then begin 
+   dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /NETCDF4_FORMAT, /MODIFY, ErrorLoggerName=self.active_ncloggerfile) 
+   return, dObj
+  endif 
   
   case (self.domain) of
     1: begin 
@@ -485,7 +513,7 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   proj_name = tnt_c.proj.name
   datum = tnt_c.proj.datum.name
   timestep_string = str_equiv(h) + ' hours'
-  
+    
   dObj = Obj_New('NCDF_FILE', self.active_ofile, /CREATE, /TIMESTAMP, /NETCDF4_FORMAT, CLOBBER=force, ErrorLoggerName=self.active_ncloggerfile)
   IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
   dObj->SetMode, /DEFINE
@@ -509,14 +537,15 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'DATUM', datum, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'TIMESTEP', timestep_string, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'DOMAIN', self.domain, DATATYPE='LONG'
   dObj->WriteGlobalAttr, 'NESTED', nested_string, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'TIME_ZONE', 'UTC', DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'GRID_INFO', 'Grid spacing: Global Attributes DX and DY (unit: m), ' + $
                                        'Down left corner: Global Attributes X0 and Y0 (unit: m) ', DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'DX', tnt_c.dx, DATATYPE='FLOAT'
   dObj->WriteGlobalAttr, 'DY', tnt_c.dy, DATATYPE='FLOAT'
-  dObj->WriteGlobalAttr, 'X0', min(x), DATATYPE='FLOAT'
-  dObj->WriteGlobalAttr, 'Y0', min(y), DATATYPE='FLOAT'
+  dObj->WriteGlobalAttr, 'X0', STRING(min(x), FORMAT='(F12.1)'), DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'Y0', STRING(min(y), FORMAT='(F12.1)'), DATATYPE='CHAR'
   
   ; Variables
   vn = 'time'
@@ -559,6 +588,7 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteVarAttr, vn, 'long_name', self.active_var.description
   dObj->WriteVarAttr, vn, 'units', self.active_var.unit
   dObj->WriteVarAttr, vn, 'agg_method', self.active_var.agg_method
+  if N_ELEMENTS(missing) ne 0 then dObj->WriteVarAttr, vn, 'missing_value', missing, DATATYPE='float'
   
   ; Fill with data
   dObj->SetMode, /DATA
@@ -566,18 +596,20 @@ pro w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteVarData, 'south_north', y  
   dObj->WriteVarData, 'lon', lon  
   dObj->WriteVarData, 'lat', lat  
-  if nz ne 0 then dObj->WriteVarData, z_var_name, z  
-  
-  Obj_Destroy, dObj
-  
+  if nz ne 0 then dObj->WriteVarData, z_var_name, z
+    
   ;Checks
-  flag = 'ACTIVE'
-  data_check = BYTARR(self.active_n_time)
-  save, flag, data_check, FILENAME=self.active_checkfile
+  if ~static then begin
+    flag = 'ACTIVE'
+    data_check = BYTARR(self.active_n_time)
+    save, flag, data_check, FILENAME=self.active_checkfile
+  endif
   
   ;log
   self.logger->addText, ' new file: ' + self.active_ofile, PRINT=print
   self.logger->flush
+  
+  return, dObj
   
 end
 
@@ -589,13 +621,20 @@ end
 ;-
 pro w_WPP::_add_var_to_file
 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
   ON_ERROR, 2
   
-  ;Check for time ok
-  ; flag, data_check, FILENAME=l_path
-  restore, FILENAME=self.active_checkfile
-  if flag ne 'ACTIVE' then message, 'flag?'
-  if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
+  if self.active_var.type eq 'static' then static = TRUE else  static = FALSE 
+  
+  ;Check for time ok (flag, data_check)
+  if ~ static then begin
+    restore, FILENAME=self.active_checkfile
+    if flag ne 'ACTIVE' then message, 'flag?'
+    if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
+  endif
+  
   p0 = min(*self.active_index)
   
   tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
@@ -603,33 +642,47 @@ pro w_WPP::_add_var_to_file
   
   ; Vardata
   if self.active_var.type eq '3d_press' then pressure_levels = *self.pressure_levels
-  data = self.active_wrf->get_var(self.active_var.name, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
+  data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
+  
+  dObj = self.active_dObj
   
   case (self.active_var.type) of
+    'static': begin
+      nt = dObj->GetDimValue('time')
+      if nt ne 0 then return ; no need to do nothing
+      offset=[0,0,0]
+      data = reform(data[*,*,0])
+      time = 0
+    end
     '2d': begin
-      data = data[*,*,1:*]
-      offset=[0,0,p0]
+      if varnt eq 1 then begin
+        ; "false static" case
+        time=time[1]
+        offset=[0,0,dObj->GetDimValue('time')]
+      endif else begin 
+        ; normal case
+        data = data[*,*,1:*]
+        offset=[0,0,p0]
+      endelse
     end
     else:  begin
       data = data[*,*,*,1:*]
       offset=[0,0,0,p0]
     end
   endcase
-  
-  dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /MODIFY, ErrorLoggerName=self.active_ncloggerfile)
-  IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
-  
+    
   ; Fill with data
   dObj->SetMode, /DATA
-  dObj->WriteVarData, 'time', time, OFFSET=offset
+  dObj->WriteVarData, 'time', time, OFFSET=offset[N_ELEMENTS(offset)-1]
   dObj->WriteVarData, self.active_var.name, data, OFFSET=offset
-  Obj_Destroy, dObj
   
   ;Checks
-  flag = 'ACTIVE'
-  data_check[*self.active_index] = 1
-  if TOTAL(data_check) eq N_ELEMENTS(data_check) then flag = 'DONE'
-  save, flag, data_check, FILENAME=self.active_checkfile
+  if ~static then begin
+    flag = 'ACTIVE'
+    data_check[*self.active_index] = 1
+    if TOTAL(data_check) eq N_ELEMENTS(data_check) then flag = 'DONE'
+    save, flag, data_check, FILENAME=self.active_checkfile
+  endif
   
 end
 
@@ -676,7 +729,7 @@ function w_WPP::check_filelist, year, FILES=files
   
   ; Find necessary data
   GEN_date_doy, ret, ntofind, YEAR=year, month=12, day=31
-  pattern = '*wrfpost_d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
+  pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
   
   if nfiles ne ntofind then return, 0
@@ -713,6 +766,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   catch, theError
   if theError ne 0 then begin
     catch, /cancel 
+    for d=0, N_ELEMENTS(objs)-1 do obj_Destroy, objs[i]
     self.logger->addError
     return
   endif
@@ -739,9 +793,10 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   self.logger->flush
   
   vars = (*self.vars)
+  objs = OBJARR(self.n_vars)
   for i=0, self.n_vars-1 do begin
     self->_set_active_var, vars[i], year
-    self->_define_file, FORCE=force, PRINT=print
+    objs[i] = self->_define_file(FORCE=force, PRINT=print)
   endfor
   
   self.logger->addText, 'Done generating product files', PRINT=print
@@ -783,8 +838,8 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
     
     vars = (*self.vars)
     for i=0, self.n_vars-1 do begin
-      self->_set_active_var, vars[i], year
-      self->_add_var_to_file, PRINT=print
+      self->_set_active_var, vars[i], year, objs[i]
+      self->_add_var_to_file
     endfor
     OBJ_DESTROY, self.active_wrf
     
@@ -802,9 +857,14 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   vars = (*self.vars)
   for i=0, self.n_vars-1 do begin
     self->_set_active_var, vars[i], year
+    if self.active_var.type eq 'static' then continue
     restore, FILENAME=self.active_checkfile
-    if flag ne 'DONE' then print, 'noooo'
+    if flag ne 'DONE' then print, 'File seems not to be full. Big problem: ' + self.active_ofile
   endfor
+  
+  FILE_DELETE, self.output_directory + '/logs_ncdf/', self.output_directory + '/logs_idl/', self.output_directory + '/cache/',  /RECURSIVE
+  
+  for d=0, N_ELEMENTS(objs)-1 do obj_Destroy, objs[i]
   
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
   deltah =  delta / 60L / 60L
@@ -860,6 +920,7 @@ pro w_WPP__Define, class
     v2d_file              : ''           ,  $ ; From the namelist: Path to the variables_2d_wpp.csv
     v3d_file              : ''           ,  $ ; From the namelist: Path to the variables_3d_wpp.csv
     vsoil_file            : ''           ,  $ ; From the namelist: Path to the variables_soil_wpp.csv
+    vstatic_file          : ''           ,  $ ; From the namelist: Path to the variables_static_wpp.csv
     project_acronym       : ''           ,  $ ; From the namelist: project short name (to be added as prefix to the product filenames)
     created_by            : ''           ,  $ ; From the namelist: info string
     institution           : ''           ,  $ ; From the namelist: info string
@@ -871,6 +932,7 @@ pro w_WPP__Define, class
     cachepath             : ''           ,  $ ; path to the cache directory
     logger                : OBJ_NEW()    ,  $ ; Logger Object
     active_wrf            : OBJ_NEW()    ,  $ ; the active WRF object to take the info from
+    active_dObj           : OBJ_NEW()    ,  $ ; the active ncdf file object to put the information into
     active_var            : {w_WPP_var}  ,  $ ; the active variable to define/fill
     active_ofile          : ''           ,  $ ; the active output file to write into
     active_checkfile      : ''           ,  $ ; the active check save file (to be sure all times are written)

@@ -695,6 +695,82 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
   
 end
 
+;+
+; :Description:
+;    Describe the procedure.
+;
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Params:
+;    varid: in, required, type = string/integer
+;           the variable ID (string or integer) to retrieve
+;           
+;    i: in, required, type = long
+;       the X index where to get the variable 
+;       
+;    j: in, required, type = long
+;       the Y index where to get the variable 
+;
+; :Keywords:
+;    t0: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the first time of the variable timeserie
+;    t1: in, optional, type = qms/{ABS_DATE}
+;        if set, it defines the last time of the variable timeserie
+;    K: in, optional
+;       if 3D variable, the index in Z dimension where to get the TS
+;
+; :History:
+;     Written by FaM, 2012.
+;-      
+pro w_GEO_nc::plot_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a previous call to w_GEO_nc_VARDEF or w_GEO_nc_VARID, or the name of the variable. 
+                              i, j, $
+                              t0=t0, $
+                              t1=t1, $
+                              k=k
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
+  
+  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
+  
+  var = self->get_TimeSerie( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+                         i, $
+                         j, $
+                         time, $
+                         nt, $
+                         t0 = t0, $
+                         t1 = t1, $
+                         units = units, $
+                         description = description, $
+                         varname = varname , $ ; 
+                         dims = dims, $ ;
+                         dimnames = dimnames )
+                             
+  w_TimeLinePlot, var, time, varname, COLOR1='red', TITLE='Geo NC TS plot: ' + description, YTITLE=units, THICKNESS=2
+  
+  cgtext, 0.7915, 0.26, 'Grid point: [' + str_equiv(STRING(i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(j, FORMAT = '(I3)')) + ']', $
+          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW
+
+  self->get_ncdf_coordinates, lon, lat
+  
+  cgtext, 0.7915 + 0.01, 0.2, 'Lon: ' + str_equiv(STRING(lon[i,j], FORMAT='(F7.2)')), $
+          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
+  cgtext, 0.7915 + 0.01, 0.15, 'Lat: ' + str_equiv(STRING(lat[i,j], FORMAT='(F7.2)')), $
+          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
+    
+end
+
 ; :Description:
 ;   Retrieve geolocalisation info from the NCDF file.
 ;    
