@@ -1,30 +1,30 @@
-; Problems:
-; change the y-axis (=p) to log2 scale - maybe with logscl?
-; rotate the x-axis (=T)
-
+;+
+; :Description:
+;  This procedure returns a skew-T-log-p-diagram. The entered temperature and pressure values are plotted as well as
+;  isobars, unsaturated (dry) adiabates and saturated (moist) adiabates.
+;  As an option, the angle of the temperature axis can be varied (e.g. to 45 degrees) to generate a "skew" temperature axis.
+; 
+; :Params:
+;    temperature: in, required, array of temperature values (in °C), same array size as pressure array needed
+;    pressure: in, required, array of atmospheric pressure values (in hPa)
+;
+; :Keywords:
+;    ANGLE: in, optional, default = 0.,
+;               set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
+;    TEMPRANGE: in, optional, default = [-60,60],
+;               set this keyword as deg. Celsius [min.value, max.value] to vary the x range of the diagram
+;
+; :Examples:
+;   skewt_logp_diagram, temperature, pressure, ANGLE=45., TEMPRANGE=[-60,40]
+;   
+;   
+; :History:
+;       Written by JaH, 2012.
+;       
+;       
   ; Data in:
   ; restore, filename='\\klima-fs1\hinners\skew-t-log-p\test_data_pt.sav'
   
-function skewt_logp_diagram_skewY_old, x, y, xrange, yrange, ANGLE=angle
-
-   if N_ELEMENTS(ANGLE) eq 0 then angle = 0.   
-   
-   ; Convert the data coordinates into NORMAL coordinates ([0.,1.])   
-   dx = float(max(xrange)-min(xrange))
-   dy = float(max(yrange)-min(yrange))        
-   _x = (float(x) - min(xrange))/dx
-   _y = - (float(y) - max(yrange))/dy ; minus is because we are inverted
-   
-   
-  ; Make the trigonometry in normal coordinates
-  _delta =  _y * tan(angle*!PI/180.)
-  
-  ; go back to data coordinates  
-  return, (_x + _delta) * dx + min(xrange)
-
-
-end
-
   
 function skewt_logp_diagram_skewY, x, y, ANGLE=angle
 
@@ -42,59 +42,51 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle
   r = CONVERT_COORD(_x, r[1,*], /TO_DATA, /DEVICE)
   
   return, REFORM(r[0,*])
-
-
+  
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
+pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
 
-  ; gas constant
-  R  =  8.314 ; J/mol*K
-  
-  ; Heat capacity of dry air
-  Cp = 28.964 ; J/mol*K ; is this a generally accepted value ?
-  
-  ; sample parameters for dry adiabates
+  ; dry adiabate formula
+  R  =  8.314 ; gas konstant [J/mol*K]
+  Cp = 28.964 ; heat capacity of dry air [J/mol*K]
   p_0 = 1000. ; hPa
   T_0 = 213.15
-  p = findgen(1000)
- 
-  ; dry adiabate formula
-  T_adiab = fltarr(21,N_ELEMENTS(p))  
-  for nda = 0,20 do begin
+  p = findgen(101)*10
+  T_adiab = fltarr(31,N_ELEMENTS(p))  
+  for nda = 0,30 do begin
     T_adiab[nda, *] = (T_0) * (p/p_0)^(R/Cp) - 273.15
     T_0 = T_0 + 20
   endfor
   
-  wxsize = 400
-  wysize = 600  
-;  YLOG=1        
-  
-  xrange= [-20, 80]
-  yrange= [1000,100]
-  
-
   ; moist adiabate formula
-  a = 0.28571 ;  a, b unc c = vereinfachte Werte aus Buch Meteorology for Sc. & Eng., S. 109
-  b = (1.35*10^7)
-  c = 2488.4
-  T0 = 253.15
-  r_s = [0.78, 3.77, 14.91, 51.43] ; Werte aus Tabelle 5.1,S.97 im Buch Meteorology for Sc. & Eng.
-  T_moistadiab = fltarr(4, N_Elements(p))
-  for nma = 0,3 do begin
-    T_moistadiab[nma,*] = (T0 + ( p - p_0) * ((a*T0 + c*r_s[nma]) / ( p_0 * (1 + b*r_s[nma]/T0) )) ) - 273.15
-    T0 = T0 + 20
-  endfor 
-  
-  print, T_moistadiab
+  ; (calculation and parameter values from R. Stull, 2000: "Meteorology for Scientists and Engineers", p.111)
+  T_0 = 213.15
+  pp=reverse(findgen(101))
+  T_moistadiab = fltarr(10,N_Elements(pp)) 
+  for nma = 0,9 do begin
+    for i = 0, (N_Elements(pp)-1) do begin
+      if i eq 0 then (_T = T_0) else (_T = T_moistadiab[nma,i-1]+273.15) 
+      if i eq 0 then (_p = p_0/10.) else (_p = pp[i-1])
+      es = 0.611* exp(5423.*( 1/273.15 - 1/_T ))
+      rs = 0.622*es/(pp[i]-es)
+      deltaT = (0.28571*_T + 2488.4*rs) / (pp[i]*(1.+(13500000.* rs/(_T^2))))
+      T_moistadiab[nma,i] = _T + deltaT *(pp[i]-_p) - 273.15
+    endfor
+    T_0 = T_0+20.
+    endfor
+
+    
+  if N_ELEMENTS(TEMPRANGE) eq 0 then xrange=[-60,60] else xrange=TEMPRANGE
+  yrange= [1000,100]
 
   WINDOW=1 
+  wxsize = 800
+  wysize = 600
   cgWindow, WXSIZE=wxsize, WYSIZE=wysize
-;  cgDisplay,  wxsize, wysize
   cgControl, EXECUTE=0
-  
-   
+ 
   cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], $
             yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-log(p)-diagram !C', $
@@ -105,12 +97,10 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle
   yps = [0,1000]
   T_iso = INDGEN(30)*20 - 100 
   for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, ANGLE=angle), yps, /DATA, NOCLIP=0, WINDOW=window
-   
-  for nda = 0,20 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
+  for nda = 0,30 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
   cgControl, EXECUTE=1
-  for nma = 0,3 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, $
+  for nma = 0,9 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
   color='darkgreen', WINDOW=window
   cgControl, EXECUTE=1
- ; wdelete, xwin 
 
 end
