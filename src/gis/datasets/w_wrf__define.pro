@@ -208,8 +208,8 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
     ;Temporary test
     self->Get_LonLat, gislon, gislat
     self->get_ncdf_coordinates, lon, lat
-    if max(abs(gislon-lon)) gt 1e-4 then Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon)))
-    if max(abs(gislat-lat)) gt 1e-4 then Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat)))
+    if max(abs(gislon-lon)) gt 1e-4 then Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
+    if max(abs(gislat-lat)) gt 1e-4 then Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
     
   endif else begin
    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $

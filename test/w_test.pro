@@ -1577,22 +1577,13 @@ pro TEST_WRF_OUT
     if time[1] ne QMS_TIME(year = 2008, month = 10, day = 26, hour = 15) then error += 1
 
     dom1->GetProperty, BOTTOM_TOP=bt, CROPPED=crop, HSTEP=hstep, LON=gislon, lat=GISlat, $
-     dom = dom, I_PARENT_START=ipar, J_PARENT_START=jpar, PARENT_GRID_RATIO=rat, TNT_C = c, $
-      type = typ, version = ver     
+     TNT_C = c
     dom1->get_ncdf_coordinates, lon, lat, nx, ny
     
     if nx ne 150 then error += 1
     if ny ne 150 then error += 1
     if c.nx ne 150 then error +=1
     if c.ny ne 150 then error +=1
-    if jpar ne 1 then error +=1
-    if ipar ne 1 then error +=1
-    if rat ne 1 then error +=1
-    if dom ne 1 then error +=1
-    if hstep.hour ne 3 then error += 1
-    if bt ne 27 then error += 1
-    if typ ne 'WRF' then error += 1
-    if ver ne 'OUTPUT FROM WRF V3.1.1 MODEL' then error+=1 
     
     if max(abs(gislon-lon)) gt 1e-4 then  error += 1
     if max(abs(gislat-lat)) gt 1e-4 then  error += 1
@@ -1735,14 +1726,6 @@ pro TEST_WRF_OUT
     if ny ne 150 then error += 1
     if c.nx ne 150 then error +=1
     if c.ny ne 150 then error +=1
-    if jpar ne 1 then error +=1
-    if ipar ne 1 then error +=1
-    if rat ne 1 then error +=1
-    if dom ne 1 then error +=1
-    if hstep.hour ne 3 then error += 1
-    if bt ne 27 then error += 1
-    if typ ne 'WRF' then error += 1
-    if ver ne 'OUTPUT FROM WRF V3.1.1 MODEL' then error+=1 
     
     if max(abs(gislon-lon)) gt 1e-4 then  error += 1
     if max(abs(gislat-lat)) gt 1e-4 then  error += 1
@@ -1993,11 +1976,7 @@ pro TEST_WRF_GEO
     if ny ne 100 then error += 1
     if c.nx ne 140 then error +=1
     if c.ny ne 100 then error +=1
-    if rat ne 5 then error +=1
-    if dom ne 3 then error +=1
-    if hstep.hour ne 0 then error += 1
-    if bt ne 1 then error += 1
-    if typ ne 'GEO' then error += 1
+
     
     if max(abs(gislon-lon)) gt 1e-4 then  error += 1
     if max(abs(gislat-lat)) gt 1e-4 then  error += 1

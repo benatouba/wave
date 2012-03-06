@@ -2081,14 +2081,24 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   
   ; Automatic aggregation
   if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
-  
-    if N_ELEMENTS(hour) ne 0 then qms = H_QMS * LONG64(HOUR) $
-    else if N_ELEMENTS(day) ne  0 then qms = D_QMS * LONG64(DAY)
     
-    qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
-    qmsend = CEIL(qms1[n-1] / double(qms)) * qms
-    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms
-    
+    if N_ELEMENTS(hour) ne 0 then begin      
+      d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
+      start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      d = MAKE_ABS_DATE(QMS=qms1[n-1])
+      end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      if end_D lt qms1[n-1] then end_D += H_QMS
+      qms2 = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=H_QMS * LONG64(HOUR))
+    endif
+    if N_ELEMENTS(day) ne 0 then begin
+      d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
+      start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+      d = MAKE_ABS_DATE(QMS=qms1[n-1])
+      end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+      if end_D lt qms1[n-1] then end_D += D_QMS
+      qms2 = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=D_QMS * LONG64(DAY))
+    endif    
+
     regular = TRUE
     
   endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
@@ -2331,7 +2341,7 @@ end
 ;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
-;              n elements of the statistics for each interval [t, t+1]
+;              n elements of the statistics for each interval ]t, t+1]
 ;              (t excluded)
 ;    DOUBLE: in, optional
 ;            set this keyword to compute in double precision
@@ -2349,7 +2359,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   
   ON_ERROR, 2
   
-  ; CHeck arguments
+  ; Check arguments
   if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /ARG)
   if ~ check_WTIME(time, OUT_QMS=qms1, WAS_ABSDATE=was_absdate) then message, WAVE_Std_Message('time', /ARG)
   
@@ -2372,13 +2382,23 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   ; Automatic aggregation
   if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
   
-    if N_ELEMENTS(hour) ne 0 then qms = H_QMS * LONG64(HOUR) $
-    else if N_ELEMENTS(day) ne 0 then qms = D_QMS * LONG64(DAY)
-    
-    qmstart = FLOOR((qms1[0]-1LL) / double(qms)) * qms
-    qmsend = CEIL(qms1[n-1] / double(qms)) * qms
-    qms2 = qmstart + INDGEN((qmsend-qmstart )/qms + 1) * qms
-    
+    if N_ELEMENTS(hour) ne 0 then begin      
+      d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
+      start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      d = MAKE_ABS_DATE(QMS=qms1[n-1])
+      end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      if end_D lt qms1[n-1] then end_D += H_QMS
+      qms2 = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=H_QMS * LONG64(HOUR))
+    endif
+    if N_ELEMENTS(day) ne 0 then begin
+      d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
+      start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+      d = MAKE_ABS_DATE(QMS=qms1[n-1])
+      end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+      if end_D lt qms1[n-1] then end_D += D_QMS
+      qms2 = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=D_QMS * LONG64(DAY))
+    endif    
+
     regular = TRUE
     
   endif else if check_WTIME(new_time, OUT_QMS=qms2) then begin
