@@ -35,10 +35,11 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle
   if angle eq 0. then return, x
    
    ; Convert the data coordinates into NORMAL coordinates ([0.,1.])   
-  r =  CONVERT_COORD(X, Y, /DATA, /TO_DEVICE)
+  r =  CONVERT_COORD(X, Y, /DATA, /TO_DEVICE)  
+  r0 = CONVERT_COORD(X, REPLICATE(1000.,N_ELEMENTS(X)), /DATA, /TO_DEVICE)
    
   ; Make the trigonometry in normal coordinates
-  _delta =  REFORM(r[1,*] * tan(angle*!PI/180.))
+  _delta =  REFORM((r[1,*]-r0[1,*]) * tan(angle*!PI/180.))
   
   ; go back to data coordinates  
   _x  = REFORM(r[0,*] + _delta)
@@ -96,6 +97,8 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-p-diagram !C', $
            yticklen=1, YSTYLE=1, XSTYLE=1, WINDOW=window, /NODATA, YLOG=YLOG
+  wset, cgQuery(/Current)   
+  
   cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
   
   ; plot isotherms
@@ -105,11 +108,11 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
   
   ; plot dry adiabates
   for nda = 0,30 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
-  cgControl, EXECUTE=1
-  
+    
   ; plot moist adiabates
   for nma = 0,9 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
   color='blue', WINDOW=window
   cgControl, EXECUTE=1
+
 
 end
