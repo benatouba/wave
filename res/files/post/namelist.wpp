@@ -1,6 +1,7 @@
 domain = 2 ; The domain to process
 input_directory = /cfs/nas5/WET/Standard_V0_d02/ ; where to find the orginal WRF files
-output_directory =  /home/mowglie/WAVE_POST/WET ; where to put the aggregated files
+output_directory =  /home/mowglie/WAVE_POST/WET ; where to put the output files (logs and products)
+product_directory =  - ; alternative product directory. Set to '-' for default (output_directory/products) 
 pressure_levels = 1000, 975, 925, 900, 850, 800, 700, 650, 600, 550, 500, 450, 400, 350, 300, 250, 200, 150, 100, 75 ; pressure levels (remove this line if no pressure levels have to be computed)
 search_pattern = wrfpost_d{domain}*.{zip,nc} ; File search pattern (MUST contain a {domain} field!)
 path_to_variables_2d_file = .  ;variables_2d_wpp.csv

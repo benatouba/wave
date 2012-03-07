@@ -165,6 +165,9 @@ function w_WPP::_Parse_Namelist
         matches = Where(StrMatch(val, '*{domain}*'), count)
         if count gt 0 then self.search_pattern = val
       end
+      'PRODUCT_DIRECTORY': begin
+        if FILE_TEST(val, /DIRECTORY) then self.product_directory = utils_clean_path(val, /MARK_DIRECTORY)
+      end
       'PATH_TO_VARIABLES_2D_FILE': begin
         if FILE_TEST(val) then self.v2d_file = utils_clean_path(val)
         if val eq '.' then begin
@@ -240,6 +243,8 @@ function w_WPP::_Parse_Namelist
   if self.vsoil_file eq '' then Message, 'Problem while parsing vsoil_file field.'
   if self.project_acronym eq '' then Message, 'Problem while parsing project_acronym field.'
   if self.search_pattern eq '' then Message, 'Problem while parsing search_pattern field.'
+  if self.product_directory eq '' then $
+     self.product_directory = utils_clean_path(self.output_directory + '/products', /MARK_DIRECTORY)
   
   return, 1
   
@@ -368,9 +373,19 @@ end
 ; :Description:
 ;    Simple routine to tell the wpp the current variable
 ;    to process, generate the active file paths, etc.
-;        
+;
+; :Params:
+;    var: in, required, type={w_WPP_var}
+;         the variable info structure
+;    year: in, required, type=int
+;          the year
+;    agg: in, required, type=string
+;          'h','d','m' or 'y'
+;    obj: in, optional, type=NCDF_FILE object
+;         the destination object for the variable
+;
 ;-
-pro w_WPP::_set_active_var, var, year, obj
+pro w_WPP::_set_active_var, var, year, agg, obj
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -388,12 +403,17 @@ pro w_WPP::_set_active_var, var, year, obj
       dom_str = 'd02km'    
     end
   endcase
-  
-  if var.type eq 'static' then f_dir = dom_str+'/'+var.type else f_dir = dom_str+'/h/'+var.type
-  if var.type eq 'static' then yr_str = '' else yr_str = '_' + STRING(year, FORMAT='(I4)')
+   
+  if var.type eq 'static' then begin
+    f_dir = dom_str+'/static'
+    yr_str = ''
+  endif else begin
+    f_dir = dom_str+'/'+ agg +'/'+var.type
+    yr_str = '_' + STRING(year, FORMAT='(I4)')
+  endelse
   
   f_name = self.project_acronym + '_' + utils_replace_string(f_dir, '/', '_') + '_' + var.name + yr_str + '.nc'
-  f_path = utils_clean_path(self.output_directory + '/products/'+ f_dir + '/' + f_name)
+  f_path = utils_clean_path(self.product_directory + f_dir + '/' + f_name)
   l_path = utils_clean_path(self.output_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
   f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
   f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
@@ -406,13 +426,14 @@ pro w_WPP::_set_active_var, var, year, obj
   self.active_ncloggerfile = f_log
   self.active_ofile = f_path
   self.active_var = var
+  self.active_agg = agg
   if N_ELEMENTS(obj) ne 0 then self.active_dObj = obj
   
 end
 
 ;+
 ; :Description:
-;   Defines one file per variable per year
+;   Defines one file per variable per year and per aggregation
 ;
 ; :Keywords:
 ;    FORCE: in, optional
@@ -435,68 +456,75 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   
   case (self.active_var.type) of
     'static': begin
-       nz = 0    
-       static = TRUE
+      nz = 0
+      static = TRUE
     end
     '2d': begin
-       nz = 0    
+      nz = 0
     end
     '3d_eta': begin
-       z_dim_name = 'eta'
-       nz = self.active_wrf->get_Dim('bottom_top')
-       self.active_wrf->get_Time, dum, dumy, t0
-       z = self.active_wrf->get_var('ZNU', t0=t0, t1=t0)
-       z_var_name = 'eta'
-       z_var_long_name = 'Eta Levels (mass points)'
-       z_var_units = ''       
+      z_dim_name = 'eta'
+      z_var_name = z_dim_name
+      z_var_long_name = 'Eta Levels (mass points)'
+      z_var_units = ''
+      if self.active_agg eq 'h' then begin
+        nz = self.active_wrf->get_Dim('bottom_top')
+        self.active_wrf->get_Time, dum, dumy, t0
+        z = self.active_wrf->get_var('ZNU', t0=t0, t1=t0)
+      endif else begin
+        nz = self.active_wrf->get_Dim(z_dim_name)
+        z = self.active_wrf->get_var(z_var_name)
+      endelse
     end
     '3d_press': begin
-       z_dim_name = 'pressure'
-       nz = self.n_pressure_levels
-       z = *self.pressure_levels
-       z_var_name = 'pressure'
-       z_var_long_name = 'Pressure Levels'
-       z_var_units = 'hPa'   
-       missing = -9999.   
+      nz = self.n_pressure_levels
+      z = *self.pressure_levels
+      z_dim_name = 'pressure'
+      z_var_name = z_dim_name
+      z_var_long_name = 'Pressure Levels'
+      z_var_units = 'hPa'
+      missing = -9999.
     end
     '3d_soil': begin
-       z_dim_name = 'soil'
-       nz = self.active_wrf->get_Dim('soil_layers_stag')
-       self.active_wrf->get_Time, dum, dumy, t0
-       z = TOTAL(self.active_wrf->get_var('DZS', t0=t0, t1=t0),/CUMULATIVE)
-       z_var_name = 'soil'
-       z_var_long_name = 'depths of lower boundaries of soil layers'
-       z_var_units = 'm'      
+      z_dim_name = 'soil'
+      z_var_name = z_dim_name
+      z_var_long_name = 'depths of lower boundaries of soil layers'
+      z_var_units = 'm'
+      if self.active_agg eq 'h' then begin
+        nz = self.active_wrf->get_Dim('soil_layers_stag')
+        self.active_wrf->get_Time, dum, dumy, t0
+        z = TOTAL(self.active_wrf->get_var('DZS', t0=t0, t1=t0),/CUMULATIVE)
+      endif else begin
+        nz = self.active_wrf->get_Dim(z_dim_name)
+        z = self.active_wrf->get_var(z_var_name)
+      endelse
     end
     else: message, 'Type not ok'
   endcase
-  
-  if static and FILE_TEST(self.active_ofile) then begin 
-   dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /NETCDF4_FORMAT, /MODIFY, ErrorLoggerName=self.active_ncloggerfile) 
-   return, dObj
-  endif 
+    
+  if static and FILE_TEST(self.active_ofile) then begin
+    dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /NETCDF4_FORMAT, /MODIFY, ErrorLoggerName=self.active_ncloggerfile)
+    return, dObj
+  endif
   
   case (self.domain) of
-    1: begin 
+    1: begin
       nested_string = 'NO'
       grid_string = '30km'
-      h=3
-      nt_per_day = 8
+      nt_per_day = (self.active_agg EQ 'h') ? 8 : 1
     end
-    2:  begin 
+    2:  begin
       nested_string = 'YES'
       grid_string = '10km'
-      h=1
-      nt_per_day = 24
-    end    
+      nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
+    end
     else: begin
       nested_string = 'YES'
       grid_string = '02km'
-      h=1
-      nt_per_day = 24
+      nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
     end
   endcase
-      
+         
   x_dim_name = 'west_east'
   y_dim_name = 'south_north'
   t_dim_name = 'time'
@@ -512,8 +540,7 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   proj_envi_string = tnt_c.proj.envi
   proj_name = tnt_c.proj.name
   datum = tnt_c.proj.datum.name
-  timestep_string = str_equiv(h) + ' hours'
-    
+      
   dObj = Obj_New('NCDF_FILE', self.active_ofile, /CREATE, /TIMESTAMP, /NETCDF4_FORMAT, CLOBBER=force, ErrorLoggerName=self.active_ncloggerfile)
   IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
   dObj->SetMode, /DEFINE
@@ -536,7 +563,6 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteGlobalAttr, 'PROJECTION', proj_name , DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'DATUM', datum, DATATYPE='CHAR'
-  dObj->WriteGlobalAttr, 'TIMESTEP', timestep_string, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'DOMAIN', self.domain, DATATYPE='LONG'
   dObj->WriteGlobalAttr, 'NESTED', nested_string, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'TIME_ZONE', 'UTC', DATATYPE='CHAR'
@@ -546,6 +572,12 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteGlobalAttr, 'DY', tnt_c.dy, DATATYPE='FLOAT'
   dObj->WriteGlobalAttr, 'X0', STRING(min(x), FORMAT='(F12.1)'), DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'Y0', STRING(min(y), FORMAT='(F12.1)'), DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'PRODUCT_LEVEL', self.active_agg, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'LEVEL_INFO', 'H: original simulation output; ' + $
+                                       'D: daily means; ' + $
+                                       'M: monthly means; ' + $
+                                       'Y: yearly means; ',  $
+                                        DATATYPE='CHAR'
   
   ; Variables
   vn = 'time'
@@ -619,7 +651,7 @@ end
 ;   Adds the active variable data at the right place into the right file
 ;
 ;-
-pro w_WPP::_add_var_to_file
+pro w_WPP::_add_var_to_h_file
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -688,9 +720,64 @@ end
 
 ;+
 ; :Description:
+;   Adds the active variable data at the right place into the right file
+;
+;-
+pro w_WPP::_add_var_to_mean_file, ts
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
+  
+  if self.active_var.type eq 'static' then return
+  
+  ;Check for time ok (flag, data_check)
+  restore, FILENAME=self.active_checkfile
+  if flag ne 'ACTIVE' then message, 'flag?'
+  
+  self.active_wrf->get_time, wtime, wnt
+  
+  if self.active_agg eq 'm' then begin
+    wtime += (MAKE_TIME_STEP(DAY=1)).dms
+  endif
+  if self.active_agg eq 'y' then begin
+    for i=0,wnt-1 do wtime[i] = MAKE_REL_DATE(wtime[i], MONTH=1)
+  endif
+    
+  dObj = self.active_dObj
+  dObj->SetMode, /DATA  
+  for i=0, N_ELEMENTS(ts)-2 do begin
+    T0 = wtime[MIN(where(wtime gt ts[i]))]
+    T1 = wtime[where(wtime eq ts[i+1])]
+    data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
+    agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))
+    if agg_method eq 'WIND' then agg_method = 'MEAN'
+    TS_AGG_GRID, data, vartime, agg, agg_time, MISSING=-9999., AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
+    if self.active_var.type EQ '3d_press' then begin
+      TS_AGG_GRID, data, vartime, sig, agg_time, MISSING=-9999., AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
+      sig = sig / float(varnt)
+      pno = where(sig lt 1., cntno)
+      if cntno ne 0 then agg[pno] = !VALUES.F_NAN
+    endif    
+    tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
+    t = LONG((ts[i]-tref) / (MAKE_TIME_STEP(hour=1)).dms)
+    dObj->WriteVarData, 'time', t, OFFSET=i
+    offset = (self.active_var.type EQ '2d') ? [0,0,i] : [0,0,0,i]
+    dObj->WriteVarData, self.active_var.name, agg, OFFSET=offset    
+  endfor 
+  
+  flag = 'DONE'
+  save, flag, data_check, FILENAME=self.active_checkfile
+
+  
+end
+
+;+
+; :Description:
 ;    Gives an opportunity to the user to check if all required files to process
-;    one year are available in the input directory. If the user doesn'tdo 
-;    it, the process routine will.
+;    one year are available in the input directory. If the user doesn't do 
+;    it, w_WPP::process will throw a message if not enough files are available
 ;
 ; :Params:
 ;    year: in, required
@@ -744,7 +831,7 @@ end
 
 ;+
 ; :Description:
-;    Process one year
+;    Process one year into hourly files
 ;    
 ; :Params:
 ;    year: in, required, type=numeric
@@ -757,7 +844,7 @@ end
 ;           if set (default), the log messages are printed in the console as well
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force
+pro w_WPP::process_h, year, PRINT=print, FORCE=force
 
   ; Set up environnement and Error handling
   @WAVE.inc
@@ -773,7 +860,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
-  OBJ_DESTROY, self.active_wrf
+  obj_destroy, self.active_wrf
   ptr_free, self.active_time
   ptr_free, self.active_index
   
@@ -781,7 +868,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   
   if ~ self->check_filelist(year, FILES=files) then Message, 'Not enough files to aggregate year : ' + str_equiv(year)
    
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print
        
   ; Define
@@ -795,7 +882,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   vars = (*self.vars)
   objs = OBJARR(self.n_vars)
   for i=0, self.n_vars-1 do begin
-    self->_set_active_var, vars[i], year
+    self->_set_active_var, vars[i], year, 'h'
     objs[i] = self->_define_file(FORCE=force, PRINT=print)
   endfor
   
@@ -838,8 +925,8 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
     
     vars = (*self.vars)
     for i=0, self.n_vars-1 do begin
-      self->_set_active_var, vars[i], year, objs[i]
-      self->_add_var_to_file
+      self->_set_active_var, vars[i], year, 'h', objs[i]
+      self->_add_var_to_h_file
     endfor
     OBJ_DESTROY, self.active_wrf
     
@@ -856,14 +943,13 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   ;final check
   vars = (*self.vars)
   for i=0, self.n_vars-1 do begin
-    self->_set_active_var, vars[i], year
+    self->_set_active_var, vars[i], year, 'h'
     if self.active_var.type eq 'static' then continue
     restore, FILENAME=self.active_checkfile
-    if flag ne 'DONE' then print, 'File seems not to be full. Big problem: ' + self.active_ofile
+    if flag ne 'DONE' then print, 'File check for all indexes failed. Big problem: ' + self.active_ofile
+    file_delete, self.active_checkfile
   endfor
-  
-  FILE_DELETE, self.output_directory + '/logs_ncdf/', self.output_directory + '/logs_idl/', self.output_directory + '/cache/',  /RECURSIVE
-  
+    
   for d=0, N_ELEMENTS(objs)-1 do obj_Destroy, objs[i]
   
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
@@ -875,16 +961,147 @@ pro w_WPP::process, year, PRINT=print, FORCE=force
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
   self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
   self.Logger->AddText, '', PRINT=print
-  self.Logger->AddText, '', PRINT=print
-  self.Logger->AddText, '+----------------------------------+', PRINT=print
-  self.Logger->AddText, '+ Processing year '+STRING(year,FORMAT='(I4)')+' successfull +', PRINT=print
-  self.Logger->AddText, '+----------------------------------+', PRINT=print
+  self.Logger->AddText, '+ Hourly files for year '+STRING(year,FORMAT='(I4)')+' processed successfully +', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->Flush
   
   self.active_n_time = 0
   PTR_FREE, self.active_time
   PTR_FREE, self.active_index
+  
+end
+
+;+
+; :Description:
+;    Process one year into daily, monthly and yearly files (must follow a call from process_h)
+;    
+; :Params:
+;    year: in, required, type=numeric
+;          the year to process
+;
+; :Keywords:
+;    FORCE: in, optional
+;           set this keyword to overwrite existing NCDF files in the directory
+;    PRINT: in, optional, type=boolean, default=1
+;           if set (default), the log messages are printed in the console as well
+;
+;-
+pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
+
+  ; Set up environnement and Error handling
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  catch, theError
+  if theError ne 0 then begin
+    catch, /cancel 
+    self.logger->addError
+    return
+  endif
+  
+  if ~(agg eq 'd' or agg eq 'm' or agg eq 'y') then Message, '$AGG not valid' 
+    
+  if N_ELEMENTS(PRINT) eq 0 then print = 1    
+  
+  obj_destroy, self.active_wrf
+  ptr_free, self.active_time
+  ptr_free, self.active_index
+  
+  t0 = QMS_TIME(year=year, month=01, day=01, hour=0)
+  t1 = QMS_TIME(year=year+1, month=01, day=01, hour=0)  
+  case (agg) of
+    'd': begin
+      ts = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(DAY=1), NSTEPS=nsteps)
+    end
+    'm': begin
+      ts = MAKE_ENDED_TIME_SERIE(t0, t1, MONTH=1, NSTEPS=nsteps)
+    end
+    'y': begin
+      ts = [t0,t1]
+      nsteps=2
+    end    
+    else: MESSAGE, 'type not OK'
+  endcase  
+  
+  self.active_n_time = nsteps-1
+  self.active_time = PTR_NEW(ts[0:nsteps-2])
+  
+  logt0 = SYSTIME(/SECONDS)
+     
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process mean files (' + self.active_agg + ') for year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '', PRINT=print
+  
+  vars = (*self.vars)
+  for i=0, self.n_vars-1 do begin
+    if (vars[i]).type eq 'static' then continue    
+    if (vars[i]).agg_method eq 'no' then continue
+    case (agg) of
+      'd': self->_set_active_var, vars[i], year, 'h'
+      'm': self->_set_active_var, vars[i], year, 'd'
+      'y': self->_set_active_var, vars[i], year, 'm'
+    endcase    
+    hfile = self.active_ofile
+    if ~ FILE_TEST(hfile) then message, 'Necessary file not here. You sure you did everything in the right order?'
+    self->_set_active_var, vars[i], year, agg   
+    self.active_wrf = OBJ_NEW('w_WRF', FILE=hfile)
+    dobj = self->_define_file(FORCE=force, PRINT=print)
+    self.active_dObj = dobj
+    self->_add_var_to_mean_file, ts
+    undefine, dObj, self.active_wrf
+  endfor
+    
+  ;final check
+  vars = (*self.vars)
+  for i=0, self.n_vars-1 do begin
+    self->_set_active_var, vars[i], year, agg
+    if self.active_var.type eq 'static' then continue
+    if self.active_var.agg_method eq 'no' then continue
+    restore, FILENAME=self.active_checkfile
+    if flag ne 'DONE' then print, 'File check for all indexes failed. Big problem: ' + self.active_ofile
+    file_delete, self.active_checkfile
+  endfor
+    
+  delta =  LONG(SYSTIME(/SECONDS) - logt0)
+  deltah =  delta / 60L / 60L
+  deltam =  (delta-(deltaH*60L*60L)) / 60L 
+  deltas =  delta-(deltaH*60L*60L)-(deltaM*60L)
+  
+  self.logger->addText, '', PRINT=print
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
+  self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '+ Mean (' + self.active_agg + ') files for year '+STRING(year,FORMAT='(I4)')+' processed successfully +', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->Flush
+  
+  self.active_n_time = 0
+  PTR_FREE, self.active_time
+  PTR_FREE, self.active_index
+
+end
+
+
+;+
+; :Description:
+;    Process one year into ALL files
+;    
+; :Params:
+;    year: in, required, type=numeric
+;          the year to process
+;
+; :Keywords:
+;    FORCE: in, optional
+;           set this keyword to overwrite existing NCDF files in the directory
+;    PRINT: in, optional, type=boolean, default=1
+;           if set (default), the log messages are printed in the console as well
+;
+;-
+pro w_WPP::process, year, PRINT=print, FORCE=force
+
+  self->process_h, year, PRINT=print, FORCE=force
+  self->process_means, 'd', year, PRINT=print, FORCE=force
+  self->process_means, 'm', year, PRINT=print, FORCE=force
+  self->process_means, 'y', year, PRINT=print, FORCE=force
   
 end
 
@@ -915,7 +1132,8 @@ pro w_WPP__Define, class
     namelist_file         : ''           ,  $ ; Path to the namelist.wpp file
     domain                : 0L           ,  $ ; From the namelist: The domain to process
     input_directory       : ''           ,  $ ; From the namelist: where to find the orginal WRF files
-    output_directory      : ''           ,  $ ; From the namelist: where to put the aggregated files
+    output_directory      : ''           ,  $ ; From the namelist: where to put the output files
+    product_directory     : ''           ,  $ ; From the namelist: where to put the product files. Default: output_directory/products 
     search_pattern        : ''           ,  $ ; From the namelist: file search pattern
     v2d_file              : ''           ,  $ ; From the namelist: Path to the variables_2d_wpp.csv
     v3d_file              : ''           ,  $ ; From the namelist: Path to the variables_3d_wpp.csv
@@ -934,6 +1152,7 @@ pro w_WPP__Define, class
     active_wrf            : OBJ_NEW()    ,  $ ; the active WRF object to take the info from
     active_dObj           : OBJ_NEW()    ,  $ ; the active ncdf file object to put the information into
     active_var            : {w_WPP_var}  ,  $ ; the active variable to define/fill
+    active_agg            : ''           ,  $ ; the active aggregation type ('h', 'd', 'm' or 'y')
     active_ofile          : ''           ,  $ ; the active output file to write into
     active_checkfile      : ''           ,  $ ; the active check save file (to be sure all times are written)
     active_ncloggerfile   : ''           ,  $ ; the active ncdf logger file (destroyed if no error)

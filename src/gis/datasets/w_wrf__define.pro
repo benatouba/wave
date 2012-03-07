@@ -311,12 +311,6 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
   self.type = ftype
   meta = str_equiv(title)
   
-  ;*******
-  ; Time *
-  ;*******
-  ; Done by w_GEO_nc
-  if self.nt gt 1 then if ~check_TimeSerie(*self.time) then Message, 'Time serie in the file is not regular.'
-  
   ; Projection
   if self.type eq 'PRO' then begin  
     ; Make the projection
