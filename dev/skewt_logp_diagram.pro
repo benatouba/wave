@@ -26,7 +26,9 @@
   ; Data in:                                                                 $
   ; restore, filename='\\klima-fs1\hinners\skew-t-log-p\test_data_pt.sav'    $
   ;--------------------------------------------------------------------------$
-  
+
+
+; this function generates the skew temperature axis if an angle is set
 function skewt_logp_diagram_skewY, x, y, ANGLE=angle
 
   if N_ELEMENTS(ANGLE) eq 0 then angle = 0.
@@ -52,8 +54,8 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas konstant [J/mol*K]
   Cp = 28.964 ; heat capacity of dry air [J/mol*K]
-  p_0 = 1000. ; hPa
-  T_0 = 213.15
+  p_0 = 1000. ; [hPa]
+  T_0 = 213.15 ; [K]
   p = findgen(101)*10
   T_adiab = fltarr(31,N_ELEMENTS(p))  
   for nda = 0,30 do begin
@@ -64,7 +66,7 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
   ; saturated (moist) adiabate formula
   ; (calculation and parameter values from R. Stull, 2000: "Meteorology for Scientists and Engineers", p.111)
   T_0 = 213.15
-  pp=reverse(findgen(101))
+  pp=reverse(findgen(101)) ; [kPa]
   T_moistadiab = fltarr(10,N_Elements(pp)) 
   for nma = 0,9 do begin
     for i = 0, (N_Elements(pp)-1) do begin
@@ -91,15 +93,15 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
   
   ; plot isobars and entered temperature and pressure
   cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], $
-            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
-           xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-log(p)-diagram !C', $
+           yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
+           xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-p-diagram !C', $
            yticklen=1, YSTYLE=1, XSTYLE=1, WINDOW=window, /NODATA, YLOG=YLOG
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle), pressure, thick=2., /OVERPLOT, color = 'blue', WINDOW=window
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
   
   ; plot isotherms
   yps = [0,1000]
   T_iso = INDGEN(30)*20 - 100 
-  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, ANGLE=angle), yps, /DATA, NOCLIP=0, WINDOW=window
+  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, ANGLE=angle), yps, /DATA, NOCLIP=0, color='black', WINDOW=window
   
   ; plot dry adiabates
   for nda = 0,30 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
@@ -107,7 +109,7 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
   
   ; plot moist adiabates
   for nma = 0,9 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
-  color='darkgreen', WINDOW=window
+  color='blue', WINDOW=window
   cgControl, EXECUTE=1
 
 end
