@@ -853,7 +853,11 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   catch, theError
   if theError ne 0 then begin
     catch, /cancel 
-    for d=0, N_ELEMENTS(objs)-1 do obj_Destroy, objs[i]
+    for d=0, N_ELEMENTS(objs)-1 do begin 
+      o = objs[d]
+      obj_Destroy, o
+    endfor
+    undefine, objs
     self.logger->addError
     return
   endif
@@ -949,12 +953,16 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
     if flag ne 'DONE' then print, 'File check for all indexes failed. Big problem: ' + self.active_ofile
     file_delete, self.active_checkfile
   endfor
-    
-  for d=0, N_ELEMENTS(objs)-1 do obj_Destroy, objs[i]
+  
+  for d=0, N_ELEMENTS(objs)-1 do begin
+    o = objs[d]
+    obj_Destroy, o
+  endfor
+  undefine, objs
   
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
   deltah =  delta / 60L / 60L
-  deltam =  (delta-(deltaH*60L*60L)) / 60L 
+  deltam =  (delta-(deltaH*60L*60L)) / 60L
   deltas =  delta-(deltaH*60L*60L)-(deltaM*60L)
   
   self.logger->addText, '', PRINT=print
@@ -1028,7 +1036,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   
   logt0 = SYSTIME(/SECONDS)
      
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process mean files (' + self.active_agg + ') for year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process mean files (' + agg + ') for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print
   
   vars = (*self.vars)
