@@ -2422,7 +2422,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   valid = BYTARR(SIZE(_data, /DIMENSIONS)) + 1B
   
   if FINITE(miss) then pnok = where(ABS(_data-miss) le epsilon, cntnok) $
-    else pnok = where(FINITE(_data) eq 0, cntnok, COMPLEMENT=cntok)
+    else pnok = where(FINITE(_data) eq 0, cntnok, NCOMPLEMENT=cntok)
   if cntok eq 0 then Message, 'No valid values in data!'
   if cntnok ne 0 then begin
     valid[pnok] = 0B
@@ -2481,7 +2481,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
     endif else begin ;DIm4
       if a le b then begin
         tp = reform(_data[*,*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
-        _v = reform(valid[*,*,a:b], siz[1], siz[2], siz[3], b-a+1)               
+        _v = reform(valid[*,*,*,a:b], siz[1], siz[2], siz[3], b-a+1)               
         if (b-a) eq 0 then n_y = _v else n_y = TOTAL(_v, 4, /INTEGER)
         case str_equiv(am) of
           'NONE': agg[*,*,*,i] = tp[*,*,*,n_y-1]
@@ -2499,7 +2499,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
                 'DOUBLE':  n_y[pnov] = !VALUES.D_NAN
               endcase
             endif
-            agg[*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double) / n_y
+            agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double) / n_y
           end
           'MEDIAN': agg[*,*,*,i] = median(tp, DOUBLE=double, dimension = 4)
           'SUM': agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double)
@@ -2515,6 +2515,12 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
       endelse
     endelse
   endfor
+  
+  ; It can be that NAN arrived
+  if FINITE(miss) then begin 
+    pnok = where(~ FINITE(agg), cntnok)
+    if cntnok then agg[pnok] = miss 
+  endif
 
   agg_time = qms2[1: nnt-1]
   if WAS_ABSDATE then agg_time = MAKE_ABS_DATE(QMS=agg_time)
