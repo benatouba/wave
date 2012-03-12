@@ -320,7 +320,7 @@ function w_Map::_shading
    self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
   endif
   
-  if self._shading_params.relief_factor eq 0 then return, self->_img_to_rgb()
+  if self.shading_params.relief_factor eq 0 then return, self->_img_to_rgb()
  
   nlevels = self.plot_params.nlevels + 1 
   if self.is_Masked then nlevels += self.nmasks
@@ -355,14 +355,14 @@ function w_Map::_shading
   ; Prepare _shading *
   ;******************
   sl = *self.sl
-  if self._shading_params.smooth ne 0 then sl = SMOOTH(sl,self._shading_params.smooth)
+  if self.shading_params.smooth ne 0 then sl = SMOOTH(sl,self.shading_params.smooth)
   mean_sl = moment(sl, SDEV=sdev_sl)
   
   p = where(sl gt 0, cnt)
   if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
   p = 0
-  level = 1.0 - 0.1 * self._shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
-  sens  = 0.7 * self._shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
+  level = 1.0 - 0.1 * self.shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
+  sens  = 0.7 * self.shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
   
   ;****************
   ; Apply _shading *
