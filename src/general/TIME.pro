@@ -2119,20 +2119,16 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
     end
     'DOUBLE': begin
       if _missing then miss = double(missing) else miss = !VALUES.D_NAN
+      epsilon = (MACHAR(/DOUBLE)).eps
     end
-    else: begin
-      if _missing then miss = fix(missing) else miss = -9999
-      epsilon = 0
-    end
+    else: Message, 'TS_agg decided not to do integer arithmetic. Integer arithmetic sucks.'
   endcase
   
   if FINITE(miss) then pok = where(ABS(_data-miss) gt epsilon, cntok) $
-  else pok = where(FINITE(_data) eq 1, cntok)
+  else pok = where(FINITE(_data), cntok)
   if cntok eq 0 then Message, 'No valid values in data!'
   _data = _data[pok]
   qms1 = qms1[pok]
-  
-  regular = false ;TODO: Update routine: implement regular with histogram
   
   s = VALUE_LOCATE(qms1, qms2)
   
@@ -2169,8 +2165,7 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
       endcase
     endif else begin
       if am eq 'N_SIG' then agg[i] = 0 $
-      else agg[i] = miss
-      
+      else agg[i] = miss      
     endelse
   endfor
   
@@ -2411,6 +2406,7 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   endif else message, 'One of the positionnal keywords must be set.'
   
   dataTypeName = Size(_data, /TNAME)
+  dataType = Size(_data, /TYPE)
   _missing = KEYWORD_SET(MISSING)
   CASE dataTypeName OF
     'FLOAT': begin
@@ -2420,42 +2416,59 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
     'DOUBLE': begin
       if _missing then miss = double(missing) else miss = !VALUES.D_NAN
     end
-    else: begin
-      if _missing then miss = fix(missing) else miss = -9999
-      epsilon = 0
-    end
+    else: Message, 'TS_agg_grid decided not to do integer arithmetic. Integer arithmetic sucks.'
   endcase
   
+  valid = BYTARR(SIZE(_data, /DIMENSIONS)) + 1B
+  
   if FINITE(miss) then pnok = where(ABS(_data-miss) le epsilon, cntnok) $
-  else pnok = where(FINITE(_data) eq 0, cntnok)
-  if cntnok ne 0 then _data[pnok] = miss
+    else pnok = where(FINITE(_data) eq 0, cntnok, COMPLEMENT=cntok)
+  if cntok eq 0 then Message, 'No valid values in data!'
+  if cntnok ne 0 then begin
+    valid[pnok] = 0B
+    CASE dataTypeName OF
+      'FLOAT': _data[pnok] = !VALUES.F_NAN
+      'DOUBLE': _data[pnok] = !VALUES.D_NAN
+    endcase
+  endif
   
   s = VALUE_LOCATE(qms1, qms2)
   nnt = N_ELEMENTS(qms2)
   
-  if ndims eq 3 then agg = REPLICATE(_data[0], siz[1], siz[2], nnt-1) * 0 $
-  else agg = REPLICATE(_data[0], siz[1], siz[2], siz[3],nnt-1) * 0
+  if ndims eq 3 then agg = MAKE_ARRAY(siz[1], siz[2], nnt-1, TYPE=dataType) $
+    else agg = MAKE_ARRAY(siz[1], siz[2], siz[3],nnt-1, TYPE=dataType)
   
   for i = 0,  N_ELEMENTS(s) - 2 do begin
   
     a = s[i]+1
     b = s[i+1]
     
-    if ndims eq 3 then begin
+    if ndims eq 3 then begin    
       if a le b then begin
         tp = reform(_data[*,*,a:b], siz[1], siz[2], b-a+1)
-        if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 3)
+        _v = reform(valid[*,*,a:b], siz[1], siz[2], b-a+1)               
+        if (b-a) eq 0 then n_y = _v else n_y = TOTAL(_v, 3, /INTEGER)
         case str_equiv(am) of
-          'NONE': agg[*,*,i] = tp[*,*,n_y-1]
+          'NONE': agg[*,*,i] = tp[*,*,b-a]
           'MIN': agg[*,*,i] = min(tp, /NAN, DIMENSION=3)
           'MAX': agg[*,*,i] = max(tp, /NAN, DIMENSION=3)
           'MEAN': begin
-            agg[*,*,i] = TOTAL(tp, 3, /NAN, DOUBLE=double)
-            agg[*,*,i] = agg[*,*,i] / n_y
+            pnov = where(n_y eq 0, cntnov)
+            CASE dataTypeName OF
+              'FLOAT': n_y = FLOAT(n_y)
+              'DOUBLE':  n_y = DOUBLE(n_y)
+            endcase
+            if cntnov ne 0 then begin
+              CASE dataTypeName OF
+                'FLOAT': n_y[pnov] = !VALUES.F_NAN
+                'DOUBLE':  n_y[pnov] = !VALUES.D_NAN
+              endcase
+            endif
+            agg[*,*,i] = TOTAL(tp, 3, /NAN, DOUBLE=double) / n_y
           end
           'MEDIAN': agg[*,*,i] = median(tp, DOUBLE=double, dimension = 3)
           'SUM': agg[*,*,i] = TOTAL(tp, 3, /NAN, DOUBLE=double)
-          'SIGMA': agg[*,*,i] = utils_SIG_ARRAY(tp, 3)
+          'SIGMA': Message, 'SIGMA: Not yet in 3D'
           'RANGE': agg[*,*,i] = max(tp, /NAN, DIMENSION=3) - min(tp, /NAN, DIMENSION=3)
           'N_SIG': agg[*,*,i] = n_y
           'FREQ': Message, 'FREQ: Not yet'
@@ -2468,18 +2481,29 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
     endif else begin ;DIm4
       if a le b then begin
         tp = reform(_data[*,*,*,a:b], siz[1], siz[2], siz[3], b-a+1)
-        if (b-a) eq 0 then n_y = FINITE(tp) else n_y = TOTAL(FINITE(tp), 4)
+        _v = reform(valid[*,*,a:b], siz[1], siz[2], siz[3], b-a+1)               
+        if (b-a) eq 0 then n_y = _v else n_y = TOTAL(_v, 4, /INTEGER)
         case str_equiv(am) of
           'NONE': agg[*,*,*,i] = tp[*,*,*,n_y-1]
           'MIN': agg[*,*,*,i] = min(tp, /NAN, DIMENSION=4)
           'MAX': agg[*,*,*,i] = max(tp, /NAN, DIMENSION=4)
           'MEAN': begin
-            agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double)
-            agg[*,*,*,i] = agg[*,*,*,i] / n_y
+            pnov = where(n_y eq 0, cntnov)
+            CASE dataTypeName OF
+              'FLOAT': n_y = FLOAT(n_y)
+              'DOUBLE':  n_y = DOUBLE(n_y)
+            endcase
+            if cntnov ne 0 then begin
+              CASE dataTypeName OF
+                'FLOAT': n_y[pnov] = !VALUES.F_NAN
+                'DOUBLE':  n_y[pnov] = !VALUES.D_NAN
+              endcase
+            endif
+            agg[*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double) / n_y
           end
           'MEDIAN': agg[*,*,*,i] = median(tp, DOUBLE=double, dimension = 4)
           'SUM': agg[*,*,*,i] = TOTAL(tp, 4, /NAN, DOUBLE=double)
-          'SIGMA': agg[*,*,*,i] = utils_SIG_ARRAY(tp, 4)
+          'SIGMA': Message, 'SIGMA: Not yet in 4D'
           'RANGE': agg[*,*,*,i] = max(tp, /NAN, DIMENSION=4) - min(tp, /NAN, DIMENSION=4)
           'N_SIG': agg[*,*,*,i] = n_y
           'FREQ': Message, 'FREQ: Not yet'
@@ -2489,7 +2513,6 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
         if am eq 'N_SIG' then agg[*,*,*,i] = 0 $
         else agg[*,*,*,i] = miss
       endelse
-      
     endelse
   endfor
 

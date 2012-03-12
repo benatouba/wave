@@ -40,231 +40,9 @@
 ;
 ; :History:
 ;     Written by FaM, 2011.
+;     
 ;-     
  
-;+
-; :Description:
-;    Defines the attributes of the class.
-;    
-;
-; :History:
-;     Written by FaM, 2011.
-;-    
-PRO w_Map__Define
- 
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  ; This is for the colors and data-levels 
-  struct = {w_Map_PLOT_PARAMS              , $
-            type           : 0L            , $ ; USER or AUTO generated levels
-            nlevels        : 0L            , $ ; number of data levels
-            colors         : PTR_NEW()     , $ ; array of nlevels colors
-            levels         : PTR_NEW()     , $ ; array of nlevels data levels
-            neutral        : 0L            , $ ; neutral color
-            min_val        : 0D            , $ ; min data level
-            max_val        : 0D              $ ; max data level           
-            }
-  
-  ; This is the information for one shape file
-  struct = {w_Map_SHAPE                    , $ 
-            shape_file     : ''            , $ ; path to the shape file
-            thick          : 0D            , $ ; thickness or the shape line for the plot
-            style          : 0D            , $ ; style or the shape line for the plot
-            color          : ''            , $ ; color or the shape line for the plot
-            n_coord        : 0L            , $ ; number of coordinates in the shape (private)
-            fill           : FALSE         , $ ; if the shape has to be filled
-            coord          : PTR_NEW()     , $ ; coordinates of the shape points (private)
-            conn           : PTR_NEW()       $ ; connivence info (private)          
-            }
-  
-  ; This is the information for one polygon to draw
-  struct = {w_Map_POLYGON                  , $ 
-            thick          : 0D            , $ ; thickness or the line for the plot
-            style          : 0D            , $ ; style or the line for the plot
-            color          : ''            , $ ; color or the line for the plot
-            n_coord        : 0L            , $ ; number of coordinates in the polygon (private)
-            coord          : PTR_NEW()       $ ; coordinates of the polygon points (private)        
-            }
-  
-  ; This is the information for one point to draw
-  struct = {w_Map_POINT                    , $ 
-            thick          : 0D            , $ ; thickness or the point
-            psym           : 0L            , $ ; style or the point
-            symsize        : 0D            , $ ; style or the point
-            color          : ''            , $ ; color or the point
-            text           : ''            , $ ; point annotation
-            charsize       : 0D            , $ ; point annotation size
-            align          : 0D            , $ ; annotation alignement
-            dpText         : [0D,0D]       , $ ; delta pos of the text with respect to the point
-            coord          : [0D,0D]         $ ; coordinates of the point       
-            }
-  
-  ; This is the information for one contour to draw
-  struct = {w_Map_CONTOUR                  , $ 
-            keywords       : PTR_NEW()     , $ ; Keywords for cgContour 
-            data           : PTR_NEW()       $ ; data to contour 
-            }
-  
-  ; This is the information for one wind rose to draw
-  struct = {w_Map_WindRose                 , $ 
-            keywords       : PTR_NEW()     , $ ; Keywords for w_add_windRose 
-            wind_dir       : PTR_NEW()     , $ ; wind_dir
-            wind_speed     : PTR_NEW()       $ ; wind_speed
-            }
-  
-  ; This is a mask structure
-  struct = {w_Map_MASK                     , $
-            mask           : PTR_new()     , $ ; the mask
-            color          : 0L              $ 
-            } 
-  
-  ; This is for the Lon-Lat/UTM contours drawing
-  struct = {w_Map_MAP_PARAMS               , $
-            type           : ''            , $ ; LONLAT or UTM
-            xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis
-            yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis
-            xtickvalues    : PTR_new()     , $ ; value of the ticks on the Xaxis
-            ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
-            xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
-            ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
-            t_Charsize     : 0D            , $ ; Ticks charsizes
-            interval       : 0D            , $ ; The interval between ticks
-            color          : ''            , $ ; color of the contour lines
-            labeled        : 0L            , $ ; if the contours have to labelled
-            label_size_f   : 0D            , $ ; charsize factor
-            thick          : 0D            , $ ; thickness of the contour lines
-            style          : 0D              $ ; style of the contour lines
-            }
-
-  ; This is for the wind vectors 
-  struct = {w_Map_WIND_PARAMS              , $
-            type           : ''            , $ ; currently VECTORS
-            velx           : PTR_new()     , $ ; x velocities
-            vely           : PTR_new()     , $ ; y velocities
-            posx           : PTR_new()     , $ ; coordinates in data device
-            posy           : PTR_new()     , $ ; coordinates in data device
-            color          : ''            , $ ; color of the arrows
-            thick          : 0D            , $ ; thickness of the arrows
-            length         : 0D              $ ; lenght of the arrows
-            }
-  
-  ; This is for the wind vectors 
-  struct = {w_Map_SHADING_PARAMS           , $
-            relief_factor : 0D             , $ ; strenght of the shading (default: 0.7)
-            smooth        : 0L               $ ; slope layer smoohting width
-            }
-  
-  ; Finaly, this is the object
-  struct = { w_Map                                  , $
-             grid          : OBJ_NEW()              , $ ; the grid object (nx = Xsize, ny = Ysize)
-             Xsize         : 0L                     , $ ; X size of the image in pixels
-             Ysize         : 0L                     , $ ; Y size of the image in pixels
-             img           : PTR_NEW()              , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
-             data          : PTR_NEW()              , $ ; active data array ([Xsize,Ysize]) of any numeric type
-             missing       : PTR_NEW()              , $ ; missing values in the data array
-             sl            : PTR_NEW()              , $ ; shading layer for topography shading
-             contour_img   : FALSE                  , $ ; the imaeg is generated using contour
-             nshapes       : 0L                     , $ ; number of active shape files to plot                  
-             shapes        : PTR_NEW()              , $ ; array of nshapes {w_Map_SHAPE} structures                               
-             npolygons     : 0L                     , $ ; number of active polygons to plot                  
-             polygons      : PTR_NEW()              , $ ; array of npolygons {w_Map_POLYGON} structures                               
-             npoints       : 0L                     , $ ; number of points to plot                  
-             points        : PTR_NEW()              , $ ; array of npoints {w_Map_POINT} structures                               
-             ncontours     : 0L                     , $ ; number of additional contours to plot                  
-             contours      : PTR_NEW()              , $ ; array of ncontours {w_Map_CONTOUR} structures                               
-             nWindRoses    : 0L                     , $ ; number of additional wind roses to plot                  
-             windroses     : PTR_NEW()              , $ ; array of nWindRoses {w_Map_WindRose} structures                               
-             nmasks        : 0L                     , $ ; number of masks                  
-             masks         : PTR_NEW()              , $ ; array of namsks {w_Map_MASK} structures                               
-             map_params    : {w_Map_MAP_PARAMS}     , $ ; the mapping params for contours
-             plot_params   : {w_Map_PLOT_PARAMS}    , $ ; the plotting params          
-             shading_params: {w_Map_SHADING_PARAMS} , $ ; the shading params          
-             wind_params   : {w_Map_WIND_PARAMS}    , $ ; the wind params          
-             is_Shaped     : FALSE                  , $ ; is there at least one shape to draw?
-             is_Shaded     : FALSE                  , $ ; did the user specify a DEM for shading?
-             is_Polygoned  : FALSE                  , $ ; did the user specify a polygon to draw?
-             is_Pointed    : FALSE                  , $ ; did the user specify a point to draw?
-             is_Mapped     : FALSE                  , $ ; did the user specify a contour to draw for mapping?         
-             is_Winded     : FALSE                  , $ ; did the user specify wind flows?         
-             is_Contoured  : FALSE                  , $ ; did the user specify additional contour plots?      
-             is_WindRosed  : FALSE                  , $ ; did the user specify additional windroses?      
-             is_Masked     : FALSE                    $ ; did the user specify masks to overplot?      
-             }
-    
-END
-
-;+
-; :Description:
-;    Build function. The required parameter is an instance of 'w_grid2d' that 
-;    defines the map geolocalisation.
-;    
-; :Params:
-;    grid: in, required, type = 'w_grid2d'
-;          the map geolocalisation
-; :Keywords:
-;    Xsize: in, optional, type = integer
-;           the window X dimension size (the original grid X/Y ratio is conserved) 
-;    Ysize: in, optional, type = integer, default = 400
-;           the window Y dimension size (the original grid X/Y ratio is conserved) (if set, Xsize is ignored)
-;    FACTOR: in, optional, type = float
-;            a factor to multiply to the grid nx and ny to obtain the window size (if set, Xsize and Ysize are ignored)
-;    NO_COUNTRIES: in, optional, type = boolean
-;                  default behavior is to add country outlines to the map automatically. 
-;                  This can be a bit long. Set this keyword to prevent drawing countries
-;                  automatically.
-;    BLUE_MARBLE: in, optional, type = boolean/string
-;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
-;                 if set to a string, it is the path to an alternative jpg file to use as background
-;
-; :History:
-;     Written by FaM, 2011.
-;-    
-Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
-                            BLUE_MARBLE=blue_marble
-     
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-      
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
-    RETURN, 0
-  ENDIF 
-  
-  ;******************
-  ; Check arguments *
-  ;******************
-  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
-  if ~KEYWORD_SET(Xsize) and ~KEYWORD_SET(Ysize) and ~KEYWORD_SET(FACTOR) then Ysize = 400
-  
-  self.grid = grid->reGrid(Xsize = Xsize,  Ysize = Ysize, FACTOR = factor) 
-  self.grid->getProperty, tnt_C = c
-  self.Xsize = c.nx
-  self.Ysize = c.ny
-  
-  ; Defaults
-  dummy = self->set_data()
-  dummy = self->set_plot_params(COLORS='white')  
-  dummy = self->set_map_params()  
-  dummy = self->set_shading_params()
-  dummy = self->set_wind()  
-  
-  if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
-  
-  if KEYWORD_SET(BLUE_MARBLE) then begin
-    if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
-    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
-    undefine, w
-  endif
-                 
-  RETURN, 1
-  
-END
-
 ;+
 ; :Description:
 ;   utilitary routine to properly destroy the pointers.
@@ -272,7 +50,7 @@ END
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-pro w_Map::DestroyPlotParams
+pro w_Map::_DestroyPlotParams
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -291,7 +69,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-pro w_Map::DestroyWindParams
+pro w_Map::_DestroyWindParams
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -314,7 +92,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyMapParams
+pro w_Map::_DestroyMapParams
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -340,7 +118,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyShapes
+pro w_Map::_DestroyShapes
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -367,7 +145,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyPolygons
+pro w_Map::_DestroyPolygons
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -391,7 +169,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyPoints
+pro w_Map::_DestroyPoints
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -410,7 +188,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyContours
+pro w_Map::_DestroyContours
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -437,7 +215,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyWindRoses
+pro w_Map::_DestroyWindRoses
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -465,7 +243,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-pro w_Map::DestroyMasks
+pro w_Map::_DestroyMasks
 
     ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -486,61 +264,356 @@ end
 
 ;+
 ; :Description:
-;    Destroy function. 
+;    Change image color palette indexes into rgb image for plot without shading
+; 
+; :Private:
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-pro w_Map::Cleanup
+function w_Map::_img_to_rgb
 
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
+  ; Make an indexed image
+  colors = [self.plot_params.neutral, *self.plot_params.colors]
+  img = *self.img
+  if self.is_Masked then begin
+    for m=0, self.nmasks-1 do begin
+      mask = (*self.masks)[m]
+      pm = where(*mask.mask eq 1, cntm)
+      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+      colors = [colors,mask.color]
+    endfor
+  endif
   
-  OBJ_DESTROY, self.grid
-  PTR_FREE, self.img 
-  PTR_FREE, self.data 
-  PTR_FREE, self.sl    
-  PTR_FREE, self.missing    
+  utils_color_rgb, colors, s_r, s_g, s_b
+  r = byte(0 > s_r[img] < 255)
+  g = byte(0 > s_g[img] < 255)
+  b = byte(0 > s_b[img] < 255)
+  img = bytarr(3, self.Xsize, self.Ysize)
+  img[0,*,*] = r[*,*]
+  img[1,*,*] = g[*,*]
+  img[2,*,*] = b[*,*]
   
-  self->DestroyShapes         
-  self->DestroyMapParams       
-  self->DestroyPlotParams     
-  self->DestroyWindParams     
-  self->DestroyPolygons     
-  self->DestroyPoints   
-  self->DestroyContours   
-  self->DestroyMasks
-  self->DestroyWindRoses
+  return, img
   
-END
+end    
+    
+;+
+; :Description:
+; 
+;    Change image color palette indexes into rgb image for plot with shading
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+function w_Map::_shading
+
+  if SIZE(*self.img, /N_DIMENSIONS) gt 2 then begin 
+   img = COLOR_QUAN(*self.img, 1, _r, _g, _b, COLORS=127) + 1
+   _colors = utils_color_convert(COLORS=[[_r],[_g],[_b]])
+   PTR_FREE, self.img
+   self.img = PTR_NEW(img, /NO_COPY)
+   self.plot_params.nlevels  = 127
+   PTR_FREE, self.plot_params.colors
+   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
+  endif
+  
+  if self._shading_params.relief_factor eq 0 then return, self->_img_to_rgb()
+ 
+  nlevels = self.plot_params.nlevels + 1 
+  if self.is_Masked then nlevels += self.nmasks
+  
+  if nlevels eq 0 or nlevels gt 128 then begin
+    MESSAGE, 'w_Map INFO: _shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
+    return, self->_img_to_rgb()
+  endif
+  
+  rp = bindgen(256)
+  gp = bindgen(256)
+  bp = bindgen(256)
+  
+  ; Make an indexed image
+  colors = [self.plot_params.neutral, *self.plot_params.colors]
+  img = *self.img  
+  if self.is_Masked then begin
+    for m=0, self.nmasks-1 do begin
+      mask = (*self.masks)[m]
+      pm = where(*mask.mask eq 1, cntm)
+      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+      colors = [colors,mask.color]
+    endfor
+  endif
+  
+  utils_color_rgb, colors, s_r, s_g, s_b
+  rp[0:nlevels-1] = s_r[*]
+  gp[0:nlevels-1] = s_g[*]
+  bp[0:nlevels-1] = s_b[*]
+  
+  ;******************
+  ; Prepare _shading *
+  ;******************
+  sl = *self.sl
+  if self._shading_params.smooth ne 0 then sl = SMOOTH(sl,self._shading_params.smooth)
+  mean_sl = moment(sl, SDEV=sdev_sl)
+  
+  p = where(sl gt 0, cnt)
+  if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
+  p = 0
+  level = 1.0 - 0.1 * self._shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
+  sens  = 0.7 * self._shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
+  
+  ;****************
+  ; Apply _shading *
+  ;****************
+  _img = ROTATE(img,7)
+  r = rp[_img]
+  g = gp[_img]
+  b = bp[_img]
+  
+  r = byte(0 > (level*r*(1+sens*sl) < 255))
+  g = byte(0 > (level*g*(1+sens*sl) < 255))
+  b = byte(0 > (level*b*(1+sens*sl) < 255))
+  sl = 0
+  
+  img = bytarr(3, self.Xsize, self.Ysize)
+  img[0,*,*] = r[*,*]
+  img[1,*,*] = g[*,*]
+  img[2,*,*] = b[*,*]
+  
+  return, reverse(img,3)
+  
+end
 
 ;+
 ; :Description:
-;    Get access to some params. 
+;    Adds the contours to the device
+; 
+; :Private:
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
+function w_Map::_draw_Map, WINDOW = window
+
+  if self.map_params.type eq 'LONLAT' then begin
+    self.grid->get_Lonlat, lon, lat
+    if N_ELEMENTS(*(self.map_params.xlevels)) ne 0 then begin
+      cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
+        LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
+    endif
+    if N_ELEMENTS(*(self.map_params.ylevels)) ne 0 then begin
+      cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
+        LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
+    endif
+  endif
+  
+  ; Draw a frame
+  if ~(self.contour_img and ~self.is_Shaded) then begin
+    xf = [0, self.xsize, self.xsize, 0, 0]
+    yf = [0, 0, self.ysize, self.ysize, 0]
+    cgPlotS, xf, yf, WINDOW = window, /DATA
+  endif
+  
+  TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
+  if TICK_LABEL then begin    
+    spacing = 1.
+    ddy = - 0.023 * spacing * self.ysize
+    ddx = - 0.008 * spacing * self.xsize    
+    ; Tick labels
+    if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
+    charthick = charsize
+    if self.map_params.interval lt 0.1 then format = '(F8.2)' $
+     else if self.map_params.interval lt 1. then format = '(F8.1)' $
+       else format = '(I4)'
+    for i=0,N_ELEMENTS(*self.map_params.xticks)-1 do begin
+      label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
+      if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
+      cgText, (*self.map_params.xticks)[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
+    endfor
+    for i=0,N_ELEMENTS(*self.map_params.yticks)-1 do begin
+      label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
+      if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
+      if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
+      cgText, ddx, (*self.map_params.yticks)[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
+    endfor
+  end
+
+  return, 1
+
+end
+
+;+
+; :Description:
+;    Adds the shapes to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-   
+function w_Map::_draw_shapes, WINDOW = window  
+  
+  shapes = *(self.shapes)
     
-  ; SET UP ENVIRONNEMENT
+  for i = 0LL, self.nshapes-1 do begin
+    sh = shapes[i]
+    index = 0
+    while index lt N_ELEMENTS((*sh.conn)) do begin    
+      nbElperConn = (*sh.conn)[index]      
+      idx = (*sh.conn)[index+1:index+nbElperConn]      
+      index += nbElperConn + 1       
+      _coord = (*sh.coord) [*,idx]     
+      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
+      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
+    endwhile  
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the wind vectors to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::_draw_wind, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
   @WAVE.inc
-  COMPILE_OPT IDL2
   
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN
-  ENDIF
+  w_partvelvec, *self.wind_params.velx, $
+                *self.wind_params.vely, $
+                *self.wind_params.posx, $
+                *self.wind_params.posy, $
+                VECCOLORS=cgColor(self.wind_params.color), $
+                LENGTH = self.wind_params.length, $
+                thick = self.wind_params.thick, /OVER, $              
+                /DATA,  /NORMAL, WINDOW = window, NOCLIP = 0
   
-  if ARG_PRESENT(XSIZE) then xsize = self.Xsize
-  if ARG_PRESENT(YSIZE) then ysize = self.Ysize
-  if ARG_PRESENT(LEVELS) then levels = *self.plot_params.levels
-  if ARG_PRESENT(COLORS) then colors = *self.plot_params.colors
-  if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C = tnt_c
-     
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the polygons to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::_draw_polygons, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+  
+  for i = 0, self.npolygons-1 do begin
+     poly = (*self.polygons)[i]
+    _coord = *poly.coord
+    cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(poly.color), THICK=poly.thick, LINESTYLE=poly.style, NOCLIP=0, WINDOW = window
+  endfor
+    
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the points to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::_draw_points, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.npoints-1 do begin
+    p = (*self.points)[i]
+    if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
+    if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
+    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=cgColor(p.color), ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the contours to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::_draw_contours, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.ncontours-1 do begin
+    c = (*self.contours)[i]
+    cgContour, *c.data, WINDOW=window, /OVERPLOT, _EXTRA = *c.keywords
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the windroses to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
+function w_Map::_draw_windRoses, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.nWindRoses-1 do begin
+    wr = (*self.windroses)[i]
+    k = *wr.keywords
+    c = k.center
+    c = CONVERT_COORD(c[0], c[1], /DATA, /DOUBLE, /TO_NORMAL) 
+    k.center = [c[0],c[1]]
+    w_add_WindRose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
+  endfor
+  
+  return, 1
+  
 end
 
 ;+
@@ -596,7 +669,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel    
-    self->DestroyPlotParams
+    self->_DestroyPlotParams
     ok = self->set_Plot_Params()
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
@@ -655,7 +728,7 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
   endelse
   
   ;Fill up
-  self->DestroyPlotParams
+  self->_DestroyPlotParams
   if is_Levels then self.plot_params.type = 0 else begin
     self.plot_params.type = 1 ; for automatic
     if N_ELEMENTS(MIN_VALUE) ne 0 then self.plot_params.type += 2
@@ -719,13 +792,13 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyMapParams
+    self->_DestroyMapParams
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF
   
   ; This is for the Lon-Lat/UTM contours drawing
-  self->DestroyMapParams
+  self->_DestroyMapParams
   _type = 'LONLAT'
   _interval = 10.
   _thick = 1.
@@ -754,7 +827,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   self.is_Mapped = _type ne ''
   
   if ~self.is_Mapped then begin
-    self->DestroyMapParams
+    self->_DestroyMapParams
     return, 1
   endif
   
@@ -1029,7 +1102,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyShapes
+    self->_DestroyShapes
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
@@ -1044,13 +1117,13 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   ; Check arguments *
   ;******************
   if not KEYWORD_SET(shpfile) then begin
-   self->DestroyShapes
+   self->_DestroyShapes
    return, 1
   endif
   
   if N_ELEMENTS(shpfile) eq 0 then shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
   if shpfile eq '' then begin
-   self->DestroyShapes
+   self->_DestroyShapes
    return, 1
   endif
   
@@ -1078,7 +1151,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   sh.fill = KEYWORD_SET(FILL)
   
   if self.nshapes eq 0 then begin
-   self.nshapes = 1
+   self.nshapes = 1LL
    self.shapes = PTR_NEW(sh, /NO_COPY)
   endif else begin
    temp = *self.shapes
@@ -1086,7 +1159,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
    ptr_free, self.shapes
    temp = [temp, sh]
    self.shapes = PTR_NEW(temp, /NO_COPY)
-   self.nshapes = nshapes + 1
+   self.nshapes = nshapes + 1LL
   endelse
     
   self.is_Shaped = TRUE
@@ -1134,7 +1207,7 @@ function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYL
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyPolygons
+    self->_DestroyPolygons
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
@@ -1143,7 +1216,7 @@ function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYL
   ; Check arguments *
   ;******************
   if N_PARAMS() ne 2 then begin
-   self->DestroyPolygons
+   self->_DestroyPolygons
    return, 1
   endif
     
@@ -1244,7 +1317,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyPoints
+    self->_DestroyPoints
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
@@ -1253,7 +1326,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   ; Check arguments *
   ;******************
   if N_PARAMS() ne 2 then begin
-   self->DestroyPoints
+   self->_DestroyPoints
    return, 1
   endif
     
@@ -1309,7 +1382,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   endif else begin
    temp = *self.points
    npoints = self.npoints
-   self->DestroyPoints
+   self->_DestroyPoints
    temp = [temp, point]
    self.points = PTR_NEW(temp, /NO_COPY)
    self.npoints = npoints + n_coord
@@ -1612,13 +1685,13 @@ function w_Map::set_mask, mask, grid, BILINEAR = bilinear, COLOR = color
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyMasks
+    self->_DestroyMasks
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
 
   if N_PARAMS() eq 0 then begin
-   self->DestroyMasks
+   self->_DestroyMasks
    return, 1
   endif  
   
@@ -1691,13 +1764,13 @@ function w_Map::set_contour, data, grid, MISSING = missing, _EXTRA = extra
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyContours
+    self->_DestroyContours
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
 
   if N_PARAMS() eq 0 then begin
-    self->DestroyContours
+    self->_DestroyContours
     RETURN, 1
   endif  
 
@@ -1776,13 +1849,13 @@ function w_Map::set_WindRose, wind_dir, wind_speed, x, y, SRC=SRC, _EXTRA = extr
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyContours
+    self->_DestroyContours
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
 
   if N_PARAMS() eq 0 then begin
-    self->DestroyWindRoses
+    self->_DestroyWindRoses
     RETURN, 1
   endif  
   
@@ -1866,7 +1939,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
-    self->DestroyWindParams
+    self->_DestroyWindParams
     ok = self->set_wind()
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
@@ -1879,7 +1952,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   type = 'VECTORS'
   
   if N_PARAMS() eq 0 then begin
-   self->DestroyWindParams
+   self->_DestroyWindParams
    self.wind_params.type = type
    self.wind_params.length = length
    self.wind_params.thick = thick
@@ -1917,7 +1990,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   velx = ud[xi,yi]
   vely = vd[xi,yi] 
   
-  self->DestroyWindParams
+  self->_DestroyWindParams
   self.wind_params.type = type
   self.wind_params.length = length
   self.wind_params.thick = thick
@@ -1930,361 +2003,6 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   
   return, 1
 
-end
-
-
-;+
-; :Description:
-;    Change image color palette indexes into rgb image for plot without shading
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-    
-function w_Map::img_to_rgb
-
-  ; Make an indexed image
-  colors = [self.plot_params.neutral, *self.plot_params.colors]
-  img = *self.img
-  if self.is_Masked then begin
-    for m=0, self.nmasks-1 do begin
-      mask = (*self.masks)[m]
-      pm = where(*mask.mask eq 1, cntm)
-      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-      colors = [colors,mask.color]
-    endfor
-  endif
-  
-  utils_color_rgb, colors, s_r, s_g, s_b
-  r = byte(0 > s_r[img] < 255)
-  g = byte(0 > s_g[img] < 255)
-  b = byte(0 > s_b[img] < 255)
-  img = bytarr(3, self.Xsize, self.Ysize)
-  img[0,*,*] = r[*,*]
-  img[1,*,*] = g[*,*]
-  img[2,*,*] = b[*,*]
-  
-  return, img
-  
-end    
-    
-;+
-; :Description:
-; 
-;    Change image color palette indexes into rgb image for plot with shading
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-    
-function w_Map::shading
-
-  if SIZE(*self.img, /N_DIMENSIONS) gt 2 then begin 
-   img = COLOR_QUAN(*self.img, 1, _r, _g, _b, COLORS=127) + 1
-   _colors = utils_color_convert(COLORS=[[_r],[_g],[_b]])
-   PTR_FREE, self.img
-   self.img = PTR_NEW(img, /NO_COPY)
-   self.plot_params.nlevels  = 127
-   PTR_FREE, self.plot_params.colors
-   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
-  endif
-  
-  if self.shading_params.relief_factor eq 0 then return, self->img_to_rgb()
- 
-  nlevels = self.plot_params.nlevels + 1 
-  if self.is_Masked then nlevels += self.nmasks
-  
-  if nlevels eq 0 or nlevels gt 128 then begin
-    MESSAGE, 'w_Map INFO: Shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
-    return, self->img_to_rgb()
-  endif
-  
-  rp = bindgen(256)
-  gp = bindgen(256)
-  bp = bindgen(256)
-  
-  ; Make an indexed image
-  colors = [self.plot_params.neutral, *self.plot_params.colors]
-  img = *self.img  
-  if self.is_Masked then begin
-    for m=0, self.nmasks-1 do begin
-      mask = (*self.masks)[m]
-      pm = where(*mask.mask eq 1, cntm)
-      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-      colors = [colors,mask.color]
-    endfor
-  endif
-  
-  utils_color_rgb, colors, s_r, s_g, s_b
-  rp[0:nlevels-1] = s_r[*]
-  gp[0:nlevels-1] = s_g[*]
-  bp[0:nlevels-1] = s_b[*]
-  
-  ;******************
-  ; Prepare shading *
-  ;******************
-  sl = *self.sl
-  if self.shading_params.smooth ne 0 then sl = SMOOTH(sl,self.shading_params.smooth)
-  mean_sl = moment(sl, SDEV=sdev_sl)
-  
-  p = where(sl gt 0, cnt)
-  if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
-  p = 0
-  level = 1.0 - 0.1 * self.shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
-  sens  = 0.7 * self.shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
-  
-  ;****************
-  ; Apply shading *
-  ;****************
-  _img = ROTATE(img,7)
-  r = rp[_img]
-  g = gp[_img]
-  b = bp[_img]
-  
-  r = byte(0 > (level*r*(1+sens*sl) < 255))
-  g = byte(0 > (level*g*(1+sens*sl) < 255))
-  b = byte(0 > (level*b*(1+sens*sl) < 255))
-  sl = 0
-  
-  img = bytarr(3, self.Xsize, self.Ysize)
-  img[0,*,*] = r[*,*]
-  img[1,*,*] = g[*,*]
-  img[2,*,*] = b[*,*]
-  
-  return, reverse(img,3)
-  
-end
-
-;+
-; :Description:
-;    Adds the contours to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-    
-function w_Map::draw_Map, WINDOW = window
-
-  if self.map_params.type eq 'LONLAT' then begin
-    self.grid->get_Lonlat, lon, lat
-    if N_ELEMENTS(*(self.map_params.xlevels)) ne 0 then begin
-      cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
-        LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
-    endif
-    if N_ELEMENTS(*(self.map_params.ylevels)) ne 0 then begin
-      cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
-        LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
-    endif
-  endif
-  
-  ; Draw a frame
-  if ~(self.contour_img and ~self.is_Shaded) then begin
-    xf = [0, self.xsize, self.xsize, 0, 0]
-    yf = [0, 0, self.ysize, self.ysize, 0]
-    cgPlotS, xf, yf, WINDOW = window, /DATA
-  endif
-  
-  TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
-  if TICK_LABEL then begin    
-    spacing = 1.
-    ddy = - 0.023 * spacing * self.ysize
-    ddx = - 0.008 * spacing * self.xsize    
-    ; Tick labels
-    if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
-    charthick = charsize
-    if self.map_params.interval lt 0.1 then format = '(F8.2)' $
-     else if self.map_params.interval lt 1. then format = '(F8.1)' $
-       else format = '(I4)'
-    for i=0,N_ELEMENTS(*self.map_params.xticks)-1 do begin
-      label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
-      if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
-      cgText, (*self.map_params.xticks)[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
-    endfor
-    for i=0,N_ELEMENTS(*self.map_params.yticks)-1 do begin
-      label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
-      if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
-      if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
-      cgText, ddx, (*self.map_params.yticks)[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
-    endfor
-  end
-
-  return, 1
-
-end
-
-;+
-; :Description:
-;    Adds the shapes to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-   
-function w_Map::draw_shapes, WINDOW = window  
-  
-  shapes = *(self.shapes)
-    
-  for i = 0, self.nshapes-1 do begin
-    sh = shapes[i]
-    index = 0
-    while index lt N_ELEMENTS((*sh.conn)) do begin    
-      nbElperConn = (*sh.conn)[index]      
-      idx = (*sh.conn)[index+1:index+nbElperConn]      
-      index += nbElperConn + 1       
-      _coord = (*sh.coord) [*,idx]     
-      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
-      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
-    endwhile  
-  endfor
-  
-  return, 1
-  
-end
-
-;+
-; :Description:
-;    Adds the wind vectors to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-  
-function w_Map::draw_wind, WINDOW = window
-
-  ;--------------------------
-  ; Set up environment
-  ;--------------------------
-  compile_opt idl2
-  @WAVE.inc
-  
-  w_partvelvec, *self.wind_params.velx, $
-                *self.wind_params.vely, $
-                *self.wind_params.posx, $
-                *self.wind_params.posy, $
-                VECCOLORS=cgColor(self.wind_params.color), $
-                LENGTH = self.wind_params.length, $
-                thick = self.wind_params.thick, /OVER, $              
-                /DATA,  /NORMAL, WINDOW = window, NOCLIP = 0
-  
-  return, 1
-  
-end
-
-;+
-; :Description:
-;    Adds the polygons to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-  
-function w_Map::draw_polygons, WINDOW = window
-
-  ;--------------------------
-  ; Set up environment
-  ;--------------------------
-  compile_opt idl2
-  @WAVE.inc
-  
-  for i = 0, self.npolygons-1 do begin
-     poly = (*self.polygons)[i]
-    _coord = *poly.coord
-    cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(poly.color), THICK=poly.thick, LINESTYLE=poly.style, NOCLIP=0, WINDOW = window
-  endfor
-    
-  return, 1
-  
-end
-
-;+
-; :Description:
-;    Adds the points to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-  
-function w_Map::draw_points, WINDOW = window
-
-  ;--------------------------
-  ; Set up environment
-  ;--------------------------
-  compile_opt idl2
-  @WAVE.inc
-
-  for i = 0, self.npoints-1 do begin
-    p = (*self.points)[i]
-    if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
-    if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
-    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=cgColor(p.color), ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
-  endfor
-  
-  return, 1
-  
-end
-
-;+
-; :Description:
-;    Adds the contours to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-  
-function w_Map::draw_contours, WINDOW = window
-
-  ;--------------------------
-  ; Set up environment
-  ;--------------------------
-  compile_opt idl2
-  @WAVE.inc
-
-  for i = 0, self.ncontours-1 do begin
-    c = (*self.contours)[i]
-    cgContour, *c.data, WINDOW=window, /OVERPLOT, _EXTRA = *c.keywords
-  endfor
-  
-  return, 1
-  
-end
-
-;+
-; :Description:
-;    Adds the windroses to the device
-; 
-; :Private:
-;
-; :History:
-;     Written by FaM, 2011.
-;-  
-function w_Map::draw_WindRoses, WINDOW = window
-
-  ;--------------------------
-  ; Set up environment
-  ;--------------------------
-  compile_opt idl2
-  @WAVE.inc
-
-  for i = 0, self.nWindRoses-1 do begin
-    wr = (*self.windroses)[i]
-    k = *wr.keywords
-    c = k.center
-    c = CONVERT_COORD(c[0], c[1], /DATA, /DOUBLE, /TO_NORMAL) 
-    k.center = [c[0],c[1]]
-    w_add_WindRose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
-  endfor
-  
-  return, 1
-  
 end
 
 ;+
@@ -2317,7 +2035,7 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
   
   if self.is_Shaded then begin
     ; Build RGB image and show it
-    cgImage, self->shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
+    cgImage, self->_shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
   endif else begin
     if self.contour_img then begin
       if self.is_Masked then message, 'w_Map INFO: for CONTOUR plots the masks are ignored.'
@@ -2353,13 +2071,13 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
     endelse
   endelse
    
-  if self.is_Contoured then ok = self->draw_contours(WINDOW = window) 
-  if self.is_Shaped then ok = self->draw_shapes(WINDOW = window) 
-  if self.is_Mapped then ok = self->draw_Map(WINDOW = window)
-  if self.is_Winded then ok = self->draw_wind(WINDOW = window)
-  if self.is_Polygoned then ok = self->draw_polygons(WINDOW = window)
-  if self.is_Pointed then ok = self->draw_points(WINDOW = window)
-  if self.is_WindRosed then ok = self->draw_WindRoses(WINDOW = window)
+  if self.is_Contoured then ok = self->_draw_contours(WINDOW = window) 
+  if self.is_Shaped then ok = self->_draw_shapes(WINDOW = window) 
+  if self.is_Mapped then ok = self->_draw_Map(WINDOW = window)
+  if self.is_Winded then ok = self->_draw_wind(WINDOW = window)
+  if self.is_Polygoned then ok = self->_draw_polygons(WINDOW = window)
+  if self.is_Pointed then ok = self->_draw_points(WINDOW = window)
+  if self.is_WindRosed then ok = self->_draw_windRoses(WINDOW = window)
   
 end
 
@@ -2510,3 +2228,285 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, VERTICAL = vertical, _REF_EXTR
  endelse
   
 end
+
+;+
+; :Description:
+;    Get access to some params. 
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if ARG_PRESENT(XSIZE) then xsize = self.Xsize
+  if ARG_PRESENT(YSIZE) then ysize = self.Ysize
+  if ARG_PRESENT(LEVELS) then levels = *self.plot_params.levels
+  if ARG_PRESENT(COLORS) then colors = *self.plot_params.colors
+  if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C = tnt_c
+     
+end
+
+;+
+; :Description:
+;    Destroy function. 
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+pro w_Map::Cleanup
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  OBJ_DESTROY, self.grid
+  PTR_FREE, self.img 
+  PTR_FREE, self.data 
+  PTR_FREE, self.sl    
+  PTR_FREE, self.missing    
+  
+  self->_DestroyShapes         
+  self->_DestroyMapParams       
+  self->_DestroyPlotParams     
+  self->_DestroyWindParams     
+  self->_DestroyPolygons     
+  self->_DestroyPoints   
+  self->_DestroyContours   
+  self->_DestroyMasks
+  self->_DestroyWindRoses
+  
+END
+
+;+
+; :Description:
+;    Build function. The required parameter is an instance of 'w_grid2d' that 
+;    defines the map geolocalisation.
+;    
+; :Params:
+;    grid: in, required, type = 'w_grid2d'
+;          the map geolocalisation
+; :Keywords:
+;    Xsize: in, optional, type = integer
+;           the window X dimension size (the original grid X/Y ratio is conserved) 
+;    Ysize: in, optional, type = integer, default = 400
+;           the window Y dimension size (the original grid X/Y ratio is conserved) (if set, Xsize is ignored)
+;    FACTOR: in, optional, type = float
+;            a factor to multiply to the grid nx and ny to obtain the window size (if set, Xsize and Ysize are ignored)
+;    NO_COUNTRIES: in, optional, type = boolean
+;                  default behavior is to add country outlines to the map automatically. 
+;                  This can be a bit long. Set this keyword to prevent drawing countries
+;                  automatically.
+;    BLUE_MARBLE: in, optional, type = boolean/string
+;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
+;                 if set to a string, it is the path to an alternative jpg file to use as background
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
+                            BLUE_MARBLE=blue_marble
+     
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+      
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+    RETURN, 0
+  ENDIF 
+  
+  ;******************
+  ; Check arguments *
+  ;******************
+  if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
+  if ~KEYWORD_SET(Xsize) and ~KEYWORD_SET(Ysize) and ~KEYWORD_SET(FACTOR) then Ysize = 400
+  
+  self.grid = grid->reGrid(Xsize = Xsize,  Ysize = Ysize, FACTOR = factor) 
+  self.grid->getProperty, tnt_C = c
+  self.Xsize = c.nx
+  self.Ysize = c.ny
+  
+  ; Defaults
+  dummy = self->set_data()
+  dummy = self->set_plot_params(COLORS='white')  
+  dummy = self->set_map_params()  
+  dummy = self->set_shading_params()
+  dummy = self->set_wind()  
+  
+  if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
+  
+  if KEYWORD_SET(BLUE_MARBLE) then begin
+    if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
+    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
+    undefine, w
+  endif
+                 
+  RETURN, 1
+  
+END
+
+;+
+; :Description:
+;    Defines the attributes of the class.
+;    
+;
+; :History:
+;     Written by FaM, 2011.
+;-    
+PRO w_Map__Define
+ 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ; This is for the colors and data-levels 
+  struct = {w_Map_PLOT_PARAMS              , $
+            type           : 0L            , $ ; USER or AUTO generated levels
+            nlevels        : 0L            , $ ; number of data levels
+            colors         : PTR_NEW()     , $ ; array of nlevels colors
+            levels         : PTR_NEW()     , $ ; array of nlevels data levels
+            neutral        : 0L            , $ ; neutral color
+            min_val        : 0D            , $ ; min data level
+            max_val        : 0D              $ ; max data level           
+            }
+  
+  ; This is the information for one shape file
+  struct = {w_Map_SHAPE                    , $ 
+            shape_file     : ''            , $ ; path to the shape file
+            thick          : 0D            , $ ; thickness or the shape line for the plot
+            style          : 0D            , $ ; style or the shape line for the plot
+            color          : ''            , $ ; color or the shape line for the plot
+            n_coord        : 0L            , $ ; number of coordinates in the shape (private)
+            fill           : FALSE         , $ ; if the shape has to be filled
+            coord          : PTR_NEW()     , $ ; coordinates of the shape points (private)
+            conn           : PTR_NEW()       $ ; connivence info (private)          
+            }
+  
+  ; This is the information for one polygon to draw
+  struct = {w_Map_POLYGON                  , $ 
+            thick          : 0D            , $ ; thickness or the line for the plot
+            style          : 0D            , $ ; style or the line for the plot
+            color          : ''            , $ ; color or the line for the plot
+            n_coord        : 0L            , $ ; number of coordinates in the polygon (private)
+            coord          : PTR_NEW()       $ ; coordinates of the polygon points (private)        
+            }
+  
+  ; This is the information for one point to draw
+  struct = {w_Map_POINT                    , $ 
+            thick          : 0D            , $ ; thickness or the point
+            psym           : 0L            , $ ; style or the point
+            symsize        : 0D            , $ ; style or the point
+            color          : ''            , $ ; color or the point
+            text           : ''            , $ ; point annotation
+            charsize       : 0D            , $ ; point annotation size
+            align          : 0D            , $ ; annotation alignement
+            dpText         : [0D,0D]       , $ ; delta pos of the text with respect to the point
+            coord          : [0D,0D]         $ ; coordinates of the point       
+            }
+  
+  ; This is the information for one contour to draw
+  struct = {w_Map_CONTOUR                  , $ 
+            keywords       : PTR_NEW()     , $ ; Keywords for cgContour 
+            data           : PTR_NEW()       $ ; data to contour 
+            }
+  
+  ; This is the information for one wind rose to draw
+  struct = {w_Map_WindRose                 , $ 
+            keywords       : PTR_NEW()     , $ ; Keywords for w_add_windRose 
+            wind_dir       : PTR_NEW()     , $ ; wind_dir
+            wind_speed     : PTR_NEW()       $ ; wind_speed
+            }
+  
+  ; This is a mask structure
+  struct = {w_Map_MASK                     , $
+            mask           : PTR_new()     , $ ; the mask
+            color          : 0L              $ 
+            } 
+  
+  ; This is for the Lon-Lat/UTM contours drawing
+  struct = {w_Map_MAP_PARAMS               , $
+            type           : ''            , $ ; LONLAT or UTM
+            xticks         : PTR_new()     , $ ; where to find the ticks on the Xaxis
+            yticks         : PTR_new()     , $ ; where to find the ticks on the Yaxis
+            xtickvalues    : PTR_new()     , $ ; value of the ticks on the Xaxis
+            ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
+            xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
+            ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
+            t_Charsize     : 0D            , $ ; Ticks charsizes
+            interval       : 0D            , $ ; The interval between ticks
+            color          : ''            , $ ; color of the contour lines
+            labeled        : 0L            , $ ; if the contours have to labelled
+            label_size_f   : 0D            , $ ; charsize factor
+            thick          : 0D            , $ ; thickness of the contour lines
+            style          : 0D              $ ; style of the contour lines
+            }
+
+  ; This is for the wind vectors 
+  struct = {w_Map_WIND_PARAMS              , $
+            type           : ''            , $ ; currently VECTORS
+            velx           : PTR_new()     , $ ; x velocities
+            vely           : PTR_new()     , $ ; y velocities
+            posx           : PTR_new()     , $ ; coordinates in data device
+            posy           : PTR_new()     , $ ; coordinates in data device
+            color          : ''            , $ ; color of the arrows
+            thick          : 0D            , $ ; thickness of the arrows
+            length         : 0D              $ ; lenght of the arrows
+            }
+  
+  ; This is for the wind vectors 
+  struct = {w_Map_SHADING_PARAMS           , $
+            relief_factor : 0D             , $ ; strenght of the shading (default: 0.7)
+            smooth        : 0L               $ ; slope layer smoohting width
+            }
+  
+  ; Finaly, this is the object
+  struct = { w_Map                                  , $
+             grid          : OBJ_NEW()              , $ ; the grid object (nx = Xsize, ny = Ysize)
+             Xsize         : 0L                     , $ ; X size of the image in pixels
+             Ysize         : 0L                     , $ ; Y size of the image in pixels
+             img           : PTR_NEW()              , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
+             data          : PTR_NEW()              , $ ; active data array ([Xsize,Ysize]) of any numeric type
+             missing       : PTR_NEW()              , $ ; missing values in the data array
+             sl            : PTR_NEW()              , $ ; shading layer for topography shading
+             contour_img   : FALSE                  , $ ; the imaeg is generated using contour
+             nshapes       : 0L                     , $ ; number of active shape files to plot                  
+             shapes        : PTR_NEW()              , $ ; array of nshapes {w_Map_SHAPE} structures                               
+             npolygons     : 0L                     , $ ; number of active polygons to plot                  
+             polygons      : PTR_NEW()              , $ ; array of npolygons {w_Map_POLYGON} structures                               
+             npoints       : 0L                     , $ ; number of points to plot                  
+             points        : PTR_NEW()              , $ ; array of npoints {w_Map_POINT} structures                               
+             ncontours     : 0L                     , $ ; number of additional contours to plot                  
+             contours      : PTR_NEW()              , $ ; array of ncontours {w_Map_CONTOUR} structures                               
+             nWindRoses    : 0L                     , $ ; number of additional wind roses to plot                  
+             windroses     : PTR_NEW()              , $ ; array of nWindRoses {w_Map_WindRose} structures                               
+             nmasks        : 0L                     , $ ; number of masks                  
+             masks         : PTR_NEW()              , $ ; array of namsks {w_Map_MASK} structures                               
+             map_params    : {w_Map_MAP_PARAMS}     , $ ; the mapping params for contours
+             plot_params   : {w_Map_PLOT_PARAMS}    , $ ; the plotting params          
+             shading_params: {w_Map_SHADING_PARAMS} , $ ; the shading params          
+             wind_params   : {w_Map_WIND_PARAMS}    , $ ; the wind params          
+             is_Shaped     : FALSE                  , $ ; is there at least one shape to draw?
+             is_Shaded     : FALSE                  , $ ; did the user specify a DEM for shading?
+             is_Polygoned  : FALSE                  , $ ; did the user specify a polygon to draw?
+             is_Pointed    : FALSE                  , $ ; did the user specify a point to draw?
+             is_Mapped     : FALSE                  , $ ; did the user specify a contour to draw for mapping?         
+             is_Winded     : FALSE                  , $ ; did the user specify wind flows?         
+             is_Contoured  : FALSE                  , $ ; did the user specify additional contour plots?      
+             is_WindRosed  : FALSE                  , $ ; did the user specify additional windroses?      
+             is_Masked     : FALSE                    $ ; did the user specify masks to overplot?      
+             }
+    
+END
