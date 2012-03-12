@@ -483,7 +483,6 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
       z_var_name = z_dim_name
       z_var_long_name = 'Pressure Levels'
       z_var_units = 'hPa'
-      missing = -9999.
     end
     '3d_soil': begin
       z_dim_name = 'soil'
@@ -620,7 +619,6 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteVarAttr, vn, 'long_name', self.active_var.description
   dObj->WriteVarAttr, vn, 'units', self.active_var.unit
   dObj->WriteVarAttr, vn, 'agg_method', self.active_var.agg_method
-  if N_ELEMENTS(missing) ne 0 then dObj->WriteVarAttr, vn, 'missing_value', missing, DATATYPE='float'
   
   ; Fill with data
   dObj->SetMode, /DATA
@@ -744,7 +742,7 @@ pro w_WPP::_add_var_to_mean_file, ts
   if self.active_agg eq 'y' then begin
     for i=0,wnt-1 do wtime[i] = MAKE_REL_DATE(wtime[i], MONTH=1)
   endif
-    
+
   dObj = self.active_dObj
   dObj->SetMode, /DATA  
   for i=0, N_ELEMENTS(ts)-2 do begin
@@ -753,11 +751,11 @@ pro w_WPP::_add_var_to_mean_file, ts
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))
     if agg_method eq 'WIND' then agg_method = 'MEAN'
-    TS_AGG_GRID, data, vartime, agg, agg_time, MISSING=-9999., AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
+    TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
     if self.active_var.type EQ '3d_press' then begin
-      TS_AGG_GRID, data, vartime, sig, agg_time, MISSING=-9999., AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
+      TS_AGG_GRID, data, vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
       sig = sig / float(varnt)
-      pno = where(sig lt 1., cntno)
+      pno = where(sig lt 0.5, cntno)
       if cntno ne 0 then agg[pno] = !VALUES.F_NAN
     endif    
     tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
