@@ -38,15 +38,20 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
   ; the chosen file / all files of the path is/are tested
   file = file_search(PATH)
   filtered_files = 0
+  
+  ac_date = time_to_str(QMS_TIME(), MASK='YYYY-MM-DD_HHTT')
+  
   for nfile = 0,(N_ELEMENTS(file)-1) do begin ; end of for-loop at the end of the whole procedure
     testfile = file[nfile]
     
     ; get time information
+    if ~STRMATCH(FILE_BASENAME(FILE[nfile]), 'gsod-*.dat', /FOLD_CASE)then continue 
     data = w_ncdc_read_gsod_file(FILE = testfile)
     if ~ OBJ_VALID(data) then continue 
     vNames = data->getVarNames()
     varObj = data->getVar('TEMP')
     org_time=varObj->getTime(nt)
+    
     
     ; requested time series of temperature information
     t0=QMS_TIME(Date_Str=startpoint)
@@ -70,6 +75,8 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
     height = round(data->getProperty('elevation'))
     name = data->getProperty('name')
     id = data->getProperty('id')
+    s_id=strmid(id, 0, 6)
+    s_wban=strmid(id, 6, 5)
     
     ; precipitation and time
     varObj = data->getVar('PRCP')
@@ -166,11 +173,12 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
       valyears_prcp[m] = N_ELEMENTS(i_months)
     endfor
     
+    
     FILE_MKDIR,output_dir+'/NCDC_filtered/pngs'    
     
     w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
       MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
-      VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, STD_PNG=output_dir+'/NCDC_filtered/pngs/'+id+'.png'
+      VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, STD_PNG=output_dir+'/NCDC_filtered/pngs/gsod-'+s_id+'-'+s_wban+'.png'
       
     ;----------------------------------------------------------------------------------------------------------------------------
     ; csv file of all stations with at least 3 years of valid temperature information in the time interval 2001-2011
@@ -183,17 +191,17 @@ pro valid_temperature_stations, startpoint, endpoint, min_daynumber, OUTPUT_DIR=
     height = STRING(height,FORMAT='(I4)')  
     
     FILE_MKDIR,output_dir+'/NCDC_filtered/data'
-    FILE_COPY, testfile, output_dir+'/NCDC_filtered/data/'+id+'.dat', /OVERWRITE
-    csvfile=output_dir+'/NCDC_filtered/info_on_filtered_stations.csv'
+    FILE_COPY, testfile, output_dir+'/NCDC_filtered/data/gsod-'+s_id+'-'+s_wban+'.dat', /OVERWRITE
+    csvfile=output_dir+'/NCDC_filtered/filtered_stations_'+ac_date+'.csv'
     started_header = 0
     if filtered_files eq 1 then begin
        OPENW, lun, csvfile, /GET_LUN
-      header= 'NAME, ID, START_YEAR, STOP_YEAR, LAT, LON, HEIGHT , '+name_nval[0]+','+name_percval[0]+' , '+name_nval[1]+','+name_percval[1]+' , '+name_nval[2]+','+name_percval[2]+' , '+name_nval[3]+','+name_percval[3]+' , '+name_nval[4]+','+name_percval[4]+' , '+name_nval[5]+','+name_percval[5]+' , '+name_nval[6]+','+name_percval[6]+' , '+name_nval[7]+','+name_percval[7]+' , '+name_nval[8]+','+name_percval[8]+' , '+name_nval[9]+','+name_percval[9]+''
+      header= 'NAME, ID, WBAN, START_YEAR, STOP_YEAR, LAT, LON, HEIGHT , '+name_nval[0]+','+name_percval[0]+' , '+name_nval[1]+','+name_percval[1]+' , '+name_nval[2]+','+name_percval[2]+' , '+name_nval[3]+','+name_percval[3]+' , '+name_nval[4]+','+name_percval[4]+' , '+name_nval[5]+','+name_percval[5]+' , '+name_nval[6]+','+name_percval[6]+' , '+name_nval[7]+','+name_percval[7]+' , '+name_nval[8]+','+name_percval[8]+' , '+name_nval[9]+','+name_percval[9]+''
       printf, lun, header
       free_lun, lun
     endif
     
-    stat_info=''+name+', '+id+', '+StartYear+', '+StopYear+', '+lat+', '+lon+', '+height+' , '+nval[0]+','+percval[0]+' , '+nval[1]+','+percval[1]+' , '+nval[2]+','+percval[2]+' , '+nval[3]+','+percval[3]+' , '+nval[4]+','+percval[4]+' , '+nval[5]+','+percval[5]+' , '+nval[6]+','+percval[6]+' , '+nval[7]+','+percval[7]+' , '+nval[8]+','+percval[8]+' , '+nval[9]+','+percval[9]+''
+    stat_info=''+name+', '+s_id+', '+s_wban+', '+StartYear+', '+StopYear+', '+lat+', '+lon+', '+height+' , '+nval[0]+','+percval[0]+' , '+nval[1]+','+percval[1]+' , '+nval[2]+','+percval[2]+' , '+nval[3]+','+percval[3]+' , '+nval[4]+','+percval[4]+' , '+nval[5]+','+percval[5]+' , '+nval[6]+','+percval[6]+' , '+nval[7]+','+percval[7]+' , '+nval[8]+','+percval[8]+' , '+nval[9]+','+percval[9]+''
     OPENU, lun, csvfile, /GET_LUN, /APPEND
     printf, lun, stat_info
     free_lun, lun
