@@ -313,12 +313,18 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
   
-  cnt=1L
+    
+  stat_val=0L
   if N_ELEMENTS(DIRECTORY) ne 0 then file_list=FILE_SEARCH(directory, 'gsod-*.dat', count=filecnt)
-  if N_ELEMENTS(FILE) ne 0 then file_list=file
+  if (N_ELEMENTS(FILE) ne 0) then begin
+  if STRMATCH(FILE_BASENAME(FILE), 'gsod-*.dat', /FOLD_CASE) then $
+  file_list=file
+  endif
   filecnt = N_ELEMENTS(file_list)
   
-  if N_ELEMENTS(file_list) eq 0 then message, 'No file(s) found.'
+  if filecnt eq 0 then message, 'No file(s) found.'
+  
+  if filecnt gt 1 then station_list = Obj_New('w_ts_Container')
   
   for t=0, filecnt-1 do begin
     ascii_data = READ_ASCII(file_list[t], TEMPLATE=template)
@@ -329,7 +335,9 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
     
     nb_entries=N_ELEMENTS(date)
-    if nb_entries le 2 then continue ;print, 'No valid data in file: ' + file_list[t] 
+    if nb_entries le 2 then continue 
+    
+    stat_val=+1
     
     stn = ascii_data.stn
     wban = ascii_data.wban
@@ -357,15 +365,15 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       sname = ncdc_history.name[s]
       p = where(uswb eq id)
       _t = date[p]
-      s_id=strmid(id, 0, 6)
+     
       
       un = uniq(_t, sort(_t))
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
-      print, sname,s_id
+      print, sname, id
       
       ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
-         ID=s_id, $ ; Station ID
+         ID=id, $ ; Station ID
          DESCRIPTION='NCDC Station', $ ; A short description of the station
          ELEVATION=elev, $ ; altitude in m
          LOC_X=lon, $ ; X location in SRC
@@ -379,15 +387,18 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
         if OBJ_VALID(var) then ncdc_station->addVar, var
       endfor
         
-      if (N_ELEMENTS(list_values) eq 0) then list_values = ncdc_station else list_values = [list_values, ncdc_station]
+        if filecnt gt 1 then begin 
+        if OBJ_VALID(ncdc_station) then station_list->Add, ncdc_station 
+        endif else $
+        station_list=ncdc_station
+        
       undefine, stat_vars
     endfor
         
   endfor
   
-  nbstat=N_ELEMENTS(list_values)
-  print, nbstat + ' stations were read and saved in structure.'
-  return, list_values
+  if stat_val eq 0 then message, 'No valid station.'    
+  return, station_list
   
 end
 
