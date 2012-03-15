@@ -103,7 +103,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
     if do_p then begin
       GIS_make_proj, ret, proj, PARAM='1, WGS-84'
       grid = OBJ_NEW('w_Grid2D', x0 = llbox[0], x1 = llbox[2], y0 = llbox[3], y1 = llbox[1], dx=0.01, dy=0.01, PROJ=proj)
-      map = OBJ_NEW('w_Map', grid, YSIZE=600, /BLUE_MARBLE)
+      map = OBJ_NEW('w_Map', grid, YSIZE=600)
       undefine, grid
     endif
   endif else MESSAGE, WAVE_Std_Message(/ARG)
@@ -111,8 +111,16 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
   stations = w_ncdc_select_stations_crop_struct(_h, p_in, cnt_in)
   
   if do_p and stations.n_stations ne 0 then begin
-    d = map->set_point(stations.lon, stations.lat, SRC=wgs, PSYM=SymCat(16), COLOR='orange')
-    w_standard_2d_plot, map, title='ALL available NCDC stations', /RESIZABLE, /NO_BAR
+    h = stations.elev
+    lon = stations.lon
+    lat = stations.lat
+    cgLoadCT, 34
+    colors = BYTE(Scale_Vector(h, 0, 255))
+    d = map->set_plot_params(N_LEVELS=256, MAX_VALUE=max(h), MIN_VALUE=MIN(h))    
+    d = map->set_data(FLTARR(2,2)-999.) 
+    s = SymCat(16)
+    for i=0, N_ELEMENTS(h)-1 do d = map->set_point(lon[i], lat[i], SRC=wgs, PSYM=S, COLOR=colors[i])
+    w_standard_2d_plot, map, title='ALL available NCDC stations', /RESIZABLE, BAR_TITLE='Station Elevation', BAR_FORMAT='(I5)' 
     undefine, map
   endif
   

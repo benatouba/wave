@@ -1086,6 +1086,30 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
 
 end
 
+;+
+; :Description:
+;    Process one year means for d, m, y files
+;    
+; :Params:
+;    year: in, required, type=numeric
+;          the year to process
+;
+; :Keywords:
+;    FORCE: in, optional
+;           set this keyword to overwrite existing NCDF files in the directory
+;    PRINT: in, optional, type=boolean, default=1
+;           if set (default), the log messages are printed in the console as well
+;
+;-
+pro w_WPP::process_all_means, year, PRINT=print, FORCE=force
+
+  self->process_means, 'd', year, PRINT=print, FORCE=force
+  self->process_means, 'm', year, PRINT=print, FORCE=force
+  self->process_means, 'y', year, PRINT=print, FORCE=force
+  
+end
+
+
 
 ;+
 ; :Description:
@@ -1105,9 +1129,7 @@ end
 pro w_WPP::process, year, PRINT=print, FORCE=force
 
   self->process_h, year, PRINT=print, FORCE=force
-  self->process_means, 'd', year, PRINT=print, FORCE=force
-  self->process_means, 'm', year, PRINT=print, FORCE=force
-  self->process_means, 'y', year, PRINT=print, FORCE=force
+  self->process_all_means, year, PRINT=print, FORCE=force
   
 end
 
