@@ -950,7 +950,7 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd, MASK = mask
     i = where(msk eq 32b,cnt)
     if cnt gt 0 then msk[i] = 255B ; dummy
     msk = string(msk)
-    smsk = str_equiv(mask)
+    smsk = STRUPCASE(mask)
     
     str = replicate('',n)
        

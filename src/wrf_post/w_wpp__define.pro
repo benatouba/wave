@@ -427,6 +427,7 @@ pro w_WPP::_set_active_var, var, year, agg, obj
   self.active_ofile = f_path
   self.active_var = var
   self.active_agg = agg
+  self.active_year = year
   if N_ELEMENTS(obj) ne 0 then self.active_dObj = obj
   
 end
@@ -523,6 +524,16 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
       nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
     end
   endcase
+  
+  time_str = TIME_to_STR(QMS_TIME(YEAR=self.active_year, month=1, day=1), MASK=' since YYYY-MM-DD HH:TT:SS')
+  case (self.active_agg) of
+    'h': time_str = 'hours'  + time_str
+    'd': time_str = 'days'   + time_str
+    'm': time_str = 'months' + time_str
+    'y': time_str = 'years'  + time_str 
+    else: MESSAGE, 'type not OK'
+  endcase  
+  
          
   x_dim_name = 'west_east'
   y_dim_name = 'south_north'
@@ -573,16 +584,16 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteGlobalAttr, 'Y0', STRING(min(y), FORMAT='(F12.1)'), DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'PRODUCT_LEVEL', self.active_agg, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'LEVEL_INFO', 'H: original simulation output; ' + $
-                                       'D: daily means; ' + $
-                                       'M: monthly means; ' + $
-                                       'Y: yearly means; ',  $
+                                       'D: daily; ' + $
+                                       'M: monthly; ' + $
+                                       'Y: yearly; ',  $
                                         DATATYPE='CHAR'
   
   ; Variables
   vn = 'time'
   dObj->WriteVarDef, vn, t_dim_name, DATATYPE='LONG'
   dObj->WriteVarAttr, vn, 'long_name', 'Time'
-  dObj->WriteVarAttr, vn, 'units', 'hours since 2000-01-01 00:00:00'
+  dObj->WriteVarAttr, vn, 'units', time_str
   vn = 'west_east'
   dObj->WriteVarDef, vn, x_dim_name, DATATYPE='FLOAT'
   dObj->WriteVarAttr, vn, 'long_name', 'x-coordinate in Cartesian system'
@@ -667,7 +678,7 @@ pro w_WPP::_add_var_to_h_file
   
   p0 = min(*self.active_index)
   
-  tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
+  tref = QMS_TIME(year=self.active_year,month=1,day=1)
   time = LONG(((*self.active_time)[*self.active_index]-tref) / (MAKE_TIME_STEP(hour=1)).dms)
   
   ; Vardata
@@ -757,13 +768,19 @@ pro w_WPP::_add_var_to_mean_file, ts
       sig = sig / float(varnt)
       pno = where(sig lt 0.5, cntno)
       if cntno ne 0 then agg[pno] = !VALUES.F_NAN
-    endif    
-    tref = QMS_TIME(year=2000,month=1,day=1,hour=0)
-    t = LONG((ts[i]-tref) / (MAKE_TIME_STEP(hour=1)).dms)
+    endif
+    case (self.active_agg) of
+      'd': t = LONG((ts[i]-QMS_TIME(year=self.active_year,month=1,day=1)) / (MAKE_TIME_STEP(day=1)).dms)
+      'm': t = (MAKE_ABS_DATE(ts[i])).month - 1
+      'y': t = 0
+      else: MESSAGE, 'type not OK'
+    endcase
+        
     dObj->WriteVarData, 'time', t, OFFSET=i
     offset = (self.active_var.type EQ '2d') ? [0,0,i] : [0,0,0,i]
-    dObj->WriteVarData, self.active_var.name, agg, OFFSET=offset    
-  endfor 
+    dObj->WriteVarData, self.active_var.name, agg, OFFSET=offset
+  
+  endfor
   
   flag = 'DONE'
   save, flag, data_check, FILENAME=self.active_checkfile
@@ -1184,6 +1201,7 @@ pro w_WPP__Define, class
     active_ofile          : ''           ,  $ ; the active output file to write into
     active_checkfile      : ''           ,  $ ; the active check save file (to be sure all times are written)
     active_ncloggerfile   : ''           ,  $ ; the active ncdf logger file (destroyed if no error)
+    active_year           : 0L           ,  $ ; the active year
     active_n_time         : 0L           ,  $ ; the number of times in the year
     active_time           : PTR_NEW()    ,  $ ; the times in the year
     active_index          : PTR_NEW()    ,  $ ; the current indexes in time where to put the data
