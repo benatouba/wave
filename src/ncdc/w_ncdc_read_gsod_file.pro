@@ -338,16 +338,17 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     if nb_entries le 2 then continue 
     
     stat_val=+1
-    
-    stn = ascii_data.stn
-    wban = ascii_data.wban
+        
     for k = 0, nvals-1 do begin
       val = w_ncdc_read_gsod_file_parse_val_from_ascii(ascii_data.(k), ascii_tags[k])
       if arg_okay(val,TYPE=IDL_STRING) then continue
       if (N_ELEMENTS(stat_vars) eq 0) then stat_vars = ptr_new(val) else stat_vars = [stat_vars, ptr_new(val)]
     endfor
     
-    uswb=ascii_data.stn+ascii_data.wban
+    stn=ascii_data.stn
+    wban=ascii_data.wban
+    uswb=stn+wban
+    
     undefine, ascii_data
     
     ids = uswb[UNIQ(uswb, SORT(uswb))]
@@ -356,6 +357,8 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     for i=0, nstats-1 do begin
     
       id = ids[i]
+      id_str=stn[i]+'-'+wban[i]
+      
       s=where(ncdc_history.usaf+ncdc_history.wban eq id, cnt)
       if cnt eq 0 then Message, id + ' not found, please update your NCDC history file!'
       
@@ -370,10 +373,10 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       un = uniq(_t, sort(_t))
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
-      print, sname, id
+      print, sname, id_str
       
       ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
-         ID=id, $ ; Station ID
+         ID=id_str, $ ; Station ID
          DESCRIPTION='NCDC Station', $ ; A short description of the station
          ELEVATION=elev, $ ; altitude in m
          LOC_X=lon, $ ; X location in SRC
