@@ -1,20 +1,20 @@
 ;+
 ; :Description:
 ;    This procedure computes an altitudinal gradient for any given variable for every value of a 2D or 3D array.
-;  
-;    
+;
+;
 ;  :Examples:
-;     For a 10x5 array and a kernel_size of 3 the routine works like follows: 
-;     
+;     For a 10x5 array and a kernel_size of 3 the routine works like follows:
+;
 ;      ***-------    with x: current value for which the altitudinal gradient is computed
 ;      *x*oooooo-         *: all values that are used for current computation (including x!) - defined by kernel size
-;      ***oooooo-         o: values for which an altitudinal gradient will be computed according to kernel size 
+;      ***oooooo-         o: values for which an altitudinal gradient will be computed according to kernel size
 ;      -oooooooo-         -: array boundaries, for which a default gradient is set
 ;      ----------
-;      
+;
 ;      alr_temp=w_altitudinal_gradient, temperature, height, KERNEL_SIZE=3, DEFAULT_VAL=-0.0098, /REGRESS
-;      
-;     
+;
+;
 ; :Params:
 ;    var: in, required, type=2D/3D array
 ;         the variable array
@@ -29,21 +29,21 @@
 ;                an array mask of the same size as var, with 0 for values where no alt gradient should be computed (e.g. lakes), default value is set
 ;    MEAN: in, optional, type=boolean
 ;          compute the alt gradient with mean values (REGRESS is recommended)
-;    REGRESS: in, optional, type=boolean 
+;    REGRESS: in, optional, type=boolean
 ;          compute the alt gradient with linear regression (default, recommended)
 ;    CLIP_MIN: in, optional, type=
 ;              clip the minimum value for alt gradient
 ;    CLIP_MAX: in, optional, type=
-;              clip the maximum value for alt gradient 
+;              clip the maximum value for alt gradient
 ;    SIG: in, optional, type=boolean
-;         if set, the altitudinal gradient itself is NOT returned but its SIGNIFICANCE. returns array of same size as var, containing significances. 
+;         if set, the altitudinal gradient itself is NOT returned but its SIGNIFICANCE. returns array of same size as var, containing significances.
 ;
 ; :History:
 ;     Written by CoK, 2012.
 ;-
 function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $
-                                   VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
-                                     CLIP_MAX=clip_max, SIG=sig
+    VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
+    CLIP_MAX=clip_max, SIG=sig
     
   ;--------------------------
   ; Set up environment
@@ -52,7 +52,10 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   @WAVE.inc
   
   ; Check inputs and set kernel size
-  if N_ELEMENTS(var                                                   ;check var height same size
+  v_check=size(var)
+  h_check=size(height)
+  
+  if (v_check[0:2] ne h_check[0:2]) then message, 'var and height are not of the same size.'
   if N_ELEMENTS(KERNEL_SIZE) eq 0 then message, 'KERNEL_SIZE must be set.'
   if N_ELEMENTS(DEFAULT_VAL) eq 0 then message, 'DEFAULT_VAL must be set.'
   if (KERNEL_SIZE/2.) eq long(KERNEL_SIZE/2.) then message, 'KERNEL_SIZE must be an odd number of grids (e.g. 3, 5, 7 ...)'
@@ -63,7 +66,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   ntime=N_ELEMENTS(var[0,0,*])
   nk = KERNEL_SIZE^2
   
-  ;Loop over all time steps 
+  ;Loop over all time steps
   if ntime eq 1 then begin
   
     valid = intarr(ncol,nrow) + 1
@@ -85,8 +88,8 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
     inds = ARRAY_INDICES(edges, ptocompute)
     
     for i=0, ntocompute-1 do begin
-      
-      m = ptocompute[i]    
+    
+      m = ptocompute[i]
       curcol=inds[0,i]
       currow=inds[1,i]
       
@@ -98,6 +101,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
       
       subarr_var = var[curcol-ngrid:curcol+ngrid, currow-ngrid:currow+ngrid]
       
+      ;compute alt grad by mean if keyword is set
       if KEYWORD_SET(MEAN) then begin
         diff_h = subarr_height-height[m]
         p = where(ABS(diff_h) lt 10., cnt)
@@ -107,6 +111,8 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
         out_arr[m] = mean(subarr_var[pv]-var[m])/(diff_h[pv])
         sig[m] = float(cntv)/nk
       endif else begin
+      
+        ;compute alt grad by regress, default setting
         out_arr[m] = regress(subarr_height[pv], subarr_var[pv], CORRELATION=lr_corr)
         sig[m] = lr_corr*lr_corr
       endelse
@@ -114,6 +120,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
     endfor
     
   endif else begin
+    ;call procedure in itself to compute all time steps
     out_arr = fltarr(ncol,nrow,ntime)-default_val
     sig = fltarr(ncol,nrow,ntime)
     for t=0, ntime-1 do begin
