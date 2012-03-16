@@ -140,13 +140,13 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_yea
       if nvalidstat eq 1 then begin
         OPENW, lun, out_directory+'/'+ logfile, /GET_LUN
         header='#######GSOD_EXTRACT_NCDC LOG FILE_'+ac_date+'#######'
-        descr= 'USAF, WBAN, NAME, LON, LAT, START_YEAR, END_YEAR'
+        descr= 'ID (USAF-WBAN), NAME, LON, LAT, START_YEAR, END_YEAR'
         printf, lun, header
         printf, lun, descr
         free_lun, lun
       endif
       
-      stat_info=str_usaf[s]+', '+str_wban[s]+', '+st_names[s]+', '+ st_lons[s]+', '+ st_lats[s]+', '+ y0+', '+ y1
+      stat_info=str_usaf[s]+'-'+str_wban[s]+', '+st_names[s]+', '+ st_lons[s]+', '+ st_lats[s]+', '+ y0+', '+ y1
       OPENU, lun, out_directory+'/'+ logfile, /GET_LUN, /APPEND
       printf, lun, stat_info
       free_lun, lun
