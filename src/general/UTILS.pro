@@ -1223,6 +1223,7 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
   NCDF_VARGET, Cdfid, vok, u
   
   fac = 0LL
+  is_reg = '' ; to see if we have to handle the unregular cases
   case (str_equiv(UNIT)) of
     'SEC': fac = S_QMS
     'SECS': fac = S_QMS
@@ -1244,16 +1245,30 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
     'DAYS': fac = D_QMS
     'D': fac = D_QMS
     'DS': fac = D_QMS
+    'MONTH': is_reg = 'M'
+    'MONTHS': is_reg = 'M'
+    'MON': is_reg = 'M'
+    'YEAR': is_reg = 'Y'
+    'YEARS': is_reg = 'Y'
+    'YR': is_reg = 'Y'
+    'YRS': is_reg = 'Y'  
     else: return, FALSE
   endcase
   
-  if is_OLD then begin 
-   deltaU = (jd1 - jd0) * D_QMS / fac
-   if MIN(u) lt deltaU then deltaU = 0 
-  endif else deltaU = 0 
-  
-  time = time0 + fac * LONG64(u - deltaU)
-  nt = N_ELEMENTS(time)
+  if is_reg eq '' then begin ; usual case
+    if is_OLD then begin
+      deltaU = (jd1 - jd0) * D_QMS / fac
+      if MIN(u) lt deltaU then deltaU = 0
+    endif else deltaU = 0
+    time = time0 + fac * LONG64(u - deltaU)
+    nt = N_ELEMENTS(time)
+  endif else begin 
+    nt = N_ELEMENTS(u)
+    time = LON64ARR(nt)
+    if is_reg eq 'M' then for i=0, N_ELEMENTS(u)-1 do time[i] = MAKE_REL_DATE(time0, MONTH=u[i])
+    if is_reg eq 'Y' then for i=0, N_ELEMENTS(u)-1 do time[i] = MAKE_REL_DATE(time0, YEAR=u[i])
+  endelse
+
   time0 = time[0]
   time1 = time[nt-1]
   
