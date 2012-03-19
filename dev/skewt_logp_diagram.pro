@@ -93,7 +93,7 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
   
   if N_ELEMENTS(figtitle) eq 0 then figtitle='Skew-T-log-p-diagram !C'
     
-  ; plot entered temperature and pressure
+  ; prepare plot
   cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=figtitle, $
@@ -101,10 +101,7 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
   cgControl, EXECUTE=0
   wset, cgQuery(/Current)   
   
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
-  
-  
-  ; plot isotherms
+   ; plot isotherms
   T_iso = INDGEN(60)*10 - 100 
   for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp), yrange, /DATA, NOCLIP=0, color='dark grey', WINDOW=window
   
@@ -118,6 +115,9 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
   for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
   color='blue', WINDOW=window
   cgControl, EXECUTE=1
+  
+  ; plot entered pressure and temperature
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
 
   if N_ELEMENTS(std_png) ne 0 then cgControl, CREATE_PNG=std_png, IM_RASTER=0
 
