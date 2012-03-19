@@ -129,8 +129,12 @@ END
 ;                   polygons or shapes. Valid values include::
 ;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
 ;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
-;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set. This is the default.
-;
+;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
+;                       * 3 = Pixel center point is used to test the appartenance to the ROI. This is the default!
+;    MARGIN: in
+;            set to a positive integer value to add a margin to the subset
+;            (MARGIN=1 will put one grid point on each side of the subset, so two
+;             more columns per dimension in total)
 ; :Returns:
 ;   1 if the subset has been set correctly, 0 if not
 ;
@@ -149,6 +153,7 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
                                 SRC=src, $
                                 REMOVE_ENTITITES=remove_entitites, $ 
                                 KEEP_ENTITITES=keep_entitites, $
+                                MARGIN=margin, $
                                 ROI_MASK_RULE=roi_mask_rule
 
   ; Set Up environnement
@@ -235,9 +240,9 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   
   dummy = self->w_GEO_nc::define_subset()
   if self->is_ROI() then begin
-    self->get_ROI, SUBSET=subset
+    self->get_ROI, SUBSET=subset, MARGIN=margin
     if ~self->w_GEO_nc::define_subset(SUBSET=SUBSET) then return, 0 
-    new_grid = self->reGrid(/TO_ROI)
+    new_grid = self->reGrid(/TO_ROI, MARGIN=margin)
     IF NOT self->w_Grid2D::ReInit(grid=new_grid) THEN RETURN, 0  
     dummy = self->set_ROI()    
     undefine, new_grid

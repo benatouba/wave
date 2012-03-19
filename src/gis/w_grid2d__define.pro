@@ -612,7 +612,8 @@ end
 ;    MASK: out
 ;          the ROI mask
 ;    SUBSET: out
-;           the smallest subset ([x0_dl, nx, y0_dl, ny]) surrounding the ROI
+;             the smallest subset ([x0_dl, nx, y0_dl, ny]) surrounding the ROI. 
+;             If the ROI is empty
 ;    MARGIN: in
 ;            set to a positive integer value to add a margin to the subset
 ;            (MARGIN=1 will put one grid point on each side of the subset, so two
@@ -628,20 +629,26 @@ pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset, MARGIN=margin
   COMPILE_OPT IDL2
   
   undefine, mask, subset
-  if ~self.is_roi then mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny) + 1B else mask = *self.roi  
+  if ~self.is_roi then mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny) + 1B else mask = *self.roi
   
-  p = where(mask eq 1, cnt)
-  inds = ARRAY_INDICES(mask, p)   
-  xmin = min(inds[0,*])
-  xmax = max(inds[0,*])
-  ymin = min(inds[1,*])
-  ymax = max(inds[1,*])  
-  subset = [xmin, (xmax-xmin)+1, ymin, (ymax-ymin)+1]
+  if ARG_PRESENT(SUBSET) then begin
   
-  IF arg_okay(MARGIN, /INTEGER) then subset += [-margin,margin*2,-margin,margin*2]
+    p = where(mask eq 1, cnt)
+    if cnt eq 0 then begin
+     undefine, subset
+     return      
+    endif
+    inds = ARRAY_INDICES(mask, p)
+    xmin = min(inds[0,*])
+    xmax = max(inds[0,*])
+    ymin = min(inds[1,*])
+    ymax = max(inds[1,*])
+    subset = [xmin, (xmax-xmin)+1, ymin, (ymax-ymin)+1]
     
-    
-END
+    if arg_okay(MARGIN, /INTEGER) then subset += [-margin,margin*2,-margin,margin*2]
+  endif
+  
+end
 
 ;+
 ; :Description:
@@ -1299,7 +1306,7 @@ function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_ro
   nx = self.tnt_c.nx
   ny = self.tnt_c.ny
   
-  if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
+  if KEYWORD_SET(TO_ROI) then begin
     self->get_ROI, SUBSET=subset, MARGIN=margin
     x0 = self.tnt_c.x0 + subset[0] * self.tnt_c.dx
     y0 = self.tnt_c.y0 - (self.tnt_c.ny-(subset[2]+subset[3])) * self.tnt_c.dy
@@ -1628,7 +1635,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     if dims[1] lt 3 then Message, '$POLYGON should contain at least 3 points'
     x = reform(polygon[0,*])
     y = reform(polygon[1,*])
-    if N_ELEMENTS(shp_src) ne 0 then begin ; To the grid projetion
+    if N_ELEMENTS(SRC) ne 0 then begin ; To the grid projetion
       self->transform, x, y, x, y, SRC=src
     endif    
     roi = OBJ_NEW('IDLanROI', x, y)
