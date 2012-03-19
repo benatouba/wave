@@ -750,8 +750,16 @@ pro w_WPP::_add_var_to_mean_file, ts
   dObj = self.active_dObj
   dObj->SetMode, /DATA  
   for i=0, N_ELEMENTS(ts)-2 do begin
-    T0 = wtime[where(wtime eq ts[i])]
-    T1 = wtime[max(where(wtime lt ts[i+1]))]    
+    case (self.active_agg) of
+      'd': begin
+        T0 = wtime[min(where(wtime gt ts[i]))]
+        T1 = wtime[where(wtime eq ts[i+1])]
+      end
+      else: begin
+        T0 = wtime[where(wtime eq ts[i])]
+        T1 = wtime[max(where(wtime lt ts[i+1]))]
+      end
+    endcase 
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))
     if agg_method eq 'WIND' then agg_method = 'MEAN'      

@@ -1385,7 +1385,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;- 
-pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, NO_COORD_SHIFT = no_coord_shift
+pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, NO_COORD_SHIFT = no_coord_shift
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1582,7 +1582,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   do_shape = N_ELEMENTS(SHAPE) ne 0
   do_mask = N_ELEMENTS(MASK) ne 0
   do_grid = N_ELEMENTS(GRID) ne 0
-  do_polygon = N_ELEMENTS(POLYGON)
+  do_polygon = N_ELEMENTS(POLYGON) ne 0
   do_border = N_ELEMENTS(CROPBORDER) ne 0
   do_corner = N_ELEMENTS(CORNERS) ne 0
   
@@ -1598,7 +1598,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   if KEYWORD_SET(NO_ERASE) and self.is_roi then _mask = *self.roi
   
   if do_shape then begin
-    self->transform_shape, shape, x, y, conn, SHP_SRC = SRC, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
+    self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'
     index = 0
     if _roi_mask_rule eq 3 then utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
@@ -1606,13 +1606,13 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       nbElperConn = conn[index]
       idx = conn[index+1:index+nbElperConn]
       index += nbElperConn + 1
-      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])         
+      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
       if _roi_mask_rule eq 3 then begin
         if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
-        cont = roi->ContainsPoints(i, j) 
+        cont = roi->ContainsPoints(i, j)
         p_in = where(cont ge 1, cnt_in)
         if cnt_in ne 0 then _mask[p_in] = 1
-      endif else begin      
+      endif else begin
         if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
         else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
       endelse
@@ -1621,11 +1621,36 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     _mask = _mask < 1B
   endif
   
+  if do_polygon then begin  
+    if ~ arg_okay(polygon, N_DIM=2) then Message, WAVE_Std_Message("POLYGON", DIMARRAY=2)
+    dims = SIZE(polygon, /DIMENSIONS)
+    if dims[0] ne 2 then Message, '$POLYGON should be a 2xN array'
+    if dims[1] lt 3 then Message, '$POLYGON should contain at least 3 points'
+    x = reform(polygon[0,*])
+    y = reform(polygon[1,*])
+    if N_ELEMENTS(shp_src) ne 0 then begin ; To the grid projetion
+      self->transform, x, y, x, y, SRC=src
+    endif    
+    roi = OBJ_NEW('IDLanROI', x, y)
+    if _roi_mask_rule eq 3 then begin
+      utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
+      if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+      cont = roi->ContainsPoints(i, j)
+      p_in = where(cont ge 1, cnt_in)
+      if cnt_in ne 0 then _mask[p_in] = 1
+    endif else begin
+      if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
+      else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
+    endelse
+    OBJ_DESTROY, roi
+    _mask = _mask < 1B
+  endif
+  
   if do_mask then begin
     if ~arg_okay(mask, /NUMERIC, DIM=[self.tnt_c.nx,self.tnt_c.ny]) then Message, WAVE_Std_Message('MASK', /ARG)
     if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
     p = where(mask ne 0, cnt)
-    if cnt ne 0 then _mask[p] = 1B  
+    if cnt ne 0 then _mask[p] = 1B
   endif
   
   if do_grid then begin
@@ -1676,8 +1701,6 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     if cnt ne 0 then _mask[p] = 1B
     isubs = [i[0], j[0], i[1], j[1]]
   endif
-  
-  if do_polygon then Message, 'POLYGON currently not implemented'
   
   if min(_mask) lt 0 or max(_mask) ne 1 then Message, 'The mask is either empty or full.'
   
