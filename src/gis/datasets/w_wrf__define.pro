@@ -1367,8 +1367,9 @@ function w_WRF::get_Var, Varid, $
         dims = dims, $
         dimnames = dimnames)
       sr = self->get_Var('SR', t0 = t0, t1 = t1)
-      ptm = where(sr gt (MACHAR()).EPS and value gt (MACHAR()).EPS, cntp)
-      if cntp ne 0 then value[ptm] = sr[ptm] * value[ptm] 
+      ptm = where(sr gt (MACHAR()).EPS and value gt (MACHAR()).EPS, cntp, COMPLEMENT=pc, NCOMPLEMENT=cntc)
+      if cntp ne 0 then value[ptm] = sr[ptm] * value[ptm]
+      if cntc ne 0 then value[pc] = 0.
       _acc_to_step = FALSE
     end
     
