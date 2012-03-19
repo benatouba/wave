@@ -29,14 +29,14 @@
 
 
 ; this function generates the skew temperature axis if an angle is set
-function skewt_logp_diagram_skewY, x, y, ANGLE=angle
+function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 
   if N_ELEMENTS(ANGLE) eq 0 then angle = 0.
   if angle eq 0. then return, x
    
    ; Convert the data coordinates into NORMAL coordinates ([0.,1.])   
   r =  CONVERT_COORD(X, Y, /DATA, /TO_DEVICE)  
-  r0 = CONVERT_COORD(X, REPLICATE(1000.,N_ELEMENTS(X)), /DATA, /TO_DEVICE)
+  r0 = CONVERT_COORD(X, REPLICATE(minp,N_ELEMENTS(X)), /DATA, /TO_DEVICE)
    
   ; Make the trigonometry in normal coordinates
   _delta =  REFORM((r[1,*]-r0[1,*]) * tan(angle*!PI/180.))
@@ -84,33 +84,36 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange
 
   ; skew-T-log-p-diagram
   if N_ELEMENTS(TEMPRANGE) eq 0 then xrange=[-60,60] else xrange=TEMPRANGE
-  yrange= [1000,100]
-
+  
+  minp=1050
+  yrange= [minp,100]
+ 
   WINDOW=1 
   wxsize = 800
   wysize = 600
   cgWindow, WXSIZE=wxsize, WYSIZE=wysize
-  cgControl, EXECUTE=0
-  
+    
   ; plot isobars and entered temperature and pressure
   cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='temperature ['+ cgsymbol('deg')+'C]', title='Skew-T-p-diagram !C', $
-           yticklen=1, YSTYLE=1, XSTYLE=1, WINDOW=window, /NODATA, YLOG=YLOG
+           YSTYLE=1, XSTYLE=1, WINDOW=window, /NODATA, YLOG=1
+  cgControl, EXECUTE=0
   wset, cgQuery(/Current)   
   
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
+  
   
   ; plot isotherms
-  yps = [0,1000]
+  
   T_iso = INDGEN(30)*20 - 100 
-  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yps, ANGLE=angle), yps, /DATA, NOCLIP=0, color='black', WINDOW=window
+  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp), yrange, /DATA, NOCLIP=0, color='dark grey', WINDOW=window
   
   ; plot dry adiabates
-  for nda = 0,30 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
+  for nda = 0,30 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
     
   ; plot moist adiabates
-  for nma = 0,9 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
+  for nma = 0,9 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
   color='blue', WINDOW=window
   cgControl, EXECUTE=1
 
