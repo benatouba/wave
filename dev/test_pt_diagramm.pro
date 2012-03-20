@@ -4,7 +4,7 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
   if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
   
   ; number of time points (nt) and absolute time(time) of simulations
-  wrf = OBJ_NEW('w_WRF', FILE='/home/mowglie/wrfout_d01_2008-10-26.nc')
+  wrf = OBJ_NEW('w_WRF', FILE='//klima-fs1/hinners/IDL/skewT-logP/wrfout_d01_2008-10-26.nc')
   wrf->get_time, time, nt
 
   ; coordinates of wrf simulations for which skewT-logp-diagram will be generated
@@ -33,8 +33,9 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
         
       
         FILE_MKDIR,output_dir+'/skewT_logP_diagrams'
-        skewt_logp_diagram, tcloc, ploc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'/skewT_logP_diagrams/'+pngname+'.png'
+        skewt_logp_diagram, tcloc, ploc, DEWPOINT=tdloc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'/skewT_logP_diagrams/'+pngname+'.png'
 
+ 
      endfor
           
   endfor 
