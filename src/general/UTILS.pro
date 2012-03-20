@@ -2368,6 +2368,27 @@ function utils_wrf_slp, Z, T, P, Q
   
 end
 
+function utils_wrf_td, p, qvapor
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  if not array_processing(p, qvapor) then message, WAVE_Std_Message(/ARG)
+  
+  qv = qvapor > 0
+  p = p*0.01
+  
+  ; vapor pressure
+  tdc = qv * p / (0.622 + qv)
+  
+  ;avoid problems near zero
+  tdc = tdc > 0.001
+  
+  return,  (243.5*alog(tdc)-440.8)/ (19.48-alog(tdc))
+  
+end
+
 ;+
 ; :Description:
 ;    Unstaggers an input variable along a specified dimension.

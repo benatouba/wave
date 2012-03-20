@@ -676,7 +676,25 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'T2PBLC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]     
       endif 
-  
+      
+      ;TD
+      d1 = self->w_NCDF::get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)      
+      d2 = self->w_NCDF::get_Var_Info('P')
+      d3 = self->w_NCDF::get_Var_Info('PB')   
+      if (d1 and d2 and d3) then begin
+        var = {name:'TD',unit:'C',ndims:N_elements(dims),description:'Dewpoint Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var] 
+      endif 
+      
+      ;TD2
+      d1 = self->w_NCDF::get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)      
+      d2 = self->w_NCDF::get_Var_Info('Q2')
+      if (d1 and d2) then begin
+        var = {name:'TD2',unit:'C',ndims:N_elements(dims),description:'2m Dewpoint Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var] 
+      endif 
+      
+      
       ;THETA
       if (d1) then begin
         var = {name:'THETA',unit:'K',ndims:N_elements(dims),description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
@@ -1217,6 +1235,8 @@ end
 ;             potevap:  Potential evaporation (step-wize) [w m-2]             
 ;             rh: Relative Humidity [%]
 ;             rh2: 2m Relative Humidity [%]
+;             td2: 2m dew point temperature [C]
+;             td: Dew point temperature [C]
 ;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. See `utils_wrf_slp` 
 ;                  (If the vertical dimension is not present in the file, slp_b is computed automatically instead)
 ;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see `MET_barometric` for more info)
@@ -1446,8 +1466,8 @@ function w_WRF::get_Var, Varid, $
           dimnames = dimnames)
         P = self->get_Var('P', T0=t0, T1=t1, ZLEVELS=zlevels)
         PB = self->get_Var('PB', T0=t0, T1=t1, ZLEVELS=zlevels)
-        T = T + 300.
-        P = P + PB
+        T += 300.
+        P += PB
         value = utils_wrf_tk(P,T)    ; calculate TK
       endif else begin
         value = self->get_Var('TT', time, nt, t0 = t0, t1 = t1,  $
@@ -1460,6 +1480,16 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames) - 273.15
+    end
+        
+    'TD': begin
+        QVAPOR = self->get_Var('QVAPOR', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+                    dims = dims, $
+                    dimnames = dimnames)
+        P = self->get_Var('P', T0=t0, T1=t1, ZLEVELS=zlevels)
+        PB = self->get_Var('PB', T0=t0, T1=t1, ZLEVELS=zlevels)
+        P += PB
+        value = utils_wrf_td(P,QVAPOR)    ; calculate TD
     end
         
     'THETA': begin

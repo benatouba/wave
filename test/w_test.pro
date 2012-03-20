@@ -957,6 +957,84 @@ pro TEST_TS_FIT_SERIES, VERBOSE = VERBOSE
   
 end
 
+pro TEST_GR_DATALEVELS
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  error = 0
+  
+;  w_gr_DataLevels, data, $
+;    LEVELS=levels, $
+;    N_LEVELS=n_levels, $
+;    COLORS=colors, $
+;    NEUTRAL_COLOR=neutral_color, $
+;    MISSING=missing, $
+;    MIN_VALUE=min_value, $
+;    MAX_VALUE=max_value, $
+;    EPSILON=epsilon, $
+;    CMIN=cmin, $ 
+;    CMAX=cmax, $
+;    INVERTCOLORS=invertcolors, $
+;    DCBAR=dcbar, $
+;    SHOW=show
+  
+  ; Test default
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=1)  
+  if info.N_LEVELS ne 257 then error += 1
+  if info.N_COLORS ne 256 then error += 1
+  if MAX(info.LEVELS) ne 1 then error += 1
+  if MIN(info.LEVELS) ne 0 then error += 1
+  if info.LEVELS[1] ne 1./256 then error += 1
+
+  info = w_gr_DataLevels(MIN_VALUE=0.25, MAX_VALUE=0.75)  
+  if info.N_LEVELS ne 257 then error += 1
+  if info.N_COLORS ne 256 then error += 1
+  if MAX(info.LEVELS) ne 0.75 then error += 1
+  if MIN(info.LEVELS) ne 0.25 then error += 1
+  if info.LEVELS[1] ne 0.5/256 + 0.25 then error += 1
+  if info.is_ooTop ne 0 then error += 1
+  if info.is_ooBot ne 0 then error += 1
+    
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10) 
+  if info.N_LEVELS ne 257 then error += 1
+  if info.N_COLORS ne 256 then error += 1
+  if MAX(info.LEVELS) ne 10 then error += 1
+  if MIN(info.LEVELS) ne 0 then error += 1
+  if info.LEVELS[1] ne 10./256 then error += 1
+  
+  info = w_gr_DataLevels(LEVELS=[0,1,2,3,4,5,6,7,8,9,10]) 
+  if info.N_LEVELS ne 11 then error += 1
+  if info.N_COLORS ne 10 then error += 1
+  if MAX(info.LEVELS) ne 10 then error += 1
+  if MIN(info.LEVELS) ne 0 then error += 1
+  if info.LEVELS[1] ne 1 then error += 1
+  if info.LEVELS[8] ne 8 then error += 1
+  if info.dcbar ne 0 then error += 1 
+  if info.is_ooTop ne 0 then error += 1
+  if info.is_ooBot ne 0 then error += 1
+  
+  info = w_gr_DataLevels(LEVELS=[1,2,3,4,5,6,7,8,9,10], /DCBAR) 
+  if info.N_LEVELS ne 10 then error += 1
+  if info.N_COLORS ne 10 then error += 1
+  if MAX(info.LEVELS) ne 10 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.dcbar ne 1 then error += 1
+  if info.is_ooTop ne 0 then error += 1
+  if info.is_ooBot ne 0 then error += 1
+  
+  data = FLTARR(3,3)
+  data = [1.,.25,0.4,0.8, 0.]
+  info = w_gr_DataLevels(data, /SHOW)  
+ 
+  if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
+  
+  
+end
+
 
 
 pro time_bug
@@ -3399,6 +3477,23 @@ pro TEST_WRF_GETVAR
     FREE_LUN, lun
     if MAX(ABS(tk_ncl-tk_wrf)) gt 1e-3 then error +=1 
     
+    ;td
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    td_wrf = wrf->get_Var('td', T0 = t0, T1 = t0)
+    td_ncl = td_wrf * 0.    
+    td_f = ncldir+'/wrfd1_td2008-10-26_21:00:00'
+    OPENR, lun, td_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     td_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(td_ncl-td_wrf)) gt 1e-3 then error +=1     
+        
     ; theta    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
     tk_wrf = wrf->get_Var('theta', T0 = t0, T1 = t0)
@@ -3657,7 +3752,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
     varin = wrf->get_Var('tc', t0 = t0, t1 = t0, PRESSURE_LEVELS=[700.], UNITS=units, $
@@ -3667,7 +3762,7 @@ pro TEST_WRF_GETVAR
                               DIMNAMES=dimnames ) - 0.01    
     if TOTAL(dimnames eq ['west_east','south_north']) ne 2 then error+=1 
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl[*,*,1]-varin)) gt 1e-3 then error +=1
     
     varin = wrf->get_Var('tc', PRESSURE_LEVELS=[700.], UNITS=units, $
@@ -3677,7 +3772,7 @@ pro TEST_WRF_GETVAR
                               DIMNAMES=dimnames ) - 0.01    
     
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl[*,*,1]-varin[*,*,3])) gt 1e-3 then error +=1
     
     ;RH PLANE
@@ -3702,7 +3797,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     ; Metem
     varin = met->get_Var('rh',PRESSURE_LEVELS=[850., 700., 500., 300.]) 
@@ -3719,7 +3814,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
     ;Z PLANE
@@ -3744,7 +3839,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 0.002 then error +=1
     
     ;U PLANE
@@ -3769,7 +3864,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
     varin = wrf->get_Var('U', PRESSURE_LEVELS=[850., 700., 500., 300.], /UNSTAGGER, UNITS=units, $
@@ -3792,7 +3887,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin[*,*,*,3])) gt 1e-3 then error +=1
     
     ;P H PLANE
@@ -3815,7 +3910,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
     ;V H PLANE
@@ -3839,7 +3934,7 @@ pro TEST_WRF_GETVAR
     CLOSE, lun
     FREE_LUN, lun    
     p = where(~FINITE(varin), cnt)
-    if cnt ne 0 then varin[p] = -999999
+    if cnt ne 0 then varin[p] = 9.96921e+36
     if MAX(ABS(var_ncl-varin)) gt 1e-3 then error +=1
     
     
