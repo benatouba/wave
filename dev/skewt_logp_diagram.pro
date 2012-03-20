@@ -59,18 +59,18 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
   p_0 = 1000. ; [hPa]
   T_0 = 213.15 ; [K]
   p = findgen(106)*10
-  T_adiab = fltarr(61,N_ELEMENTS(p))  
-  for nda = 0,60 do begin
+  T_adiab = fltarr(121,N_ELEMENTS(p))  
+  for nda = 0,120 do begin
     T_adiab[nda, *] = (T_0) * (p/p_0)^(R/Cp) - 273.15
-    T_0 = T_0 + 10.
+    T_0 = T_0 + 5.
   endfor
   
   ; saturated (moist) adiabate formula
   ; (calculation and parameter values from R. Stull, 2000: "Meteorology for Scientists and Engineers", p.111)
   T_0 = 213.15
   pp=reverse(findgen(106)) ; [kPa]
-  T_moistadiab = fltarr(20,N_Elements(pp)) 
-  for nma = 0,19 do begin
+  T_moistadiab = fltarr(40,N_Elements(pp)) 
+  for nma = 0,39 do begin
     for i = 0, (N_Elements(pp)-1) do begin
       if i eq 0 then (_T = T_0) else (_T = T_moistadiab[nma,i-1]+273.15) 
       if i eq 0 then (_p = p_0/10.) else (_p = pp[i-1])
@@ -80,7 +80,7 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
       deltaT = (0.28571*_T + 2488.4*rs) / (pp[i]*(1.+(13500000.* rs/(_T^2))))
       T_moistadiab[nma,i] = _T + deltaT *(pp[i]-_p) - 273.15
     endfor
-    T_0 = T_0 + 10.
+    T_0 = T_0 + 5.
     endfor
 
   ; skew-T-log-p-diagram
