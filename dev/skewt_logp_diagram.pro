@@ -10,12 +10,16 @@
 ;
 ; :Keywords:
 ;    ANGLE: in, optional, default = 0.,
-;               set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
+;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
 ;    TEMPRANGE: in, optional, default = [-60,60],
-;               set this keyword as deg. Celsius [min.value, max.value] to vary the x range of the diagram
+;              set this keyword as deg. Celsius [min.value, max.value] to vary the x range of the diagram
 ;    FIGTITLE: in, optional, default='Skew-T-log-p-diagram'
+;    PNG: in, optional, type = string
+;              set to a filename to generate a png output (uses image magick)
+;    EPS: in, optional, type = string
+;              set to a filename to generate an encapsulated postscript output
 ;    STD_PNG: in, optional, type = string
-;               set to a filename to generate a standard png output (without image magick)
+;              set to a filename to generate a standard png output (without image magick)
 ;
 ; :Examples:
 ;   skewt_logp_diagram, temperature, pressure, ANGLE=45., TEMPRANGE=[-60,40]
@@ -47,10 +51,10 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
-  R  =  8.314 ; gas konstant [J/mol*K]
+  R  =  8.314 ; gas constant [J/mol*K]
   Cp = 28.964 ; heat capacity of dry air [J/mol*K]
   p_0 = 1000. ; [hPa]
   T_0 = 213.15 ; [K]
@@ -88,37 +92,43 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
  
   WINDOW=1 
   wxsize = 700
-  wysize = 850
+  wysize = 830
   cgWindow, WXSIZE=wxsize, WYSIZE=wysize
   
   if N_ELEMENTS(figtitle) eq 0 then figtitle='Skew-T-log-p-diagram !C'
     
   ; prepare plot
-  cgplot, temperature, pressure, position=[0.13, 0.15, 0.85, 0.85], $
+  cgplot, temperature, pressure, position=[0.13, 0.1, 0.9, 0.9], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=figtitle, $
-           YSTYLE=1, XSTYLE=1, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
+           YSTYLE=1,XSTYLE=9, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
   cgControl, EXECUTE=0
   wset, cgQuery(/Current)   
   
    ; plot isotherms
   T_iso = INDGEN(60)*10 - 100 
-  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp), yrange, /DATA, NOCLIP=0, color='dark grey', WINDOW=window
+  for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp),$
+  yrange, /DATA, NOCLIP=0, color='dark grey', WINDOW=window
   
   ; plot isobars
-   for i = 0, N_ELEMENTS(pticks)-1 do cgplots, [T_iso[0],T_iso[N_ELEMENTS(T_iso)-1]], [pticks[i],pticks[i]], /DATA,  NOCLIP=0, color='dark grey', WINDOW=window
+   for i = 0, N_ELEMENTS(pticks)-1 do cgplots, [T_iso[0],T_iso[N_ELEMENTS(T_iso)-1]], [pticks[i],pticks[i]], /DATA,  NOCLIP=0,$
+   color='dark grey', WINDOW=window
   
   ; plot dry adiabates
-  for nda = 0,60 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5, color='brown', WINDOW=window
+  for nda = 0,60 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5,$
+  color='brown', WINDOW=window
     
   ; plot moist adiabates
-  for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0, LINESTYLE=2, $
-  color='blue', WINDOW=window
+  for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0,$
+  LINESTYLE=2, color='blue', WINDOW=window
   cgControl, EXECUTE=1
   
   ; plot entered pressure and temperature
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black', WINDOW=window
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black',$
+  WINDOW=window
 
+  if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
+  if N_ELEMENTS(png) ne 0 then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
   if N_ELEMENTS(std_png) ne 0 then cgControl, CREATE_PNG=std_png, IM_RASTER=0
 
 end
