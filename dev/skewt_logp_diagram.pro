@@ -9,6 +9,7 @@
 ;    pressure: in, required, array of atmospheric pressure values (in hPa)
 ;
 ; :Keywords:
+;    DEWPOINT: in optional, array of dewpoint temperature values (in °C), same array size as pressure array needed
 ;    ANGLE: in, optional, default = 0.,
 ;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
 ;    TEMPRANGE: in, optional, default = [-60,60],
@@ -51,7 +52,7 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas constant [J/mol*K]
@@ -116,16 +117,21 @@ pro skewt_logp_diagram, temperature, pressure, ANGLE=angle, TEMPRANGE=temprange,
   
   ; plot dry adiabates
   for nda = 0,60 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5,$
-  color='brown', WINDOW=window
+  color='red7', WINDOW=window
     
   ; plot moist adiabates
   for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0,$
-  LINESTYLE=2, color='blue', WINDOW=window
+  LINESTYLE=2, color='blu7', WINDOW=window
   cgControl, EXECUTE=1
+    
+  ; plot dewpoint temperature and pressure
+  if N_ELEMENTS(dewpoint) ne 0 then cgplot, skewt_logp_diagram_skewY(dewpoint, pressure, ANGLE=angle, MINP=minp), pressure, thick=3.,$
+  /OVERPLOT, color = 'blue', WINDOW=window
   
   ; plot entered pressure and temperature
-  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=2., /OVERPLOT, color = 'black',$
+  cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=3., /OVERPLOT, color = 'black',$
   WINDOW=window
+  cgplots,[xrange(0),xrange(1)],[yrange(1),yrange(1)], color=black, WINDOW=window, /DATA
 
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   if N_ELEMENTS(png) ne 0 then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
