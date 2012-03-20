@@ -28,7 +28,7 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
 
 
         _figtitle= 'Sounding at x='+STRING(x,FORMAT='(I3)')+', y='+STRING(y,FORMAT='(I3)')+', Time='+TIME_to_STR(ti)+'!C'
-        pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((nt),FORMAT='(I2)')+''
+        pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((t+1),FORMAT='(I2)')+''
         
       
         FILE_MKDIR,output_dir+'\skewT_logP_diagrams'
