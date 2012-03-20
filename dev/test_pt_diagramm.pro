@@ -28,14 +28,14 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
 
 
         _figtitle= 'Sounding at x='+STRING(x,FORMAT='(I3)')+', y='+STRING(y,FORMAT='(I3)')+', Time='+TIME_to_STR(ti)+'!C'
-        pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((l+1),FORMAT='(I2)')+''
+        pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((nt),FORMAT='(I2)')+''
         
       
         FILE_MKDIR,output_dir+'\skewT_logP_diagrams'
         skewt_logp_diagram, tcloc, ploc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'\skewT_logP_diagrams\'+pngname+'.png'
       
         undefine, wrf
-        return
+
      endfor
           
   endfor 
