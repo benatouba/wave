@@ -4,7 +4,7 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
   if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
   
   ; number of time points (nt) and absolute time(time) of simulations
-  wrf = OBJ_NEW('w_WRF', FILE='//KLIMA-FS1/hinners/IDL/skewT-logP/wrfout_d01_2008-10-26.nc')
+  wrf = OBJ_NEW('w_WRF', FILE='/home/mowglie/wrfout_d01_2008-10-26.nc')
   wrf->get_time, time, nt
 
   ; coordinates of wrf simulations for which skewT-logp-diagram will be generated
@@ -16,7 +16,7 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
   for t=0, nt-1 do begin
      tc = wrf->get_Var("tc", ti, T0=time[t],T1=time[t])
      p = wrf->get_Var("pressure", T0=time[t],T1=time[t])
-;     td = wrf->get_Var("td", T0=time[t],T1=time[t])
+     td = wrf->get_Var("td", T0=time[t],T1=time[t])
      
      print, 'Now working on time: ' +  TIME_to_STR(ti)
      for l=0, nloc-1 do begin
@@ -25,16 +25,15 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
         print, 'Now working on loc: ' +  str_equiv(x) + ', ' +  str_equiv(y) 
         ploc = p[x,y,*]
         tcloc = tc[x,y,*]
-
+        tdloc = td[x,y,*]
+          
 
         _figtitle= 'Sounding at x='+STRING(x,FORMAT='(I3)')+', y='+STRING(y,FORMAT='(I3)')+', Time='+TIME_to_STR(ti)+'!C'
         pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((t+1),FORMAT='(I2)')+''
         
       
-        FILE_MKDIR,output_dir+'\skewT_logP_diagrams'
-        skewt_logp_diagram, tcloc, ploc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'\skewT_logP_diagrams\'+pngname+'.png'
-      
-        undefine, wrf
+        FILE_MKDIR,output_dir+'/skewT_logP_diagrams'
+        skewt_logp_diagram, tcloc, ploc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'/skewT_logP_diagrams/'+pngname+'.png'
 
      endfor
           
