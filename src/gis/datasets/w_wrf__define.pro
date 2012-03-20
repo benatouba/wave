@@ -210,12 +210,25 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
                                   x0 = x0                , $
                                   y0 = y0                , $
                                   proj = self.tnt_c.proj) THEN RETURN, 0
-    ;Temporary test
+                                  
+    ;Temporary tests to be sure we are good at WRF georeference
     self->Get_LonLat, gislon, gislat
     self->get_ncdf_coordinates, lon, lat
-    if max(abs(gislon-lon)) gt 1e-4 then Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
-    if max(abs(gislat-lat)) gt 1e-4 then Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
-    
+    if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
+      ; This can be due to the nest
+      np = (self->get_Var('NEST_POS'))[*,*,0]
+      pnest = where(np ne 0, cntp)
+      if cntp ne 0 then begin
+        lon[pnest]=0 & lat[pnest]=0 & gislon[pnest]=0 & gislat[pnest]=0
+        if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
+          Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
+          Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
+        endif
+      endif else begin
+        Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
+        Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
+      endelse
+    endif
   endif else begin
    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
                                    ny = ny                , $
@@ -1235,8 +1248,8 @@ end
 ;             potevap:  Potential evaporation (step-wize) [w m-2]             
 ;             rh: Relative Humidity [%]
 ;             rh2: 2m Relative Humidity [%]
-;             td2: 2m dew point temperature [C]
-;             td: Dew point temperature [C]
+;             td: Dewpoint temperature [C]
+;             td2: 2m Dewpoint temperature [C]
 ;             slp: Sea level pressure [hPa] (computed with full vertical levels - slow. See `utils_wrf_slp` 
 ;                  (If the vertical dimension is not present in the file, slp_b is computed automatically instead)
 ;             slp_b: Sea level pressure [hPa] (computed with surface values - fast. see `MET_barometric` for more info)
@@ -1490,6 +1503,14 @@ function w_WRF::get_Var, Varid, $
         PB = self->get_Var('PB', T0=t0, T1=t1, ZLEVELS=zlevels)
         P += PB
         value = utils_wrf_td(P,QVAPOR)    ; calculate TD
+    end
+        
+    'TD2': begin
+        PSFC = self->get_Var('PSFC', time, nt, t0 = t0, t1 = t1,  $
+                    dims = dims, $
+                    dimnames = dimnames)
+        Q2 = self->get_Var('Q2', T0=t0, T1=t1)
+        value = utils_wrf_td(PSFC,Q2)    ; calculate TD2
     end
         
     'THETA': begin

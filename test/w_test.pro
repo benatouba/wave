@@ -2692,8 +2692,8 @@ pro TEST_3D_STATS
     if TOTAL(ABS(agg[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
     TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='min'
     if TOTAL(ABS(agg[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'
-    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+;    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'
+;    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
     ss = size(t2c)
     
     ; Dom3    
@@ -2726,8 +2726,8 @@ pro TEST_3D_STATS
     if TOTAL(ABS(agg[*,*,1]-max(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
     TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='min'       
     if TOTAL(ABS(agg[*,*,1]-min(t2c[*,*,1:*], DIMENSION=3))) ne 0 then error += 1
-    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'       
-    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
+;    TS_AGG_GRID, t2, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'       
+;    if TOTAL(ABS(agg[*,*,1]-utils_SIG_ARRAY(t2c[*,*,1:*], 3))) ne 0 then error += 1  
     
     ; 3D    
     tt = d1->get_Var('TSLB', time)    
@@ -2763,8 +2763,8 @@ pro TEST_3D_STATS
     if TOTAL(ABS(agg[*,*,*,1]-max(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
     TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='min'         
     if TOTAL(ABS(agg[*,*,*,1]-min(ttc[*,*,*,1:*], DIMENSION=4))) ne 0 then error += 1
-    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'         
-    if TOTAL(ABS(agg[*,*,*,1]-utils_SIG_ARRAY(ttc[*,*,*,1:*], 4))) ne 0 then error += 1  
+;    TS_AGG_GRID, tt, time, agg, agg_time, DAY = 1, AGG_METHOD='sigma'         
+;    if TOTAL(ABS(agg[*,*,*,1]-utils_SIG_ARRAY(ttc[*,*,*,1:*], 4))) ne 0 then error += 1  
         
     OBJ_DESTROY,  d1
     OBJ_DESTROY,  d1c
@@ -3438,6 +3438,10 @@ pro TEST_WRF_GETVAR
     mine = wrf->get_Var('GRAUPEL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
     if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
     
+    all = wrf->w_geo_nc::get_Var('SR') * wrf->get_Var('PRCP')
+    mine = wrf->get_Var('PRCP_FR')
+    if total(ABS(all - mine)) gt 0.001 then error+=1 
+    
     ncldir = TEST_file_directory() + 'WRF/ncl_out/'
        
     ; TK    
@@ -3482,6 +3486,22 @@ pro TEST_WRF_GETVAR
     td_wrf = wrf->get_Var('td', T0 = t0, T1 = t0)
     td_ncl = td_wrf * 0.    
     td_f = ncldir+'/wrfd1_td2008-10-26_21:00:00'
+    OPENR, lun, td_f, /GET_LUN
+    line = ''
+    k=0LL
+    while ~eof(lun) do begin
+     readf,lun, line
+     td_ncl[k] = FLOAT(line)   
+     k+=1 
+    endwhile       
+    CLOSE, lun
+    FREE_LUN, lun
+    if MAX(ABS(td_ncl-td_wrf)) gt 1e-3 then error +=1     
+        
+    t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
+    td_wrf = wrf->get_Var('td2', T0 = t0, T1 = t0)
+    td_ncl = td_wrf * 0.    
+    td_f = ncldir+'/wrfd1_td22008-10-26_21:00:00'
     OPENR, lun, td_f, /GET_LUN
     line = ''
     k=0LL
