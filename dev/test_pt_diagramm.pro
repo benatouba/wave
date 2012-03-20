@@ -17,6 +17,7 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
      tc = wrf->get_Var("tc", ti, T0=time[t],T1=time[t])
      p = wrf->get_Var("pressure", T0=time[t],T1=time[t])
      td = wrf->get_Var("td", T0=time[t],T1=time[t])
+     z = wrf->get_Var("z", T0=time[t],T1=time[t])
      
      print, 'Now working on time: ' +  TIME_to_STR(ti)
      for l=0, nloc-1 do begin
@@ -26,14 +27,14 @@ pro test_pt_diagramm, OUTPUT_DIR=output_dir
         ploc = p[x,y,*]
         tcloc = tc[x,y,*]
         tdloc = td[x,y,*]
-          
+        zloc = z[x,y,*]        
 
         _figtitle= 'Sounding at x='+STRING(x,FORMAT='(I3)')+', y='+STRING(y,FORMAT='(I3)')+', Time='+TIME_to_STR(ti)+'!C'
         pngname=''+STRING(x,FORMAT='(I3)')+'_'+STRING(y,FORMAT='(I3)')+'_'+STRING((t+1),FORMAT='(I2)')+''
-        
-      
+              
         FILE_MKDIR,output_dir+'/skewT_logP_diagrams'
-        skewt_logp_diagram, tcloc, ploc, DEWPOINT=tdloc, ANGLE=45., FIGTITLE=_figtitle, STD_PNG=output_dir+'/skewT_logP_diagrams/'+pngname+'.png'
+        skewt_logp_diagram, tcloc, ploc, DEWPOINT=tdloc, ANGLE=45., HEIGHT=zloc,$
+             FIGTITLE=_figtitle, STD_PNG=output_dir+'/skewT_logP_diagrams/'+pngname+'.png'
 
  
      endfor

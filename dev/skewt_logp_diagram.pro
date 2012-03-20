@@ -10,6 +10,7 @@
 ;
 ; :Keywords:
 ;    DEWPOINT: in optional, array of dewpoint temperature values (in °C), same array size as pressure array needed
+;    HEIGHT: in optional, array of height values (in m), same array size as pressure array needed
 ;    ANGLE: in, optional, default = 0.,
 ;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
 ;    TEMPRANGE: in, optional, default = [-60,60],
@@ -52,7 +53,7 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, HEIGHT=height, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas constant [J/mol*K]
