@@ -142,6 +142,8 @@ function w_LoadCT_getTables, UPDATE=UPDATE
       if N_ELEMENTS(tables) eq 0 then tables = t else tables = [tables, t]
     endfor
     nt = N_ELEMENTS(tables)
+    
+    visdir = root+'/res/colormaps/'
     print, 'Found ' + str_equiv(nt) +' colortables: '
     print, ' ID  Name                     Ncolors'
     for i=0, nt-1 do begin
@@ -151,6 +153,25 @@ function w_LoadCT_getTables, UPDATE=UPDATE
       STRPUT, ns, t.name, 5
       STRPUT, ns, str_equiv(t.nc) , 30      
       print, ns
+     
+      cgDisplay, 1000, 300, /FREE, /PIXMAP
+      xwin = !D.WINDOW
+      
+      dum = BYTARR(100) + 1
+      r = reform(t.pal[0,0:t.nc-1]) # dum
+      g = reform(t.pal[1,0:t.nc-1]) # dum
+      b = reform(t.pal[2,0:t.nc-1]) # dum
+      img = [[[r]],[[g]],[[b]]]
+            
+      cgImage, img, POSITION=[0.05,0.15,0.95,0.7], /AXIS, AXKEYWORDS={YTICKS:1, YTICKNAME:[' ', ' ']} 
+      title = str_equiv(t.id) + ': ' + t.name
+      cgText, 0.05, 0.8, title, /NORMAL,  COLOR='black', charsize=5, FONT=-1, CHARTHICK=2
+      title = 'ncolors = ' + str_equiv(t.nc)   
+      cgText, 0.95, 0.8, title, /NORMAL,  COLOR='black', charsize=3, FONT=-1, CHARTHICK=1, ALIGNMENT=1.
+      write_png, visdir + t.name + '.png', tvrd(TRUE=1)
+  
+      if xwin ne -1 then wdelete, xwin
+      
     endfor
     save, tables, FILENAME=savf
   endif else begin
@@ -162,6 +183,30 @@ function w_LoadCT_getTables, UPDATE=UPDATE
 end
 
 
+;+
+; :Description:
+;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
+;   access to a large number (currently 91) of new colour tables.
+;
+; :Params:
+;    table: in, optional, default=IDL 0
+;           the table to load. Either the name of the table or 
+;           its ID. See http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml
+;           for some visuals, or 
+;
+; :Keywords:
+;    UPDATE
+;    GET_RGB_TABLE
+;    ROW
+;    GET_NAME
+;    GET_NCOLORS
+;    REVERSE
+;    TALK
+;    WINID
+;    WINDOW
+;    ADDCMD
+;
+;-
 pro w_LoadCT, table, $
     UPDATE=update, $
     GET_RGB_TABLE=get_rgb_table, $
