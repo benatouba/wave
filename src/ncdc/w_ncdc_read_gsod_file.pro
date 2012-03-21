@@ -1,5 +1,5 @@
 ;+
-; :Description:
+; 
 ; The `w_ncdc_read_gsod_file` routine parses Global Summary of the Day (GSOD) NCDC ascii files. 
 ; The files must have the same data format as downloaded from the NCDC website
 ; (`http://www.ncdc.noaa.gov/oa/climate/climatedata.html#daily`) 

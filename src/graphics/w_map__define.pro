@@ -2310,12 +2310,14 @@ END
 ;    BLUE_MARBLE: in, optional, type = boolean/string
 ;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
 ;                 if set to a string, it is the path to an alternative jpg file to use as background
+;    HR_BLUE_MARBLE: in, optional, type = boolean/string
+;                    set this keyword to make a map using the NASA Land Cover picture (High res)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
-                            BLUE_MARBLE=blue_marble
+                            BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_marble
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2348,7 +2350,13 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   
-  if KEYWORD_SET(BLUE_MARBLE) then begin
+  if KEYWORD_SET(HR_BLUE_MARBLE) then begin
+    w = OBJ_NEW('w_BlueMarble', /HR)
+    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
+    undefine, w
+  endif
+  
+  if KEYWORD_SET(BLUE_MARBLE) then begin    
     if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
     ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
     undefine, w

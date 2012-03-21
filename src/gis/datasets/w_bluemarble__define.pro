@@ -41,6 +41,8 @@ end
 ;   SRTM: in, optional
 ;         if set, the default topo jpeg file from the marble is read instead of
 ;         the land map
+;   HR: in, optional
+;       if set, take the defaul HR jpeg
 ;
 ; :Returns:
 ;   one if the object was created successfully
@@ -48,9 +50,8 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;
-;
 ;-
-Function w_BlueMarble::Init, FILE=file, SRTM=srtm
+Function w_BlueMarble::Init, FILE=file, SRTM=srtm, HR=hr
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -63,10 +64,11 @@ Function w_BlueMarble::Init, FILE=file, SRTM=srtm
     RETURN, 0
   ENDIF 
   
-  if N_ELEMENTS(FILE) eq 0 then _file = WAVE_RESOURCE_DIR+'/files/bluemarble/world.topo.200407.3x5400x2700.jpg' $
+  if N_ELEMENTS(FILE) eq 0 then _file = WAVE_RESOURCE_DIR+'/bluemarble/world.topo.200407.3x5400x2700.jpg' $
    else _file = file
-  if KEYWORD_SET(SRTM) then _file = WAVE_RESOURCE_DIR+'/files/bluemarble/srtm_ramp2.world.21600x10800.jpg'
- 
+  if KEYWORD_SET(SRTM) then _file = WAVE_RESOURCE_DIR+'/bluemarble/srtm_ramp2.world.21600x10800.jpg'
+  if KEYWORD_SET(HR) then _file = WAVE_RESOURCE_DIR+'/bluemarble/world.topo.200407.3x21600x10800.jpg'
+  
   if N_ELEMENTS(_file) eq 0 then _file = DIALOG_PICKFILE(TITLE='Please select bluemarble file or directory to read')
   
   type = ''
