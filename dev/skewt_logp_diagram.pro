@@ -142,7 +142,7 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   maxh=WHERE(pressure eq maxp)
   maxheight=height[maxh]
   print, maxheight
-  cgaxis, yaxis=1, yrange=[0,maxheight], ystyle=0, ticklen=-0.03, color = 'black', /save ,ytitle='height [km]', ylog=0, /window
+  cgaxis, yaxis=1, yrange=[0,maxheight], ystyle=0, ticklen=-0.03, color = 'black', /save ,ytitle='height [km]', ylog=0, ytickinterval=2, /window
   endif 
   
  cgControl, EXECUTE=1
