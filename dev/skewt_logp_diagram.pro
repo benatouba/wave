@@ -89,7 +89,8 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   if N_ELEMENTS(TEMPRANGE) eq 0 then xrange=[-30,40] else xrange=TEMPRANGE
   
   minp=1050
-  yrange= [minp,100]
+  maxp=100
+  yrange= [minp,maxp]
   pticks=[100,150,200,300,400,600,800,1000]
  
   WINDOW=1 
@@ -100,13 +101,14 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   if N_ELEMENTS(figtitle) eq 0 then figtitle='Skew-T-log-p-diagram !C'
     
   ; prepare plot
-  cgplot, temperature, pressure, position=[0.13, 0.1, 0.9, 0.9], $
+  cgplot, temperature, pressure, position=[0.13, 0.1, 0.87, 0.9], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=figtitle, $
            YSTYLE=1,XSTYLE=9, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
   cgControl, EXECUTE=0
-  wset, cgQuery(/Current)   
-  
+  wset, cgQuery(/Current)  
+   
+
    ; plot isotherms
   T_iso = INDGEN(60)*10 - 100 
   for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp),$
@@ -123,7 +125,7 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   ; plot moist adiabates
   for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0,$
   LINESTYLE=2, color='blu7', WINDOW=window
-  cgControl, EXECUTE=1
+ 
     
   ; plot dewpoint temperature and pressure
   if N_ELEMENTS(dewpoint) ne 0 then cgplot, skewt_logp_diagram_skewY(dewpoint, pressure, ANGLE=angle, MINP=minp), pressure, thick=3.,$
@@ -134,6 +136,17 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   WINDOW=window
   cgplots,[xrange(0),xrange(1)],[yrange(1),yrange(1)], color=black, WINDOW=window, /DATA
 
+ ; plot height axis
+  if N_ELEMENTS(height) ne 0 then begin 
+  height=height/1000
+  maxh=WHERE(pressure eq maxp)
+  maxheight=height[maxh]
+  print, maxheight
+  cgaxis, yaxis=1, yrange=[0,maxheight], ystyle=0, ticklen=-0.03, color = 'black', /save ,ytitle='height [km]', ylog=0, /window
+  endif 
+  
+ cgControl, EXECUTE=1
+ 
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   if N_ELEMENTS(png) ne 0 then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
   if N_ELEMENTS(std_png) ne 0 then cgControl, CREATE_PNG=std_png, IM_RASTER=0
