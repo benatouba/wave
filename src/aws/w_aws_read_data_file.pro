@@ -71,18 +71,45 @@ function w_aws_read_data_file_auto_template, file
   k = 0LL
   m = 0LL
   stop_header = FALSE
+  station_name = ''
+  station_des = ''
+  station_locX = 0.
+  station_locY = 0.
+  station_h = 0.
+  data_val = 'POINT'
+  is_ts = FALSE
   readf, lun, line ; ignore the first line
   while ~stop_header do begin
-     readf, lun, line
-     k += 1 
-     if (BYTE(line))[0] eq BYTE('%') then continue
-     line = utils_replace_string(line, ',:', ':') 
-     els = utils_replace_string(STRSPLIT(line, ',' ,/EXTRACT, /PRESERVE_NULL), '"', '')     
-     if m eq 0 then var_names = els
-     if m eq 1 then var_units = els
-     if m eq 2 then var_type = els
-     if m ge 3 and AWS_time_is_valid(els[0]) then stop_header = TRUE
-     m += 1 
+    readf, lun, line
+    k += 1
+    if (BYTE(line))[0] eq BYTE('%') then begin
+      l = STRSPLIT(line, ':', /EXTRACT, /PRESERVE_NULL)
+      if str_equiv(l[0]) eq '% STATION_NAME' then station_name = GEN_strtrim(l[1], /ALL)
+      if str_equiv(l[0]) eq '% STATION_DESCRIPTION' then station_des = GEN_strtrim(l[1], /ALL)
+      if str_equiv(l[0]) eq '% STATION_LOCATION' then begin
+        l = STRSPLIT(l[1], ';', /EXTRACT, /PRESERVE_NULL)
+        station_locX = DOUBLE(utils_replace_string(l[0], 'Longitude', ''))
+        station_locY = DOUBLE(utils_replace_string(l[1], 'Latitude', ''))
+        station_h = FLOAT(utils_replace_string(l[2], 'Altitude', ''))
+      endif
+      if str_equiv(l[0]) eq '% DATA_VALIDITY' then data_val = GEN_strtrim(l[1], /ALL)
+      if str_equiv(l[0]) eq '% FILE_FORMAT' then is_ts = TRUE
+      continue
+    endif
+    line = utils_replace_string(line, ',:', ':')
+    els = utils_replace_string(STRSPLIT(line, ',' ,/EXTRACT, /PRESERVE_NULL), '"', '')
+    if m eq 0 then var_names = els
+    if is_ts then begin
+      if m eq 1 then var_des = els
+      if m eq 2 then var_units = els
+      if m eq 3 then var_type = els
+      if m ge 4 and AWS_time_is_valid(els[0]) then stop_header = TRUE
+    endif else begin
+      if m eq 1 then var_units = els
+      if m eq 2 then var_type = els
+      if m ge 3 and AWS_time_is_valid(els[0]) then stop_header = TRUE
+    endelse
+    m += 1
   endwhile
   FREE_LUN, lun
   var_names = utils_replace_string(var_names, '(', '_')  
@@ -107,6 +134,8 @@ function w_aws_read_data_file_auto_template, file
   add = [1,1]
   for j=0, nf-1 do field_locations[j] = fptr[j] + add[0]
   
+  if N_ELEMENTS(var_des) eq 0 then var_des = STRARR(nf)
+  
   template = { $
     version:            1.0, $
     dataStart:          k, $
@@ -117,9 +146,17 @@ function w_aws_read_data_file_auto_template, file
     fieldTypes:         types, $
     fieldNames:         str_equiv(var_names), $
     fieldUnits:         str_equiv(var_units), $
+    station_name:       station_name, $
+    station_des:        station_des, $
+    station_locX:       station_locX, $
+    station_locY:       station_locY, $
+    station_h:          station_h, $
+    data_val:           data_val, $
+    is_ts:              is_ts, $
+    fieldDes:           var_des, $
     fieldLocations:     field_locations, $
     fieldGroups:        LINDGEN(nf) $
-   }
+    }
      
   return, template
   
@@ -210,8 +247,15 @@ function w_aws_read_data_file, FILE=file, DELTA_QMS=delta_qms, STATION_OBJ=stati
   endif
   
   ; Where to put the data
-  if N_ELEMENTS(STATION_OBJ) eq 0 then _station_obj = OBJ_NEW('w_ts_Station') else begin
-    if ~OBJ_VALID(station_obj) and ~OBJ_ISA(station_obj, 'w_ts_Station') then Message, WAVE_Std_Message('STATION_OBJ', /ARG) 
+  if N_ELEMENTS(STATION_OBJ) eq 0 then begin
+    if TEMPLATE.is_ts then begin
+      _station_obj = OBJ_NEW('w_ts_Station', DESCRIPTION=template.station_des, ELEVATION=template.station_h, $
+                     LOC_X=template.station_locX, LOC_Y=template.station_locY, NAME=template.station_name)
+    endif else begin
+      _station_obj = OBJ_NEW('w_ts_Station')
+    endelse
+  endif else begin
+    if ~OBJ_VALID(station_obj) and ~OBJ_ISA(station_obj, 'w_ts_Station') then Message, WAVE_Std_Message('STATION_OBJ', /ARG)
     _station_obj = station_obj
   endelse
   
@@ -222,7 +266,8 @@ function w_aws_read_data_file, FILE=file, DELTA_QMS=delta_qms, STATION_OBJ=stati
     pi = where(str_equiv(_ignoretag) eq str_equiv(tag), cnti)
     if cnti ne 0 then continue
     ;create new data object and add it to the station
-    _var = OBJ_NEW('w_ts_Data', ascii_data.(i), time, NAME=tag, UNIT=template.fieldUnits[i])
+    _var = OBJ_NEW('w_ts_Data', ascii_data.(i), time, NAME=tag, UNIT=template.fieldUnits[i], $
+                      DESCRIPTION=template.fieldDes[i], VALIDITY=template.data_val)
     _station_obj->addVar, _var    
   endfor  
   

@@ -697,17 +697,16 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
   
   openw, id, file, /GET_LUN
   
-  if N_ELEMENTS(title) eq 0 then title = '% File generated with IDL. See metadata for more info.'
-  printf, id, '% ' + title
+  if N_ELEMENTS(title) eq 0 then title = 'File generated with IDL.'
+  printf, id, '% TITLE: ' + title
   
-  meta = '% Station: ' + self.name
+  meta = '% STATION_NAME: ' + self.name
   printf, id, meta
-  meta = '% Description: ' + self.description
+  meta = '% STATION_DESCRIPTION: ' + self.description
   printf, id, meta
-  meta = '% Location info: Longitude ' + str_equiv(STRING(self.loc_x)) + ' ; Latitude ' + str_equiv(STRING(self.loc_y)) + ' ; Altitude ' + STRING(self.elevation, FORMAT='(I4)') 
+  meta = '% STATION_LOCATION: Longitude ' + str_equiv(STRING(self.loc_x)) + ' ; Latitude ' + str_equiv(STRING(self.loc_y)) + ' ; Altitude ' + STRING(self.elevation, FORMAT='(I4)') 
   printf, id, meta
-  
-  
+    
   vNames = self->GetVarNames(COUNT=nvar) 
   
   units = STRARR(nvar)
@@ -729,7 +728,9 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
    valids[i] = Validity
       
   endfor 
-  meta = '% Validity (POINT or INTERVAL. If INTERVAL the data is aggregated and the time indicates the time at the *END* of the interval): ' + valids[0]
+  meta = '% DATA_VALIDITY: ' + valids[0]
+  printf, id, meta
+  meta = '% FILE_FORMAT: NAME, DESCRIPTION, UNIT, TYPE'
   printf, id, meta
   
   time = _var->getTime(nt)    
@@ -740,7 +741,7 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
   text += vNames[nvar- 1]  + '"'
   printf, id, text
   
-  text = '"DESCRIPTION","'
+  text = '"-","'
   for i = 0, nvar - 2 do text +=descriptions[i] + sep
   text += descriptions[nvar- 1]  + '"'
   printf, id, text
