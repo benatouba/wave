@@ -1,13 +1,16 @@
 ;+
+;
 ;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
 ;   access to a large number (currently 91) of new colour tables, 
 ;   mostly taken from the NCL colormaps library 
 ;   (http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml).
+;   You can have a look on all available table (including the ones you added)
+;   in the $WAVE/res/colormaps directory.
 ;   
 ;   Moreover, it allows you to create very easily your own color table by 
-;   creating a file called xxxx.rgb, where xxxx is the color table name
+;   creating a file called xxxx.rgb (where xxxx is the color table name)
 ;   and moving it to the WAVE res/colortables directory.
-;   Here's a sample color table with 8 colors::
+;   For example, here's a sample color table with 8 colors::
 ;      ncolors=8
 ;      # r   g   b
 ;      160 32  240
@@ -190,22 +193,42 @@ end
 ;
 ; :Params:
 ;    table: in, optional, default=IDL 0
-;           the table to load. Either the name of the table or 
-;           its ID. See http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml
-;           for some visuals, or 
+;           the table to load. Either the table name or the table ID. Since the ids
+;           are likely to change with time, it is is strongly recommended to use the 
+;           table name in your code.
+;           See the $WAVE/res/colormaps directory for the list of available colortables      
 ;
 ; :Keywords:
-;    UPDATE
-;    GET_RGB_TABLE
-;    ROW
-;    GET_NAME
-;    GET_NCOLORS
-;    REVERSE
-;    TALK
-;    WINID
-;    WINDOW
-;    ADDCMD
-;
+;    UPDATE: in, optional, type=boolean, default=0
+;            set this keyword to update the table list before loading your table
+;    GET_RGB_TABLE: out, optional, type=array
+;                   set to a named variable to get the RGB palette. If set, the table
+;                   will NOT be loaded in IDL
+;    ROW: in, optional, type=boolean, default=0
+;       Set this keyword to indicate you are getting the RGB_TABLE vectors
+;       for use in the IDL's object graphics routines. Whereas TVLCT expects color 
+;       tables to be 256x3 (column vectors), the object graphics routines expect them 
+;       to be 3x256 (row vectors). Setting this keyword will transpose the vectors 
+;       before they are returned.
+;    GET_NAME: out, optional, type=string
+;              set to a named variable to get the table name              
+;    GET_NCOLORS: out, optional, type=long
+;                 set to a named variable to get the table number of colors. 
+;                 This is very usefull (if not very very important) if yo plan
+;                 to use `w_gr_datalevels` after a call to w_Loadct          
+;    REVERSE: in, optional, type=boolean, default=0
+;             If this keyword is set, the color table vectors are reversed.
+;    TALK: in, optional, type=boolean, default=0
+;          IDL used to talk when it loaded a colortable. Set this keyword
+;          if you want w_LoadCT do talk, too
+;    WINDOW: in, optional, type=boolean, default=0
+;            Set this keyword to add the command to an cgWindow application.
+;    WINID: in, optional, type=integer                 
+;           The window index number of an cgWindow to receive the color vectors.
+;           If this parameter is absent, the color table vectors are sent to the
+;           current cgWindow.
+;    ADDCMD: in, optional, type=boolean, default=0
+;             Set this keyword to add the command to the resizeable graphics window cgWindow.
 ;-
 pro w_LoadCT, table, $
     UPDATE=update, $
