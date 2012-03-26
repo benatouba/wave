@@ -77,9 +77,9 @@ pro WAVE_init
   TIME_init
   AWS_init
   !ORDER = 0 
-  window, /FREE, /PIXMAP
-  if !D.WINDOW ge 0 then wdelete, !D.WINDOW
-  cgWindow_SetDefs, im_resize = 50
+;  window, /FREE, /PIXMAP
+;  if !D.WINDOW ge 0 then wdelete, !D.WINDOW
+;  cgWindow_SetDefs, im_resize = 50
   
   print, ''
   print, '*******************'

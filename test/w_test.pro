@@ -987,15 +987,15 @@ pro TEST_GR_DATALEVELS
   if MAX(info.LEVELS) ne 1 then error += 1
   if MIN(info.LEVELS) ne 0 then error += 1
   if info.LEVELS[1] ne 1./256 then error += 1
-
+  
   info = w_gr_DataLevels(MIN_VALUE=0.25, MAX_VALUE=0.75)  
   if info.N_LEVELS ne 257 then error += 1
   if info.N_COLORS ne 256 then error += 1
   if MAX(info.LEVELS) ne 0.75 then error += 1
   if MIN(info.LEVELS) ne 0.25 then error += 1
   if info.LEVELS[1] ne 0.5/256 + 0.25 then error += 1
-  if info.is_ooTop ne 0 then error += 1
-  if info.is_ooBot ne 0 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
     
   info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10) 
   if info.N_LEVELS ne 257 then error += 1
@@ -1012,8 +1012,8 @@ pro TEST_GR_DATALEVELS
   if info.LEVELS[1] ne 1 then error += 1
   if info.LEVELS[8] ne 8 then error += 1
   if info.dcbar ne 0 then error += 1 
-  if info.is_ooTop ne 0 then error += 1
-  if info.is_ooBot ne 0 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
   
   info = w_gr_DataLevels(LEVELS=[1,2,3,4,5,6,7,8,9,10], /DCBAR) 
   if info.N_LEVELS ne 10 then error += 1
@@ -1023,12 +1023,94 @@ pro TEST_GR_DATALEVELS
   if info.LEVELS[1] ne 2 then error += 1
   if info.LEVELS[8] ne 9 then error += 1
   if info.dcbar ne 1 then error += 1
-  if info.is_ooTop ne 0 then error += 1
-  if info.is_ooBot ne 0 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
   
-  data = FLTARR(3,3)
-  data = [1.,.25,0.4,0.8, 0.]
-  info = w_gr_DataLevels(data, /SHOW)  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1) 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 11 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+    
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown') 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 11 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+    
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink') 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 12 then error += 1
+  if info.colors[info.N_COLORS-1] ne cgColor('pink') then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_TOP_COLOR='pink', OOB_BOT_COLOR='grey') 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 13 then error += 1
+  if info.colors[info.N_COLORS-1] ne cgColor('pink') then error += 1
+  if info.colors[0] ne cgColor('grey') then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
+  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_BOT_COLOR='grey', NEUTRAL_COLOR='brown') 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 12 then error += 1
+  if info.colors[0] ne cgColor('grey') then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
+      
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /DCBAR) 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 12 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown', /DCBAR) 
+  if info.N_LEVELS ne 12 then error += 1
+  if info.N_COLORS ne 12 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+  
+  ;----------------------------------------
+  ;----------------------------------------
+  ; Now with data
+  ;----------------------------------------
+  ;----------------------------------------
+  
+    
+  
+;  data = FLTARR(3,3)
+;  data = [1.,.25,0.4,0.8, 0.]
+;  info = w_gr_DataLevels(data, /SHOW)  
  
   if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
   

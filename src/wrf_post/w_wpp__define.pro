@@ -31,7 +31,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
     catch, /cancel
     if OBJ_VALID(self.logger) then begin
       self.logger->addError
-      obj_destroy, self.errorLogger
+      obj_destroy, self.Logger
     endif else begin
       ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     endelse
@@ -53,7 +53,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   endif
   
   ; Logger
-  logf = self.output_directory + '/wpp_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  logf = self.output_directory + '/wpp_init_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
   ; General info
   self.Logger->AddText, 'WPP logfile ' + self.title + ' - Domain ' + str_equiv(self.domain), PRINT=print
@@ -71,9 +71,14 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   self.Logger->AddText, '', PRINT=print
   
   ; Parse the variable files. Need a WRF template for this
-  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
+  ite = 0L
+  while ~ caching((*self.ifiles)[ite], /CHECK, CACHEPATH=self.cachepath) do begin
+    ite+=1
+    if ite gt self.n_ifiles-1 then message, 'Something got really wrong with caching'
+  endwhile
+  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
-  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE)  
+  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, /DELETE)  
   self.Logger->AddText, 'Parse variable definitions ...', PRINT=print  
   if ~ self->_Parse_VarDefFile(self.vstatic_file, 'static', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.vstatic_file
   if ~ self->_Parse_VarDefFile(self.v2d_file, '2d', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.v2d_file 
@@ -91,6 +96,8 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   self.Logger->AddText, '+----------------------------+', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->Flush
+  
+  OBJ_DESTROY, self.logger
     
   return, 1
   
@@ -115,7 +122,7 @@ pro w_WPP::Cleanup
   ptr_free, self.pressure_levels 
   undefine, *self.vars
   ptr_free, self.vars   
-  file_delete, self.cachepath, /RECURSIVE
+  if FILE_TEST(self.cachepath, /DIRECTORY) then file_delete, self.cachepath, /RECURSIVE
   
 END
 
@@ -870,17 +877,26 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   
   catch, theError
   if theError ne 0 then begin
-    catch, /cancel 
-    for d=0, N_ELEMENTS(objs)-1 do begin 
+    catch, /cancel
+    for d=0, N_ELEMENTS(objs)-1 do begin
       o = objs[d]
       obj_Destroy, o
     endfor
     undefine, objs
-    self.logger->addError
+    if OBJ_VALID(self.logger) then begin
+      self.logger->addError
+      obj_destroy, self.Logger
+    endif else begin
+      ok = WAVE_Error_Message(!Error_State.Msg)
+    endelse
     return
   endif
   
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
+  
+  ; Logger
+  logf = self.output_directory + '/wpp_process_h_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
   
   obj_destroy, self.active_wrf
   ptr_free, self.active_time
@@ -895,7 +911,15 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
        
   ; Define
   ; Tpl Object  
-  if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[0]
+  if self.do_cache then begin 
+   ite = 0L
+   while ~ caching(files[0], /CHECK, CACHEPATH=self.cachepath) do begin
+    ite+=1
+    wait, 5
+    if ite gt 300 then message, 'Something got really wrong with caching'
+   endwhile
+   file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
+  endif else file = files[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
  
   self.logger->addText, 'Generating product files ...', PRINT=print
@@ -919,7 +943,15 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
     logti = SYSTIME(/SECONDS)
   
     if f ne 0 then begin
-      if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) else file = files[f]
+      if self.do_cache then begin
+        ite = 0L
+        while ~ caching(files[f], /CHECK, CACHEPATH=self.cachepath) do begin
+          ite+=1
+          wait, 5
+          if ite gt 300 then message, 'Something got really wrong with caching'
+        endwhile
+        file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
+      endif else file = files[f]
       self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
     endif
     
@@ -994,6 +1026,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   self.active_n_time = 0
   PTR_FREE, self.active_time
   PTR_FREE, self.active_index
+  OBJ_DESTROY, self.logger
   
 end
 
@@ -1020,12 +1053,20 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   
   catch, theError
   if theError ne 0 then begin
-    catch, /cancel 
-    self.logger->addError
+    catch, /cancel
+    if OBJ_VALID(self.logger) then begin
+      self.logger->addError
+      obj_destroy, self.Logger
+    endif else begin
+      ok = WAVE_Error_Message(!Error_State.Msg)
+    endelse
     return
   endif
-  
+ 
   if ~(agg eq 'd' or agg eq 'm' or agg eq 'y') then Message, '$AGG not valid' 
+
+  logf = self.output_directory + '/wpp_process_m_' + agg + '_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
     
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
@@ -1103,6 +1144,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   self.active_n_time = 0
   PTR_FREE, self.active_time
   PTR_FREE, self.active_index
+  OBJ_DESTROY, self.logger
 
 end
 

@@ -105,6 +105,11 @@ end
 ;            set this keyword to 0 to log the caching actions
 ;    NO_ZIP: in, optional, type=BOOLEAN
 ;            set this keyword to prevent unzipping the file (should not be set normally)
+;    CHECK: in, optional, type=BOOLEAN
+;           set this keyword to check if the file is allready cached or beeing cached.
+;           output is 1 if everything is clear and you can cache it, 0 if not (in this
+;           case you may want to wait or do something else)
+;           
 ; :Returns:
 ;   The path to the cached file
 ;
@@ -117,8 +122,18 @@ end
 ;    IDL> f = caching(ofile, CACHEPATH='/home/mowglie/cache', /DELETE)
 ;    
 ;-
-function caching, filename, DELETE=delete, CACHEPATH=cachepath, LOGGER=logger, PRINT=print, QUIET=quiet, NO_ZIP=no_zip
+function caching, filename , $
+    DELETE=delete, $
+    CACHEPATH=cachepath, $
+    LOGGER=logger, $
+    PRINT=print, $
+    QUIET=quiet, $
+    NO_ZIP=no_zip, $
+    CHECK=check
   
+  ; Set up environnement and Error handling
+  @WAVE.inc
+  COMPILE_OPT IDL2
   ON_ERROR, 2
   
   if n_elements(filename) eq 0 then message, WAVE_Std_Message('filename', /ARG)
@@ -131,10 +146,15 @@ function caching, filename, DELETE=delete, CACHEPATH=cachepath, LOGGER=logger, P
   ending = strsplit(filename, '.', /extract, count=cnt)
   if cnt eq 0 then Message, 'Type not recognized (must be .nc or .zip): ' + filename
   
-  if ~keyword_set(no_zip) then begin
+  if ~keyword_set(no_zip) and ~keyword_set(CHECK) then begin
     ending = ending[cnt-1]
     if str_equiv(ending) eq 'ZIP' then begin
-      origname = caching(filename, /NO_ZIP, delete=delete, cachepath=cachepath, logger=logger, print=print, quiet=quiet)
+      origname = caching(filename, /NO_ZIP, $
+        DELETE=delete,  $
+        CACHEPATH=cachepath,  $
+        LOGGER=logger,  $
+        PRINT=print,  $
+        QUIET=quiet)
       lfile = utils_replace_string(origname, '.zip', '.sav')
       if keyword_set(delete) then begin
         if ~ FILE_TEST(lfile) then message, 'Something went wrong. Did you try to delete the file before caching it?' 
@@ -161,6 +181,11 @@ function caching, filename, DELETE=delete, CACHEPATH=cachepath, LOGGER=logger, P
   _filename = utils_replace_string(filename, '/', '_')
   cachefile = caching_combine_path_file(cachepath, _filename)
   lockfile = caching_combine_path_file(cachepath, _filename + '.lck')
+  
+  if KEYWORD_SET(CHECK) then begin
+    if ~ file_test(cachefile) and ~ file_test(lockfile) then return, 1 ; everything is ok
+    return, 0 ; not ok
+  endif
   
   if keyword_set(delete) and file_test(cachefile) then begin
     file_delete, cachefile
