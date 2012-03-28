@@ -1,11 +1,18 @@
 ;+
 ;
 ;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
-;   access to a large number (currently 91) of new colour tables, 
-;   mostly taken from the NCL colormaps library 
+;   access to a large number of new colour tables, mostly taken from the 
+;   NCL colormaps library 
 ;   (http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml).
-;   You can have a look on all available table (including the ones you added)
+;   You can visualise all available tables (including the ones you added)
 ;   in the $WAVE/res/colormaps directory.
+;   
+;   The most interesting feature of this tool is its flexibility, allowing 
+;   you to add or define virtualy ANY colortable you could desire. For 
+;   example, you could visit the cpt-city website to get access to thousands
+;   of colortables (http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html),
+;   download one of them (using the *.c3g format) and add it to the WAVE 
+;   res/colortables directory directory.
 ;   
 ;   Moreover, it allows you to create very easily your own color table by 
 ;   creating a file called xxxx.rgb (where xxxx is the color table name)
@@ -22,7 +29,7 @@
 ;      100 225 0
 ;      210 255 47
 ;   
-;   Don't forget to update the tables when you add your own table to the list!
+;   Don't forget to update the table list when you add your own table to the WAVE!
 ;
 ; :Categories:
 ;    Graphics
@@ -97,6 +104,69 @@ end
 ; :Private:
 ; 
 ; :Description:
+;    Parses a C3G ascii file.
+;
+; :Params:
+;    file: in, required
+;          path to the file
+;    pal: out
+;         the palette
+;    n: out
+;       the number of colors in the palette
+;  
+;  :Returns:
+;    1 if successed, 0 if not
+;-
+function w_LoadCT_parse_c3g, file, pal, n
+
+  @WAVE.inc
+  compile_opt idl2
+  
+;  catch, theError
+;  if theError ne 0 then begin
+;    catch, /cancel
+;    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
+;    print, 'Could not read file: ' + FILE_BASENAME(file)
+;    return, 0
+;  endif
+  
+  r = BYTARR(256)
+  g = BYTARR(256)
+  b = BYTARR(256)
+  
+  OPENR, lun, file, /GET_LUN
+  line = ''
+  n=0LL
+  while ~eof(lun) do begin
+    readf, lun, line
+    line = strtrim(line,2)
+    if N_ELEMENTS(BYTE(line)) lt 4 then continue
+    if TOTAL((byte(line))[0:3] - byte('rgb(')) ne 0 then continue 
+    l = STRSPLIT(line, '(', /EXTRACT)
+    l = (STRSPLIT(l[1], ')', /EXTRACT))[0]
+    l = STRSPLIT(l, ',', /EXTRACT)
+    if ~arg_okay(l[0:2], /NUMERIC) then continue
+    if n ge 256 then continue
+    r[n]=l[0]
+    g[n]=l[1]
+    b[n]=l[2]
+    n+=1
+  endwhile
+  CLOSE, lun
+  FREE_LUN, lun
+  
+  if n eq 0 then Message, 'no'
+
+  pal = [TRANSPOSE(r), TRANSPOSE(g), TRANSPOSE(b)]
+  
+  return, 1
+
+end
+
+;+
+; :Private:
+; 
+; :Description:
 ;    Returns the parsed color palettes and updates them if necessary
 ;
 ; :Keywords:
@@ -119,7 +189,7 @@ function w_LoadCT_getTables, UPDATE=UPDATE
   
   if UPDATE then begin
   
-    files = FILE_SEARCH(dir, '*.{rgb,ncmap,gp}', /EXPAND_ENVIRONMENT, COUNT=nfiles)
+    files = FILE_SEARCH(dir, '*.{rgb,ncmap,gp,c3g}', /EXPAND_ENVIRONMENT, COUNT=nfiles)
     files = files[sort(files)]
     names = STRARR(nfiles)
     suff = STRARR(nfiles)
@@ -137,7 +207,8 @@ function w_LoadCT_getTables, UPDATE=UPDATE
     id = 0L
     
     for i=0, nfiles-1 do begin
-      ok = w_LoadCT_parse_rgb(files[i], pal, nc)
+      if str_equiv(suff[i]) eq 'C3G' then ok = w_LoadCT_parse_c3g(files[i], pal, nc) $
+       else ok = w_LoadCT_parse_rgb(files[i], pal, nc)
       if ~ ok then continue
       t = {name:names[i], id:id, pal:pal, nc:nc}
       id += 1
@@ -156,25 +227,29 @@ function w_LoadCT_getTables, UPDATE=UPDATE
       STRPUT, ns, t.name, 5
       STRPUT, ns, str_equiv(t.nc) , 30      
       print, ns
-     
-      cgDisplay, 1000, 300, /FREE, /PIXMAP
-      xwin = !D.WINDOW
       
+      pngf = visdir + t.name + '.png'     
+      cgDisplay, 1000, 300, /FREE, /PIXMAP
+      xwin = !D.WINDOW      
       dum = BYTARR(100) + 1
       r = reform(t.pal[0,0:t.nc-1]) # dum
       g = reform(t.pal[1,0:t.nc-1]) # dum
       b = reform(t.pal[2,0:t.nc-1]) # dum
-      img = [[[r]],[[g]],[[b]]]
-            
+      img = [[[r]],[[g]],[[b]]]            
       cgImage, img, POSITION=[0.05,0.15,0.95,0.7], /AXIS, AXKEYWORDS={YTICKS:1, YTICKNAME:[' ', ' ']} 
-      title = str_equiv(t.id) + ': ' + t.name
+      title = t.name
       cgText, 0.05, 0.8, title, /NORMAL,  COLOR='black', charsize=5, FONT=-1, CHARTHICK=2
       title = 'ncolors = ' + str_equiv(t.nc)   
       cgText, 0.95, 0.8, title, /NORMAL,  COLOR='black', charsize=3, FONT=-1, CHARTHICK=1, ALIGNMENT=1.
-      write_png, visdir + t.name + '.png', tvrd(TRUE=1)
-  
-      if xwin ne -1 then wdelete, xwin
-      
+      newimg = tvrd(TRUE=1)
+      if FILE_TEST(pngf) then begin
+        READ_PNG, pngf, oldimg
+        if total(ABS(oldimg-newimg)) ne 0 then begin
+          print, 'replacing: ' + pngf
+          write_png, pngf, newimg
+        endif
+      endif else write_png, pngf, newimg  
+      if xwin ne -1 then wdelete, xwin      
     endfor
     save, tables, FILENAME=savf
   endif else begin
@@ -189,7 +264,7 @@ end
 ;+
 ; :Description:
 ;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
-;   access to a large number (currently 91) of new colour tables.
+;   access to a large number of new colour tables.
 ;
 ; :Params:
 ;    table: in, optional, default=IDL 0
