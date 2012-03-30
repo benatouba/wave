@@ -1616,9 +1616,13 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
       if _roi_mask_rule eq 3 then begin
         if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
-        cont = roi->ContainsPoints(i, j)
+        pok = where(roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=2), cntok)
+        if cntok eq 0 then continue
+        _i = i[pok]
+        _j = j[pok]
+        cont = roi->ContainsPoints(_i, _j)
         p_in = where(cont ge 1, cnt_in)
-        if cnt_in ne 0 then _mask[p_in] = 1
+        if cnt_in ne 0 then _mask[_i[p_in],_j[p_in]] = 1
       endif else begin
         if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
         else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
