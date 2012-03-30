@@ -1,11 +1,9 @@
 ;+
 ;
-;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
-;   access to a large number of new colour tables, mostly taken from the 
-;   NCL colormaps library 
-;   (http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml).
-;   You can visualise all available tables (including the ones you added)
-;   in the $WAVE/res/colormaps directory.
+;   This command is similar to IDL's CTLOAD or Coyote's cgLoadCT and gives
+;   access to a large number of new colour tables. It should be used as
+;   replacement for those routines since it works in combination with 
+;   `w_gr_datalevels`.    
 ;   
 ;   The most interesting feature of this tool is its flexibility, allowing 
 ;   you to add or define virtualy ANY colortable you could desire. For 
@@ -14,9 +12,8 @@
 ;   download one of them (using the *.c3g format) and add it to the WAVE 
 ;   res/colortables directory directory.
 ;   
-;   Moreover, it allows you to create very easily your own color table by 
-;   creating a file called xxxx.rgb (where xxxx is the color table name)
-;   and moving it to the WAVE res/colortables directory.
+;   To make you colortable, create a file called xxxx.rgb (where xxxx is the
+;   color table name and move it to the WAVE res/colortables directory.
 ;   For example, here's a sample color table with 8 colors::
 ;      ncolors=8
 ;      # r   g   b
@@ -28,11 +25,24 @@
 ;      46  139 87
 ;      100 225 0
 ;      210 255 47
+;      
+;   A large part of the new colortables are taken from the NCL colormaps library 
+;   (http://www.ncl.ucar.edu/Document/Graphics/color_table_gallery.shtml).
+;   You can visualise all available tables (including the ones you added)
+;   in the $WAVE/res/colormaps directory.
 ;   
 ;   Don't forget to update the table list when you add your own table to the WAVE!
 ;
 ; :Categories:
 ;    Graphics
+;    
+; :Examples:
+;    You can use w_loadct pretty much the same way as loadct::
+;      IDL> w_LoadCT, 'ncview_default'
+;      IDL> cgimage, cgDemodata(18)
+;    But it becomes even more interesting together with `w_gr_Datalevels`::
+;      IDL> w_LoadCT, 'wiki-schwarzwald-cont'
+;      IDL> info = w_gr_DataLevels(cgDemoData(7), /SHOW)
 ;    
 ; :History:
 ;     Written by FaM, 2012.
@@ -122,13 +132,13 @@ function w_LoadCT_parse_c3g, file, pal, n
   @WAVE.inc
   compile_opt idl2
   
-;  catch, theError
-;  if theError ne 0 then begin
-;    catch, /cancel
-;    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
-;    print, 'Could not read file: ' + FILE_BASENAME(file)
-;    return, 0
-;  endif
+  catch, theError
+  if theError ne 0 then begin
+    catch, /cancel
+    if N_ELEMENTS(lun) ne 0 then FREE_LUN, lun
+    print, 'Could not read file: ' + FILE_BASENAME(file)
+    return, 0
+  endif
   
   r = BYTARR(256)
   g = BYTARR(256)
@@ -260,44 +270,64 @@ function w_LoadCT_getTables, UPDATE=UPDATE
   
 end
 
+;+
+; :Description:
+;    Set the sysvar !W_TABLE_SIZE
+;
+; :Params:
+;    table_size: in, required
+;                the table sixe
+;    
+; :Private:
+;
+;-
+pro w_LoadCT_set_sysvar, table_size
+
+  @WAVE.inc
+  compile_opt idl2  
+  
+  ; Does the system variable !W_TABLE_SIZE exist? If so, set its value.
+  ; If not, create it.
+  DefSysV, '!W_TABLE_SIZE', EXISTS=sysvarExists
+  IF sysvarExists $
+    THEN !W_TABLE_SIZE = table_size $
+      ELSE DefSysV, '!W_TABLE_SIZE', table_size
+  
+end
 
 ;+
 ; :Description:
 ;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
-;   access to a large number of new colour tables.
+;   access to a large number of new color tables.
 ;
 ; :Params:
-;    table: in, optional, default=IDL 0
-;           the table to load. Either the table name or the table ID. Since the ids
-;           are likely to change with time, it is is strongly recommended to use the 
-;           table name in your code.
-;           See the $WAVE/res/colormaps directory for the list of available colortables      
-;
+;    table: in, optional, default=0
+;           the table to load. Either:
+;           (1) the table name for WAVE colortables (string),
+;           (2) an integer for cgLoadct tables, 
+;           (3) a 3*N color palette to load.
+;           ;
 ; :Keywords:
 ;    UPDATE: in, optional, type=boolean, default=0
 ;            set this keyword to update the table list before loading your table
-;    GET_RGB_TABLE: out, optional, type=array
-;                   set to a named variable to get the RGB palette. If set, the table
-;                   will NOT be loaded in IDL
+;    BREWER: in, optional, type=boolean, default=0
+;            set this keyword to use the brewer colortables instead of IDL ones
+;    RGB_TABLE: out, optional, type=array
+;               set to a named variable to get the RGB palette. If set, the table
+;               will NOT be loaded in IDL
 ;    ROW: in, optional, type=boolean, default=0
 ;       Set this keyword to indicate you are getting the RGB_TABLE vectors
 ;       for use in the IDL's object graphics routines. Whereas TVLCT expects color 
 ;       tables to be 256x3 (column vectors), the object graphics routines expect them 
 ;       to be 3x256 (row vectors). Setting this keyword will transpose the vectors 
-;       before they are returned.
-;    GET_NAME: out, optional, type=string
-;              set to a named variable to get the table name              
-;    GET_NCOLORS: out, optional, type=long
-;                 set to a named variable to get the table number of colors. 
-;                 This is very usefull (if not very very important) if yo plan
-;                 to use `w_gr_datalevels` after a call to w_Loadct          
+;       before they are returned.      
+;    TABLE_SIZE: out, optional, type=long
+;                set to a named variable to get the table number of colors. 
+;                internally, a system variable !W_TABLE_SIZE is generated  
 ;    REVERSE: in, optional, type=boolean, default=0
 ;             If this keyword is set, the color table vectors are reversed.
-;    TALK: in, optional, type=boolean, default=0
-;          IDL used to talk when it loaded a colortable. Set this keyword
-;          if you want w_LoadCT do talk, too
 ;    WINDOW: in, optional, type=boolean, default=0
-;            Set this keyword to add the command to an cgWindow application.
+;            Set this keyword to add the command to a cgWindow application.
 ;    WINID: in, optional, type=integer                 
 ;           The window index number of an cgWindow to receive the color vectors.
 ;           If this parameter is absent, the color table vectors are sent to the
@@ -307,12 +337,11 @@ end
 ;-
 pro w_LoadCT, table, $
     UPDATE=update, $
-    GET_RGB_TABLE=get_rgb_table, $
+    BREWER=brewer, $
+    RGB_TABLE=rgb_table, $
     ROW=row, $
-    GET_NAME=get_name, $
-    GET_NCOLORS=get_ncolors, $
+    TABLE_SIZE=table_size, $
     REVERSE=reverse, $
-    TALK=talk, $
     WINID=winID, $
     WINDOW=window, $
     ADDCMD=addcmd
@@ -333,13 +362,12 @@ pro w_LoadCT, table, $
     IF wincnt EQ 0 THEN cgWindow
     cgWindow, 'w_LoadCT', table, $
       UPDATE=update, $
-      GET_RGB_TABLE=get_rgb_table, $
+      RGB_TABLE=rgb_table, $
       ROW=row, $
-      GET_NAME=get_name, $
-      GET_NCOLORS=get_ncolors, $
+      TABLE_SIZE=table_size, $
       REVERSE=reverse, $
-      TALK=talk, $
       WINID=winID, $
+      WINDOW=window, $
       ADDCMD=1
     return
   ENDIF
@@ -350,28 +378,61 @@ pro w_LoadCT, table, $
   tables = w_LoadCT_getTables(UPDATE=update)
   nt = N_ELEMENTS(tables)  
   
-  if N_ELEMENTS(table) eq 0 then begin
-    cgLoadCT, 0
-    return
-  endif
-  
-  if arg_okay(table, TYPE=IDL_STRING, /SCALAR) then begin
+  if N_ELEMENTS(table) eq 0 then table=0  
+
+  if arg_okay(table, TYPE=IDL_STRING, /SCALAR) then begin ; wave table case
     p = WHERE(str_equiv(tables.Name) eq str_equiv(table), cnt)
     if cnt ne 0 then out_id = p[0] else MESSAGE, 'Table not found: ' + table
-  endif else if arg_okay(table, /INTEGER, /SCALAR) then begin
-    if table lt 0 or table ge nt then MESSAGE, 'Table not found: ' + str_equiv(table)
-    out_id = table    
+  endif else if arg_okay(table, /INTEGER, /SCALAR) then begin ; coyote table case
+    if ARG_PRESENT(RGB_TABLE) then begin
+      cgLoadCT, table, $
+        ADDCMD=addcmd, $
+        BREWER=brewer, $
+        RGB_TABLE=rgb_table, $
+        REVERSE=reverse, $
+        ROW=row, $
+        WINDOW=window, $
+        WINID=winID
+    endif else begin
+      cgLoadCT, table, $
+        ADDCMD=addcmd, $
+        BREWER=brewer, $
+        REVERSE=reverse, $
+        ROW=row, $
+        WINDOW=window, $
+        WINID=winID
+    endelse
+    table_size=!D.TABLE_SIZE
+    w_LoadCT_set_sysvar, table_size
+    return
+  endif else if arg_okay(table, /INTEGER, N_DIM=2) then begin ; palette case
+    dims = Size(table, /DIMENSIONS)
+    threeIndex = Where(dims EQ 3, cntthree)
+    if cntthree eq 0 then message, 'Color palette is not a 3xN array.'
+    if cntthree eq 2 then begin
+      TVLCT, table
+      table_size = 3
+      w_LoadCT_set_sysvar, table_size
+      return
+    endif else begin
+      IF threeIndex[0] EQ 0 THEN begin
+        TVLCT, Transpose(table)
+        table_size = dims[1]
+      endif else begin
+        TVLCT, table
+        table_size = dims[0]
+      endelse
+      w_LoadCT_set_sysvar, table_size
+      return
+    endelse
   endif else MESSAGE, WAVE_Std_Message('table', /ARG)
   
   t = tables[out_id]
-  GET_NCOLORS = t.nc
-  GET_NAME=t.name
+  table_size = t.nc
   r = reform(t.pal[0,*])
   g = reform(t.pal[1,*])
   b = reform(t.pal[2,*])    
-  
-  if KEYWORD_SET(TALK) then print, '% W_LoadCT: Loading table ' + GET_NAME + ', ncolors: ' + str_equiv(GET_NCOLORS)
-  
+    
   ; Need to reverse the colors?
   IF reverse THEN BEGIN
      r = Reverse(r)
@@ -380,11 +441,12 @@ pro w_LoadCT, table, $
   ENDIF
 
   ; Load a color_table, if needed. Otherwise, load color vectors.
-  IF Arg_Present(get_rgb_table) THEN BEGIN
-    get_rgb_table = [[r], [g], [b]]
-    IF Keyword_Set(row) THEN get_rgb_table = Transpose(get_rgb_table)
+  IF Arg_Present(RGB_TABLE) THEN BEGIN
+    rgb_table = [[r], [g], [b]]
+    IF Keyword_Set(row) THEN rgb_table = Transpose(rgb_table)
   ENDIF ELSE BEGIN
-    TVLCT, r, g, b
+    TVLCT, r, g, b    
+    w_LoadCT_set_sysvar, table_size
   ENDELSE
   
   ; If the WINDOW keyword is set, send these colors to a cgWindow object.
@@ -420,6 +482,5 @@ pro w_LoadCT, table, $
       ENDIF
     ENDIF
   ENDIF
-    
-  
+      
 end
