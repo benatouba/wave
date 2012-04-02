@@ -81,7 +81,7 @@ pro w_gr_DataLevels_show, info
     ;Histogram
     if info.dcbar then begin
       labels = w_str(info.levels)
-      if is_Missing then labels = ['Miss', labels]
+      if info.is_Missing then labels = ['Miss', labels]
     endif else begin
       labels = w_str(info.levels[0:N_ELEMENTS(info.levels)-2]) + ' to ' + w_str(info.levels[1:*])
       if info.is_ooBotColor then labels = ['< '+ w_str(info.levels[0]), labels]
@@ -109,13 +109,13 @@ pro w_gr_DataLevels_show, info
     cgWindow, WXSIZE=700, WYSIZE=500
     if info.dataNdims eq 2 then begin ; Image case
       cgImage, info.loc, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
-        /KEEP_ASPECT_RATIO, MINUS_ONE=0, /AXIS, TITLE='Data image'
+        MINUS_ONE=0, /AXIS, TITLE='Data image', MARGIN=0.1
     endif else begin
       d = CEIL(SQRT(dataNel))
       img = LONARR(d,d)
       img[0:dataNel-1] = info.loc
       cgImage, img, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
-        /KEEP_ASPECT_RATIO, MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE
+        MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE
       if N_ELEMENTS(img) gt dataNel then begin ; put a cross where no data
         inds = ARRAY_INDICES(img, INDGEN(N_ELEMENTS(img)-dataNel) + dataNel)
         cgPlotS, inds[0,*]+0.5, inds[1,*]+0.5, PSYM=SymCat(34), /DATA, /ADDCMD, SYMSIZE=1.5
