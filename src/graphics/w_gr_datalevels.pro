@@ -178,7 +178,8 @@ end
 ;    SHOW: in, optional, type=boolean, default=0
 ;          Set this keyword to look at your data
 ;
-;
+; :Returns:
+;    A structure containing all necessary information to do your plot
 ;-
 function w_gr_DataLevels, data, $
     LEVELS=levels, $
