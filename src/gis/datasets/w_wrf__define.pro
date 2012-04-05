@@ -113,7 +113,7 @@ END
 ;    GRID: in, type = w_Grid2D
 ;          a grig object
 ;    CORNERS: in, type = array 
-;            LL and UR corners of the desired subset ([XLL,YLL,XDR,YDR]), coordinate system defined by `SRC`
+;            LL and UR corners of the desired subset ([XLL,YLL,XUR,YUR]), coordinate system defined by `SRC`
 ;    NO_ERASE: in, type = boolean
 ;              set this keyword to update the ROI in place of replacing it
 ;    SRC: in, optional
