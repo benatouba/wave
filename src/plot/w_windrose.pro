@@ -150,7 +150,15 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   if N_ELEMENTS(TICKS_ANGLE) eq 0 then ticks_angle = 1
   if N_ELEMENTS(ADD_VAR) eq 0 then _var2 = wind_speed else _var2 = add_var
   if N_ELEMENTS(DEF_CALM) eq 0 then _def_calm = 0. else _def_calm = DEF_CALM
-  _wf = FLOAT(!D.X_Size)/!D.Y_Size
+  
+  wid = cgQuery(/CURRENT, COUNT=cnt)
+  if cnt eq 0 then begin 
+    _wf = FLOAT(!D.X_Size)/!D.Y_Size
+  endif else begin
+    dims = SIZE(cgSnapshot(WID=wid), /DIMENSIONS)
+    _wf = FLOAT(dims[1])/dims[2]
+  endelse
+    
   if _wf gt 1. then begin
     rx = 1./_wf
     ry = 1.
