@@ -7,7 +7,30 @@
 ; your data on the display and have acces to some easy statistics.
 ; 
 ; The output of `w_gr_data_levels` is a structure containing all necessary 
-; information to generate a colored plot (see examples). 
+; information to generate a colored plot::
+;   
+;     info = { $
+;       is_data : TRUE, $
+;       levels : _levels, $
+;       colors : _colors, $
+;       dcbar : user_dcbar, $
+;       is_ooTopColor : is_ooTopColor, $
+;       is_ooBotColor : is_ooBotColor, $
+;       is_Missing : is_Missing, $
+;       is_ooTop : is_ooTop, $
+;       is_ooBot : is_ooBot, $
+;       missing_value : _missing , $
+;       dataTypeName : dataTypeName , $
+;       dataNel : dataNel , $
+;       dataNdims : dataNdims , $
+;       data_min : dataMin , $
+;       data_max : dataMax , $
+;       pmissing : pNoValid, $
+;       nmissing : cntNoValid, $
+;       loc : loc , $
+;       histo : h $
+;       }
+;       
 ; 
 ; There are basically two ways to assign a color to a data value:
 ; (1) the data is of integer type and one color can be attributed to each value (/DCBar case); 
@@ -60,6 +83,17 @@
 ;-
 
 
+;+
+; :Private:
+; 
+; :Description:
+;    Makes a nice graphical overview of the content of a info structure
+;
+; :Params:
+;    info: in, required
+;          the output of `w_gr_DataLevels`
+;
+;-
 pro w_gr_DataLevels_show, info
 
   @WAVE.inc
@@ -449,8 +483,8 @@ function w_gr_DataLevels, data, $
     ; we give back the colors and levels and that's all
     out = { $
            is_data : FALSE, $
-           levels : _levels, $
-           colors : _colors, $
+           levels : _levels, $ 
+           colors : _colors, $ 
            dcbar : user_dcbar, $   
            is_ooTopColor : is_ooTopColor, $
            is_ooBotColor : is_ooBotColor, $

@@ -53,7 +53,8 @@
 ;    
 ;        
 ; :Params:
-;    file: the file to template
+;    file: in, required
+;          the file to template
 ;
 ; :Returns:
 ;    an IDL ASCII template structure
@@ -170,7 +171,7 @@ end
 ;    FORMAT: "2009-04-26 04:10:00"
 ;
 ; :Params:
-;    stimes: in, required, type = string
+;    stimes: in, required, type=string
 ;            the campbell string to parse
 ; 
 ; :Returns:
@@ -200,16 +201,16 @@ end
 ;    (see the file documentation)
 ;
 ; :Keywords:    
-;    FILE: in, optional, type = string
+;    FILE: in, optional, type=string
 ;          the path of file to parse (if not set, a dialog window will open)
-;    DELTA_QMS: in, optional, type = qms
+;    DELTA_QMS: in, optional, type=qms
 ;               the delta in qms to apply to the read time (for example, 
 ;               for UTC+8: DELTA_QMS = (MAKE_TIME_STEP(HOUR = 8)).dms)
-;    STATION_OBJ: in, optional, type = w_ts_Station
+;    STATION_OBJ: in, optional, type=w_ts_Station
 ;                 a station object to add the variables to. If not given, a new object is created
 ;    TIMETAG: in, optional, string, default = 'TIMESTAMP'
 ;             the tag corresponding to the time column
-;    IGNORETAG: in, optional, string, default = 'RECORD'
+;    IGNORETAG: in, optional, string, default='RECORD'
 ;               a string (or array of string) of tags to ignore from the ASCII file.
 ;               Default is to ignore the tag 'RECORD', set IGNORETAG to '' to prevent this
 ;  :Returns:

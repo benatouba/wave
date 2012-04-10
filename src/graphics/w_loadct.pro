@@ -180,7 +180,7 @@ end
 ;    Returns the parsed color palettes and updates them if necessary
 ;
 ; :Keywords:
-;    UPDATE: in, option
+;    UPDATE: in, optional
 ;            if the list must be updated before returned
 ;            
 ;  :Returns:
