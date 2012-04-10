@@ -306,7 +306,7 @@ end
 ;           (1) the table name for WAVE colortables (string),
 ;           (2) an integer for cgLoadct tables, 
 ;           (3) a 3*N color palette to load.
-;           ;
+;           
 ; :Keywords:
 ;    UPDATE: in, optional, type=boolean, default=0
 ;            set this keyword to update the table list before loading your table

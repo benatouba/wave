@@ -7,29 +7,19 @@
 ; your data on the display and have acces to some easy statistics.
 ; 
 ; The output of `w_gr_data_levels` is a structure containing all necessary 
-; information to generate a colored plot::
+; information to generate a colored plot. Her the most important tags::
 ;   
-;     info = { $
-;       is_data : TRUE, $
-;       levels : _levels, $
-;       colors : _colors, $
-;       dcbar : user_dcbar, $
-;       is_ooTopColor : is_ooTopColor, $
-;       is_ooBotColor : is_ooBotColor, $
-;       is_Missing : is_Missing, $
-;       is_ooTop : is_ooTop, $
-;       is_ooBot : is_ooBot, $
-;       missing_value : _missing , $
-;       dataTypeName : dataTypeName , $
-;       dataNel : dataNel , $
-;       dataNdims : dataNdims , $
-;       data_min : dataMin , $
-;       data_max : dataMax , $
-;       pmissing : pNoValid, $
-;       nmissing : cntNoValid, $
-;       loc : loc , $
-;       histo : h $
-;       }
+;     info.levels: array of the data levels that the routine chose for you or
+;                  that you specified by yourself
+;     info.colors: array of the colors that the routine chose for you
+;                  colors are LONGS, that means that you should work
+;                  in decompes mode (one should always work in decomposed mode)
+;                  If you want the colors in RGB, do rgb = w_gr_ColorToRGB(info.colors)
+;     info.loc: integer array of the same dimesnions as DATA. Each element of
+;               info.loc corresponds to an index in info.colors 
+;               (info.colors[info.loc[0]] is simply the color assigned to the
+;               first element in yoru data)
+;     ...
 ;       
 ; 
 ; There are basically two ways to assign a color to a data value:
@@ -114,12 +104,12 @@ pro w_gr_DataLevels_show, info
     
     ;Histogram
     if info.dcbar then begin
-      labels = w_str(info.levels)
+      labels = Number_Formatter(info.levels)
       if info.is_Missing then labels = ['Miss', labels]
     endif else begin
-      labels = w_str(info.levels[0:N_ELEMENTS(info.levels)-2]) + ' to ' + w_str(info.levels[1:*])
-      if info.is_ooBotColor then labels = ['< '+ w_str(info.levels[0]), labels]
-      if info.is_ooTopColor then labels = [labels, '> '+w_str(MAX(info.levels))]
+      labels = Number_Formatter(info.levels[0:N_ELEMENTS(info.levels)-2]) + ' to ' + Number_Formatter(info.levels[1:*])
+      if info.is_ooBotColor then labels = ['< '+ Number_Formatter(info.levels[0]), labels]
+      if info.is_ooTopColor then labels = [labels, '> '+Number_Formatter(MAX(info.levels))]
       if info.is_Missing then labels = ['Missing', labels]
     endelse
     if N_ELEMENTS(labels) le 60 then begin
@@ -164,6 +154,49 @@ pro w_gr_DataLevels_show, info
 end
 
 ;+
+; :Private:
+; 
+; :Description:
+;    Makes a nice graphical overview of the content of a info structure
+;
+; :Params:
+;    info: in, required
+;          the output of `w_gr_DataLevels`
+;
+;-
+function w_gr_DataLevels_dataloc, info, data
+
+  @WAVE.inc
+  compile_opt idl2
+  
+  loc = VALUE_LOCATE(info.levels, data)  
+
+  ; Som temporary checks
+  p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
+  if cnt_ooBot ne 0 and ~ info.is_ooBot then Message, 'Internal error by OO_Bot'
+  
+  p_ooTop = where(loc ge N_ELEMENTS(info.levels)-1, cnt_ooTop)  
+  if cnt_ooTop ne 0 and ~ info.is_ooTop then begin
+    ; check for the "on the bound" case 
+    ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
+    if cnton ne cnt_ooTop then Message, 'Internal error by OO_Top'
+    if ~info.dcbar then loc[p_ooTop] = loc[p_ooTop]-1
+  endif
+    
+  if info.is_ooBotColor then loc+=1
+  if info.is_Missing then begin 
+    loc+=1
+    loc[info.pmissing] = 0
+  endif 
+  
+  ;statistics
+  h = HISTOGRAM(loc, BINSIZE=1, MIN=0, MAX=N_ELEMENTS(info.colors)-1)
+  
+  return, CREATE_STRUCT('loc', loc, 'histo', h, info)
+
+end
+
+;+
 ; :Description:
 ;    The purpose of this function is to provide a generic tool to define
 ;    data levels and associate the right color to the right value for a plot 
@@ -180,7 +213,7 @@ end
 ;    TABLE_SIZE: in, optional, default=!W_TABLE_SIZE
 ;                the size of the color table that is currently loaded in IDL    
 ;    COLORS: in, optional
-;            an array of N_LEVELS colors to use (currenlty only for /DCBAR case)
+;            an array of N_LEVELS colors to use (currently accepted only for the /DCBAR case)
 ;    NEUTRAL_COLOR: in, optional, default='grey'
 ;                   the color to assign to missing values
 ;    MISSING: in, optional, default=NaN
@@ -495,30 +528,7 @@ function w_gr_DataLevels, data, $
   endif
   
   ; We have data
-  loc = VALUE_LOCATE(_levels, _data)  
-
-  ; Som temporary checks
-  p_ooBot = where(valid and loc lt 0, cnt_ooBot)
-  if cnt_ooBot ne 0 and ~ is_ooBot then Message, 'Internal error by OO_Bot'
-  
-  p_ooTop = where(loc ge _n_levels-1, cnt_ooTop)  
-  if cnt_ooTop ne 0 and ~ is_ooTop then begin
-    ; check for the "on the bound" case 
-    ponthbound = where(ABS(_data-Max(_levels)) le _epsilon, cnton)
-    if cnton ne cnt_ooTop then Message, 'Internal error by OO_Top'
-    if ~user_dcbar then loc[p_ooTop] = loc[p_ooTop]-1
-  endif
-    
-  if is_ooBotColor then loc+=1
-  if is_Missing then begin 
-    loc+=1
-    loc[pNoValid] = 0
-  endif 
-  
-  ;statistics
-  h = HISTOGRAM(loc, BINSIZE=1, MIN=0, MAX=N_ELEMENTS(_colors)-1)
-  
-  out = { $
+   out = { $
     is_data : TRUE, $
     levels : _levels, $
     colors : _colors, $
@@ -529,6 +539,7 @@ function w_gr_DataLevels, data, $
     is_ooTop : is_ooTop, $
     is_ooBot : is_ooBot, $
     missing_value : _missing , $
+    epsilon : _epsilon , $
     dataTypeName : dataTypeName , $
     dataNel : dataNel , $
     dataNdims : dataNdims , $
@@ -536,12 +547,13 @@ function w_gr_DataLevels, data, $
     data_max : dataMax , $
     pmissing : pNoValid, $
     nmissing : cntNoValid, $
-    loc : loc , $
-    histo : h $
+    valid : valid $
     }
+    
+   out = w_gr_DataLevels_dataloc(out, _data)
   
   if KEYWORD_SET(SHOW) then w_gr_DataLevels_show, out
-
+  
   return, out
   
 end

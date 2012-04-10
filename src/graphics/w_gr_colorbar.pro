@@ -151,7 +151,7 @@ pro w_gr_Colorbar, info, $
     else _discrete = KEYWORD_SET(DISCRETE)
   
   if _discrete then begin
-    if N_ELEMENTS(FORMAT) ne 0 then ticknames = STRING(levels, FORMAT=format) else ticknames = w_str(levels)
+    if N_ELEMENTS(FORMAT) ne 0 then ticknames = STRING(levels, FORMAT=format) else ticknames = Number_Formatter(levels)
     divisions = ncolors
 ;    cgLoadCT, NCOLORS=ncolors
 ;    TVLCT, palette

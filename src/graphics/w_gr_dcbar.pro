@@ -112,7 +112,7 @@ pro w_gr_DCBar, info, $
   endif else begin
     if ~ tag_exist(info, 'levels') then  Message, '$INFO should contain a "LEVELS" tag.'
     levels = info.levels
-    if N_ELEMENTS(FORMAT) ne 0 then labels = STRING(levels, FORMAT=format) else labels = w_str(levels)  
+    if N_ELEMENTS(FORMAT) ne 0 then labels = STRING(levels, FORMAT=format) else labels = Number_Formatter(levels)  
   endelse
   
   cgDCBar, colors, $
