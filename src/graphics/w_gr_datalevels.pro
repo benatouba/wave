@@ -145,13 +145,13 @@ pro w_gr_DataLevels_show, info
       cgImage, info.loc, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
         MINUS_ONE=0, /AXIS, TITLE='Data image', MARGIN=0.1
     endif else begin
-      d = CEIL(SQRT(dataNel))
+      d = CEIL(SQRT(info.dataNel))
       img = LONARR(d,d)
-      img[0:dataNel-1] = info.loc
+      img[0:info.dataNel-1] = info.loc
       cgImage, img, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
         MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE
-      if N_ELEMENTS(img) gt dataNel then begin ; put a cross where no data
-        inds = ARRAY_INDICES(img, INDGEN(N_ELEMENTS(img)-dataNel) + dataNel)
+      if N_ELEMENTS(img) gt info.dataNel then begin ; put a cross where no data
+        inds = ARRAY_INDICES(img, INDGEN(N_ELEMENTS(img)-info.dataNel) + info.dataNel)
         cgPlotS, inds[0,*]+0.5, inds[1,*]+0.5, PSYM=SymCat(34), /DATA, /ADDCMD, SYMSIZE=1.5
       endif
     endelse
