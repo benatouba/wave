@@ -146,6 +146,15 @@ function caching, filename , $
   ending = strsplit(filename, '.', /extract, count=cnt)
   if cnt eq 0 then Message, 'Type not recognized (must be .nc or .zip): ' + filename
   
+  _filename = utils_replace_string(filename, '/', '_')
+  cachefile = caching_combine_path_file(cachepath, _filename)
+  lockfile = caching_combine_path_file(cachepath, _filename + '.lck')
+  
+  if KEYWORD_SET(CHECK) then begin
+    if ~ file_test(cachefile) and ~ file_test(lockfile) then return, 1 ; everything is ok
+    return, 0 ; not ok
+  endif
+  
   if ~keyword_set(no_zip) and ~keyword_set(CHECK) then begin
     ending = ending[cnt-1]
     if str_equiv(ending) eq 'ZIP' then begin
@@ -157,7 +166,7 @@ function caching, filename , $
         QUIET=quiet)
       lfile = utils_replace_string(origname, '.zip', '.sav')
       if keyword_set(delete) then begin
-        if ~ FILE_TEST(lfile) then message, 'Something went wrong. Did you try to delete the file before caching it?' 
+        if ~ FILE_TEST(lfile) then message, 'Something went wrong. Did you try to delete the file before caching it?'
         restore, filename=lfile
         file_delete, outname, lfile
         caching_log, 'uncompressed file: ' + outname + ' deleted', logger=logger, print=print, quiet=quiet
@@ -167,26 +176,22 @@ function caching, filename , $
           restore, filename=lfile
           return, outname
         endif
+        openw,lun,lockfile, /get_lun
+        free_lun,lun
         spawn, 'unzip ' + origname + ' -d '+ cachepath, ret, err, exit_status=status
         if err[0] ne '' then message, 'Error on uncompress: ' + err
         outname = strcompress((strsplit(ret[1], ':', /extract))[1], /remove_all)
         if ~ file_test(outname) then message, 'Error on uncompress filename'
         save, outname, filename=lfile
+        ; if it was deleted by someone else
+        if file_test(lockfile) then file_delete, lockfile
         caching_log, 'file: ' + origname + ' uncompressed', logger=logger, print=print, quiet=quiet
         return, outname
       endelse
     endif
   endif
-   
-  _filename = utils_replace_string(filename, '/', '_')
-  cachefile = caching_combine_path_file(cachepath, _filename)
-  lockfile = caching_combine_path_file(cachepath, _filename + '.lck')
   
-  if KEYWORD_SET(CHECK) then begin
-    if ~ file_test(cachefile) and ~ file_test(lockfile) then return, 1 ; everything is ok
-    return, 0 ; not ok
-  endif
-  
+  ; Normal case  
   if keyword_set(delete) and file_test(cachefile) then begin
     file_delete, cachefile
     caching_log, 'cachefile: ' + cachefile + ' deleted', logger=logger, print=print, quiet=quiet
@@ -201,9 +206,12 @@ function caching, filename , $
     ; order is important!!!
     file_test(cachefile) eq 1 and file_test(lockfile) eq 0: return, cachefile
     file_test(cachefile) eq 0 and file_test(lockfile) eq 1: begin
+      ite = 0
       while file_test(lockfile) do begin
         caching_log, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists, we wait a second', logger=logger, print=print, quiet=quiet
-        wait,1
+        ite += 1
+        if ite ge 720 then message, 'no cachefile: ' + cachefile + '  yet lockfile: '+ lockfile + ' still exists. big problem'
+        wait,1        
       endwhile
       return, cachefile
     end
@@ -219,8 +227,11 @@ function caching, filename , $
       return, cachefile
     end
     file_test(cachefile) eq 1 and file_test(lockfile) ne 0: begin
+      ite = 0
       while file_test(lockfile) do begin
         caching_log, 'cachefile: '+ cachefile +' exists but also lockfile: '+ lockfile + ' still exists, we wait a second', logger=logger, print=print, quiet=quiet
+        ite += 1
+        if ite ge 720 then message, 'no cachefile: ' + cachefile + '  exists but also lockfile: '+ lockfile + ' still exists. big problem'
         wait,1
       endwhile
       return, cachefile

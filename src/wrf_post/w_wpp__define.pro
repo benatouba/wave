@@ -387,12 +387,16 @@ end
 ;    year: in, required, type=int
 ;          the year
 ;    agg: in, required, type=string
-;          'h','d','m' or 'y'
+;          's','h','d','m' or 'y'
 ;    obj: in, optional, type=NCDF_FILE object
 ;         the destination object for the variable
+; 
+; :Keywords:
+;    IS_STATIC: out, optional, type=boolean
+;               is the variable is static or not
 ;
 ;-
-pro w_WPP::_set_active_var, var, year, agg, obj
+pro w_WPP::_set_active_var, var, year, agg, obj, IS_STATIC=is_static
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -436,6 +440,8 @@ pro w_WPP::_set_active_var, var, year, agg, obj
   self.active_agg = agg
   self.active_year = year
   if N_ELEMENTS(obj) ne 0 then self.active_dObj = obj
+  
+  is_static = self.active_var.type eq 'static'
   
 end
 
@@ -508,11 +514,6 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
     end
     else: message, 'Type not ok'
   endcase
-    
-  if static and FILE_TEST(self.active_ofile) then begin
-    dObj = Obj_New('NCDF_FILE', self.active_ofile, /TIMESTAMP, /NETCDF4_FORMAT, /MODIFY, ErrorLoggerName=self.active_ncloggerfile)
-    return, dObj
-  endif
   
   case (self.domain) of
     1: begin
@@ -534,14 +535,14 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   
   time_str = TIME_to_STR(QMS_TIME(YEAR=self.active_year, month=1, day=1), MASK=' since YYYY-MM-DD HH:TT:SS')
   case (self.active_agg) of
+    's': time_str = 'hours since 2000-01-01 00:00:00' 
     'h': time_str = 'hours'  + time_str
     'd': time_str = 'days'   + time_str
     'm': time_str = 'months' + time_str
     'y': time_str = 'years'  + time_str 
     else: MESSAGE, 'type not OK'
   endcase  
-  
-         
+           
   x_dim_name = 'west_east'
   y_dim_name = 'south_north'
   t_dim_name = 'time'
@@ -651,7 +652,12 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
     flag = 'ACTIVE'
     data_check = BYTARR(self.active_n_time)
     save, flag, data_check, FILENAME=self.active_checkfile
-  endif
+  endif else begin
+    ; Fill with data
+    data = reform((self.active_wrf->get_var(self.active_var.name))[*,*,0])    
+    dObj->WriteVarData, 'time', 0
+    dObj->WriteVarData, self.active_var.name, data    
+  endelse
   
   ;log
   self.logger->addText, ' new file: ' + self.active_ofile, PRINT=print
@@ -673,15 +679,11 @@ pro w_WPP::_add_var_to_h_file
   @WAVE.inc
   COMPILE_OPT IDL2
   ON_ERROR, 2
-  
-  if self.active_var.type eq 'static' then static = TRUE else  static = FALSE 
-  
+    
   ;Check for time ok (flag, data_check)
-  if ~ static then begin
-    restore, FILENAME=self.active_checkfile
-    if flag ne 'ACTIVE' then message, 'flag?'
-    if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
-  endif
+  restore, FILENAME=self.active_checkfile
+  if flag ne 'ACTIVE' then message, 'flag?'
+  if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
   
   p0 = min(*self.active_index)
   
@@ -693,19 +695,15 @@ pro w_WPP::_add_var_to_h_file
   data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
   
   dObj = self.active_dObj
+  dObj->SetMode, /DATA
+  ok = dObj->HasDim('time', OBJECT=tObj)
+  tObj->parseDimension
   
   case (self.active_var.type) of
-    'static': begin
-      nt = dObj->GetDimValue('time')
-      if nt ne 0 then return ; no need to do nothing
-      offset=[0,0,0]
-      data = reform(data[*,*,0])
-      time = 0
-    end
     '2d': begin
       if varnt eq 1 then begin
         ; "false static" case
-        time=time[1]
+        time=time[0]
         offset=[0,0,dObj->GetDimValue('time')]
       endif else begin 
         ; normal case
@@ -720,18 +718,15 @@ pro w_WPP::_add_var_to_h_file
   endcase
     
   ; Fill with data
-  dObj->SetMode, /DATA
   dObj->WriteVarData, 'time', time, OFFSET=offset[N_ELEMENTS(offset)-1]
   dObj->WriteVarData, self.active_var.name, data, OFFSET=offset
   
   ;Checks
-  if ~static then begin
-    flag = 'ACTIVE'
-    data_check[*self.active_index] = 1
-    if TOTAL(data_check) eq N_ELEMENTS(data_check) then flag = 'DONE'
-    save, flag, data_check, FILENAME=self.active_checkfile
-  endif
-  
+  flag = 'ACTIVE'
+  data_check[*self.active_index] = 1
+  if TOTAL(data_check) eq N_ELEMENTS(data_check) then flag = 'DONE'
+  save, flag, data_check, FILENAME=self.active_checkfile
+   
 end
 
 ;+
@@ -856,6 +851,101 @@ end
 
 ;+
 ; :Description:
+;    Process static files
+;
+; :Keywords:
+;    FORCE: in, optional
+;           set this keyword to overwrite existing NCDF files in the directory
+;    PRINT: in, optional, type=boolean, default=1
+;           if set (default), the log messages are printed in the console as well
+;
+;-
+pro w_WPP::process_static, PRINT=print, FORCE=force
+
+  ; Set up environnement and Error handling
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  catch, theError
+  if theError ne 0 then begin
+    catch, /cancel
+    if OBJ_VALID(self.logger) then begin
+      self.logger->addError
+      obj_destroy, self.Logger
+    endif else begin
+      ok = WAVE_Error_Message(!Error_State.Msg)
+    endelse
+    return
+  endif
+  
+  if N_ELEMENTS(PRINT) eq 0 then print = 1    
+  
+  ; Logger
+  logf = self.output_directory + '/wpp_process_static_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
+  
+  obj_destroy, self.active_wrf
+  ptr_free, self.active_time
+  ptr_free, self.active_index
+  
+  logt0 = SYSTIME(/SECONDS)
+   
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process static files...', PRINT=print
+  self.logger->addText, '', PRINT=print
+       
+  ; Define
+  ; Tpl Object  
+  if self.do_cache then begin 
+   ite = 0L
+   while ~ caching((*self.ifiles)[ite], /CHECK, CACHEPATH=self.cachepath) do begin
+    ite+=1
+    wait, 5
+    if ite gt 300 then message, 'Something got really wrong with caching'
+   endwhile
+   file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
+  endif else file = (*self.ifiles)[ite]
+  self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
+ 
+  self.logger->addText, 'Generating product files ...', PRINT=print
+  self.logger->flush
+  
+  vars = (*self.vars)
+  for i=0, self.n_vars-1 do begin
+    self->_set_active_var, vars[i], 2000, 's', IS_STATIC=is_static
+    if ~ is_static then continue    
+    obj = self->_define_file(FORCE=force, PRINT=print)
+    if ~ OBJ_VALID(obj) then Message, 'Problem by static file definition'
+    OBJ_DESTROY, obj
+  endfor
+  
+  self.logger->addText, 'Done generating product files', PRINT=print
+  self.logger->addText, '', PRINT=print
+
+  OBJ_DESTROY, self.active_wrf    
+  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+      
+  delta =  LONG(SYSTIME(/SECONDS) - logt0)
+  deltah =  delta / 60L / 60L
+  deltam =  (delta-(deltaH*60L*60L)) / 60L
+  deltas =  delta-(deltaH*60L*60L)-(deltaM*60L)
+  
+  self.logger->addText, '', PRINT=print
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
+  self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->AddText, '+ Static files processed successfully +', PRINT=print
+  self.Logger->AddText, '', PRINT=print
+  self.Logger->Flush
+  
+  self.active_n_time = 0
+  PTR_FREE, self.active_time
+  PTR_FREE, self.active_index
+  OBJ_DESTROY, self.logger
+
+end
+
+;+
+; :Description:
 ;    Process one year into hourly files
 ;    
 ; :Params:
@@ -928,7 +1018,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   vars = (*self.vars)
   objs = OBJARR(self.n_vars)
   for i=0, self.n_vars-1 do begin
-    self->_set_active_var, vars[i], year, 'h'
+    self->_set_active_var, vars[i], year, 'h', IS_STATIC=is_static
+    if is_static then continue
     objs[i] = self->_define_file(FORCE=force, PRINT=print)
   endfor
   
@@ -979,7 +1070,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
     
     vars = (*self.vars)
     for i=0, self.n_vars-1 do begin
-      self->_set_active_var, vars[i], year, 'h', objs[i]
+      self->_set_active_var, vars[i], year, 'h', objs[i], IS_STATIC=is_static
+      if is_static then continue
       self->_add_var_to_h_file
     endfor
     OBJ_DESTROY, self.active_wrf
@@ -997,8 +1089,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   ;final check
   vars = (*self.vars)
   for i=0, self.n_vars-1 do begin
-    self->_set_active_var, vars[i], year, 'h'
-    if self.active_var.type eq 'static' then continue
+    self->_set_active_var, vars[i], year, 'h', IS_STATIC=is_static
+    if is_static then continue
     restore, FILENAME=self.active_checkfile
     if flag ne 'DONE' then print, 'File check for all indexes failed. Big problem: ' + self.active_ofile
     file_delete, self.active_checkfile
