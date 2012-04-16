@@ -742,9 +742,9 @@ pro w_GEO_nc::plot_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a
   
   if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)
   
-  if ~self->get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
+  if ~self->W_NCDF::get_Var_Info(Varid) then MESSAGE, 'Variable not found'  
   
-  var = self->get_TimeSerie( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
+  var = self->w_GEO_nc::get_TimeSerie( Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable. 
                          i, $
                          j, $
                          time, $
@@ -762,7 +762,7 @@ pro w_GEO_nc::plot_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a
   cgtext, 0.7915, 0.26, 'Grid point: [' + str_equiv(STRING(i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(j, FORMAT = '(I3)')) + ']', $
           CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW
 
-  self->get_ncdf_coordinates, lon, lat
+  self->w_GEO_nc::get_ncdf_coordinates, lon, lat
   
   cgtext, 0.7915 + 0.01, 0.2, 'Lon: ' + str_equiv(STRING(lon[i,j], FORMAT='(F7.2)')), $
           CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
@@ -913,14 +913,14 @@ pro w_GEO_nc::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid, _EXTRA = 
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
-  var = self->get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
+  if ~self->w_NCDF::get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
+  var = self->w_GEO_nc::get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
 
 
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)
   
-  self->get_ncdf_coordinates, lon, lat, nx, ny  
+  self->w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny  
   
   if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file  
     p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    

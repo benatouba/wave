@@ -346,11 +346,13 @@ end
 ; :Keywords:
 ;    COUNT: out
 ;           the number of variables
+;    PRINT: in, optional, type=boolean
+;           print the variables in the console
 ;
 ; :Returns:
 ;    An string array of COUNT variable names
 ;-
-function w_ts_Station::GetVarNames, COUNT=varCount
+function w_ts_Station::GetVarNames, COUNT=varCount, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -377,6 +379,10 @@ function w_ts_Station::GetVarNames, COUNT=varCount
   
   ; Return a scalar if necessary.
   IF varCount EQ 1 THEN varNames = varNames[0]
+  
+  if KEYWORD_SET(PRINT) then begin
+    for i=0, varCount-1 do print, str_equiv(i) + ': ' + varNames[i]
+  endif
   
   RETURN, varNames
   

@@ -85,7 +85,6 @@ PRO w_NCDF__Define
             path:               ''    ,  $ ; complete path of the active ncdf file
             cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
             fname:              ''    ,  $ ; name of the active ncdf file
-            directory:          ''    ,  $ ; directory of the active ncdf file
             Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
             Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
             Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
@@ -149,7 +148,6 @@ Function w_NCDF::Init, FILE = file
   ;***************** 
  
   fname = FILE_BASENAME(file)
-  directory = FILE_DIRNAME(file)
   
   ;****************
   ; Read metadata *
@@ -161,17 +159,16 @@ Function w_NCDF::Init, FILE = file
   self.path = file
   self.cdfid = cdfid
   self.fname = fname
-  self.directory = directory
   self.Ndims = inq.Ndims
   self.Nvars = inq.Nvars
   self.Ngatts = inq.Ngatts
   self.RecDim = inq.RecDim      
   
-  self->get_Varlist, varid, varnames
+  self->w_NCDF::get_Varlist, varid, varnames
   self.varNames = PTR_NEW(varnames, /NO_COPY)
-  self->get_gattsList, gattsIds, gattNames
+  self->w_NCDF::get_gattsList, gattsIds, gattNames
   self.gattNames = PTR_NEW(gattNames, /NO_COPY)
-  self->get_dimList, dimIds, dimNames, dimSizes
+  self->w_NCDF::get_dimList, dimIds, dimNames, dimSizes
   self.dimNames = PTR_NEW(dimNames, /NO_COPY)
   self.dimSizes = PTR_NEW(dimSizes, /NO_COPY)
     
@@ -259,7 +256,6 @@ PRO w_NCDF::GetProperty, $
     path = path, $
     cdfid = cdfid, $
     fname = fname, $
-    directory = directory, $
     Ndims = Ndims, $
     Nvars = Nvars, $
     Ngatts = Ngatts, $
@@ -282,7 +278,6 @@ PRO w_NCDF::GetProperty, $
   
   IF Arg_Present(path) NE 0 THEN path = self.path
   IF Arg_Present(fname) NE 0 THEN fname = self.fname
-  IF Arg_Present(directory) NE 0 THEN directory = self.directory
   IF Arg_Present(cdfid) NE 0 THEN cdfid = self.cdfid
   IF Arg_Present(Ndims) NE 0 THEN Ndims = self.Ndims
   IF Arg_Present(Nvars) NE 0 THEN Nvars = self.Nvars
@@ -523,7 +518,7 @@ pro w_NCDF::get_VattsList, varid, vattsIds, vattNames, PRINTVATTS = printvatts
     RETURN
   ENDIF
   
-  if not self->get_Var_Info(varid, out_id = out_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)  
+  if not self->w_NCDF::get_Var_Info(varid, out_id = out_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)  
   
   s_var_info = NCDF_VARINQ(self.cdfid,out_id)
        
@@ -596,7 +591,7 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   COMPILE_OPT IDL2  
   ON_ERROR, 2  
   
-  if ~self->get_Var_Info (Varid, $
+  if ~self->w_NCDF::get_Var_Info (Varid, $
                             out_id = vid, $
                             units = units, $
                             description = description, $
@@ -608,10 +603,10 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
   
   ; Is the variable scaled ?
-  is_scale = self->get_VAtt_Info(varid, 'scale_factor')
-  if is_scale then value *= self->get_VAtt(varid, 'scale_factor') 
-  is_offset = self->get_VAtt_Info(varid, 'add_offset')
-  if is_offset then value += self->get_VAtt(varid, 'add_offset') 
+  is_scale = self->w_NCDF::get_VAtt_Info(varid, 'scale_factor')
+  if is_scale then value *= self->w_NCDF::get_VAtt(varid, 'scale_factor') 
+  is_offset = self->w_NCDF::get_VAtt_Info(varid, 'add_offset')
+  if is_offset then value += self->w_NCDF::get_VAtt(varid, 'add_offset') 
   
   if N_ELEMENTS(count) ne 0 then begin ;Check if we have to change the variable metadata
     pr = where(count le 1, cnt)
@@ -761,7 +756,7 @@ function w_NCDF::get_Gatt, attid
   COMPILE_OPT IDL2  
   ON_ERROR, 2  
   
-  if ~self->get_Gatt_Info(attid, OUT_id = outid) then Message, '$attid is not a correct attribute ID'
+  if ~self->w_NCDF::get_Gatt_Info(attid, OUT_id = outid) then Message, '$attid is not a correct attribute ID'
 
   NCDF_ATTGET, self.Cdfid , outid, Value, /GLOBAL
   
@@ -841,7 +836,7 @@ function w_NCDF::get_Dim, dimid
   COMPILE_OPT IDL2  
   ON_ERROR, 2  
   
-  if ~self->get_Dim_Info(dimid, OUT_id=outid) then Message, '$dimid is not a correct dimension ID'
+  if ~self->w_NCDF::get_Dim_Info(dimid, OUT_id=outid) then Message, '$dimid is not a correct dimension ID'
   
   return, (*self.dimSizes)[outid]
   
@@ -923,8 +918,8 @@ function w_NCDF::get_VAtt, varid, attid
   
   if ~arg_okay(attid) then message, WAVE_Std_Message('attid', /ARG)
   
-  if not self->get_Var_Info(varid, out_id = var_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)
-  if not self->get_VAtt_Info(var_id, attid, OUT_ID = att_id) then MESSAGE, WAVE_Std_Message('attid', /ARG)
+  if not self->w_NCDF::get_Var_Info(varid, out_id = var_id) then MESSAGE, WAVE_Std_Message('VarId', /ARG)
+  if not self->w_NCDF::get_VAtt_Info(var_id, attid, OUT_ID = att_id) then MESSAGE, WAVE_Std_Message('attid', /ARG)
   
   NCDF_ATTGET, self.cdfid, var_id, att_id, value
   
@@ -970,8 +965,8 @@ function w_NCDF::get_VAtt_Info, varid, attid, OUT_ID = out_id
     RETURN, FALSE
   ENDIF
     
-  if not self->get_Var_Info(varid, out_id = var_id) then return, false
-  self->get_VattsList, var_id, vattsids, vatssnames
+  if not self->w_NCDF::get_Var_Info(varid, out_id = var_id) then return, false
+  self->w_NCDF::get_VattsList, var_id, vattsids, vatssnames
   
   if arg_okay(attid, TYPE=IDL_STRING, /SCALAR) then begin
     p = WHERE(str_equiv(vatssnames) eq str_equiv(attid), cnt)
@@ -1015,9 +1010,9 @@ pro w_NCDF::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid
     RETURN
   ENDIF
   
-  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
+  if ~self->w_NCDF::get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
 
-  var = self->get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
+  var = self->w_NCDF::get_Var(Varid, varname = varname, dimnames = dimnames, units = units, DESCRIPTION=DESCRIPTION)
   
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
   if KEYWORD_SET(UPSIDEDOWN) then var = ROTATE(var, 7)

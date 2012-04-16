@@ -164,7 +164,7 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
     ok = WAVE_Error_Message(!Error_State.Msg)
-    RETURN, self->define_subset()
+    RETURN, self->w_WRF::define_subset()
   ENDIF
   
   ;*******************
@@ -181,8 +181,8 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   ; GRID info *
   ;************      
   if self.type eq 'PRO' then begin
-    x = self->get_Var('west_east')
-    y = self->get_Var('south_north')         
+    x = self->w_WRF::get_Var('west_east')
+    y = self->w_WRF::get_Var('south_north')         
     nx = N_ELEMENTS(x)        
     ny = N_ELEMENTS(y)              
     dx = x[1]-x[0] ;TODO CHANGE this!!
@@ -190,14 +190,14 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
     x0 = min(x)             
     y0 = max(y) 
   endif else begin
-    center_lat = self->get_Gatt('CEN_LAT')
-    center_lon = self->get_Gatt('CEN_LON')
+    center_lat = self->w_NCDF::get_Gatt('CEN_LAT')
+    center_lon = self->w_NCDF::get_Gatt('CEN_LON')
     ; Get easting and northings from dom center
     GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj
-    nx = self->get_Gatt('WEST-EAST_GRID_DIMENSION')-1
-    ny = self->get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1
-    dx = self->get_Gatt('DX')
-    dy = self->get_Gatt('DY')
+    nx = self->w_NCDF::get_Gatt('WEST-EAST_GRID_DIMENSION')-1
+    ny = self->w_NCDF::get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1
+    dx = self->w_NCDF::get_Gatt('DX')
+    dy = self->w_NCDF::get_Gatt('DY')
     x0 =  - (nx-1) / 2. * dx + e ; UL corner
     y0 =    (ny-1) / 2. * dy + n ; UL corner
   endelse
@@ -212,8 +212,8 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
                                   proj = self.tnt_c.proj) THEN RETURN, 0
                                   
     ;Temporary tests to be sure we are good at WRF georeference
-    self->Get_LonLat, gislon, gislat
-    self->get_ncdf_coordinates, lon, lat
+    self->w_GRID2d::Get_LonLat, gislon, gislat
+    self->w_GEO_nc::get_ncdf_coordinates, lon, lat
     if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
       ; This can be due to the nest
       np = (self->get_Var('NEST_POS'))[*,*,0]
@@ -240,7 +240,7 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   endelse
   
   
-  if not self->set_ROI(SHAPE=shape,  $
+  if not self->w_Grid2D::set_ROI(SHAPE=shape,  $
     POLYGON=polygon, MASK=mask,  $
     CROPBORDER=cropborder,  $
     GRID=grid,    $
@@ -252,12 +252,12 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
     ROI_MASK_RULE=roi_mask_rule) THEN RETURN, 0
   
   dummy = self->w_GEO_nc::define_subset()
-  if self->is_ROI() then begin
-    self->get_ROI, SUBSET=subset, MARGIN=margin
+  if self->w_Grid2D::is_ROI() then begin
+    self->w_Grid2D::get_ROI, SUBSET=subset, MARGIN=margin
     if ~self->w_GEO_nc::define_subset(SUBSET=SUBSET) then return, 0 
-    new_grid = self->reGrid(/TO_ROI, MARGIN=margin)
+    new_grid = self->w_Grid2D::reGrid(/TO_ROI, MARGIN=margin)
     IF NOT self->w_Grid2D::ReInit(grid=new_grid) THEN RETURN, 0  
-    dummy = self->set_ROI()    
+    dummy = self->w_Grid2D::set_ROI()    
     undefine, new_grid
   endif 
     
@@ -311,7 +311,7 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
   ;*****************************************
   ; Determine the type of WRF file we have *
   ;*****************************************
-  title = self->get_Gatt('TITLE')
+  title = self->w_NCDF::get_Gatt('TITLE')
   ftype = ''
   isHere = STRPOS(str_equiv(title), 'WRF')
   if isHere ne -1 then ftype = 'WRF'
@@ -323,7 +323,7 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
   if isHere ne -1 then ftype = 'REAL'
   isHere = STRPOS(str_equiv(self.fname), 'AGG')
   if isHere ne -1 then ftype = 'AGG'    
-  isHere = self->get_Gatt_Info('PROJ_ENVI_STRING')
+  isHere = self->w_NCDF::get_Gatt_Info('PROJ_ENVI_STRING')
   if isHere eq 1 then ftype = 'PRO'  
   if ftype eq '' then message, 'Input file not recognized as a known WRF product.'
   self.type = ftype
@@ -335,13 +335,13 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
     GIS_make_proj, ret, proj, PARAM=STRING(self->get_Gatt('PROJ_ENVI_STRING'))
     self.tnt_c.proj = proj      
   endif else begin
-    center_lat = self->get_Gatt('CEN_LAT')
-    center_lon = self->get_Gatt('CEN_LON')
-    moad_cen_lat = self->get_Gatt('MOAD_CEN_LAT')
-    stand_lon = self->get_Gatt('STAND_LON')
-    truelat1 = self->get_Gatt('TRUELAT1')
-    truelat2 = self->get_Gatt('TRUELAT2')
-    proj_id = self->get_Gatt('MAP_PROJ')
+    center_lat = self->w_NCDF::get_Gatt('CEN_LAT')
+    center_lon = self->w_NCDF::get_Gatt('CEN_LON')
+    moad_cen_lat = self->w_NCDF::get_Gatt('MOAD_CEN_LAT')
+    stand_lon = self->w_NCDF::get_Gatt('STAND_LON')
+    truelat1 = self->w_NCDF::get_Gatt('TRUELAT1')
+    truelat2 = self->w_NCDF::get_Gatt('TRUELAT2')
+    proj_id = self->w_NCDF::get_Gatt('MAP_PROJ')
     GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
     switch proj_id of
       1: begin
@@ -390,13 +390,13 @@ Function w_WRF::Init, FILE=file, _REF_EXTRA=extra
   ;***********************
   ; Diagnostic variables *
   ;***********************    
-  self->get_Varlist, /DIAGNOSTIC
+  self->w_WRF::get_Varlist, /DIAGNOSTIC
     
   ;*********
   ; define *
   ;*********
   self.cropped = ''
-  if NOT self->define_subset(_EXTRA=extra) THEN RETURN, 0
+  if NOT self->w_WRF::define_subset(_EXTRA=extra) THEN RETURN, 0
     
   RETURN, 1
   
@@ -518,7 +518,9 @@ function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
     RETURN, FALSE
   ENDIF
   
-  if ~self->w_NCDF::get_Var_Info(Varid, $
+  if self.type eq 'PRO' and N_ELEMENTS(Varid) eq 0 then varid = self.Nvars-1
+  
+  if ~ self->w_NCDF::get_Var_Info(Varid, $
                                  out_id = out_id, $
                                  units = units, $
                                  description = description, $
@@ -527,6 +529,7 @@ function w_WRF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
                                  dimnames = dimnames) then begin
      
      ;Post processed variables
+     if ~ PTR_VALID(self.diagVars) then return, FALSE 
      post = (*self.diagVars).name           
      p = where(post eq str_equiv(Varid), cnt)
      if cnt eq 0 then return, FALSE  
@@ -602,9 +605,9 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       dvars = {name:'',unit:'',ndims:0L,description:'',type:'',dims:PTR_NEW(),dimnames:PTR_NEW()}
       
       ;PRCP
-      d1 = self->w_NCDF::get_Var_Info('RAINNC', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('RAINC')
-      d3 = self->w_NCDF::get_Var_Info('SR')
+      d1 = self->get_Var_Info('RAINNC', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('RAINC')
+      d3 = self->get_Var_Info('SR')
       if (d1 and d2) then begin
         var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Total precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -619,47 +622,47 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif
             
       ;snowfall
-      d1 = self->w_NCDF::get_Var_Info('SNOWNC', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('SNOWNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Grid scale snow and ice (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       ;graupel
-      d1 = self->w_NCDF::get_Var_Info('GRAUPELNC', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('GRAUPELNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'GRAUPEL',unit:'mm',ndims:N_elements(dims),description:'Grid scale graupel (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       ;hail
-      d1 = self->w_NCDF::get_Var_Info('HAILNC', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('HAILNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'HAIL',unit:'mm',ndims:N_elements(dims),description:'Grid scale hail (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;POTEVP
-      d1 = self->w_NCDF::get_Var_Info('POTEVP', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('POTEVP', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'POTEVAP',unit:'w m-2',ndims:N_elements(dims),description:'Potential evaporation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;pressure
-      d1 = self->w_NCDF::get_Var_Info('P', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('PB') 
+      d1 = self->get_Var_Info('P', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('PB') 
       if (d1 and d2) then begin
         var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]         
       endif           
-      d1 = self->w_NCDF::get_Var_Info('PRES', DIMNAMES=dnames,DIMS=dims) ;met_em
+      d1 = self->get_Var_Info('PRES', DIMNAMES=dnames,DIMS=dims) ;met_em
       if (d1) then begin
         var = {name:'PRESSURE',unit:'hPa',ndims:N_elements(dims),description:'Full model pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]         
       endif 
       
       ; geopotential, z
-      d1 = self->w_NCDF::get_Var_Info('PH', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('PHB')  
+      d1 = self->get_Var_Info('PH', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('PHB')  
       if (d1 and d2) then begin
         dnames = utils_replace_string(dnames, '_stag', '')
         var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
@@ -667,7 +670,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]                 
       endif          
-      d1 = self->w_NCDF::get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
+      d1 = self->get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
       if (d1) then begin
         var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]         
@@ -676,9 +679,9 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif      
         
       ;TK and TC
-      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
-      d2 = self->w_NCDF::get_Var_Info('P')
-      d3 = self->w_NCDF::get_Var_Info('PB')   
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
+      d2 = self->get_Var_Info('P')
+      d3 = self->get_Var_Info('PB')   
       if (d1 and d2 and d3) then begin
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -691,17 +694,17 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif 
       
       ;TD
-      d1 = self->w_NCDF::get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)      
-      d2 = self->w_NCDF::get_Var_Info('P')
-      d3 = self->w_NCDF::get_Var_Info('PB')   
+      d1 = self->get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)      
+      d2 = self->get_Var_Info('P')
+      d3 = self->get_Var_Info('PB')   
       if (d1 and d2 and d3) then begin
         var = {name:'TD',unit:'C',ndims:N_elements(dims),description:'Dewpoint Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var] 
       endif 
       
       ;TD2
-      d1 = self->w_NCDF::get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)      
-      d2 = self->w_NCDF::get_Var_Info('Q2')
+      d1 = self->get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)      
+      d2 = self->get_Var_Info('Q2')
       if (d1 and d2) then begin
         var = {name:'TD2',unit:'C',ndims:N_elements(dims),description:'2m Dewpoint Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var] 
@@ -714,7 +717,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]    
       endif 
             
-      d1 = self->w_NCDF::get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims) ;Met em
+      d1 = self->get_Var_Info('TT', DIMNAMES=dnames,DIMS=dims) ;Met em
       if (d1) then begin
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -723,140 +726,140 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif
       
       ;T2C
-      d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'T2C',unit:'C',ndims:N_elements(dims),description:'2 m Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;RH
-      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('QVAPOR')
-      d3 = self->w_NCDF::get_Var_Info('P')
-      d4 = self->w_NCDF::get_Var_Info('PB')
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QVAPOR')
+      d3 = self->get_Var_Info('P')
+      d4 = self->get_Var_Info('PB')
       if (d1 and d2 and d3 and d4)then begin
         var = {name:'RH',unit:'%',ndims:N_elements(dims),description:'Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
 
       ;RH2
-      d1 = self->w_NCDF::get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('Q2')
-      d3 = self->w_NCDF::get_Var_Info('PSFC')
+      d1 = self->get_Var_Info('T2', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('Q2')
+      d3 = self->get_Var_Info('PSFC')
       if (d1 and d2 and d3) then begin
         var = {name:'RH2',unit:'%',ndims:N_elements(dims),description:'2 m Relative Humidity',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;SWUP
-      d1 = self->w_NCDF::get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('ALBEDO')      
+      d1 = self->get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('ALBEDO')      
       if (d1 and d2) then begin
         var = {name:'SWUP',unit:'w m-2',ndims:N_elements(dims),description:'upward short wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;LWUP
-      d1 = self->w_NCDF::get_Var_Info('TSK', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('EMISS')      
+      d1 = self->get_Var_Info('TSK', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('EMISS')      
       if (d1 and d2) then begin
         var = {name:'LWUP',unit:'w m-2',ndims:N_elements(dims),description:'upward long wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;LWDOWN
-      d1 = self->w_NCDF::get_Var_Info('GLW', DIMNAMES=dnames,DIMS=dims)  
+      d1 = self->get_Var_Info('GLW', DIMNAMES=dnames,DIMS=dims)  
       if (d1) then begin
         var = {name:'LWDOWN',unit:'w m-2',ndims:N_elements(dims),description:'downward long wave flux at ground surface',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;NETRAD
-      d1 = self->w_NCDF::get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('ALBEDO')        
-      d3 = self->w_NCDF::get_Var_Info('TSK')        
-      d4 = self->w_NCDF::get_Var_Info('EMISS')        
-      d5 = self->w_NCDF::get_Var_Info('GLW')        
-      d6 = self->w_NCDF::get_Var_Info('SWDOWN')        
+      d1 = self->get_Var_Info('SWDOWN', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('ALBEDO')        
+      d3 = self->get_Var_Info('TSK')        
+      d4 = self->get_Var_Info('EMISS')        
+      d5 = self->get_Var_Info('GLW')        
+      d6 = self->get_Var_Info('SWDOWN')        
       if (d1 and d2 and d3 and d4 and d5 and d6) then begin
         var = {name:'NETRAD',unit:'w m-2',ndims:N_elements(dims),description:'net radiation at ground surface (+ = downward)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;TER      
-      d1 = self->w_NCDF::get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('HGT', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
-      d1 = self->w_NCDF::get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'TER',unit:'m',ndims:2L,description:'Model Terrain Height',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
       ;lucat      
-      d1 = self->w_NCDF::get_Var_Info('LU_INDEX', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('LU_INDEX', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'LUCAT',unit:'-',ndims:2L,description:'Model Landuse Category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
       ;soiltop      
-      d1 = self->w_NCDF::get_Var_Info('SCT_DOM', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('SCT_DOM', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'SOILTOP',unit:'-',ndims:2L,description:'Model dominant soil category (top)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
-      d1 = self->w_NCDF::get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'SOILTOP',unit:'-',ndims:2L,description:'Model dominant soil category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
       ;soilbot      
-      d1 = self->w_NCDF::get_Var_Info('SCB_DOM', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('SCB_DOM', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'SOILBOT',unit:'-',ndims:2L,description:'Model dominant soil category (bottom)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
-      d1 = self->w_NCDF::get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
+      d1 = self->get_Var_Info('ISLTYP', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'SOILBOT',unit:'-',ndims:2L,description:'Model dominant soil category',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1]]), dimnames:PTR_NEW([dnames[0],dnames[1]])}
         dvars = [dvars,var]
       endif
       
       ;SLP
-      d1 = self->w_NCDF::get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('P')
-      d3 = self->w_NCDF::get_Var_Info('PB')
-      d4 = self->w_NCDF::get_Var_Info('QVAPOR')      
-      d5 = self->w_NCDF::get_Var_Info('PH')
-      d6 = self->w_NCDF::get_Var_Info('PHB')
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('P')
+      d3 = self->get_Var_Info('PB')
+      d4 = self->get_Var_Info('QVAPOR')      
+      d5 = self->get_Var_Info('PH')
+      d6 = self->get_Var_Info('PHB')
       if (d1 and d2 and d3 and d4 and d5 and d6) then begin
         var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
       endif
       
-      d1 = self->w_NCDF::get_Var_Info('PMSL', DIMNAMES=dnames,DIMS=dims) ;MET EM
+      d1 = self->get_Var_Info('PMSL', DIMNAMES=dnames,DIMS=dims) ;MET EM
       if d1 then begin
         var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
       ;SLP_B
-      d1 = self->w_NCDF::get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('T2')
-      if self.type eq 'MET' then d3 = self->w_NCDF::get_Var_Info('HGT_M') $
-       else  d3 = self->w_NCDF::get_Var_Info('HGT')
+      d1 = self->get_Var_Info('PSFC', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('T2')
+      if self.type eq 'MET' then d3 = self->get_Var_Info('HGT_M') $
+       else  d3 = self->get_Var_Info('HGT')
       if (d1 and d2 and d3) then begin
         var = {name:'SLP_B',unit:'hPa',ndims:N_elements(dims),description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif      
       
       ;WS and WD
-      d1 = self->w_NCDF::get_Var_Info('U10', DIMNAMES=dnames,DIMS=dims)
-      d2 = self->w_NCDF::get_Var_Info('V10') 
+      d1 = self->get_Var_Info('U10', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('V10') 
       if (d1 and d2) then begin
         var = {name:'WS10',unit:'m s-1',ndims:N_elements(dims),description:'10 m wind speed',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
@@ -1039,16 +1042,16 @@ function w_WRF::get_TimeSerie,varid, x, y, $
      end
     
     'PRCP_STEP': begin
-      d1 = self->w_NCDF::get_Var_Info('RAINNC_step')
-      d2 = self->w_NCDF::get_Var_Info('RAINC_step')
+      d1 = self->get_Var_Info('RAINNC_step')
+      d2 = self->get_Var_Info('RAINC_step')
       if d1 and d2 then begin
         value = self->w_GEO_nc::get_TimeSerie('RAINNC_step', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
           dims = dims, $ ;
           dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC_step', point_i, point_j, K = K, t0 = t0, t1 = t1)
         _acc_to_step = FALSE
       endif else begin
-        d1 = self->w_NCDF::get_Var_Info('RAINNC')
-        d2 = self->w_NCDF::get_Var_Info('RAINC')
+        d1 = self->get_Var_Info('RAINNC')
+        d2 = self->get_Var_Info('RAINC')
         if d1 and d2 then begin
           value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
             dims = dims, $ ;
@@ -1088,7 +1091,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
     end
 
     'TER': begin
-      if self->w_NCDF::get_Var_Info('HGT') then _id = 'HGT' $
+      if self->get_Var_Info('HGT') then _id = 'HGT' $
        else _id = 'HGT_M'
       value = self->w_GEO_nc::get_TimeSerie(_id, point_i, point_j, time, nt, t0 = self.t0, t1 = self.t0, $
         dims = dims, $ ;
@@ -1560,7 +1563,7 @@ function w_WRF::get_Var, Varid, $
     end
     
     'TER': begin
-      if self->w_NCDF::get_Var_Info('HGT') then _id = 'HGT' $
+      if self->get_Var_Info('HGT') then _id = 'HGT' $
        else _id = 'HGT_M'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
         dims = dims, ZLEVELS=zlevels, $
@@ -1568,7 +1571,7 @@ function w_WRF::get_Var, Varid, $
     end
     
     'SOILTOP': begin
-      if self->w_NCDF::get_Var_Info('SCT_DOM') then _id = 'SCT_DOM' $
+      if self->get_Var_Info('SCT_DOM') then _id = 'SCT_DOM' $
        else _id = 'ISLTYP'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
         dims = dims, ZLEVELS=zlevels, $
@@ -1576,7 +1579,7 @@ function w_WRF::get_Var, Varid, $
     end
     
     'SOILBOT': begin
-      if self->w_NCDF::get_Var_Info('SCB_DOM') then _id = 'SCB_DOM' $
+      if self->get_Var_Info('SCB_DOM') then _id = 'SCB_DOM' $
        else _id = 'ISLTYP'
       value = self->get_Var(_id, time, nt, t0 = self.t0, t1 = self.t0,  $
         dims = dims, ZLEVELS=zlevels, $
