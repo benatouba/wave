@@ -21,10 +21,12 @@
 ;    height: in, required, type=2D/3D array
 ;            the heights corresponding to var - must have the same size
 ; :Keywords:
-;    KERNEL_SIZE: in, required, type=integer, odd number (2n+1)
-;                 the edge length of the kernel (e.g. KERNEL_SIZE=3 equates to a kernel size of 3x3=9 values)
-;    DEFAULT_VAL: in, required, type=
-;                 the default value set where no alt gradient is computed (boundaries, invalid values)
+;    KERNEL_SIZE: in, required, type=integer, default=9
+;                 the edge length of the kernel. Must be an odd number 
+;                 (e.g. KERNEL_SIZE=3 equates to a kernel size of 3x3=9 values)
+;    DEFAULT_VAL: in, optional, default=0
+;                 the default value set where no alt gradient can be computed (boundaries, invalid values).
+;                 A reasonable value for temperature would be -0.0098
 ;    VALID_MASK: in, optional, type=byte array
 ;                an array mask of the same size as var, with 0 for values where no alt gradient should be computed (e.g. lakes), default value is set
 ;    MEAN: in, optional, type=boolean
@@ -35,15 +37,15 @@
 ;              clip the minimum value for alt gradient
 ;    CLIP_MAX: in, optional, type=
 ;              clip the maximum value for alt gradient
-;    SIG: in, optional, type=boolean
-;         if set, the altitudinal gradient itself is NOT returned but its SIGNIFICANCE. returns array of same size as var, containing significances.
+;    SIG: out, optional
+;         set to a named variable to obtain an array of the same size as var, containing significances
 ;
 ; :History:
 ;     Written by CoK, 2012.
 ;-
 function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $
     VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
-    CLIP_MAX=clip_max, SIGNI=signi
+    CLIP_MAX=clip_max, SIG=sig
     
   ;--------------------------
   ; Set up environment
@@ -55,9 +57,9 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   v_check=size(var)
   h_check=size(height)
   
-  if N_ELEMENTS(KERNEL_SIZE) eq 0 then message, 'KERNEL_SIZE must be set.'
-  if N_ELEMENTS(DEFAULT_VAL) eq 0 then message, 'DEFAULT_VAL must be set.'
   if (KERNEL_SIZE/2.) eq long(KERNEL_SIZE/2.) then message, 'KERNEL_SIZE must be an odd number of grids (e.g. 3, 5, 7 ...)'
+  if N_ELEMENTS(KERNEL_SIZE) eq 0 then kernel_size = 9
+  if N_ELEMENTS(DEFAULT_VAL) eq 0 then default_val = 0.
   
   ngrid=long(KERNEL_SIZE/2)
   ncol=N_ELEMENTS(var[*,0,0])
@@ -67,6 +69,8 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   
   ;Loop over all time steps
   if ntime eq 1 then begin
+    
+    do_mean = KEYWORD_SET(mean)
   
     valid = intarr(ncol,nrow) + 1
     if n_elements(valid_mask) ne 0 then valid = valid_mask
@@ -85,7 +89,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
     endif
     
     inds = ARRAY_INDICES(edges, ptocompute)
-    
+        
     for i=0, ntocompute-1 do begin
     
       m = ptocompute[i]
@@ -101,33 +105,27 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
       subarr_var = var[curcol-ngrid:curcol+ngrid, currow-ngrid:currow+ngrid]
       
       ;compute alt grad by mean if keyword is set
-      if KEYWORD_SET(MEAN) then begin
+      if do_mean then begin
         diff_h = subarr_height-height[m]
         p = where(ABS(diff_h) lt 10., cnt)
         if cnt ne 0 then subarr_valid[p] = 0
-        pv = where(subarr_valid, cntv)
-        if cntv lt 1 then continue ; how many points per kernel should be valid?
         out_arr[m] = mean(subarr_var[pv]-var[m])/(diff_h[pv])
         sig[m] = float(cntv)/nk
-      endif else begin
-      
+      endif else begin      
         ;compute alt grad by regress, default setting
         out_arr[m] = regress(subarr_height[pv], subarr_var[pv], CORRELATION=lr_corr)
         sig[m] = lr_corr*lr_corr
-        if N_ELEMENTS(SIGNI) ne 0 then out_arr[m]=sig[m]
-      endelse
-      
+      endelse            
     endfor
     
   endif else begin
     ;call procedure in itself to compute all time steps
     out_arr = fltarr(ncol,nrow,ntime)-default_val
-    sig_arr = fltarr(ncol,nrow,ntime)
+    sig = fltarr(ncol,nrow,ntime)
     for t=0, ntime-1 do begin
       out_arr[*,*,t] = w_altitudinal_gradient(var[*,*,t], height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $
-        VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
-        CLIP_MAX=clip_max, SIGNI=signi)
-     
+        VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min, CLIP_MAX=clip_max, SIG=tsig)
+       sig[*,*,t] = tsig
     endfor
   endelse
   
