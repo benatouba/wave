@@ -43,7 +43,7 @@
 ;-
 function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $
     VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
-    CLIP_MAX=clip_max, SIG=sig
+    CLIP_MAX=clip_max, SIGNI=signi
     
   ;--------------------------
   ; Set up environment
@@ -55,7 +55,6 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   v_check=size(var)
   h_check=size(height)
   
-  if (v_check[0:2] ne h_check[0:2]) then message, 'var and height are not of the same size.'
   if N_ELEMENTS(KERNEL_SIZE) eq 0 then message, 'KERNEL_SIZE must be set.'
   if N_ELEMENTS(DEFAULT_VAL) eq 0 then message, 'DEFAULT_VAL must be set.'
   if (KERNEL_SIZE/2.) eq long(KERNEL_SIZE/2.) then message, 'KERNEL_SIZE must be an odd number of grids (e.g. 3, 5, 7 ...)'
@@ -115,6 +114,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
         ;compute alt grad by regress, default setting
         out_arr[m] = regress(subarr_height[pv], subarr_var[pv], CORRELATION=lr_corr)
         sig[m] = lr_corr*lr_corr
+        if N_ELEMENTS(SIGNI) ne 0 then out_arr[m]=sig[m]
       endelse
       
     endfor
@@ -122,12 +122,12 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   endif else begin
     ;call procedure in itself to compute all time steps
     out_arr = fltarr(ncol,nrow,ntime)-default_val
-    sig = fltarr(ncol,nrow,ntime)
+    sig_arr = fltarr(ncol,nrow,ntime)
     for t=0, ntime-1 do begin
       out_arr[*,*,t] = w_altitudinal_gradient(var[*,*,t], height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $
         VALID_MASK=valid_mask, MEAN=mean, REGRESS=regress, CLIP_MIN=clip_min,$
-        CLIP_MAX=clip_max, SIG=_sig)
-      sig[*,*,t] = _sig
+        CLIP_MAX=clip_max, SIGNI=signi)
+     
     endfor
   endelse
   
@@ -140,7 +140,6 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
     if cnt ne 0 then out_arr[p] = CLIP_MAX
   endif
   
-  if KEYWORD_SET(SIG) then out_arr=sig
   
   return, out_arr
   
