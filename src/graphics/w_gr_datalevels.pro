@@ -4,7 +4,7 @@
 ; data levels and associate the right color to the right value for a plot 
 ; (like contour, image, or coloured scatter plot for example).
 ; A nice by-product of this routine is the possibility to visualise 
-; your data on the display and have acces to some easy statistics.
+; your data on the display and have access to some easy statistics.
 ; 
 ; The output of `w_gr_data_levels` is a structure containing all necessary 
 ; information to generate a colored plot. Her the most important tags::
@@ -18,7 +18,7 @@
 ;     info.loc: integer array of the same dimesnions as DATA. Each element of
 ;               info.loc corresponds to an index in info.colors 
 ;               (info.colors[info.loc[0]] is simply the color assigned to the
-;               first element in yoru data)
+;               first element in your data)
 ;     ...
 ;       
 ; 
@@ -133,13 +133,13 @@ pro w_gr_DataLevels_show, info
     cgWindow, WXSIZE=700, WYSIZE=500
     if info.dataNdims eq 2 then begin ; Image case
       cgImage, info.loc, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
-        MINUS_ONE=0, /AXIS, TITLE='Data image', MARGIN=0.1
+        MINUS_ONE=0, /AXIS, TITLE='Data image', MARGIN=0.2
     endif else begin
       d = CEIL(SQRT(info.dataNel))
       img = LONARR(d,d)
       img[0:info.dataNel-1] = info.loc
       cgImage, img, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
-        MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE
+        MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE, MARGIN=0.2
       if N_ELEMENTS(img) gt info.dataNel then begin ; put a cross where no data
         inds = ARRAY_INDICES(img, INDGEN(N_ELEMENTS(img)-info.dataNel) + info.dataNel)
         cgPlotS, inds[0,*]+0.5, inds[1,*]+0.5, PSYM=SymCat(34), /DATA, /ADDCMD, SYMSIZE=1.5
@@ -243,7 +243,7 @@ end
 ;    DOUBLE: in, optional, type=boolean, default=0
 ;            Set this keyword to transform the data to double before computing the levels
 ;    SHOW: in, optional, type=boolean, default=0
-;          Set this keyword to look at your data
+;          Set this keyword to visualize your data
 ;
 ; :Returns:
 ;    A structure containing all necessary information to do your plot

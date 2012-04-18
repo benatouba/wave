@@ -10,7 +10,7 @@
 ;   example, you could visit the cpt-city website to get access to thousands
 ;   of colortables (http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html),
 ;   download one of them (using the *.c3g format) and add it to the WAVE 
-;   res/colortables directory directory.
+;   res/colortables directory.
 ;   
 ;   To make you colortable, create a file called xxxx.rgb (where xxxx is the
 ;   color table name and move it to the WAVE res/colortables directory.

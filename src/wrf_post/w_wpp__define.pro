@@ -429,9 +429,11 @@ pro w_WPP::_set_active_var, var, year, agg, obj, IS_STATIC=is_static
   f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
   f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
   
-  FILE_MKDIR, FILE_DIRNAME(f_log)
-  FILE_MKDIR, FILE_DIRNAME(f_path)
-  FILE_MKDIR, FILE_DIRNAME(l_path)
+  if agg ne 's' then begin
+    FILE_MKDIR, FILE_DIRNAME(f_log)
+    FILE_MKDIR, FILE_DIRNAME(f_path)
+    FILE_MKDIR, FILE_DIRNAME(l_path)
+  endif
   
   self.active_checkfile = l_path
   self.active_ncloggerfile = f_log

@@ -728,13 +728,18 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
   endelse
   
   ;Fill up
+  ; Type: 
+  ; 0 for levels, 
+  ; 1 for automatic, 
+  ; 3 for automatic with min, 
+  ; 4 for automatic with max
+  ; 6 for automatic with minmax
   self->_DestroyPlotParams
   if is_Levels then self.plot_params.type = 0 else begin
     self.plot_params.type = 1 ; for automatic
     if N_ELEMENTS(MIN_VALUE) ne 0 then self.plot_params.type += 2
     if N_ELEMENTS(MAX_VALUE) ne 0 then self.plot_params.type += 3    
   endelse
-
   
   self.plot_params.nlevels  = nlevels
   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
