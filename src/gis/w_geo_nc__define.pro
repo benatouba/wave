@@ -913,8 +913,8 @@ pro w_GEO_nc::QuickPlotVar, Varid, UPSIDEDOWN = UPSIDEDOWN, WID = wid, _EXTRA = 
     RETURN
   ENDIF
   
-  if ~self->w_NCDF::get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
-  var = self->w_GEO_nc::get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
+  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
+  var = self->get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
 
 
   if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 

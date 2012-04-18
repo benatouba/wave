@@ -2179,25 +2179,25 @@ function utils_wrf_rh, qv, p, t
   
   if not array_processing(qv, p, t) then message, WAVE_Std_Message(/ARG)
 
-  SVP1=0.6112D
-  SVP2=17.67D
-  SVP3=29.65D
-  SVPT0=273.15D
+  SVP1=0.6112
+  SVP2=17.67
+  SVP3=29.65
+  SVPT0=273.15
   
-  R_D=287.04D
-  R_V=461.6D
+  R_D=287.04
+  R_V=461.6
   EP_2=R_D/R_V
   
-  EP_3=0.622D
+  EP_3=0.622
   
   PRESSURE = P
   TEMPERATURE = T
   
-  ES = 10.D*SVP1*EXP(SVP2* (TEMPERATURE-SVPT0)/(TEMPERATURE-SVP3))
+  ES = 10.*SVP1*EXP(SVP2* (TEMPERATURE-SVPT0)/(TEMPERATURE-SVP3))
   
-  QVS = EP_3 * ES / (0.01D * PRESSURE - (1.D - EP_3)*ES)
+  QVS = EP_3 * ES / (0.01 * PRESSURE - (1. - EP_3)*ES)
   
-  RH = 100.D*((QV/QVS < 1.0D) > 0.0D)
+  RH = 100.*((QV/QVS < 1.0) > 0.0)
   
   RETURN, rh
   

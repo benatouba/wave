@@ -44,6 +44,7 @@ pushd, root
 ; Datasets
 .run w_trmm__define.pro
 .run w_wrf__define.pro
+.run w_wpr__define.pro
 .run w_modis__define.pro
 .run w_dem__define.pro
 .run w_bluemarble__define.pro

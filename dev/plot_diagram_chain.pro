@@ -11,8 +11,8 @@ pro plot_diagram_chain, FILE=file
   data = w_ncdc_read_gsod_file(FILE = file)
   
   ; accepted percentage of missing days for temperature and prcp per month
-  perc_temp=1
-  perc_prcp=1
+  perc_temp=0.5
+  perc_prcp=0.5
   
   ; basic information of the station  
   lat  = data->getProperty('loc_y')
@@ -100,7 +100,7 @@ pro plot_diagram_chain, FILE=file
      endelse
    endfor
    
-  
+   cgWindow
    w_climate_diagram,  precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
                        MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
                        VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp

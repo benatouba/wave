@@ -57,9 +57,9 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
   v_check=size(var)
   h_check=size(height)
   
-  if (KERNEL_SIZE/2.) eq long(KERNEL_SIZE/2.) then message, 'KERNEL_SIZE must be an odd number of grids (e.g. 3, 5, 7 ...)'
   if N_ELEMENTS(KERNEL_SIZE) eq 0 then kernel_size = 9
   if N_ELEMENTS(DEFAULT_VAL) eq 0 then default_val = 0.
+  if (KERNEL_SIZE/2.) eq long(KERNEL_SIZE/2.) then message, 'KERNEL_SIZE must be an odd number of grids (e.g. 3, 5, 7 ...)'
   
   ngrid=long(KERNEL_SIZE/2)
   ncol=N_ELEMENTS(var[*,0,0])

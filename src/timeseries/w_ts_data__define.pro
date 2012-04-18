@@ -385,6 +385,10 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
     if dms ge 2419200000LL and dms le 2678400000LL then begin ; We are probably in a monthly timeserie
       message, 'Monthly timestep not implemented yet'
     endif    
+    if dms ge 31449600000LL and dms le 31622400000LL then begin ; We are probably in a yearly timeserie
+      message, 'Yearly timestep not implemented yet'
+    endif    
+    
     self.timestep = dms    
   endif
  
@@ -603,7 +607,7 @@ pro w_ts_Data::printMissingPeriods
   ents = LABEL_REGION([0,~self->valid(),0])
   ents = ents[1:N_elements(ents)-2]
   n_ents = max(ents)
-  print, ' ' + str_equiv(n_ents) + ' missing periods'
+  print, '  ' + str_equiv(n_ents) + ' missing periods'
   if n_ents gt 15 then ok = DIALOG_MESSAGE(str_equiv(n_ents) + ' missing periods, sure you want to print them?', /QUESTION) else ok = 'YES'
   
   if ok eq 'No' then return
@@ -621,11 +625,17 @@ end
 ;+
 ; :Description:
 ;    Just plots the time serie
+;    
+; :Keywords:
+;    TITLE_INFO: in, optional
+;                ssomethingto add to the title
 ;
 ;-
-pro w_ts_Data::plotTS
+pro w_ts_Data::plotTS, TITLE_INFO=title_info
 
-  if self.description ne '' then TITLE = self.description else TITLE = self.name
+  if self.description ne '' then title = self.description else title = self.name
+  
+  if N_ELEMENTS(TITLE_INFO) ne 0 then title = title_info + title
 
   w_TimeLinePlot, self->getData(), self->getTime(), self.name, COLOR1='blue', TITLE=title, YTITLE=self.unit 
 

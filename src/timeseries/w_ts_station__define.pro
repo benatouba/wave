@@ -83,7 +83,7 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
   
   ; Check input and set defaults
   if N_ELEMENTS(NAME) eq 0 then _name = 'Station' else _name = name
-  if N_ELEMENTS(ID) eq 0 then _id = '' else _id = id
+  if N_ELEMENTS(ID) eq 0 then _id = _name else _id = id
   if N_ELEMENTS(DESCRIPTION) eq 0 then _description = '' else _description = description
   if N_ELEMENTS(ELEVATION) eq 0 then _elevation = -9999L else _elevation = elevation
   if N_ELEMENTS(LOC_X) eq 0 then _loc_x = -9999d else _loc_x = loc_x
@@ -549,7 +549,7 @@ pro w_ts_Station::printMissingPeriods
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
-    print, _var->getProperty('NAME')
+    print, ' ' + _var->getProperty('NAME')
     _var->printMissingPeriods
   endfor        
       
@@ -676,7 +676,7 @@ pro w_ts_Station::plotVars
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
-    _var->plotTS
+    _var->plotTS, TITLE_INFO = self.name + ': '
   endfor        
       
 end
@@ -691,15 +691,19 @@ end
 ;          the path to the file to write
 ;    TITLE: in, optional, type=string
 ;           The title of the ASCII file
+;    FORMAT: in, optional, type=string
+;            the string format code for floats
 ;
 ;-
-pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
+pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title, FORMAT=format
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
 
   if N_ELEMENTS(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)
+  
+  if N_ELEMENTS(format) eq 0 then format = '(F9.3)'
   
   openw, id, file, /GET_LUN
   
@@ -780,7 +784,7 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title
     text = '"' + t + '",'
     for i = 0, nvar - 1 do begin
       data = (*(datas[i]))[l]
-      if str_equiv(types[i]) eq str_equiv('float') then v = strcompress(STRING(data,FORMAT = '(F8.3)'),/REMOVE_ALL)
+      if str_equiv(types[i]) eq str_equiv('float') then v = strcompress(STRING(data, FORMAT=format),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('long') then v = strcompress(STRING(data,FORMAT = '(I8)'),/REMOVE_ALL)
       if i lt nvar - 1 then text += v + sep else text += v
       undefine, v
