@@ -12,7 +12,7 @@ function make_color, angle, radius
   g = interpol(ticks_g, tick_coords, angle)
   b = interpol(ticks_b, tick_coords, angle)
   
-;  ; create radius
+ ; create radius
   rad = [0., 100.]
   centre = 255
   rad_r = [centre, r]
@@ -28,34 +28,16 @@ function make_color, angle, radius
  
 end
 
-;function color_circle
-;
-;r = fltarr(360, 101)
-;g = fltarr(360, 101)
-;b = fltarr(360, 101)
-;for radius = 0,100 do begin
-;  for angle = 0,359 do begin
-;      r_g_b = make_color(angle, radius)
-;      r[angle, radius] = r_g_b[0]
-;      g[angle, radius] = r_g_b[1]
-;      b[angle, radius] = r_g_b[2]
-;   endfor
-;endfor
-;colorcircle= fltarr(3,360,101)
-;colorcircle= TRANSPOSE([[[r]],[[g]],[[b]]])
-;
-;return, colorcircle
-;
-;end
 
 function test_circle
 
   ; dimension of circle
+  ; if you vary the dimension, you probably have to vary the legend as well (see below in 'legend marks' and 'mark names')
   s = 601
   center = s/2
   maxR = s-center-1
   
-  ; generate basic color = white
+  ; create basic color = white
   r = BYTARR(s,s) + 255
   g = BYTARR(s,s) + 255
   b = BYTARR(s,s) + 255
@@ -71,7 +53,8 @@ function test_circle
   angle[*] = test[0,*]
   angle = ROTATE(ABS(angle - !PI),3) * 180. / !PI
   
-  pok = where(radius le 100, cntok) ; wieso kommt aus 2-dim radius 1-dim pok raus?
+  ; generate color circle
+  pok = where(radius le 100, cntok)
   for i=0, cntok-1 do begin
     ind = pok[i]
     r_g_b = make_color(angle[ind], radius[ind])
@@ -84,9 +67,9 @@ function test_circle
   colorcircle[*,*,1]=g
   colorcircle[*,*,2]=b   
   
+  ; prepare image
   wxsize = 600
   wysize = 600
-  ;cgImage, colorcircle, WXSIZE=wxsize, WYSIZE=wysize, /Window, /KEEP_ASPECT_RATIO
   cgImage, colorcircle, WXSIZE=wxsize, WYSIZE=wysize, /Window, /KEEP_ASPECT_RATIO, /SAVE, MARGIN=0.1
   
   
@@ -96,8 +79,9 @@ function test_circle
   ycircle = center + sin(alpha) * maxR
   cgPlots, xcircle,ycircle, /ADDCMD, /DATA, THICK=2
   
-  xmonsoonmark = [(center + cos(!PI*1/2) * maxR), (center + cos(!PI*1/2) * (maxR+20))]
-  ymonsoonmark = [(center + sin(!PI*1/2) * maxR), (center + sin(!PI*1/2) * (maxR+20))]
+  ; legend marks
+  xmonsoonmark = [(center + cos(!PI*1/2) * maxR), (center + cos(!PI*1/2) * (maxR+20))] ; change the (maxR+***) value if you vary 
+  ymonsoonmark = [(center + sin(!PI*1/2) * maxR), (center + sin(!PI*1/2) * (maxR+20))] ; the dimension of the circle
   xwintermark  = [(center + cos(!PI*7/6) * maxR), (center + cos(!PI*7/6) * (maxR+20))]
   ywintermark  = [(center + sin(!PI*7/6) * maxR), (center + sin(!PI*7/6) * (maxR+20))]
   xautumnmark  = [(center + cos(!PI*11/6) * maxR), (center + cos(!PI*11/6) * (maxR+20))]
@@ -105,10 +89,18 @@ function test_circle
   cgplots, xwintermark, ywintermark, /ADDCMD, /Data, Thick=2
   cgplots, xmonsoonmark, ymonsoonmark, /ADDCMD, /Data, Thick=2
   cgplots, xautumnmark, yautumnmark, /ADDCMD, /Data, Thick=2
+  
+  ; mark names
+  xmonsoon = [center -40 + cos(!PI*1/2) *maxR] ;change the (center - ***) value if you vary the dimension of the circle
+  ymonsoon = [center +25 + sin(!PI*1/2) *maxR]
+  xwinter =  [center -80 + cos(!PI*7/6) *maxR]
+  ywinter =  [center -20 + sin(!PI*7/6) *maxR]
+  xautumn = [center +20 + cos(!PI*11/6) *maxR]
+  yautumn = [center -20 + sin(!PI*11/6) *maxR]
   ;cgtext, 0.05, 0.95, 'Legend', /Normal, /Window
-  cgtext, 0.45, 0.94, 'Monsoon', /Normal, /Window
-  cgtext, 0.05, 0.27, 'Winter', /Normal, /Window
-  cgtext, 0.87, 0.27, 'Autumn', /Normal, /Window
+  cgtext, xmonsoon, ymonsoon, 'Monsoon', /Data, /Window
+  cgtext, xwinter, ywinter, 'Winter', /Data, /Window
+  cgtext, xautumn, yautumn, 'Autumn', /Data, /Window
   
   return, colorcircle
   
