@@ -38,7 +38,7 @@
 function w_WRF_Container::FindByVar, searchID, year, $
                                      Case_Sensitive=case_sensitive, $
                                      Count=count, $
-                                     RegExp=regexp, $
+                                     RegExp=regexp, $                                    
                                      _Extra=extra
 
    ; Return to caller on error.
@@ -62,6 +62,10 @@ function w_WRF_Container::FindByVar, searchID, year, $
    FOR childNo = 0L, numChildren - 1 DO BEGIN      
       (children[childNo])->GetProperty,  NVARS=NVARS
       ok = (children[childNo])->w_NCDF::get_Var_Info(Nvars-1,VARNAME=vname)
+      okpress = (children[childNo])->w_NCDF::get_Dim_Info('pressure')
+      if okpress then vname = vname + '_press'
+      oketa = (children[childNo])->w_NCDF::get_Dim_Info('eta')
+      if oketa then vname = vname + '_eta'
       names[childNo] = vname
       if do_years then begin
         (children[childNo])->w_geo_nc::get_time, time
@@ -107,6 +111,38 @@ function w_WRF_Container::FindByVar, searchID, year, $
    RETURN, matchingObjects
    
  END
+ 
+ function w_WRF_Container::getVarNames, count=count
+
+   ; Return to caller on error.
+   ON_ERROR, 2
+   
+   ; Assume there are no matches.
+   count = 0
+
+   ; Get the names of all the child objects.
+   children = self->IDL_CONTAINER::Get(/All, Count=numChildren)
+   IF numChildren EQ 0 THEN RETURN, ''
+
+   ; We assume we can get the NAME as a property.
+   names = StrArr(numChildren)
+   FOR childNo = 0L, numChildren - 1 DO BEGIN      
+      (children[childNo])->GetProperty,  NVARS=NVARS
+      ok = (children[childNo])->w_NCDF::get_Var_Info(Nvars-1,VARNAME=vname)
+      okpress = (children[childNo])->w_NCDF::get_Dim_Info('pressure')
+      if okpress then vname = vname + '_press'
+      oketa = (children[childNo])->w_NCDF::get_Dim_Info('eta')
+      if oketa then vname = vname + '_eta'
+      names[childNo] = vname
+   ENDFOR
+   
+   names = names[UNIQ(names, SORT(names))]
+   count = N_ELEMENTS(names) 
+   
+   RETURN, names
+   
+ END
+ 
 
 ;+
 ;   Class definition module. 

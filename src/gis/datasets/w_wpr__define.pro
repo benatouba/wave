@@ -236,13 +236,15 @@ function w_WPR::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
   is_static = FALSE
   ; Is it a template variable?
   tpl = self.objs->Get(POSITION=0)
-  if ~ tpl->get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
+  ok = tpl->get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
     out_id = out_id, $
     units = units, $
     description = description, $
     varname = varname , $ ;
     dims = dims, $ ;
-    dimnames = dimnames) then begin
+    dimnames = dimnames)
+  ok = ok and (out_id ne (tpl->getProperty('NVARS')-1))
+  if ~ ok then begin
     
     ;is it a diagnostic variable?
     if ~ self->w_WRF::get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
@@ -258,7 +260,9 @@ function w_WPR::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
       if count gt 0 then begin
        is_original = TRUE
        if count eq 1 then is_static = TRUE 
-       return, (object[0])->get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
+       vid = utils_replace_string(Varid, '_press', '')
+       vid = utils_replace_string(vid, '_eta', '')
+       return, (object[0])->get_Var_Info(vid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
         out_id = out_id, $
         units = units, $
         description = description, $
@@ -272,6 +276,15 @@ function w_WPR::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
   
   return, TRUE
   
+end
+
+pro w_WPR::get_Varlist, varnames, PRINTVARS=printvars
+
+  varnames = self.objs->getVarnames(COUNT=cnt)
+  
+  if KEYWORD_SET(PRINTVARS) then print, 'WRF product variables:'
+  if KEYWORD_SET(PRINTVARS) then for i = 0, cnt-1 DO print, 'Id: ' + str_equiv(-1) + $
+       '. Name: ' + varnames[i]
 end
 
 ;+
@@ -337,6 +350,8 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
+;   YEARS: in, optional, type = long
+;          if set, it defines the years to take in account
 ;   description: out, type = string
 ;                If available, the description of the variable
 ;   units: out, type = string
@@ -359,6 +374,7 @@ function w_WPR::get_Var, Varid, $
                             nt,  $
                             T0=t0, $
                             T1=t1, $
+                            YEARS=years, $
                             UNSTAGGER=unstagger, $
                             ETA_LEVELS=eta_levels, $
                             ZLEVELS=zlevels, $
@@ -398,11 +414,12 @@ function w_WPR::get_Var, Varid, $
        obj->getProperty, Nvars=Nvars
        out = obj->get_Var(Nvars-1, time, nt)
     endif else begin
-      for y=0, N_ELEMENTS(*self.years)-1 do begin
-        obj = self.objs->FindByVar(Varid, (*self.years)[y], COUNT=count)
+      if N_ELEMENTS(years) ne 0 then _y = years else _y = *self.years
+      for y=0, N_ELEMENTS(_y)-1 do begin
+        obj = self.objs->FindByVar(Varid, (_y)[y], COUNT=count)
         ok = obj->define_subset(SUBSET=self.subset)
         obj->getProperty, Nvars=Nvars
-        tmp = obj->get_Var(Nvars-1, t)
+        tmp = obj->get_Var(Nvars-1, t, ZLEVELS=zlevels)
         if N_ELEMENTS(out) eq 0 then out = tmp else out = [[[out]],[[tmp]]]
         if N_ELEMENTS(time) eq 0 then time = t else time = [time,t]
       endfor

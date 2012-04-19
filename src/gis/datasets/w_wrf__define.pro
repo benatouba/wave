@@ -181,8 +181,8 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   ; GRID info *
   ;************      
   if self.type eq 'PRO' then begin
-    x = self->w_WRF::get_Var('west_east')
-    y = self->w_WRF::get_Var('south_north')         
+    x = self->w_NCDF::get_Var('west_east')
+    y = self->w_NCDF::get_Var('south_north')         
     nx = N_ELEMENTS(x)        
     ny = N_ELEMENTS(y)              
     dx = x[1]-x[0] ;TODO CHANGE this!!

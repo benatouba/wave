@@ -1056,7 +1056,7 @@ PRO w_NCDF::dump, FILE = file
   
   text = 'netcdf : ' + self.fname 
   printf, lu, text 
-  text = 'directory : ' + self.directory 
+  text = 'directory : ' + FILE_DIRNAME(self.path) 
   printf, lu, text 
   printf, lu, '{'
   printf, lu, ''
