@@ -243,7 +243,8 @@ function w_WPR::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
     varname = varname , $ ;
     dims = dims, $ ;
     dimnames = dimnames)
-  ok = ok and (out_id ne (tpl->getProperty('NVARS')-1))
+  tpl->getProperty, NVARS=nv
+  if ok then ok = ok and (out_id ne (nv-1))
   if ~ ok then begin
     
     ;is it a diagnostic variable?
