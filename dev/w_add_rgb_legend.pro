@@ -1,4 +1,19 @@
+
+; :Description:
+;    This function calculates the rbg color values for a certain angle and radius (or an array of angle and radius)
+;    of a rainbow-like color circle. The top of the circle is green, the lower right side is blue and the lower left side is red.
+;    The output is a 3-dim. (to 4dim., for array of agnle ansd radius) array containing the color values for [red, green, blue] for the angle and radius.
+;
+; :Parameters:
+;    angle: in, required, value (or array of values) between 0 and 360 degrees, the 0 (resp. 360 value) lies horizontally on the right side of the circle
+;    radius: in, required, value (or array of values) between 0 and 100, 0 marking the center of the circle
+
 function w_add_RGB_legend_make_color, angle, radius 
+
+  ;--------------------
+  ; Set up environment
+  ;--------------------
+  compile_opt idl2
 
   ; create angle
   tick_coords = [0  , 60 , 120, 180, 240, 300, 360]
@@ -6,7 +21,7 @@ function w_add_RGB_legend_make_color, angle, radius
   ticks_g     = [255, 255, 0  , 0  , 0  , 255, 255]
   ticks_b     = [0  , 255, 255, 255, 0  , 0  , 0  ]
   
-  ; calculate r,g,b for certain angle on periphery of circle
+  ; calculate r,g,b for certain angle
   r = interpol(ticks_r, tick_coords, angle)
   g = interpol(ticks_g, tick_coords, angle)
   b = interpol(ticks_b, tick_coords, angle)
@@ -27,19 +42,24 @@ function w_add_RGB_legend_make_color, angle, radius
  
 end
 
-function w_add_RGB_legend_make_color_circle
 
+; :Description:
+;    This function uses the w_add_RGB_legend_make_color function to create a full color circle.
+;    By setting the keyword RAD to a certain value, the size of the circle can be varied.
+;
+; :Keywords:
+;    RAD : in, optional, radius of the circle, default = 300, 
+;         set this keyword to vary the resolution of the color circle
+
+function w_add_RGB_legend_make_color_circle, RAD=rad
   ;--------------------
   ; Set up environment
   ;--------------------
   compile_opt idl2
-  
-  ; dimension of circle
-  ; if you vary the dimension, you probably have to vary the legend as well (see below in 'legend marks' and 'mark names')
-  s = 601
-  center = s/2
-  maxR = s-center-1
-  
+ 
+  s = 2.*rad+1.
+  center = s/2.
+
   ; create basic color = white
   r = BYTARR(s,s) + 255
   g = BYTARR(s,s) + 255
@@ -52,7 +72,7 @@ function w_add_RGB_legend_make_color_circle
   js = (INTARR(s)+1) # INDGEN(s) - center
   rectang_coord = TRANSPOSE([[is[*]],[js[*]]])
   test = CV_COORD(FROM_RECT=rectang_coord, /TO_POLAR)
-  radius[*] = test[1,*] * 100./maxR
+  radius[*] = test[1,*] * 100./rad
   angle[*] = test[0,*]
   angle = ROTATE(ABS(angle - !PI),3) * 180. / !PI
   
@@ -71,72 +91,76 @@ function w_add_RGB_legend_make_color_circle
   colorcircle[*,*,2]=b   
   
   return, colorcircle
-
+  
 end
+
 
 ;+
 ; :Description:
-;    Describe the procedure.
+;    This procedure uses the color circle, generated (by the w_add_RGB_legend_make_color_circle function) to add it as a legend to a cgwindow.
 ;
 ;
 ;
 ; :Keywords:
-;    POSITION
 ;    ADDCMD
 ;    DATA
 ;    NORMAL
 ;    SIZE
+;    RAD : in, optional, radius of the circle, default = 300, 
+;         set this keyword to vary the resolution of the color circle
+;    PICRAD : in, optional 
+;             set this keyword to define the size of the circle in your cgwindow
 ;    
 ;-
-pro w_add_RGB_legend, POSITION=position, ADDCMD=addcmd, DATA=data, NORMAL=normal, RADIUS=radius
+pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad
 
   ;--------------------
   ; Set up environment
   ;--------------------
   compile_opt idl2
   
-  if N_ELEMENTS(POSITION) eq 0 then position = [0.1,0,1]
-  if N_ELEMENTS(radius) eq 0 then radius = [0.1,0,1]  
-  mypos = [POSITION[0]-RADIUS,POSITION[1]-RADIUS,POSITION[0]+RADIUS,POSITION[1]+RADIUS] 
+  if N_ELEMENTS(POSITION) eq 0 then position = [0.5,0.5]
+  if N_ELEMENTS(RAD) eq 0 then rad = [0.4]  
+  if N_ELEMENTS(NORMAL) eq 0 then normal = 1
   
-  s = 601
-  center = s/2
-  maxR = s-center-1
-
-  colorcircle = w_add_RGB_legend_make_color_circle()
+  ; dimension of circle in pixels
+  if N_ELEMENTS(PIXRAD) EQ 0 then pixrad = 300.
   
-  ; prepare image
-  cgImage, colorcircle, /KEEP_ASPECT_RATIO, /SAVE, POSITION=mypos, ADDCMD=addcmd  
+  mypos = [POSITION[0]-rad,POSITION[1]-rad,POSITION[0]+rad,POSITION[1]+rad] 
   
+  colorcircle = w_add_RGB_legend_make_color_circle(RAD=pixrad)
+   
+   ; prepare image
+  cgImage, colorcircle, /KEEP_ASPECT_RATIO, /SAVE, POSITION=mypos, ADDCMD=addcmd, DATA=data, NORMAL=normal
   
+  center = pixrad+1
   npoints = 1000
   alpha = indgen(npoints) * 2. *!PI / (npoints-1)
-  xcircle = center + cos(alpha) * maxR
-  ycircle = center + sin(alpha) * maxR
+  xcircle = center + cos(alpha) * pixrad
+  ycircle = center + sin(alpha) * pixrad
   cgPlots, xcircle,ycircle, ADDCMD=addcmd , /DATA, THICK=2
   
   ; legend marks
-  xmonsoonmark = [(center + cos(!PI*1/2) * maxR), (center + cos(!PI*1/2) * (maxR+20))] ; change the (maxR+***) value if you vary 
-  ymonsoonmark = [(center + sin(!PI*1/2) * maxR), (center + sin(!PI*1/2) * (maxR+20))] ; the dimension of the circle
-  xwintermark  = [(center + cos(!PI*7/6) * maxR), (center + cos(!PI*7/6) * (maxR+20))]
-  ywintermark  = [(center + sin(!PI*7/6) * maxR), (center + sin(!PI*7/6) * (maxR+20))]
-  xautumnmark  = [(center + cos(!PI*11/6) * maxR), (center + cos(!PI*11/6) * (maxR+20))]
-  yautumnmark  = [(center + sin(!PI*11/6) * maxR), (center + sin(!PI*11/6) * (maxR+20))]
+  xmonsoonmark = [(center + cos(!PI*1/2) * pixrad), (center + cos(!PI*1/2) * (pixrad+pixrad/10))]
+  ymonsoonmark = [(center + sin(!PI*1/2) * pixrad), (center + sin(!PI*1/2) * (pixrad+pixrad/10))]
+  xwintermark  = [(center + cos(!PI*7/6) * pixrad), (center + cos(!PI*7/6) * (pixrad+pixrad/10))]
+  ywintermark  = [(center + sin(!PI*7/6) * pixrad), (center + sin(!PI*7/6) * (pixrad+pixrad/10))]
+  xautumnmark  = [(center + cos(!PI*11/6) * pixrad), (center + cos(!PI*11/6) * (pixrad+pixrad/10))]
+  yautumnmark  = [(center + sin(!PI*11/6) * pixrad), (center + sin(!PI*11/6) * (pixrad+pixrad/10))]
   cgplots, xwintermark, ywintermark, ADDCMD=addcmd , /Data, Thick=2
   cgplots, xmonsoonmark, ymonsoonmark, ADDCMD=addcmd , /Data, Thick=2
   cgplots, xautumnmark, yautumnmark, ADDCMD=addcmd , /Data, Thick=2
   
   ; mark names
-  xmonsoon = [center -40 + cos(!PI*1/2) *maxR] ;change the (center - ***) value if you vary the dimension of the circle
-  ymonsoon = [center +25 + sin(!PI*1/2) *maxR]
-  xwinter =  [center -80 + cos(!PI*7/6) *maxR]
-  ywinter =  [center -20 + sin(!PI*7/6) *maxR]
-  xautumn = [center +20 + cos(!PI*11/6) *maxR]
-  yautumn = [center -20 + sin(!PI*11/6) *maxR]
-  
-  ;cgtext, 0.05, 0.95, 'Legend', /Normal, /Window
-  cgtext, xmonsoon, ymonsoon, 'Monsoon', /Data, ADDCMD=addcmd
-  cgtext, xwinter, ywinter, 'Winter', /Data, ADDCMD=addcmd 
-  cgtext, xautumn, yautumn, 'Autumn', /Data, ADDCMD=addcmd 
+  xmonsoon = [center -(pixrad/5) + cos(!PI*1/2) *pixrad]
+  ymonsoon = [center +(pixrad/9) + sin(!PI*1/2) *pixrad]
+  xwinter =  [center -(2*pixrad/5) + cos(!PI*7/6) *pixrad]
+  ywinter =  [center -(pixrad/10) + sin(!PI*7/6) *pixrad]
+  xautumn = [center +(pixrad/7) + cos(!PI*11/6) *pixrad]
+  yautumn = [center -(pixrad/10) + sin(!PI*11/6) *pixrad]
+  chars = rad * 4.
+  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd
+  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd 
+  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd 
   
 end
