@@ -244,17 +244,22 @@ function w_WPR::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from a
     dims = dims, $ ;
     dimnames = dimnames)
   tpl->getProperty, NVARS=nv
-  if ok then ok = ok and (out_id ne (nv-1))
+  nodiag = FALSE
+  if ok then begin
+    nodiag = TRUE
+    ok = ok and (out_id ne (nv-1))
+  endif
   if ~ ok then begin
     
     ;is it a diagnostic variable?
-    if ~ self->w_WRF::get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
+    ok = self->w_WRF::get_Var_Info(Varid, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
       out_id = out_id, $
       units = units, $
       description = description, $
       varname = varname , $ ;
       dims = dims, $ ;
-      dimnames = dimnames) then begin
+      dimnames = dimnames)
+    if ~ ok or NODIAG then begin
       
       ; Can you find a variable object with this name?
       object = self.objs->FindByVar(Varid, COUNT=count)
