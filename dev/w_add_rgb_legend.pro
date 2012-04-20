@@ -14,7 +14,7 @@ function w_add_RGB_legend_make_color, angle, radius
   ; Set up environment
   ;--------------------
   compile_opt idl2
-
+  
   ; create angle
   tick_coords = [0  , 60 , 120, 180, 240, 300, 360]
   ticks_r     = [0  , 0  , 0  , 255, 255, 255, 0  ]
@@ -47,48 +47,58 @@ end
 ;    This function uses the w_add_RGB_legend_make_color function to create a full color circle.
 ;    By setting the keyword RAD to a certain value, the size of the circle can be varied.
 ;
-; :Keywords:
-;    RAD : in, optional, radius of the circle, default = 300, 
+; :Params:
+;    rad: in, required, radius of the circle 
 ;         set this keyword to vary the resolution of the color circle
 
-function w_add_RGB_legend_make_color_circle, RAD=rad
+function w_add_RGB_legend_make_color_circle, rad
   ;--------------------
   ; Set up environment
   ;--------------------
   compile_opt idl2
- 
-  s = 2.*rad+1.
-  center = s/2.
-
-  ; create basic color = white
-  r = BYTARR(s,s) + 255
-  g = BYTARR(s,s) + 255
-  b = BYTARR(s,s) + 255
-
-  ; create angle and radius
-  radius = FLTARR(s,s)
-  angle = FLTARR(s,s)
-  is = INDGEN(s) # (INTARR(s)+1) - center
-  js = (INTARR(s)+1) # INDGEN(s) - center
-  rectang_coord = TRANSPOSE([[is[*]],[js[*]]])
-  test = CV_COORD(FROM_RECT=rectang_coord, /TO_POLAR)
-  radius[*] = test[1,*] * 100./rad
-  angle[*] = test[0,*]
-  angle = ROTATE(ABS(angle - !PI),3) * 180. / !PI
+  common w_add_RGB_legend_ADMIN, circle_rad, colorcircle
   
-  ; generate color circle
-  pok = where(radius le 100, cntok)
-  for i=0, cntok-1 do begin
-    ind = pok[i]
-    r_g_b = make_color(angle[ind], radius[ind])
-    r[ind] = r_g_b[0]
-    g[ind] = r_g_b[1]
-    b[ind] = r_g_b[2]
-  endfor
-  colorcircle= bytarr(s,s,3)
-  colorcircle[*,*,0]=r 
-  colorcircle[*,*,1]=g
-  colorcircle[*,*,2]=b   
+  if N_ELEMENTS(rad) eq 0 then Message, 'rad must be set'
+  
+  redo = N_ELEMENTS(circle_rad) eq 0
+  if ~ redo then redo = circle_rad ne rad
+  
+  if redo then begin
+    circle_rad = rad
+    s = 2.*circle_rad+1.
+    center = s/2.
+    
+    ; create basic color = white
+    r = BYTARR(s,s) + 255
+    g = BYTARR(s,s) + 255
+    b = BYTARR(s,s) + 255
+    
+    ; create angle and radius
+    radius = FLTARR(s,s)
+    angle = FLTARR(s,s)
+    is = INDGEN(s) # (INTARR(s)+1) - center
+    js = (INTARR(s)+1) # INDGEN(s) - center
+    rectang_coord = TRANSPOSE([[is[*]],[js[*]]])
+    test = CV_COORD(FROM_RECT=rectang_coord, /TO_POLAR)
+    radius[*] = test[1,*] * 100./circle_rad
+    angle[*] = test[0,*]
+    angle = ROTATE(ABS(angle - !PI),3) * 180. / !PI
+    
+    ; generate color circle
+    pok = where(radius le 100, cntok)
+    for i=0, cntok-1 do begin
+      ind = pok[i]
+      r_g_b = w_add_RGB_legend_make_color(angle[ind], radius[ind])
+      r[ind] = r_g_b[0]
+      g[ind] = r_g_b[1]
+      b[ind] = r_g_b[2]
+    endfor
+    colorcircle= bytarr(s,s,3)
+    colorcircle[*,*,0]=r
+    colorcircle[*,*,1]=g
+    colorcircle[*,*,2]=b
+    
+  endif
   
   return, colorcircle
   
@@ -118,7 +128,7 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   ; Set up environment
   ;--------------------
   compile_opt idl2
-  
+    
   if N_ELEMENTS(POSITION) eq 0 then position = [0.5,0.5]
   if N_ELEMENTS(RAD) eq 0 then rad = [0.4]  
   if N_ELEMENTS(NORMAL) eq 0 then normal = 1
@@ -128,7 +138,7 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   
   mypos = [POSITION[0]-rad,POSITION[1]-rad,POSITION[0]+rad,POSITION[1]+rad] 
   
-  colorcircle = w_add_RGB_legend_make_color_circle(RAD=pixrad)
+  colorcircle = w_add_RGB_legend_make_color_circle(pixrad)
    
    ; prepare image
   cgImage, colorcircle, /KEEP_ASPECT_RATIO, /SAVE, POSITION=mypos, ADDCMD=addcmd, DATA=data, NORMAL=normal
@@ -159,8 +169,9 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   xautumn = [center +(pixrad/7) + cos(!PI*11/6) *pixrad]
   yautumn = [center -(pixrad/10) + sin(!PI*11/6) *pixrad]
   chars = rad * 4.
-  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd
-  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd 
-  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd 
+  
+  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars*3
+  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars*3
+  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars*3
   
 end

@@ -415,18 +415,30 @@ function w_WPR::get_Var, Varid, $
     
   if is_original then begin
     if is_static then begin
-       obj = self.objs->FindByVar(Varid, COUNT=count)
-       ok = obj->define_subset(SUBSET=self.subset)
-       obj->getProperty, Nvars=Nvars
-       out = obj->get_Var(Nvars-1, time, nt)
+      obj = self.objs->FindByVar(Varid, COUNT=count)
+      ok = obj->define_subset(SUBSET=self.subset)
+      obj->getProperty, Nvars=Nvars
+      out = obj->get_Var(Nvars-1, time, nt)
     endif else begin
       if N_ELEMENTS(years) ne 0 then _y = years else _y = *self.years
       for y=0, N_ELEMENTS(_y)-1 do begin
         obj = self.objs->FindByVar(Varid, (_y)[y], COUNT=count)
         ok = obj->define_subset(SUBSET=self.subset)
         obj->getProperty, Nvars=Nvars
-        tmp = obj->get_Var(Nvars-1, t, ZLEVELS=zlevels)
-        if N_ELEMENTS(out) eq 0 then out = tmp else out = [[[out]],[[tmp]]]
+        tmp = reform(obj->get_Var(Nvars-1, t, ZLEVELS=zlevels))
+        s = SIZE(tmp, /N_DIMENSIONS)
+        if s eq 3 then begin
+          if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
+        endif else begin
+          if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else begin
+            sout = size(out, /DIMENSIONS)
+            stmp = size(tmp, /DIMENSIONS)
+            out_ = TEMPORARY(out)
+            out = FLTARR(sout+[0,0,0,stmp[3]])
+            out[*,*,*,0:sout[3]-1] = TEMPORARY(out_)
+            out[*,*,*,sout[3]:*] = TEMPORARY(tmp)
+           endelse            
+          endelse
         if N_ELEMENTS(time) eq 0 then time = t else time = [time,t]
       endfor
       nt = N_ELEMENTS(time)
