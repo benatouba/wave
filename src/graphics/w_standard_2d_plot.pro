@@ -99,6 +99,7 @@ pro w_standard_2d_plot, map, TITLE=title,$
                              ANTI_ALIASING=anti_aliasing, $ 
                              XFACTOR=xfactor, $                      
                              NO_BAR=no_bar, $                      
+                             NO_LEGEND=no_legend, $                      
                              IM_RESIZE=im_resize
    
   ;--------------------------
@@ -201,6 +202,8 @@ pro w_standard_2d_plot, map, TITLE=title,$
       WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
   endif
   
+  if ~KEYWORD_SET(NO_LEGEND) then begin
+  
   ; Scale
   xSize_map = tnt_C.dx * tnt_C.nx
   xSize_map_bar =  nicenumber(xSize_map/5.)
@@ -234,6 +237,8 @@ pro w_standard_2d_plot, map, TITLE=title,$
 
   if arg_okay(source_info, TYPE=IDL_STRING) then begin
    cgText, 0.80,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
+  endif
+  
   endif
   ; Output  
   if visible then begin

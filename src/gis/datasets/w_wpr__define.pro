@@ -427,7 +427,7 @@ function w_WPR::get_Var, Varid, $
         obj->getProperty, Nvars=Nvars
         tmp = reform(obj->get_Var(Nvars-1, t, ZLEVELS=zlevels))
         s = SIZE(tmp, /N_DIMENSIONS)
-        if s eq 3 then begin
+        if s le 3 then begin
           if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
         endif else begin
           if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else begin
