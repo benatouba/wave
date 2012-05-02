@@ -55,6 +55,6 @@ function w_gr_ColorToRGB, color, r, g, b, ROW=row
   get_rgb_table = [[r], [g], [b]]
   IF Keyword_Set(row) THEN get_rgb_table = Transpose(get_rgb_table)
   
-  return, get_rgb_table
+  return, reform(get_rgb_table)
   
 end

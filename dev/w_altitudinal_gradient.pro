@@ -120,7 +120,7 @@ function w_altitudinal_gradient, var, height, KERNEL_SIZE=kernel_size, DEFAULT_V
     
   endif else begin
     ;call procedure in itself to compute all time steps
-    out_arr = fltarr(ncol,nrow,ntime)-default_val
+    out_arr = fltarr(ncol,nrow,ntime)
     sig = fltarr(ncol,nrow,ntime)
     for t=0, ntime-1 do begin
       out_arr[*,*,t] = w_altitudinal_gradient(var[*,*,t], height, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, $

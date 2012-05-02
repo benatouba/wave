@@ -324,7 +324,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
   
   if filecnt eq 0 then message, 'No file(s) found.'
   
-  if filecnt gt 1 then station_list = Obj_New('w_ts_Container')
+  if filecnt gt 1 then station_list = Obj_New('w_ts_StatSet')
   
   for t=0, filecnt-1 do begin
     ascii_data = READ_ASCII(file_list[t], TEMPLATE=template)
@@ -391,7 +391,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       endfor
         
         if filecnt gt 1 then begin 
-        if OBJ_VALID(ncdc_station) then station_list->Add, ncdc_station 
+        if OBJ_VALID(ncdc_station) then station_list->AddStat, ncdc_station 
         endif else $
         station_list=ncdc_station
         

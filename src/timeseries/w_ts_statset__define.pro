@@ -437,10 +437,28 @@ pro w_ts_StatSet::removeStat, STATNAME=statname, STATID=statid
   COMPILE_OPT IDL2
   
   
-  n = N_ELEMENTS(varName)
+  n = N_ELEMENTS(statname)
   
-  for i=0, n-1 do if self->HasVar(STATNAME=statname, STATID=statid) then self.vars->Remove, object
+  for i=0, n-1 do if self->Hasstat(STATNAME=statname, STATID=statid) then self.vars->Remove, object
     
+  self->setPeriod
+  
+end
+
+pro w_ts_StatSet::removeVar, varName
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  StatCount = self.Stats->Count()  
+  IF StatCount EQ 0 THEN return
+  
+  FOR j=0,StatCount-1 DO BEGIN
+    _stat = self.Stats->Get(POSITION=j)
+    _Stat->removeVar, varName
+  endfor  
+     
   self->setPeriod
   
 end
