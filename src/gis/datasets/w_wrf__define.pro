@@ -210,33 +210,40 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
                                   x0 = x0                , $
                                   y0 = y0                , $
                                   proj = self.tnt_c.proj) THEN RETURN, 0
-                                  
+      
     ;Temporary tests to be sure we are good at WRF georeference
     self->w_GRID2d::Get_LonLat, gislon, gislat
     self->w_GEO_nc::get_ncdf_coordinates, lon, lat
-    if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
-      ; This can be due to the nest
+    
+    ;If we are at the poles we should mask the pole, errors are frequent there
+    pp = where(lat gt 86., cntp)
+    if cntp ne 0 then begin
+     lon[pp]=0 & lat[pp]=0 & gislon[pp]=0 & gislat[pp]=0
+     inds = ARRAY_INDICES(lon, pp)
+     lon[*,inds[1,*]]=0 & gislon[*,inds[1,*]]=0
+    endif
+    ;If there is a nest, WRF jhas the bad habit to change its georeference
+    if self->get_var_info('NEST_POS') then begin
       np = (self->get_Var('NEST_POS'))[*,*,0]
       pnest = where(np ne 0, cntp)
       if cntp ne 0 then begin
-        lon[pnest]=0 & lat[pnest]=0 & gislon[pnest]=0 & gislat[pnest]=0
-        if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
-          Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
-          Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
-        endif
-      endif else begin
-        Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
-        Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
-      endelse
+       lon[pnest]=0 & lat[pnest]=0 & gislon[pnest]=0 & gislat[pnest]=0
+      endif
+    endif
+    if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
+      w_QuickPlot, abs(gislon-lon)
+      w_QuickPlot, gislat
+      Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
+      Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
     endif
   endif else begin
-   IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
-                                   ny = ny                , $
-                                   dx = dx                , $
-                                   dy = dy                , $
-                                   x0 = x0                , $
-                                   y0 = y0                , $
-                                   proj = self.tnt_c.proj) THEN RETURN, 0  
+    IF NOT self->w_Grid2D::ReInit(  nx = nx                , $
+                                    ny = ny                , $
+                                    dx = dx                , $
+                                    dy = dy                , $
+                                    x0 = x0                , $
+                                    y0 = y0                , $
+                                    proj = self.tnt_c.proj) THEN RETURN, 0
   endelse
   
   
