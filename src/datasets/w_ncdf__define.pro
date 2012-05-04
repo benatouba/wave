@@ -6,6 +6,9 @@
 ;  variable retrieval.
 ;       
 ;  It should be the superclass from all NCDF objects 
+;  
+; :Categories:
+;         datasets
 ;              
 ; :Properties: 
 ;    
@@ -38,7 +41,8 @@
 ;    FaM
 ;       
 ; :History:
-;    Written by FaM, 2010.
+;    Written by FaM, 2010
+;    04.05.2012, FaM, revisited
 ;    
 ;-
 
@@ -46,26 +50,13 @@
 ; :Description:
 ;    Build function. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS   
-;
 ; :Keywords:
-;    FILE: in, optional, type = string
+;    FILE: in, optional, type=string
 ;          the path to the NCDF file. If not set, a dialog window will open
 ;          
 ; :Returns:
 ;    1 if the NCDF object is updated successfully, 0 if not
 ;    
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
-; :History:
-;     Written by FaM, 2010.
 ;-
 Function w_NCDF::Init, FILE=file
            
@@ -90,14 +81,12 @@ Function w_NCDF::Init, FILE=file
   
   ;*****************
   ; Check filename *
-  ;***************** 
- 
+  ;*****************  
   fname = FILE_BASENAME(file)
   
   ;****************
   ; Read metadata *
-  ;****************
-    
+  ;****************    
   cdfid = NCDF_OPEN(file, /NOWRITE)
   inq = NCDF_INQUIRE(cdfid)
     
@@ -125,19 +114,6 @@ END
 ; :Description:
 ;    Destroy function. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS   
-;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
-; :History:
-;     Written by FaM, 2010.
 ;-
 pro w_NCDF::Cleanup
 
@@ -157,58 +133,46 @@ END
 ; :Description:
 ;    Get access to some params. 
 ;
-; :Categories:
-;         WAVE/OBJ_GIS   
 ;
 ; :Keywords:
-;    path: out, type = string
+;    PATH: out, type=string
 ;          complete path of the active NCDF file
-;    cdfid: out, type = long
+;    CDFID: out, type=long
 ;          id of the ncdf file as given by NCDF_open
-;    fname: out, type = string
-;          name of the active NCDF file
-;    directory: out, type = string
+;    FNAME: out, type=string
+;           name of the active NCDF file
+;    DIRECTORY: out, type=string
 ;               directory of the active NCDF file
-;    Ndims: out, type = long
+;    NDIMS: out, type=long
 ;           the number of dimensions
-;    Nvars: out, type = long
+;    NVARS: out, type=long
 ;           The number of variables defined for this NCDF file. 
-;    Ngatts: out, type = long
+;    NGATTS: out, type=long
 ;            The number of global attributes defined for this NCDF file. 
-;    varNames: out, type = string array
+;    VARNAMES: out, type=string array
 ;              An array of (nVars) strings containing the variable names. 
-;    dimNames: out, type = string array
+;    DIMNAMES: out, type=string array
 ;              An array of (nDims) strings containing the dimension names. 
-;    gattNames: out, type = string array
+;    GATTNAMES: out, type=string array
 ;                An array of (nGatts) strings containing the attributes names. 
-;    dimSizes: out, type = long array
+;    DIMSIZES: out, type=long array
 ;              An array of (nDims) longs containing the dimension sizes. 
-;    RecDim :  out, type = long
+;    RECDIM :  out, type=long
 ;              The ID of the unlimited dimension, if there is one, for this NetCDF file
 ;
-; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
-;       
-; :History:
-;     Written by FaM, 2010.
 ;-
 PRO w_NCDF::GetProperty, $
-    path = path, $
-    cdfid = cdfid, $
-    fname = fname, $
-    Ndims = Ndims, $
-    Nvars = Nvars, $
-    Ngatts = Ngatts, $
-    varNames = varNames, $
-    dimNames = dimNames, $
-    gattNames = gattNames, $
-    dimSizes = dimSizes, $
-    RecDim = RecDim
+    PATH=path, $
+    CDFID=cdfid, $
+    FNAME=fname, $
+    NDIMS=Ndims, $
+    NVARS=Nvars, $
+    NGATTS=Ngatts, $
+    VARNAMES=varNames, $
+    DIMNAMES=dimNames, $
+    GATTNAMES=gattNames, $
+    DIMSIZES=dimSizes, $
+    RECDIM=RecDim
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -237,23 +201,20 @@ end
 
 ;+
 ; :Description:
-;    Get some informations on available variables in the NCDF file
-;    
-; :Categories:
-;         WAVE/OBJ_GIS   
+;    Get some informations on available variables in the NCDF file 
 ;         
 ; :Params:
-;    varid: out, type = long
+;    varid: out, type=long
 ;           NCDF var indexes
-;    varnames: out, type = string
+;    varnames: out, type=string
 ;              variables name
-;    varndims: out, type = long
+;    varndims: out, type=long
 ;              variables number of dimensions
-;    varunits: out, type = string
+;    varunits: out, type=string
 ;              variables units
-;    vardescriptions: out, type = string
+;    vardescriptions: out, type=string
 ;                     variables description (or long name)
-;    vartypes: out, type = string
+;    vartypes: out, type=string
 ;              variables type 
 ;
 ; :Keywords:
@@ -263,7 +224,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-pro w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS = printvars
+pro w_NCDF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes, PRINTVARS=printvars
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
