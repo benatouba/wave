@@ -31,7 +31,7 @@ pro post_compress_wrf, input_dir, CACHE=cache, PATTERN=pattern
     file = fileList[i]
     odir = FILE_DIRNAME(file, /MARK_DIRECTORY)
     bname = FILE_BASENAME(file)
-    test_nc = where(BYTE(bname) eq BYTE('.'), cnt)
+    test_nc = where(BYTE(bname) eq (BYTE('.'))[0], cnt)
     if cnt eq 0 then begin
       bzipname = bname + '.zip'
       bname = bname + '.nc'  
