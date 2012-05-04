@@ -17,8 +17,6 @@
 ;          id of the ncdf file as given by NCDF_open
 ;    fname: out, type = string
 ;          name of the active NCDF file
-;    directory: out, type = string
-;               directory of the active NCDF file
 ;    Ndims: out, type = long
 ;           the number of dimensions
 ;    Nvars: out, type = long
@@ -37,65 +35,12 @@
 ;              The ID of the unlimited dimension, if there is one, for this NetCDF file
 ;                    
 ; :Author:
-;       Fabien Maussion::
-;           FG Klimatologie
-;           TU Berlin
-;  
-; :Version:
-;       WAVE V0.1
+;    FaM
 ;       
 ; :History:
-;     Written by FaM, 2010.
-;-
-
-;+
-; :Description:
-;   Defines the attributes of the class w_Grid2D. Attributes::
+;    Written by FaM, 2010.
 ;    
-;    NCDF                     
-;            path:               ''    ,  $ ; complete path of the active ncdf file
-;            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
-;            fname:              ''    ,  $ ; name of the active ncdf file
-;            directory:          ''    ,  $ ; directory of the active ncdf file
-;            Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
-;            Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
-;            Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
-;            varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
-;            dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
-;            gattNames:  PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
-;            dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
-;            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
-;            
-;
-; :Categories:
-;         WAVE/OBJ_GIS   
-; :Version:
-;       WAVE V0.1
-;       
-; :History:
-;     Written by FaM, 2010.
 ;-
-PRO w_NCDF__Define
- 
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  struct = {w_NCDF                    ,  $
-            path:               ''    ,  $ ; complete path of the active ncdf file
-            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
-            fname:              ''    ,  $ ; name of the active ncdf file
-            Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
-            Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
-            Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
-            varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
-            dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
-            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the attribute names. 
-            dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
-            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
-            }
-    
-END
 
 ;+
 ; :Description:
@@ -122,7 +67,7 @@ END
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-Function w_NCDF::Init, FILE = file
+Function w_NCDF::Init, FILE=file
            
            
   ; SET UP ENVIRONNEMENT
@@ -1135,5 +1080,53 @@ PRO w_NCDF::dump, FILE = file
   
   close, lu ; close file  
   
+end
+
+;+
+; :Description:
+;   Defines the attributes of the class w_NCDF. Attributes::
+;    
+;    NCDF                     
+;            path:               ''    ,  $ ; complete path of the active ncdf file
+;            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
+;            fname:              ''    ,  $ ; name of the active ncdf file
+;            Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
+;            Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
+;            Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
+;            varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
+;            dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
+;            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the dimension names. 
+;            dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
+;            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
+;            
+;
+; :Categories:
+;         WAVE/OBJ_GIS   
+; :Version:
+;       WAVE V0.1
+;       
+; :History:
+;     Written by FaM, 2010.
+;-
+pro w_NCDF__Define
+ 
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  struct = {w_NCDF                    ,  $
+            path:               ''    ,  $ ; complete path of the active ncdf file
+            cdfid:              0L    ,  $ ; id of the NCDF file as given by the NCDF_OPEN procedure
+            fname:              ''    ,  $ ; name of the active ncdf file
+            Ndims:              0L    ,  $ ; The number of dimensions defined for this NetCDF file. 
+            Nvars:              0L    ,  $ ; The number of variables defined for this NetCDF file. 
+            Ngatts:             0L    ,  $ ; The number of global attributes defined for this NetCDF file. 
+            varNames:    PTR_NEW()    ,  $ ; An array of (nVars) strings containing the variable names. 
+            dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
+            gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the attribute names. 
+            dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
+            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
+            }
+    
 end
 
