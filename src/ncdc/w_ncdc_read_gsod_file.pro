@@ -267,7 +267,11 @@ end
 ;                be 'gsod-*.dat'. Appropriate GSOD files can be created with the
 ;                'w_ncdc_extract_gsod' procedure. 
 ;                Either FILE or DIRECTORY must be set. 
-;
+;     KEEP_VARS: in, optional, type=string
+;                 array of variable names that have to be kept for each station
+;     REMOVE_VARS: in, optional, type=string
+;                  array of variable names that have to be removed for each station
+;                 
 ; :Returns:
 ;       Data in the form of a structure (see `General information` for more info).
 ;       If more than one station is parsed, an array of structures is returned.
@@ -292,8 +296,11 @@ end
 ; :History:
 ;       Written by FaM, CoK, 2012.
 ;-
-function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
-
+function w_ncdc_read_gsod_file, FILE=file, $
+    DIRECTORY=directory, $
+    KEEP_VARS=keep_vars, $
+    REMOVE_VARS=remove_vars
+    
   ;--------------------------
   ; Set up environment
   ;--------------------------
@@ -309,6 +316,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
     
   ; RETRIEVE file and template  
   if (N_ELEMENTS(file) eq 0) and (N_ELEMENTS(directory) eq 0) then MESSAGE, 'Either of the keywords DIRECTORY or FILE must be set!'
+  if N_ELEMENTS(KEEP_VARS) ne 0 and N_ELEMENTS(REMOVE_VARS) ne 0 then Message, 'Ambiguous keywords combination.'
   
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
@@ -385,6 +393,7 @@ function w_ncdc_read_gsod_file, FILE=file, DIRECTORY=directory
       for j=0, N_ELEMENTS(stat_vars)-1 do begin
         _var = *(stat_vars[j])
         _d = (_var.data[p])[un]
+        ; TODO: keep and remvove vars
         var = OBJ_NEW('w_ts_Data', _d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
           VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing, TIMESTEP=MAKE_TIME_STEP(day=1))
         if OBJ_VALID(var) then ncdc_station->addVar, var
