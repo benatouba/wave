@@ -393,6 +393,14 @@ function w_ncdc_read_gsod_file, FILE=file, $
       for j=0, N_ELEMENTS(stat_vars)-1 do begin
         _var = *(stat_vars[j])
         _d = (_var.data[p])[un]
+        if KEYWORD_SET(KEEP_VARS) then begin
+           ok=where(keep_vars eq _var.vname, cnt)
+           if cnt eq 0 then continue
+        endif   
+        if KEYWORD_SET(REMOVE_VARS) then begin
+           ok=where(remove_vars eq _var.vname, cnt)
+           if cnt ne 0 then continue
+        endif
         ; TODO: keep and remvove vars
         var = OBJ_NEW('w_ts_Data', _d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
           VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing, TIMESTEP=MAKE_TIME_STEP(day=1))
