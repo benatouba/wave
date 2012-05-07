@@ -394,11 +394,11 @@ function w_ncdc_read_gsod_file, FILE=file, $
         _var = *(stat_vars[j])
         _d = (_var.data[p])[un]
         if KEYWORD_SET(KEEP_VARS) then begin
-           ok=where(keep_vars eq _var.vname, cnt)
+           ok=where(str_equiv(keep_vars) eq str_equiv(_var.vname), cnt)
            if cnt eq 0 then continue
         endif   
         if KEYWORD_SET(REMOVE_VARS) then begin
-           ok=where(remove_vars eq _var.vname, cnt)
+           ok=where(str_equiv(remove_vars) eq str_equiv(_var.vname), cnt)
            if cnt ne 0 then continue
         endif
         ; TODO: keep and remvove vars
