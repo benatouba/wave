@@ -163,8 +163,11 @@ function utils_clean_path, path, MARK_DIRECTORY = mark_directory
   
   for i = 0, n-1 do begin
     split = STRSPLIT(path[i], PATH_SEP(), /EXTRACT, COUNT = cnt)
-    out[i] = ''
-    for j=0, cnt-1 do out[i] += PATH_SEP() + split[j]    
+    
+    out[i] = ''    
+    if !version.os_family eq 'Windows' then first_tok = '' else first_tok = PATH_SEP()    
+    out[i] += first_tok + split[0]           
+    for j=1, cnt-1 do out[i] += PATH_SEP() + split[j]    
     if KEYWORD_SET(MARK_DIRECTORY) then out[i] += PATH_SEP()
   endfor
       
