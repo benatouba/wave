@@ -114,14 +114,17 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
     h = stations.elev
     lon = stations.lon
     lat = stations.lat
+    TVLCT, rr, gg, bb, /GET
     cgLoadCT, 34
-    colors = BYTE(Scale_Vector(h, 0, 255))
-    d = map->set_plot_params(N_LEVELS=256, MAX_VALUE=max(h), MIN_VALUE=MIN(h))    
+    info = w_gr_DataLevels(h, N_LEVELS=256)
+    d = map->set_plot_params(N_LEVELS=256)    
     d = map->set_data(FLTARR(2,2)-999.) 
-    s = SymCat(16)
-    for i=0, N_ELEMENTS(h)-1 do d = map->set_point(lon[i], lat[i], SRC=wgs, PSYM=S, COLOR=colors[i])
-    w_standard_2d_plot, map, title='ALL available NCDC stations', /RESIZABLE, BAR_TITLE='Station Elevation', BAR_FORMAT='(I5)' 
+    for i=0, N_ELEMENTS(h)-1 do d = map->set_point(lon[i], lat[i], SRC=wgs, COLOR=info.colors[info.loc[i]])
+    w_standard_2d_plot, map, title='ALL available NCDC stations', /RESIZABLE, $
+                                /NO_BAR, XFACTOR=1.2
+    w_gr_Colorbar, info, FORMAT='(I4)', TITLE='Stat. elevation (m)', /FIT, /ADDCMD
     undefine, map
+    TVLCT, rr, gg, bb, /GET    
   endif
   
 end

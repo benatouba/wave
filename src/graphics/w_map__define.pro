@@ -465,8 +465,8 @@ function w_Map::_draw_shapes, WINDOW = window
       idx = (*sh.conn)[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
       _coord = (*sh.coord) [*,idx]     
-      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
-      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=cgColor(sh.color), THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
+      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
+      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
     endwhile  
   endfor
   
@@ -495,7 +495,7 @@ function w_Map::_draw_wind, WINDOW = window
                 *self.wind_params.vely, $
                 *self.wind_params.posx, $
                 *self.wind_params.posy, $
-                VECCOLORS=cgColor(self.wind_params.color), $
+                VECCOLORS=self.wind_params.color, $
                 LENGTH = self.wind_params.length, $
                 thick = self.wind_params.thick, /OVER, $              
                 /DATA,  /NORMAL, WINDOW = window, NOCLIP = 0
@@ -524,7 +524,7 @@ function w_Map::_draw_polygons, WINDOW = window
   for i = 0, self.npolygons-1 do begin
      poly = (*self.polygons)[i]
     _coord = *poly.coord
-    cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=cgColor(poly.color), THICK=poly.thick, LINESTYLE=poly.style, NOCLIP=0, WINDOW = window
+    cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=poly.color, THICK=poly.thick, LINESTYLE=poly.style, NOCLIP=0, WINDOW = window
   endfor
     
   return, 1
@@ -552,8 +552,8 @@ function w_Map::_draw_points, WINDOW = window
     p = (*self.points)[i]
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
-    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=cgColor(p.color), THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=cgColor(p.color), ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, THICK=p.thick, PSYM=SymCat(p.psym), SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=p.color, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
   endfor
   
   return, 1
@@ -772,7 +772,7 @@ end
 ;    STYLE: in, optional, type = float, default = 2
 ;           style of the contour lines
 ;           
-;    COLOR: in, optional, type = string, default ='dark grey'
+;    COLOR: in, optional, type = color, default ='dark grey'
 ;           color of the contour lines
 ;           
 ;    LABEL: in, optional, type=integer, default=0
@@ -825,7 +825,7 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   self.map_params.type = _type
   self.map_params.thick = _thick
   self.map_params.style = _style
-  self.map_params.color = _color
+  self.map_params.color = cgColor(_color, /DECOMPOSED)
   self.map_params.labeled = _label
   self.map_params.label_size_f = _label_size_factor
   
@@ -1073,7 +1073,7 @@ end
 ;               if set, the two previous keywords are ignored and the standard world boundaries 
 ;               shape file is read.
 ;    
-;    COLOR: in, optional, type = string
+;    COLOR: in, optional, type = color
 ;           the color of the shape lines
 ;    
 ;    THICK:in, optional, type = float
@@ -1096,9 +1096,9 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES = countries, $
-                                    COLOR = color, THICK = thick, STYLE = style, $
-                                    REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, FILL=fill
+function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=countries, $
+                                    COLOR=color, THICK=thick, STYLE=style, $
+                                    REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1113,9 +1113,9 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   ENDIF 
 
   if KEYWORD_SET(COUNTRIES) then begin
-   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
-   return, self->set_shape_file(SHPFILE = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
-            COLOR = color, THICK = thick, STYLE = style, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites)
+   GIS_make_datum, ret, shp_src, NAME='WGS-84'
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
+            COLOR=color, THICK=thick, STYLE=style, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites)
   endif  
   
   ;******************
@@ -1146,7 +1146,7 @@ function w_Map::set_shape_file, SHPFILE = shpfile, SHP_SRC = shp_src, COUNTRIES 
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   
   sh = {w_Map_SHAPE}
-  sh.color = _color
+  sh.color = cgColor(_color, /DECOMPOSED)
   sh.shape_file = shpfile
   sh.style = _style
   sh.thick = _thick  
@@ -1190,7 +1190,7 @@ end
 ;    SRC: in, optional
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
 ;    
-;    COLOR: in, optional, type = string
+;    COLOR: in, optional, type = color
 ;           the color of the polygon lines
 ;    
 ;    THICK:in, optional, type = float
@@ -1203,7 +1203,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYLE = style
+function w_Map::set_polygon, x, y, SRC=src, COLOR=color, THICK=thick, STYLE=style
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1247,7 +1247,7 @@ function w_Map::set_polygon, x, y, SRC = src, COLOR = color, THICK = thick, STYL
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   
   poly = {w_Map_POLYGON}
-  poly.color = _color
+  poly.color = cgColor(_color, /DECOMPOSED)
   poly.style = _style
   poly.thick = _thick  
   poly.coord = PTR_NEW(coord, /NO_COPY)
@@ -1294,7 +1294,7 @@ end
 ;           the thickness of the points
 ;          
 ;    PSYM:in, optional, type = int, default = 5
-;          the style of the the points
+;          the style of the the points (see symcat for plenty of possibilities)
 ;          
 ;    SYMSIZE:in, optional, type = float
 ;            the size of the the points
@@ -1353,7 +1353,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   endif else _TEXT = REPLICATE('', n_coord)
   
   _color = 'black'
-  _psym = 5.
+  _psym = 16
   _symsize = 1.
   _thick = 1.  
   _align = 0.
@@ -1372,7 +1372,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
     point[i].thick = _thick
     point[i].psym = _psym
     point[i].symsize = _symsize
-    point[i].color = _color
+    point[i].color = cgColor(_color, /DECOMPOSED)
     point[i].text = _text[i]
     point[i].align = _align
     point[i].dpText = _dpText
@@ -1680,7 +1680,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_mask, mask, grid, BILINEAR = bilinear, COLOR = color
+function w_Map::set_mask, mask, grid, BILINEAR=bilinear, COLOR=color
                              
   
   ; SET UP ENVIRONNEMENT
@@ -1710,10 +1710,11 @@ function w_Map::set_mask, mask, grid, BILINEAR = bilinear, COLOR = color
   endelse
   
   _mask = BYTE(0 > _mask < 1)
-  _color = utils_color_convert(COLORS = color)
+  _color = 'grey'
+  if N_ELEMENTS(color) ne 0 then _color = color
   
   smask = {w_Map_MASK}
-  smask.color = _color
+  smask.color =  cgColor(_color, /DECOMPOSED)
   smask.mask = PTR_NEW(_mask, /NO_COPY)
     
   if self.nmasks eq 0 then begin
@@ -1934,7 +1935,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK=thick, COLOR = color
+function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=thick, COLOR=color
                              
   
   ; SET UP ENVIRONNEMENT
@@ -1950,18 +1951,18 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
     RETURN, 0
   ENDIF 
   
-  if ~KEYWORD_SET(length) then length = 0.08
-  if ~KEYWORD_SET(thick) then thick = 1
-  if ~KEYWORD_SET(density) then density = 3
-  if ~KEYWORD_SET(color) then color = 'black'
+  if N_ELEMENTS(length) eq 0 then _length = 0.08 else _length = length
+  if N_ELEMENTS(thick) eq 0 then _thick = 1 else _thick = thick
+  if N_ELEMENTS(density) eq 0 then _density = 3 else _density = density
+  if N_ELEMENTS(color) eq 0 then _color = 'black' else _color = color
   type = 'VECTORS'
   
   if N_PARAMS() eq 0 then begin
    self->_DestroyWindParams
    self.wind_params.type = type
-   self.wind_params.length = length
-   self.wind_params.thick = thick
-   self.wind_params.color = color
+   self.wind_params.length = _length
+   self.wind_params.thick = _thick
+   self.wind_params.color = cgColor(_color, /DECOMPOSED)
    return, 1
   endif  
   
@@ -1975,12 +1976,12 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   nxg = C.nx
   nyg = C.ny
     
-  fx = FLOOR(double(nxg)/density) ; possible points
-  fy = FLOOR(double(nyg)/density) ; possible points
+  fx = FLOOR(double(nxg)/_density) ; possible points
+  fy = FLOOR(double(nyg)/_density) ; possible points
   s = floor(density/2.) ; where to start (1 for 3, 2 for 5, etc.)
     
-  xi = INDGEN(fx, /DOUBLE) * DENSITY + s
-  yi = INDGEN(fy, /DOUBLE) * DENSITY + s
+  xi = INDGEN(fx, /DOUBLE) * _density + s
+  yi = INDGEN(fy, /DOUBLE) * _density + s
   
   x = xi * c.dx + c.x0
   y = yi * c.dy + c.y1
@@ -1997,9 +1998,9 @@ function w_Map::set_wind, ud, vd, grid, DENSITY = density , LENGTH=length, THICK
   
   self->_DestroyWindParams
   self.wind_params.type = type
-  self.wind_params.length = length
-  self.wind_params.thick = thick
-  self.wind_params.color = color
+  self.wind_params.length = _length
+  self.wind_params.thick = _thick
+  self.wind_params.color = cgColor(_color, /DECOMPOSED)
   self.wind_params.velx = PTR_NEW(velx[pok], /NO_COPY)
   self.wind_params.vely = PTR_NEW(vely[pok], /NO_COPY)
   self.wind_params.posx = PTR_NEW(posx[pok], /NO_COPY)
@@ -2401,7 +2402,7 @@ PRO w_Map__Define
             shape_file     : ''            , $ ; path to the shape file
             thick          : 0D            , $ ; thickness or the shape line for the plot
             style          : 0D            , $ ; style or the shape line for the plot
-            color          : ''            , $ ; color or the shape line for the plot
+            color          : 0L            , $ ; color or the shape line for the plot
             n_coord        : 0L            , $ ; number of coordinates in the shape (private)
             fill           : FALSE         , $ ; if the shape has to be filled
             coord          : PTR_NEW()     , $ ; coordinates of the shape points (private)
@@ -2412,7 +2413,7 @@ PRO w_Map__Define
   struct = {w_Map_POLYGON                  , $ 
             thick          : 0D            , $ ; thickness or the line for the plot
             style          : 0D            , $ ; style or the line for the plot
-            color          : ''            , $ ; color or the line for the plot
+            color          : 0L            , $ ; color or the line for the plot
             n_coord        : 0L            , $ ; number of coordinates in the polygon (private)
             coord          : PTR_NEW()       $ ; coordinates of the polygon points (private)        
             }
@@ -2422,7 +2423,7 @@ PRO w_Map__Define
             thick          : 0D            , $ ; thickness or the point
             psym           : 0L            , $ ; style or the point
             symsize        : 0D            , $ ; style or the point
-            color          : ''            , $ ; color or the point
+            color          : 0L            , $ ; color or the point
             text           : ''            , $ ; point annotation
             charsize       : 0D            , $ ; point annotation size
             align          : 0D            , $ ; annotation alignement
@@ -2460,7 +2461,7 @@ PRO w_Map__Define
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
             t_Charsize     : 0D            , $ ; Ticks charsizes
             interval       : 0D            , $ ; The interval between ticks
-            color          : ''            , $ ; color of the contour lines
+            color          : 0L            , $ ; color of the contour lines
             labeled        : 0L            , $ ; if the contours have to labelled
             label_size_f   : 0D            , $ ; charsize factor
             thick          : 0D            , $ ; thickness of the contour lines
@@ -2474,7 +2475,7 @@ PRO w_Map__Define
             vely           : PTR_new()     , $ ; y velocities
             posx           : PTR_new()     , $ ; coordinates in data device
             posy           : PTR_new()     , $ ; coordinates in data device
-            color          : ''            , $ ; color of the arrows
+            color          : 0L            , $ ; color of the arrows
             thick          : 0D            , $ ; thickness of the arrows
             length         : 0D              $ ; lenght of the arrows
             }

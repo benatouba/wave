@@ -718,6 +718,7 @@ pro w_WPP::_add_var_to_h_file
       offset=[0,0,0,p0]
     end
   endcase
+
     
   ; Fill with data
   dObj->WriteVarData, 'time', time, OFFSET=offset[N_ELEMENTS(offset)-1]
@@ -786,7 +787,7 @@ pro w_WPP::_add_var_to_mean_file, ts
     dObj->WriteVarData, 'time', t, OFFSET=i
     offset = (self.active_var.type EQ '2d') ? [0,0,i] : [0,0,0,i]
     dObj->WriteVarData, self.active_var.name, agg, OFFSET=offset
-  
+
   endfor
   
   flag = 'DONE'
