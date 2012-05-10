@@ -170,8 +170,8 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   yautumn = [center -(pixrad/10) + sin(!PI*11/6) *pixrad]
   chars = rad * 4.
   
-  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars*3
-  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars*3
-  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars*3
+  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
+  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars
+  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
   
 end
