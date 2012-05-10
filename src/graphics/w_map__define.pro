@@ -1092,13 +1092,22 @@ end
 ;
 ;    FILL: in, optional, type = boolean
 ;          if the shapes have to be filled with color rather than lined
+;          
+;    OCEANS: in, optional, type = boolean/string
+;            set this keyword to make a map with blue oceans shapes
+;
+;    LAKES: in, optional, type = boolean/string
+;            set this keyword to make a map with blue lake shapes
+;
+;    RIVERS: in, optional, type = boolean/string
+;            set this keyword to make a map with blue rivers
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=countries, $
-                                    COLOR=color, THICK=thick, STYLE=style, $
-                                    REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill
+                                COLOR=color, THICK=thick, STYLE=style, OCEANS=oceans, LAKES=lakes, RIVERS=rivers,  $
+                                REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1112,6 +1121,29 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
     RETURN, 0
   ENDIF 
 
+  if KEYWORD_SET(OCEANS) then begin
+   GIS_make_datum, ret, shp_src, NAME='WGS-84'
+   if N_ELEMENTS(color) eq 0 then color = 'PBG4'
+   if N_ELEMENTS(fill) eq 0 then fill = 1   
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/oceans/10m_ocean.shp', SHP_SRC=shp_src, $
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+  endif  
+  
+  if KEYWORD_SET(LAKES) then begin
+   GIS_make_datum, ret, shp_src, NAME='WGS-84'
+   if N_ELEMENTS(color) eq 0 then color = 'PBG4'
+   if N_ELEMENTS(fill) eq 0 then fill = 1   
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/lakes/10m_lakes.shp', SHP_SRC=shp_src, $
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+  endif  
+  
+  if KEYWORD_SET(RIVERS) then begin
+   GIS_make_datum, ret, shp_src, NAME='WGS-84'
+   if N_ELEMENTS(color) eq 0 then color = 'PBG4'
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/rivers/ne_10m_rivers_lake_centerlines.shp', SHP_SRC=shp_src, $
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+  endif  
+  
   if KEYWORD_SET(COUNTRIES) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
@@ -1335,10 +1367,7 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
    return, 1
   endif
     
-  if ~KEYWORD_SET(src) then GIS_make_datum, ret, src, NAME = 'WGS-84'
-  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
-  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
-  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+  if N_ELEMENTS(src) eq 0 then GIS_make_datum, ret, src, NAME = 'WGS-84'
 
   if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
   n_coord = N_ELEMENTS(_x)
@@ -2318,12 +2347,14 @@ END
 ;                 if set to a string, it is the path to an alternative jpg file to use as background
 ;    HR_BLUE_MARBLE: in, optional, type = boolean/string
 ;                    set this keyword to make a map using the NASA Land Cover picture (High res)
+;    OCEANS: in, optional, type = boolean/string
+;            set this keyword to make a map with blue oceans shapes
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
-                            BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_marble
+                            BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_marble, OCEANS=oceans
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2353,6 +2384,8 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   dummy = self->set_map_params()  
   dummy = self->set_shading_params()
   dummy = self->set_wind()  
+  
+  if KEYWORD_SET(OCEANS) then dummy = self->set_shape_file(/OCEANS)  
   
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
   

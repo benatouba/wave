@@ -718,7 +718,9 @@ pro w_WPP::_add_var_to_h_file
       offset=[0,0,0,p0]
     end
   endcase
-
+  
+  ;If this is fake, replace with nans
+  if ~ self.active_valid then data[*] = !VALUES.F_NAN
     
   ; Fill with data
   dObj->WriteVarData, 'time', time, OFFSET=offset[N_ELEMENTS(offset)-1]
@@ -771,12 +773,11 @@ pro w_WPP::_add_var_to_mean_file, ts
     if self.active_agg eq 'm' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     if self.active_agg eq 'y' then for j=0, N_ELEMENTS(vartime)-1 do vartime[j] = MAKE_REL_DATE(vartime[j], MONTH=1)
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
-    if self.active_var.type EQ '3d_press' then begin
-      TS_AGG_GRID, data, vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
-      sig = sig / float(varnt)
-      pno = where(sig lt 0.5, cntno)
-      if cntno ne 0 then agg[pno] = !VALUES.F_NAN
-    endif
+    TS_AGG_GRID, data, vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
+    sig = sig / float(varnt)
+    pno = where(sig lt 0.5, cntno)
+    if cntno ne 0 then agg[pno] = !VALUES.F_NAN
+
     case (self.active_agg) of
       'd': t = LONG((ts[i]-QMS_TIME(year=self.active_year,month=1,day=1)) / (MAKE_TIME_STEP(day=1)).dms)
       'm': t = (MAKE_ABS_DATE(QMS=ts[i])).month - 1
@@ -808,12 +809,12 @@ end
 ;
 ; :Keywords:
 ;    FILES: out
-;           if successful, the list of the files found for this year
+;           the list of the files found for this year
 ;
 ; :Returns:
 ;    1 if enough files have been found, 0 if not
 ;-
-function w_WPP::check_filelist, year, FILES=files
+function w_WPP::check_filelist, year, FILES=files, NMISSING=nmissing, VALID=valid
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -838,17 +839,34 @@ function w_WPP::check_filelist, year, FILES=files
   self.active_time = PTR_NEW(time)
   
   ; Find necessary data
-  GEN_date_doy, ret, ntofind, YEAR=year, month=12, day=31
+  GEN_date_doy, ret, ndays, YEAR=year, month=12, day=31
   pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
   
-  if nfiles ne ntofind then return, 0
-  
   files = (*self.ifiles)[matches]  
-  files = files[UNIQ(files,SORT(files))]      
-  if N_ELEMENTS(files) ne ntofind then return, 0
+  files = files[UNIQ(files,SORT(files))]
+  valid = BYTARR(N_ELEMENTS(files)) + 1B
+  nmissing = ndays - N_ELEMENTS(files)
+  if nmissing eq 0 then return, 1
   
-  return, 1
+  ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=1), $
+                             QMS_TIME(year=year,day=31,month=12), $
+                             TIMESTEP=D_QMS)
+  
+  ofiles = STRARR(ndays)
+  for i=0L, ndays-1 do begin
+    pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ TIME_to_STR(ts[i], MASK='yyyy*mm*dd') +'*'
+    matches = Where(StrMatch(files, pattern), nfiles)
+    if nfiles eq 1 then begin
+      ofiles[i] = files[matches] 
+    endif else begin
+      valid[i] = 0
+      ofiles[i] = files[0]
+    endelse
+  endfor
+  files = ofiles
+  
+  return, 0
   
 end
 
@@ -997,8 +1015,13 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   
   logt0 = SYSTIME(/SECONDS)
   
-  if ~ self->check_filelist(year, FILES=files) then Message, 'Not enough files to aggregate year : ' + str_equiv(year)
-   
+  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid) then begin
+   messg = 'Not enough files to complete (missing ' + str_equiv(nmissing) + '). Continue? (y or n)'
+   READ, messg, PROMPT=messg
+   GEN_str_log, ret, messg, ok
+   if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
+  endif
+  
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print
        
@@ -1014,7 +1037,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
    file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
   endif else file = files[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
- 
+  self.active_valid = valid[0]
+  
   self.logger->addText, 'Generating product files ...', PRINT=print
   self.logger->flush
   
@@ -1047,6 +1071,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
         file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
       endif else file = files[f]
       self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
+      self.active_valid = valid[f]
     endif
     
     self.active_wrf->get_time, wtime, wnt, wt0, wt1
@@ -1337,6 +1362,7 @@ pro w_WPP__Define, class
     active_wrf            : OBJ_NEW()    ,  $ ; the active WRF object to take the info from
     active_dObj           : OBJ_NEW()    ,  $ ; the active ncdf file object to put the information into
     active_var            : {w_WPP_var}  ,  $ ; the active variable to define/fill
+    active_valid          : 0B           ,  $ ; is the active file valid or should I replace it by NaNs?
     active_agg            : ''           ,  $ ; the active aggregation type ('h', 'd', 'm' or 'y')
     active_ofile          : ''           ,  $ ; the active output file to write into
     active_checkfile      : ''           ,  $ ; the active check save file (to be sure all times are written)
