@@ -10,7 +10,6 @@
 ;
 ; :Keywords:
 ;    DEWPOINT: in optional, array of dewpoint temperature values (in °C), same array size as pressure array needed
-;    HEIGHT: in optional, array of height values (in m), same array size as pressure array needed
 ;    ANGLE: in, optional, default = 0.,
 ;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
 ;    TEMPRANGE: in, optional, default = [-60,60],
@@ -53,7 +52,7 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, HEIGHT=height, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas constant [J/mol*K]
@@ -136,14 +135,6 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, H
   WINDOW=window
   cgplots,[xrange(0),xrange(1)],[yrange(1),yrange(1)], color=black, WINDOW=window, /DATA
 
- ; plot height axis
-  if N_ELEMENTS(height) ne 0 then begin 
-  height=height/1000
-  maxh=WHERE(pressure eq maxp)
-  maxheight=height[maxh]
-  print, maxheight
-  cgaxis, yaxis=1, yrange=[0,maxheight], ystyle=0, ticklen=-0.03, color = 'black', /save ,ytitle='height [km]', ylog=0, ytickinterval=2, /window
-  endif 
   
  cgControl, EXECUTE=1
  
