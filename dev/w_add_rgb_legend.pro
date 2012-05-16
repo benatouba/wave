@@ -112,17 +112,20 @@ end
 ;
 ;
 ; :Keywords:
-;    ADDCMD
-;    DATA
-;    NORMAL
-;    SIZE
-;    RAD : in, optional, radius of the circle, default = 300, 
+;    ADDCMD : in , optional, set this keyword to add the color circle to the current figure
+;    DATA : in, optional
+;    NORMAL : in, optional, default = 1
+;    POSITION : in, optional, default = [0.5,0.5],
+;         set this keyword to define the positiov of the circle in the figure
+;    RAD : in, optional, radius of the circle, default = 0.4, 
 ;         set this keyword to vary the resolution of the color circle
-;    PICRAD : in, optional 
-;             set this keyword to define the size of the circle in your cgwindow
+;    PICRAD : in, optional, default = 300.
+;         set this keyword to define the size of the circle in your cgwindow
+;    LEGEND : in, optional, default is ['winter', 'summer', 'autumn']
+;         set this keyword to vary the legend of the color circle
 ;    
 ;-
-pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad
+pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad, LEGEND=legend
 
   ;--------------------
   ; Set up environment
@@ -170,8 +173,10 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   yautumn = [center -(pixrad/10) + sin(!PI*11/6) *pixrad]
   chars = rad * 4.
   
-  cgtext, xmonsoon, ymonsoon, 'Monsoon', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
-  cgtext, xwinter, ywinter, 'Winter', CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars
-  cgtext, xautumn, yautumn, 'Autumn', CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
+  if N_ELEMENTS(LEGEND) eq 0 then legend=['winter', 'summer', 'autumn']
+    cgtext, xmonsoon, ymonsoon, legend[1], CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
+    cgtext, xwinter, ywinter, legend[0], CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars
+    cgtext, xautumn, yautumn, legend[2], CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
+
   
 end
