@@ -323,9 +323,9 @@ function w_ncdc_read_gsod_file, FILE=file, $
   
     
   stat_val=0L
-  if N_ELEMENTS(DIRECTORY) ne 0 then file_list=FILE_SEARCH(directory, 'gsod-*.dat', count=filecnt)
+  if N_ELEMENTS(DIRECTORY) ne 0 then file_list=FILE_SEARCH(directory, '*gsod-*.dat', count=filecnt)
   if (N_ELEMENTS(FILE) ne 0) then begin
-  if STRMATCH(FILE_BASENAME(FILE), 'gsod-*.dat', /FOLD_CASE) then $
+  if STRMATCH(FILE_BASENAME(FILE), '*gsod-*.dat', /FOLD_CASE) then $
   file_list=file
   endif
   filecnt = N_ELEMENTS(file_list)
