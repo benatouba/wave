@@ -1,3 +1,10 @@
+;+
+; 
+; Adds a RGB colorcircle legend to the current device.
+;  
+; :Author: 
+;   JaH
+;-
 
 ; :Description:
 ;    This function calculates the rbg color values for a certain angle and radius (or an array of angle and radius)
@@ -107,22 +114,25 @@ end
 
 ;+
 ; :Description:
-;    This procedure uses the color circle, generated (by the w_add_RGB_legend_make_color_circle function) to add it as a legend to a cgwindow.
-;
-;
+;    Adds a RGB colorcircle legend to the current device.
 ;
 ; :Keywords:
-;    ADDCMD : in , optional, set this keyword to add the color circle to the current figure
+;    ADDCMD : in , optional
+;             set this keyword to add the color circle to the current figure
 ;    DATA : in, optional
+;           Set this keyword to indicate that the clipping and/or positioning 
+;           coordinates supplied are specified in the data coordinate system
 ;    NORMAL : in, optional, default = 1
+;             Set this keyword to indicate that the clipping and/or positioning 
+;             coordinates supplied are specified in the normalized coordinate system
 ;    POSITION : in, optional, default = [0.5,0.5],
-;         set this keyword to define the positiov of the circle in the figure
+;               set this keyword to define the positiov of the circle in the figure
 ;    RAD : in, optional, radius of the circle, default = 0.4, 
-;         set this keyword to vary the resolution of the color circle
+;          set this keyword to vary the resolution of the color circle
 ;    PICRAD : in, optional, default = 300.
-;         set this keyword to define the size of the circle in your cgwindow
+;             set this keyword to define the size of the circle in your cgwindow
 ;    LEGEND : in, optional, default is ['winter', 'summer', 'autumn']
-;         set this keyword to vary the legend of the color circle
+;             set this keyword to vary the legend of the color circle
 ;    
 ;-
 pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad, LEGEND=legend
@@ -178,5 +188,4 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
     cgtext, xwinter, ywinter, legend[0], CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars
     cgtext, xautumn, yautumn, legend[2], CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
 
-  
 end

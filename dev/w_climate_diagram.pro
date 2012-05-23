@@ -96,6 +96,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   cgtext, 0.18, 0.85, ''+meanTemp+' ' +cgsymbol('deg')+'C, '+sumPrcp+' mm',/Normal, /Window
   
   if (N_ELEMENTS(valyears_temp) ne 0) and (N_ELEMENTS(valyears_prcp) ne 0) then begin
+  
      vt=strarr(12)
      vp=strarr(12)
      for v= 0,11 do begin
@@ -103,25 +104,11 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
         vp[v]=String(valyears_prcp[v],Format ='(I2)')
      endfor
      
-     
-     
      ycoord = min(yt) - 0.12 * (MAx(yt)-min(yt))
      cgtext,-4.5, ycoord, 'val. years T.!Cval. years P.', /DATA, /Window
      strtags = vt+'!C'+vp
      for t=0, N_ELEMENTS(strtags)-1 do cgtext, x[t], ycoord, strtags[t], /DATA, /Window, ALIGNMENT=0.5
      
-;     cgtext,0.8,-8, ''+vt[0]+'!C'+vp[0]+'', /DATA, /Window
-;     cgtext,2.36,-8, ''+vt[1]+'!C'+vp[1]+'', /DATA, /Window
-;     cgtext,3.92,-8, ''+vt[2]+'!C'+vp[2]+'', /DATA, /Window
-;     cgtext,5.47,-8, ''+vt[3]+'!C'+vp[3]+'', /DATA, /Window
-;     cgtext,7.03,-8, ''+vt[4]+'!C'+vp[4]+'', /DATA, /Window
-;     cgtext,8.59,-8, ''+vt[5]+'!C'+vp[5]+'', /DATA, /Window
-;     cgtext,10.15,-8, ''+vt[6]+'!C'+vp[6]+'', /DATA, /Window
-;     cgtext,11.71,-8, ''+vt[7]+'!C'+vp[7]+'', /DATA, /Window
-;     cgtext,13.27,-8, ''+vt[8]+'!C'+vp[8]+'', /DATA, /Window
-;     cgtext,14.85,-8, ''+vt[9]+'!C'+vp[9]+'', /DATA, /Window
-;     cgtext,16.45,-8, ''+vt[10]+'!C'+vp[10]+'', /DATA, /Window
-;     cgtext,17.95,-8, ''+vt[11]+'!C'+vp[11]+'', /DATA, /Window
   endif
     
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
