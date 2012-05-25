@@ -169,7 +169,8 @@ function w_gr_DataLevels_dataloc, info, data
   @WAVE.inc
   compile_opt idl2
   
-  loc = VALUE_LOCATE(info.levels, data)  
+  if N_ELEMENTS(INFO.levels) lt 2 then loc = LONG(data*0) $ 
+   else loc = VALUE_LOCATE(info.levels, data)  
 
   ; Som temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
@@ -210,7 +211,7 @@ end
 ;            an array of level values            
 ;    N_LEVELS: in, optional, default=max possible
 ;              the number of levels to define (ignored if LEVELS is set)     
-;    TABLE_SIZE: in, optional, default=!W_TABLE_SIZE
+;    TABLE_SIZE: in, optional, default=!D.TABLE_SIZE
 ;                the size of the color table that is currently loaded in IDL    
 ;    COLORS: in, optional
 ;            an array of N_LEVELS colors to use (currently accepted only for the /DCBAR case)
@@ -399,10 +400,7 @@ function w_gr_DataLevels, data, $
   if N_ELEMENTS(TABLE_SIZE) ne 0 then begin
     maxncolors = long(table_size)
   endif else begin
-    DefSysV, '!W_TABLE_SIZE', EXISTS=sysvarExists
-    if sysvarExists $
-      then maxncolors = !W_TABLE_SIZE $
-        else maxncolors = !D.TABLE_SIZE
+    maxncolors = !D.TABLE_SIZE
   endelse
    
   ; Give a value to _n_levels   
@@ -418,7 +416,7 @@ function w_gr_DataLevels, data, $
     if user_Levels then _n_levels = N_Elements(levels)
     if N_ELEMENTS(_n_levels) eq 0 then begin
       ; if min and max are the same, one level one color
-      if same_minmax then _n_levels = 1 else begin
+      if same_minmax then _n_levels = 2 else begin
         if user_dcbar then _n_levels = maxncolors else _n_levels = maxncolors + 1 ; default value
         if is_ooTop or user_oob_top then _n_levels-=1
         if is_ooBot or user_oob_bot then _n_levels-=1
@@ -442,16 +440,17 @@ function w_gr_DataLevels, data, $
   if user_Levels then begin
     _levels = levels
   endif else begin
-    if same_minmax then begin
-      _levels = min_level
-    endif else begin
-      case dataTypeName of
-        'FLOAT':  _levels = (float(_max_level - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-        'DOUBLE':  _levels = (double(_max_level - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-        else: _levels = ROUND((FLOAT(_max_level - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
-      endcase
-    endelse
-  endelse   
+    case dataTypeName of
+      'FLOAT':  _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+      'DOUBLE':  _levels = (double(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+      else: begin
+        _levels = ROUND((FLOAT(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
+        _levels = _levels[SORT(_levels)]
+        if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then $
+          _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+      end
+    endcase
+  endelse
   
   ; decide n_colors to compute automatically    
   auto_oob_top = is_ooTop or (user_oob_top and ~ arg_okay(oob_top_color, TYPE=IDL_STRING))
@@ -481,9 +480,13 @@ function w_gr_DataLevels, data, $
       _cmax = BYTE(cmax)
     endif else _cmax = BYTE(maxncolors-1)
     if _n_levels eq 1 then _colors = _cmin $
-    else _colors = Scale_Vector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)    
+    else _colors = Scale_Vector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)
     if KEYWORD_SET(INVERTCOLORS) then _colors  = Reverse(_colors)
-    _colors = cgColor(_colors, /DECOMPOSED)
+    if N_ELEMENTS(_colors) eq 3 then begin
+      _colors = (cgColor([0B,_colors], /DECOMPOSED))[1:*]
+    endif else begin
+      _colors = cgColor(_colors, /DECOMPOSED)
+    endelse
   endelse
 
   ; OOB colors
@@ -526,7 +529,7 @@ function w_gr_DataLevels, data, $
    if KEYWORD_SET(SHOW) then w_gr_DataLevels_show, out
    return, out
   endif
-  
+    
   ; We have data
    out = { $
     is_data : TRUE, $

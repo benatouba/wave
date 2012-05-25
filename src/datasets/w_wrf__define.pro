@@ -1183,8 +1183,8 @@ end
 ;     Written by FaM, 2010.
 ;-      
 pro w_WRF::plot_TimeSerie, varid, x, y, $
-                           t0 = t0, t1 = t1, $
-                           src = src, K=k
+                           t0=t0, t1=t1, $
+                           src=src, K=k
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1221,15 +1221,22 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
                            
   ;TODO: Update routine: if var dim 2 then more than one curve 
   
-  w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
+  title = 'WRF TS plot: ' + VarName
+  title = title + '!C ' + description
+  title = title + '!C ' + 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']'
+  title = title + '!C ' + 'WRF lon,lat: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')) + ', ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)'))
+    
+  w_gr_tzplot, times, var, TITLE=title, YTITLE=units, THICK=2, COLOR='red', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
   
-  cgtext, 0.7915, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
-          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW
-  
-  cgtext, 0.7915 + 0.01, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
-          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
-  cgtext, 0.7915 + 0.01, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
-          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
+;  w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
+;  
+;  cgtext, 0.7915, 0.26, 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']', $
+;          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW
+;  
+;  cgtext, 0.7915 + 0.01, 0.2, 'WRF lon: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')), $
+;          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
+;  cgtext, 0.7915 + 0.01, 0.15, 'WRF lat: ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)')), $
+;          CHARSIZE=1, CHARTHICK = 1., COLOR = cgColor('BLUE'), /NORMAL, /WINDOW  
     
 end
 

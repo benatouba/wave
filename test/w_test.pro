@@ -1,21 +1,3 @@
-function TEST_file_directory, RESET = reset
-
-  common W_TEST_CMN, TEST_CMN_ROOT_DIR
-  ; Put the WAVE test pack path here.
-  
-  if N_ELEMENTS(TEST_CMN_ROOT_DIR) eq 0  or KEYWORD_SET(RESET) then TEST_CMN_ROOT_DIR = '/home/mowglie/disk/IDLWorkspace/WAVE_TEST_PACK/'
-  
-  if  ~FILE_TEST(TEST_CMN_ROOT_DIR) then TEST_CMN_ROOT_DIR = DIALOG_PICKFILE(TITLE='Please indicate the test directory', /MUST_EXIST, /DIRECTORY)
-  
-  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/WRF/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
-  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/MAPPING/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
-  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/MODIS/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
-  if ~FILE_TEST(TEST_CMN_ROOT_DIR + '/TRMM/') then TEST_CMN_ROOT_DIR = TEST_file_directory( /RESET)
-  
-  return, TEST_CMN_ROOT_DIR
-  
-end
-
 pro TEST_MAKE_ABS_DATE
 
   error= 0
@@ -975,7 +957,7 @@ pro TEST_GR_DATALEVELS
   if MAX(info.LEVELS) ne 1 then error += 1
   if MIN(info.LEVELS) ne 0 then error += 1
   if info.LEVELS[1] ne 1./256 then error += 1
-  
+   
   info = w_gr_DataLevels(MIN_VALUE=0.25, MAX_VALUE=0.75, SHOW=show)  
   if N_ELEMENTS(info.levels) ne 257 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
@@ -1207,7 +1189,7 @@ end
 
 pro TEST_TRMM_3B42
     
-    fdir = TEST_file_directory() + 'TRMM/'
+    fdir = w_test_file_directory() + 'TRMM/'
     error = 0 
     
     ;-------------------------
@@ -1428,7 +1410,7 @@ end
 
 pro TEST_TRMM_3B42_daily
     
-    fdir = TEST_file_directory() + 'TRMM/'
+    fdir = w_test_file_directory() + 'TRMM/'
     error = 0 
     
     ;-------------------------
@@ -1485,7 +1467,7 @@ end
 
 pro TEST_TRMM_3B43
     
-    fdir = TEST_file_directory() + 'TRMM/'
+    fdir = w_test_file_directory() + 'TRMM/'
     error = 0 
     
     ;-------------------------
@@ -1635,7 +1617,7 @@ end
 
 pro TEST_TRMM_AGG
     
-    fdir = TEST_file_directory() + 'TRMM/'
+    fdir = w_test_file_directory() + 'TRMM/'
     error = 0 
     
     ;-------------------------
@@ -1793,7 +1775,7 @@ end
 
 pro TEST_WRF_OUT
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
     
     ;-------------------------
@@ -2095,7 +2077,7 @@ end
 
 pro TEST_MODIS
     
-    fdir = TEST_file_directory() + 'MODIS/'
+    fdir = w_test_file_directory() + 'MODIS/'
     error = 0 
         
     lst = OBJ_NEW('w_MODIS', FILE=fdir+'MOD11A2.A2008297.h25v05.005.2008311141349.hdf')
@@ -2110,13 +2092,13 @@ pro TEST_MODIS
     if ABS(lon[nx-1,ny-1] - 104.421709972251d) gt abs((lon[nx-1,ny-1]-lon[nx-2,ny-1])/2.) then error +=1 
     if ABS(lat[nx-1,ny-1] - 39.9958333333333d) gt abs((lat[nx-1,ny-1]-lat[nx-1,ny-2])/2.) then error +=1 
        
-    dom2 = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12)
+    dom2 = OBJ_NEW('w_WRF', FILE= w_test_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12)
     map = OBJ_NEW('w_Map', dom2, YSIZE=400)   
     GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1.)
     d = map->set_map_params(INTERVAL=5)
-    d = map->set_shape_file(SHPFILE= TEST_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
+    d = map->set_shape_file(SHPFILE= w_test_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
     d=map->set_Plot_Params(N_LEVELS=126, MIN_VALUE=-24, MAX_VALUE = 29)
@@ -2144,7 +2126,7 @@ pro TEST_MODIS
     for i = 0, N_ELEMENTS(dd) - 1 do if PTR_VALID(dd[i]) then nels[i] = N_ELEMENTS(*(dd[i]))
     
     d = map->set_Plot_Params(N_LEVELS=126)
-    d = map->set_data(nels, dom2, MISSING=0)
+    d = map->set_data(FLOAT(nels), dom2, MISSING=0)
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you now see a map containing the number of pixels per grid point?', /QUESTION)
@@ -2183,7 +2165,7 @@ end
 
 pro TEST_WRF_GEO
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
     
     ;-------------------------
@@ -2254,7 +2236,7 @@ end
 
 pro TEST_GRIDS
 
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
    GIS_make_proj, ret, proj, PARAM='1, WGS-84'
@@ -2373,16 +2355,18 @@ end
 
 pro TEST_W_MAP
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
+    
     
     ;-------------------------
     ; Test 3Hourly product
     ;-------------------------
     
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
-    map =  OBJ_NEW('w_map', wrf, YSIZE=400)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    map =  OBJ_NEW('w_map', wrf, YSIZE=400, /NO_COUNTRIES)
+    
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)
     
     ok = wrf->define_subset(CROPBORDER=20)
@@ -2428,7 +2412,7 @@ pro TEST_W_MAP
     u = u / nt
     v = v / nt
     ok = map->set_wind(u, v, wrf, density = 1)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     if not ok then error +=1
     
     map->show_img, /RESIZABLE
@@ -2443,15 +2427,47 @@ pro TEST_W_MAP
         
 end
 
+pro TEST_Map_Plots
+
+  fdir = w_test_file_directory() + 'WRF/'
+  
+  wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
+  map =  OBJ_NEW('w_map', wrf, YSIZE=500)
+  d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
+  d = map->set_shading_params(RELIEF_FACTOR=1)
+  data = fINDGEN(2,2) 
+  data[0] = !VALUES.F_NAN
+  
+  
+  d = map->set_shape_file(/OCEANS)
+  d = map->set_shape_file(/RIVERS)
+  d = map->set_shape_file(/LAKES)
+  
+  
+;  ok = map->set_data(data)
+; 
+;  cgLoadCT, 34
+;  ok = map->set_plot_params(N_LEVELS=5, MIN_VALUE=1,/OOB_TOP)
+  
+  w_standard_2d_plot, map, /RESIZABLE
+  
+      
+  undefine, wrf, map
+  
+;  d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
+;  d = map->set_shading_params(RELIEF_FACTOR=1)
+  
+end
+
 pro TEST_W_STANDARD_PLOT
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
         
     wrf = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d01_2008-10-26')
     
     map =  OBJ_NEW('w_map', wrf, YSIZE=400)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)
        
     T2 = (wrf->get_Var('T2'))[*,*,8] - 273.15
@@ -2493,7 +2509,7 @@ pro TEST_W_STANDARD_PLOT
     OBJ_DESTROY, map
 
     map =  OBJ_NEW('w_map', wrf, YSIZE=600)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
     ok = map->set_data(t2, wrf, MISSING = -999.)
@@ -2524,7 +2540,7 @@ pro TEST_W_STANDARD_PLOT
     OBJ_DESTROY, map
     
     map =  OBJ_NEW('w_map', wrf, YSIZE=800)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
     ok = map->set_data(t2, wrf, MISSING = -999.)
@@ -2555,7 +2571,7 @@ pro TEST_W_STANDARD_PLOT
     OBJ_DESTROY, map
     
     map =  OBJ_NEW('w_map', wrf, YSIZE=1000)
-    d = map->set_topography(GRDFILE=TEST_file_directory() + '/MAPPING/TiP.grd')
+    d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     d = map->set_shading_params(RELIEF_FACTOR=1)    
     cgLoadCT, 13   
     ok = map->set_data(t2, wrf, MISSING = -999.)
@@ -2592,7 +2608,7 @@ end
 
 pro TEST_POST_COPY_CROP, REDO = redo
    
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
     @WAVE.inc
@@ -2802,7 +2818,7 @@ end
 
 pro TEST_3D_STATS
    
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
     @WAVE.inc
@@ -2930,7 +2946,7 @@ end
 
 pro TEST_POST_AGG, REDO = redo
    
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
     @WAVE.inc
@@ -3023,7 +3039,7 @@ end
 
 pro TEST_POST_AGG_CROPPED, REDO = redo, VERBOSE = verbose
    
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
     @WAVE.inc
@@ -3133,7 +3149,7 @@ end
 
 pro TEST_POST_AGG_NCL, REDO = redo, VERBOSE = verbose
    
-    fdir = TEST_file_directory()
+    fdir = w_test_file_directory()
     error = 0 
     
     @WAVE.inc
@@ -3291,7 +3307,7 @@ end
 
 pro TEST_WRF_AGG_MASSGRID
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
     
     ;-------------------------
@@ -3325,7 +3341,7 @@ end
 
 pro TEST_REGRID
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
     
     ;-------------------------
@@ -3367,7 +3383,7 @@ end
 
 pro TEST_FNL
 
-;    fdir = TEST_file_directory() + 'FNL/'
+;    fdir = w_test_file_directory() + 'FNL/'
 ;    error = 0 
 ;   
 ;    fnl = OBJ_NEW('w_FNL', FILE=fdir+'fnl_20100301_12_00_c.nc')
@@ -3396,7 +3412,7 @@ pro TEST_NEIREST_NEIGHBOR
   @WAVE.inc
   error = 0
   
-  fdir = TEST_file_directory() 
+  fdir = w_test_file_directory() 
   error = 0 
 
   dom1 = OBJ_NEW('w_WRF', FILE=fdir+ '/WRF/wrfout_d01_2008-10-26', CROPBORDER=45)
@@ -3438,7 +3454,7 @@ pro TEST_MOSAIC
   @WAVE.inc
   error = 0
   
-  fdir = TEST_file_directory() 
+  fdir = w_test_file_directory() 
    
   ; Map
   dom1 = OBJ_NEW('w_WRF', FILE=fdir+'WRF/wrfout_d01_2008-10-26', CROPB=35)
@@ -3452,22 +3468,22 @@ pro TEST_MOSAIC
   !QUIET = 1
   h25v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v05.005.2008299202523.hdf', SUBSET_LL=[89.,33.,96.,28.])
   h25v05->getProperty, tnt_c = c
-  data1 = BYTARR(c.nx, c.ny) + 20B
+  data1 = FLTARR(c.nx, c.ny) + 20
   ok = map->set_data(data1, h25v05, MISSING=0)
   map->show_img, /RESIZABLE, TITLE= 'h25v05'
   h25v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v06.005.2008299213852.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h25v06->getProperty, tnt_c = c
-  data2 = BYTARR(c.nx, c.ny) + 80B
+  data2 = FLTARR(c.nx, c.ny) + 80
   ok = map->set_data(data2, h25v06, MISSING=0)
   map->show_img , /RESIZABLE, TITLE= 'h25v06' 
   h26v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v05.005.2008299222304.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v05->getProperty, tnt_c = c
-  data3 = BYTARR(c.nx, c.ny) + 160
+  data3 = FLTARR(c.nx, c.ny) + 160
   ok = map->set_data(data3, h26v05, MISSING=0)
   map->show_img , /RESIZABLE, TITLE= 'h26v05' 
   h26v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v06.005.2008299220621.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v06->getProperty, tnt_c = c
-  data4 = BYTARR(c.nx, c.ny) + 240B
+  data4 = fLTARR(c.nx, c.ny) + 240
   ok = map->set_data(data4, h26v06, MISSING=0)
   map->show_img  , /RESIZABLE, TITLE= 'h26v05'
   !QUIET = 0  
@@ -3506,7 +3522,7 @@ end
 
 pro TEST_WRF_GETVAR
     
-    fdir = TEST_file_directory() + 'WRF/'
+    fdir = w_test_file_directory() + 'WRF/'
     error = 0 
     
     ;-------------------------
@@ -3595,7 +3611,7 @@ pro TEST_WRF_GETVAR
     mine = wrf->get_Var('PRCP_FR')
     if total(ABS(all - mine)) gt 0.001 then error+=1 
     
-    ncldir = TEST_file_directory() + 'WRF/ncl_out/'
+    ncldir = w_test_file_directory() + 'WRF/ncl_out/'
        
     ; TK    
     t0 = QMS_TIME(year = 2008, day = 26, month = 10, hour = 21)    
@@ -4163,7 +4179,7 @@ pro TEST_POST, REDO = redo
   TEST_3D_STATS  
 end
 
-pro w_TEST, NCDF = ncdf,  REDO = redo
+pro w_TEST, NCDF=ncdf,  REDO=redo
   TEST_TIME
   TEST_DATASETS, NCDF = ncdf
   TEST_UTILS

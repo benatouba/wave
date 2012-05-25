@@ -1040,6 +1040,7 @@ PRO w_NCDF::dump, FILE = file
   printf, lu, '}'
   
   close, lu ; close file  
+  free_lun, lu
   
 end
 

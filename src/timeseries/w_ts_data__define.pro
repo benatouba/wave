@@ -633,11 +633,11 @@ end
 ;-
 pro w_ts_Data::plotTS, TITLE_INFO=title_info
 
-  if self.description ne '' then title = self.description else title = self.name
-  
+  title = self.name
+  if self.description ne '' then title = title + ': ' + self.description 
   if N_ELEMENTS(TITLE_INFO) ne 0 then title = title_info + title
-
-  w_TimeLinePlot, self->getData(), self->getTime(), self.name, COLOR1='blue', TITLE=title, YTITLE=self.unit 
+        
+  w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
 
 end
 

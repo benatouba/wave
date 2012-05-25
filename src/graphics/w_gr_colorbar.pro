@@ -138,7 +138,8 @@ pro w_gr_Colorbar, info, $
   endif
   
   ncolors = N_ELEMENTS(colors)
-  palette = w_gr_ColorToRGB(colors)  
+  if ncolors eq 3 then row=1
+  palette = w_gr_ColorToRGB(colors, ROW=row)  
   if ncolors lt 1 then Message, 'Less than one color?'
   
   

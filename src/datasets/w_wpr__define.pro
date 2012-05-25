@@ -287,10 +287,52 @@ end
 pro w_WPR::get_Varlist, varnames, PRINTVARS=printvars
 
   varnames = self.objs->getVarnames(COUNT=cnt)
+ 
+  if ~KEYWORD_SET(PRINTVARS) then return
+
+  d3 = BYTARR(N_ELEMENTS(varnames))
+  soil = BYTARR(N_ELEMENTS(varnames))
   
-  if KEYWORD_SET(PRINTVARS) then print, 'WRF product variables:'
-  if KEYWORD_SET(PRINTVARS) then for i = 0, cnt-1 DO print, 'Id: ' + str_equiv(-1) + $
-       '. Name: ' + varnames[i]
+  pok = where(StrMatch(varnames, '*_eta*') or StrMatch(varnames, '*_press*'), cnt)  
+  d3[pok] = 1
+  varnames = utils_replace_string(varnames, '_eta', '')
+  varnames = utils_replace_string(varnames, '_press', '')
+  pok = where(StrMatch(varnames, '*sh2o*') or StrMatch(varnames, '*smcrel*') or StrMatch(varnames, '*smois*') or StrMatch(varnames, '*tslb*'), cnt)
+  soil[pok] = 1
+  
+  d3 = d3[UNIQ(varnames, SORT(varnames))]
+  soil = soil[UNIQ(varnames, SORT(varnames))]
+  varnames = varnames[UNIQ(varnames, SORT(varnames))]
+  
+  type = STRARR(N_ELEMENTS(varnames))
+  type[*] = '2d'
+  type[where(d3)] = '3d'
+  type[where(soil)] = 'soil'
+  
+  print, 'NAME                 TYPE    DESCRIPTION                                    UNIT '
+      
+  for i = 0, N_ELEMENTS(varnames)-1 DO begin
+    vn = varnames[i]
+    if d3[i] then vn = vn + '_eta'
+    ok= self->get_Var_Info(vn, $ ; The netCDF variable ID, returned from a previous call to NCDF_VARDEF or NCDF_VARID, or the name of the variable.
+      out_id = out_id, $
+      units = units, $
+      description = description, $
+      varname = varname , $ ;
+      dims = dims, $ ;
+      dimnames = dimnames, $ ;
+      is_static = is_static, $ ;
+      is_original = is_original)
+      
+    ns = '                                                                                  '
+    STRPUT, ns, varnames[i], 1
+    STRPUT, ns, type[i], 22
+    STRPUT, ns, description, 30
+    STRPUT, ns, units, 77
+
+    print, ns
+  endfor
+  
 end
 
 ;+

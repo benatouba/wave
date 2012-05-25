@@ -262,42 +262,54 @@ pro w_Map::_DestroyMasks
   
 end
 
-;+
-; :Description:
-;    Change image color palette indexes into rgb image for plot without shading
-; 
-; :Private:
+;;+
+;; :Description:
+;;    Change image color palette indexes into rgb image for plot without shading
+;; 
+;; :Private:
+;;
+;; :History:
+;;     Written by FaM, 2011.
+;;-    
+;function w_Map::_img_to_rgb
 ;
-; :History:
-;     Written by FaM, 2011.
-;-    
-function w_Map::_img_to_rgb
+;  ; Make an indexed image
+;  colors = [self.plot_params.neutral, *self.plot_params.colors]
+;  img = *self.img
+;  if self.is_Masked then begin
+;    for m=0, self.nmasks-1 do begin
+;      mask = (*self.masks)[m]
+;      pm = where(*mask.mask eq 1, cntm)
+;      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
+;      colors = [colors,mask.color]
+;    endfor
+;  endif
+;  
+;  utils_color_rgb, colors, s_r, s_g, s_b
+;  r = byte(0 > s_r[img] < 255)
+;  g = byte(0 > s_g[img] < 255)
+;  b = byte(0 > s_b[img] < 255)
+;  img = bytarr(3, self.Xsize, self.Ysize)
+;  img[0,*,*] = r[*,*]
+;  img[1,*,*] = g[*,*]
+;  img[2,*,*] = b[*,*]
+;  
+;  return, img
+;  
+;end    
 
-  ; Make an indexed image
-  colors = [self.plot_params.neutral, *self.plot_params.colors]
-  img = *self.img
-  if self.is_Masked then begin
-    for m=0, self.nmasks-1 do begin
-      mask = (*self.masks)[m]
-      pm = where(*mask.mask eq 1, cntm)
-      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-      colors = [colors,mask.color]
-    endfor
-  endif
+pro w_Map::_add_mask, img, colors
+
+  for i=0L, N_ELEMENTS(*self.masks)-1 do begin
+    m = (*self.masks)[i]
+    pok = where(*m.mask eq 0, cnt, COMPLEMENT=pnok, NCOMPLEMENT=cntnok)
+    colors = [m.color, colors]    
+    if cnt ne 0 then img[pok] = img[pok] + 1
+    if cntnok ne 0 then img[pnok] = 0
+  endfor
   
-  utils_color_rgb, colors, s_r, s_g, s_b
-  r = byte(0 > s_r[img] < 255)
-  g = byte(0 > s_g[img] < 255)
-  b = byte(0 > s_b[img] < 255)
-  img = bytarr(3, self.Xsize, self.Ysize)
-  img[0,*,*] = r[*,*]
-  img[1,*,*] = g[*,*]
-  img[2,*,*] = b[*,*]
-  
-  return, img
-  
-end    
-    
+end
+
 ;+
 ; :Description:
 ; 
@@ -310,46 +322,27 @@ end
 ;-    
 function w_Map::_shading
 
-  if SIZE(*self.img, /N_DIMENSIONS) gt 2 then begin 
-   img = COLOR_QUAN(*self.img, 1, _r, _g, _b, COLORS=127) + 1
-   _colors = utils_color_convert(COLORS=[[_r],[_g],[_b]])
-   PTR_FREE, self.img
-   self.img = PTR_NEW(img, /NO_COPY)
-   self.plot_params.nlevels  = 127
-   PTR_FREE, self.plot_params.colors
-   self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
-  endif
-  
-  if self.shading_params.relief_factor eq 0 then return, self->_img_to_rgb()
- 
-  nlevels = self.plot_params.nlevels + 1 
-  if self.is_Masked then nlevels += self.nmasks
-  
-  if nlevels eq 0 or nlevels gt 128 then begin
-    MESSAGE, 'w_Map INFO: _shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
-    return, self->_img_to_rgb()
-  endif
-  
+  if PTR_VALID(self.img) then begin
+    img = COLOR_QUAN(*self.img, 1, s_r, s_g, s_b, COLORS=127)
+  endif else if PTR_VALID(self.info) then begin
+    inf = *self.info
+    img = inf.loc
+    colors = inf.colors
+    if self.is_Masked then self->_add_mask, img, colors    
+    if N_ELEMENTS(colors) gt 127 then Message, 'N_colors to small, sorry youll have to choose other levels to do shading'
+    dummy = w_gr_ColorToRGB(colors, s_r, s_g, s_b)  
+  endif else begin
+    message, 'Shading on what??'
+  endelse
+     
   rp = bindgen(256)
   gp = bindgen(256)
   bp = bindgen(256)
   
-  ; Make an indexed image
-  colors = [self.plot_params.neutral, *self.plot_params.colors]
-  img = *self.img  
-  if self.is_Masked then begin
-    for m=0, self.nmasks-1 do begin
-      mask = (*self.masks)[m]
-      pm = where(*mask.mask eq 1, cntm)
-      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-      colors = [colors,mask.color]
-    endfor
-  endif
-  
-  utils_color_rgb, colors, s_r, s_g, s_b
-  rp[0:nlevels-1] = s_r[*]
-  gp[0:nlevels-1] = s_g[*]
-  bp[0:nlevels-1] = s_b[*]
+  nc = N_ELEMENTS(s_r)
+  rp[0:nc-1] = s_r[*]
+  gp[0:nc-1] = s_g[*]
+  bp[0:nc-1] = s_b[*]
   
   ;******************
   ; Prepare _shading *
@@ -360,22 +353,22 @@ function w_Map::_shading
   
   p = where(sl gt 0, cnt)
   if cnt gt 0 then sl[p] = 0.4*sin(0.5*!pi*(-1>(sl[p]/(2*sdev_sl))<1))
-  p = 0
+  undefine, p
   level = 1.0 - 0.1 * self.shading_params.relief_factor ; 1.0 for 0% and 0.9 for 100%
   sens  = 0.7 * self.shading_params.relief_factor       ; 0.0 for 0% and 0.7 for 100%
   
   ;****************
   ; Apply _shading *
   ;****************
-  _img = ROTATE(img,7)
-  r = rp[_img]
-  g = gp[_img]
-  b = bp[_img]
+  img = ROTATE(img,7)
+  r = rp[img]
+  g = gp[img]
+  b = bp[img]
   
   r = byte(0 > (level*r*(1+sens*sl) < 255))
   g = byte(0 > (level*g*(1+sens*sl) < 255))
   b = byte(0 > (level*b*(1+sens*sl) < 255))
-  sl = 0
+  undefine, sl
   
   img = bytarr(3, self.Xsize, self.Ysize)
   img[0,*,*] = r[*,*]
@@ -410,7 +403,7 @@ function w_Map::_draw_Map, WINDOW = window
   endif
   
   ; Draw a frame
-  if ~(self.contour_img and ~self.is_Shaded) then begin
+  if ~(self.plot_params.contour_img and ~self.is_Shaded) then begin
     xf = [0, self.xsize, self.xsize, 0, 0]
     yf = [0, 0, self.ysize, self.ysize, 0]
     cgPlotS, xf, yf, WINDOW = window, /DATA
@@ -629,38 +622,43 @@ end
 ; :Keywords:
 ;    LEVELS: in, optional, type = numeric
 ;            the data levels
-;    
 ;    N_LEVELS: in, optional, type = long, default = 256
 ;              number of data levels (ignored if levels is set)
-;             
-;    COLORS: in, optional, type = any
-;            the colors palette (array of nlevels). If not set, colors are chosen
-;            automatically from nlevels and the active color table (see e.g. CTLoad)
-;            
 ;    CMIN: in, optional, type = long
-;          minimun index in the color table (ignored if COLORS is set)
-;          
+;          minimun index in the color table
 ;    CMAX: in, optional, type = long
-;          maximum index in the color table (ignored if COLORS is set)
-;          
+;          maximum index in the color table
+;    OOB_TOP: in, optional, type = boolean
+;             set this keyword to have a "top arrow" type colorbar
+;             this will be done autmatically if there are oob data
+;    OOB_BOT: in, optional, type = boolean
+;             set this keyword to have a "ot arrow" type colorbar
+;             this will be done autmatically if there are oob data
 ;    INVERTCOLORS: in, optional, type = boolean
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
-;                  
 ;    NEUTRAL_COLOR: in, optional, type = color
 ;                   the color to attribute to missing data
-;                   
 ;    MIN_VALUE: in, optional, type = numeric, default=MIN(data)
 ;               the smaller level (for auto generation of levels)
-;    
 ;    MAX_VALUE: in, optional, type = numeric, default=MAX(data)
 ;               the bigger level (for auto generation of levels)
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = colors, CMIN=cmin, CMAX=cmax, $
-                                  INVERTCOLORS = invertcolors, NEUTRAL_COLOR = neutral_color, $
-                                  MIN_VALUE = min_value, MAX_VALUE = max_value, CONTOUR = contour
+function w_Map::set_plot_params, $
+    LEVELS=levels, $
+    N_LEVELS=n_levels, $
+    CMIN=cmin, $
+    CMAX=cmax, $
+    INVERTCOLORS=invertcolors, $
+    DCBAR=dcbar, $
+    NEUTRAL_COLOR=neutral_color, $
+    OOB_TOP=oob_top, $
+    OOB_BOT=oob_bot, $
+    MIN_VALUE=min_value, $
+    MAX_VALUE=max_value, $
+    CONTOUR=contour
          
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -675,59 +673,8 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
     RETURN, 0
   ENDIF 
      
-  is_Levels = N_ELEMENTS(levels) ne 0 
-  is_Colors = N_ELEMENTS(colors) ne 0
+  is_Levels = N_ELEMENTS(LEVELS) ne 0 
   
-  ; Give a value to nlevels   
-  IF N_Elements(n_levels) EQ 0 THEN BEGIN
-     IF ~is_Levels and ~is_Colors THEN nlevels = 255 $
-     ELSE begin
-       if is_colors then nlevels = N_Elements(colors[*,0])
-       if is_Levels then nlevels = N_Elements(levels)              
-     endelse
-  ENDIF else nlevels = n_levels
-  
-  if is_Levels then nlevels = N_ELEMENTS(levels)
-  
-  if is_colors then if (nlevels ne N_ELEMENTS(colors[*,0])) then $
-    message, '$colors and $n_levels are incompatible.'
-  
-  ; Colors
-  if is_Colors then _colors = utils_color_convert(COLORS = colors) $
-   else _colors = utils_color_convert(NCOLORS = nlevels, CMIN=cmin, CMAX=cmax, INVERTCOLORS = invertcolors)
-     if KEYWORD_SET(NEUTRAL_COLOR) then _neutral = utils_color_convert(COLORS = NEUTRAL_COLOR) else $
-       _neutral = cgColor('white')
-
-  ; Levels
-  if is_Levels then begin
-    _levels = levels
-    val_min = min(levels)
-    val_max = max(levels)
-  endif else begin
-    pfin = where(finite(*self.data) eq 1, cntfin)
-    if cntfin eq 0 then MESSAGE, '$DATA has no finite element.'
-    if N_ELEMENTS(MIN_VALUE) ne 1 then val_min = MIN((*self.data)[pfin]) else val_min = MIN_VALUE
-    if N_ELEMENTS(MAX_VALUE) ne 1 then val_max = MAX((*self.data)[pfin]) else val_max = MAX_VALUE
-    missing = *(self.missing)
-    dataTypeName = Size(*self.data, /TNAME)
-    if FINITE(MISSING) then begin      
-      CASE dataTypeName OF
-        'FLOAT': indices = Where(Abs(*self.data - missing) gt (MACHAR()).eps, count)
-        'DOUBLE': indices = Where( Abs(*self.data - missing) gt (MACHAR(DOUBLE=1)).eps, count)
-        ELSE: indices = Where(*self.data ne missing, count)
-      ENDCASE
-      if count ne 0 and N_ELEMENTS(MIN_VALUE) ne 1 then val_min = MIN((*self.data)[indices])
-      if count ne 0 and N_ELEMENTS(MAX_VALUE) ne 1 then val_max = MAX((*self.data)[indices])
-    endif    
-    CASE dataTypeName OF
-        'FLOAT':  _levels = (float(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
-        'DOUBLE':  _levels = (double(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
-        ELSE:  _levels = (LONG(val_max - val_min) / nlevels) * Indgen(nlevels) + val_min
-    ENDCASE
-   
-  endelse
-  
-  ;Fill up
   ; Type: 
   ; 0 for levels, 
   ; 1 for automatic, 
@@ -741,13 +688,33 @@ function w_Map::set_plot_params, LEVELS = levels, N_LEVELS = n_levels, COLORS = 
     if N_ELEMENTS(MAX_VALUE) ne 0 then self.plot_params.type += 3    
   endelse
   
-  self.plot_params.nlevels  = nlevels
-  self.plot_params.colors   = PTR_NEW(_colors, /NO_COPY)
-  self.plot_params.levels   = PTR_NEW(_levels, /NO_COPY)
-  self.plot_params.min_val  = val_min
-  self.plot_params.max_val  = val_max
-  self.plot_params.neutral  = _neutral
-  self.contour_img  = KEYWORD_SET(CONTOUR)
+  ; Colors
+  TVLCT, r, g, b, /GET
+  ; Need to reverse the colors?
+  IF KEYWORD_SET(INVERTCOLORS) THEN BEGIN
+     r = Reverse(r)
+     g = Reverse(g)
+     b = Reverse(b)
+  ENDIF
+  self.plot_params.colors = PTR_NEW([[r], [g], [b]])
+   
+  self.plot_params.neutral = N_ELEMENTS(NEUTRAL_COLOR) ne 0 ? cgColor(NEUTRAL_COLOR, /DECOMPOSED) : cgColor('white', /DECOMPOSED)
+  self.plot_params.cmin = N_ELEMENTS(CMIN) ne 0 ? cmin : 0
+  self.plot_params.cmax = N_ELEMENTS(CMAX) ne 0 ? cmax : 255
+  if N_ELEMENTS(min_value) eq 1 then self.plot_params.min_val = min_value
+  if N_ELEMENTS(max_value) eq 1 then self.plot_params.max_val = max_value
+
+  ; Give a value to nlevels   
+  self.plot_params.nlevels = N_Elements(N_LEVELS) ne 0 ? n_levels : self.plot_params.cmax - self.plot_params.cmin
+  if is_Levels then begin
+   self.plot_params.nlevels = N_ELEMENTS(levels)
+   self.plot_params.levels = PTR_NEW(levels)
+  endif
+  
+  self.plot_params.contour_img  = KEYWORD_SET(CONTOUR)
+  self.plot_params.dcbar  = KEYWORD_SET(DCBAR)
+  self.plot_params.oob_bot  = KEYWORD_SET(OOB_BOT)
+  self.plot_params.oob_top  = KEYWORD_SET(OOB_TOP)
   
   return, self->set_img()
 
@@ -951,7 +918,7 @@ end
 ; :History:
 ;     Written by DiS, FaM, 2011
 ;-
-function w_Map::set_topography, DEFAULT = default, GRDFILE = grdfile, USE_GRID=use_grid, Z=z
+function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_grid, Z=z
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -976,6 +943,7 @@ function w_Map::set_topography, DEFAULT = default, GRDFILE = grdfile, USE_GRID=u
   end
   
   self.grid->getProperty, tnt_c = c
+  self.grid->get_Lonlat, lon, lat, nx, ny
   
   if KEYWORD_SET(DEFAULT) then begin
   
@@ -998,7 +966,6 @@ function w_Map::set_topography, DEFAULT = default, GRDFILE = grdfile, USE_GRID=u
     
     if ~_ug then begin ; Simple NN method
     
-      self.grid->get_Lonlat, lon, lat, nx, ny
       ; Open DEM grid
       !QUIET = 1
       GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
@@ -1133,14 +1100,14 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
    if N_ELEMENTS(fill) eq 0 then fill = 1   
-   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/lakes/10m_lakes.shp', SHP_SRC=shp_src, $
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/lakes/ne_10m_lakes.shp', SHP_SRC=shp_src, $
              THICK=thick, STYLE=style, COLOR=color, FILL=fill)
   endif  
   
   if KEYWORD_SET(RIVERS) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
-   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/rivers/ne_10m_rivers_lake_centerlines.shp', SHP_SRC=shp_src, $
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/rivers/ne_10m_rivers_lake_centerlines.shp', SHP_SRC=shp_src, $
              THICK=thick, STYLE=style, COLOR=color, FILL=fill)
   endif  
   
@@ -1429,8 +1396,8 @@ end
 
 ;+
 ; :Description:
-;   If called without arguments, it generates a true-color image 
-;   from the map data and levels (called internally, you don't have
+;   If called without arguments, it generates an info 
+;   structure (called internally, you don't have
 ;   to worry about it).
 ;   
 ;   You can give a true color as argument to override this behavior and 
@@ -1455,7 +1422,7 @@ function w_Map::set_img, img
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
     PTR_FREE, self.img
-    ok = self->set_img()
+    PTR_FREE, self.info
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
   ENDIF 
@@ -1464,59 +1431,80 @@ function w_Map::set_img, img
     s = SIZE(img, /DIMENSIONS)
     if s[0] ne 3 then Message, '$IMG does not seem to be a TRUECOLOR image. Check it (dims = [3,nx,ny]).'
     PTR_FREE, self.img
+    PTR_FREE, self.info
     if s[1] ne self.Xsize or s[2] ne self.Ysize then $
      self.img = PTR_NEW(FSC_Resize_Image(img, self.Xsize, self.Ysize)) $
        else self.img = PTR_NEW(img)    
     return, 1
   endif  
 
-  if self.contour_img then begin
+  ;Do info 
+  ; 0 for levels, 
+  ; 1 for automatic, 
+  ; 3 for automatic with min, 
+  ; 4 for automatic with max
+  ; 6 for automatic with minmax
   
-    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
-    xwin = !D.WINDOW
-    if FINITE(*self.missing) then begin
-      levels = [*self.missing, *self.plot_params.levels]
-      colors = [self.plot_params.neutral, *self.plot_params.colors]
-    endif else begin
-      levels = *self.plot_params.levels
-      colors = *self.plot_params.colors
-    endelse
-    n_colors = N_ELEMENTS(colors)
-    utils_color_rgb,  colors, r,g,b
-    cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=[0,0,1,1], XTICKLEN=-1,YTICKLEN=-1, label = 0, PALETTE=[[r],[g],[b]]
-    img_ = TVRD(/TRUE)
-    WDELETE, xwin
-    
-    img = INTARR(self.Xsize, self.Ysize)
-    for i=0, N_ELEMENTS(colors)-1 do begin
-      test = (reform(img_[0,*,*]) eq r[i]) + (reform(img_[1,*,*]) eq g[i]) + (reform(img_[2,*,*]) eq b[i])
-      pok = where(test eq 3, cnt)
-      if cnt ne 0 then img[pok] = i + 1
-    endfor
-    undefine, img_
-    
-  endif else begin
+  TVLCT, rr, gg, bb, /GET
+  TVLCT, *self.plot_params.colors
+
+  t = self.plot_params.type
+  if t eq 3 or t eq 6 then min_value = self.plot_params.min_val
+  if t eq 4 or t eq 6 then max_value = self.plot_params.max_val
+  if t eq 0 then levels = *self.plot_params.levels
+  n_levels = self.plot_params.nlevels
+  cmin = self.plot_params.cmin
+  cmax = self.plot_params.cmax
+  neutral_color = self.plot_params.neutral
+  dcbar = self.plot_params.dcbar
+  if PTR_VALID(self.missing) then missing = *self.missing
+  if self.plot_params.oob_top eq 1 then oob_top_color = 1
+  if self.plot_params.oob_bot eq 1 then oob_bot_color = 1
   
-    img = INTARR(self.Xsize, self.Ysize)
-    
-    dataTypeName = Size(*self.data, /TNAME)
-    CASE dataTypeName OF
-      'FLOAT': epsilon = (MACHAR()).eps
-      'DOUBLE': epsilon = (MACHAR(DOUBLE=1)).eps
-      ELSE: epsilon =0
-    ENDCASE
-    
-    for l=0, self.plot_params.nlevels-1 do begin
-      if l lt self.plot_params.nlevels-1 then p = where((*self.data) ge (*self.plot_params.levels)[l] - epsilon and (*self.data) lt (*self.plot_params.levels)[l+1], cnt) $
-      else p = where((*self.data) ge (*self.plot_params.levels)[l]- epsilon, cnt)
-      if cnt gt 0 then img[p]= l + 1
-    endfor
-    
+  info = w_gr_DataLevels(*self.data, $
+    LEVELS=levels, $
+    N_LEVELS=n_levels, $
+    NEUTRAL_COLOR=neutral_color, $
+    MISSING=missing, $
+    MIN_VALUE=min_value, $
+    MAX_VALUE=max_value, $
+    CMIN=cmin, $ 
+    CMAX=cmax, $
+    OOB_TOP_COLOR=oob_top_color, $ 
+    OOB_BOT_COLOR=oob_bot_color, $
+    DCBAR=dcbar) 
+  
+  if self.plot_params.contour_img then begin
+    message, 'contour image, no'
+;    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
+;    xwin = !D.WINDOW
+;    if FINITE(*self.missing) then begin
+;      levels = [*self.missing, *self.plot_params.levels]
+;      colors = [self.plot_params.neutral, *self.plot_params.colors]
+;    endif else begin
+;      levels = *self.plot_params.levels
+;      colors = *self.plot_params.colors
+;    endelse
+;    n_colors = N_ELEMENTS(colors)
+;    utils_color_rgb,  colors, r,g,b
+;    cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=[0,0,1,1], XTICKLEN=-1,YTICKLEN=-1, label = 0, PALETTE=[[r],[g],[b]]
+;    img_ = TVRD(/TRUE)
+;    WDELETE, xwin
+;    
+;    img = INTARR(self.Xsize, self.Ysize)
+;    for i=0, N_ELEMENTS(colors)-1 do begin
+;      test = (reform(img_[0,*,*]) eq r[i]) + (reform(img_[1,*,*]) eq g[i]) + (reform(img_[2,*,*]) eq b[i])
+;      pok = where(test eq 3, cnt)
+;      if cnt ne 0 then img[pok] = i + 1
+;    endfor
+;    undefine, img_    
+  endif else begin 
+    PTR_FREE, self.info
+    self.info = PTR_NEW(info)
   endelse
-      
-  PTR_FREE, self.img
-  SELF.img = PTR_NEW(img, /NO_COPY)
   
+  TVLCT, rr, gg, bb
+    
   return, 1
 
 end
@@ -1552,9 +1540,11 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, OVERPLOT = overplot
+function w_Map::set_data, data, grid, $
+  BILINEAR=bilinear, $
+  MISSING=missing, $
+  OVERPLOT=overplot
                              
-  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
@@ -1573,66 +1563,29 @@ function w_Map::set_data, data, grid, BILINEAR = bilinear, MISSING = missing, OV
    PTR_FREE, self.data
    self.data = PTR_NEW(data, /NO_COPY)  
    PTR_FREE, self.missing
-   self.missing = PTR_NEW(!VALUES.F_NAN)
+   self.missing = PTR_NEW()
    return, self->set_img()
   endif  
     
   if ~ arg_okay(data, N_DIM=2, /NUMERIC) then Message, WAVE_Std_Message('data', NDIMS=2)
-  
-  _oplot = KEYWORD_SET(OVERPLOT)
-    
+     
   if N_ELEMENTS(grid) eq 0 then begin
-    if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
+    if arg_okay(data, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
     else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
   endif else begin
     if N_ELEMENTS(missing) ne 0 then _missing = missing
-    if _oplot then _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR = bilinear, DATA_DST = *self.data) $
-     else _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR = bilinear)
+    if KEYWORD_SET(OVERPLOT) then _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear, DATA_DST=*self.data) $
+     else _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear)
   endelse
   
-  if N_ELEMENTS(missing) eq 0 then begin
-    dataTypeName = Size(data, /TNAME)
-    CASE dataTypeName OF
-      'FLOAT' : missing = !VALUES.F_NAN
-      'DOUBLE': missing = !VALUES.D_NAN
-      'BYTE': missing = 0B
-      ELSE: missing = -999
-    ENDCASE
-  endif
+  if N_ELEMENTS(missing) ne 0 then begin
+    PTR_FREE, self.missing
+    self.missing = PTR_NEW(missing)
+  endif else PTR_FREE, self.missing
   
   PTR_FREE, self.data
   self.data = PTR_NEW(_data, /NO_COPY)
-  PTR_FREE, self.missing
-  self.missing = PTR_NEW(missing)
-
-  ; Levels
-  if self.plot_params.type ne 0 then begin ;The levels are not user defined
-    
-    auto_min = self.plot_params.type ne 3 and self.plot_params.type ne 6 
-    auto_max = self.plot_params.type ne 4 and self.plot_params.type ne 6 
-    
-    pfin = where(finite(*self.data) eq 1, cntfin)
-    if cntfin eq 0 then MESSAGE, '$DATA has no finite element.'
-    if auto_min then val_min = MIN((*self.data)[pfin]) else val_min = self.plot_params.min_val
-    if auto_max then val_max = MAX((*self.data)[pfin]) else val_max = self.plot_params.max_val
-
-    dataTypeName = Size(*self.data, /TNAME)
-    CASE dataTypeName OF
-      'FLOAT': indices = Where(Abs(*self.data - missing) gt (MACHAR()).eps, count)
-      'DOUBLE': indices = Where( Abs(*self.data - missing) gt (MACHAR(DOUBLE=1)).eps, count)
-      ELSE: indices = Where(*self.data ne missing, count)
-    ENDCASE
-    if count ne 0 and auto_min then val_min = MIN((*self.data)[indices])
-    if count ne 0 and auto_max then val_max = MAX((*self.data)[indices])
-  
-    _levels = (double(val_max - val_min) / self.plot_params.nlevels) * Indgen(self.plot_params.nlevels) + val_min
-    ptr_free, self.plot_params.levels
-    self.plot_params.levels  = PTR_NEW(_levels, /NO_COPY)
-    self.plot_params.min_val = val_min
-    self.plot_params.max_val = val_max
-    
-  endif
-
+ 
   return, self->set_img()
 
 end
@@ -1658,7 +1611,9 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_ll_data, data, lon, lat, SRC=src, MISSING = missing
+function w_Map::set_ll_data, data, lon, lat, $
+    SRC=src, $
+    MISSING=missing
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1735,7 +1690,7 @@ function w_Map::set_mask, mask, grid, BILINEAR=bilinear, COLOR=color
     if arg_okay(img, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _mask = mask $
     else _mask = CONGRID(mask, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
   endif else begin
-    _mask = self.grid->map_gridded_data(mask, grid, MISSING = 0, BILINEAR = bilinear)
+    _mask = self.grid->map_gridded_data(mask, grid, MISSING=0, BILINEAR=bilinear)
   endelse
   
   _mask = BYTE(0 > _mask < 1)
@@ -2042,17 +1997,17 @@ end
 
 ;+
 ; :Description:
-;    Adds the image to an existing plot
-;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
+;    Adds the image to the device
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargin, NOERASE =noerase
-
+pro w_Map::add_img, $
+    POSITION=position, $
+    WINDOW=window, $
+    MULTIMARGIN=multimargin, $
+    NOERASE=noerase
+    
   ;--------------------------
   ; Set up environment
   ;--------------------------
@@ -2063,51 +2018,67 @@ pro w_Map::add_img, POSITION = position, WINDOW = window, MULTIMARGIN=multimargi
     tmp = !D.window
     cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
     xwin = !D.WINDOW
-    cgImage, *self.img, /NORMAL, POSITION = position
+    if PTR_VALID(self.img) then begin
+      cgImage, *self.img, /NORMAL, POSITION=position
+    endif else begin
+      cgImage, (*(self.info)).loc, /NORMAL, POSITION=position
+    endelse
     wdelete, xwin
     wset, tmp
   endif
   
-  if self.is_Shaded then begin
-    ; Build RGB image and show it
-    cgImage, self->_shading(),  /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW = window, POSITION = position, NOERASE =noerase
-  endif else begin
-    if self.contour_img then begin
-      if self.is_Masked then message, 'w_Map INFO: for CONTOUR plots the masks are ignored.'
-      ; Make no image but just a contour of it
-      if FINITE(*self.missing) then begin
-        levels = [*self.missing, *self.plot_params.levels]
-        colors = [self.plot_params.neutral, *self.plot_params.colors]
-      endif else begin
-        levels = *self.plot_params.levels
-        colors = *self.plot_params.colors
-      endelse
-      n_colors = N_ELEMENTS(colors)
-      utils_color_rgb,  colors, r,g,b
-      cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=position, XTICKLEN=0,YTICKLEN=0, label = 0, $
-        PALETTE=[[r],[g],[b]], /NORMAL, WINDOW=window, XTICKNAME = REPLICATE(' ', 30), YTICKNAME = REPLICATE(' ', 30)
+  ; Std image
+  if PTR_VALID(self.img) then begin
+    if self.is_Shaded then begin
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
     endif else begin
-    
-      ; Make an indexed image
-      colors = [self.plot_params.neutral, *self.plot_params.colors]
-      img = *self.img
-      if self.is_Masked then begin
-        for m=0, self.nmasks-1 do begin
-          mask = (*self.masks)[m]
-          pm = where(*mask.mask eq 1, cntm)
-          if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-          colors = [colors,mask.color]
-        endfor
-      endif
-      
-      utils_color_rgb, colors, s_r, s_g, s_b
-      if N_ELEMENTS(colors) eq 3 then pal=ROTATE([[s_r],[s_g],[s_b]],4) else pal= [[s_r],[s_g],[s_b]]
-      cgImage, img, PALETTE=pal, WINDOW = window,  /SAVE, /NORMAL, POSITION = position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
+      cgImage, *self.img, /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
     endelse
-  endelse
-   
-  if self.is_Contoured then ok = self->_draw_contours(WINDOW = window) 
-  if self.is_Shaped then ok = self->_draw_shapes(WINDOW = window) 
+  endif else if PTR_VALID(self.info) then begin
+  
+    inf = *self.info
+    
+    do_shade = self.is_Shaded and self.shading_params.relief_factor ne 0
+    if (N_ELEMENTS(inf.colors) eq 0 or N_ELEMENTS(inf.colors) gt 128) and do_shade then begin
+      MESSAGE, 'w_Map INFO: _shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
+      do_shade = FALSE
+    endif
+    
+    if do_shade then begin
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+    endif else begin
+      if self.plot_params.contour_img then begin
+        message, 'contour image, no'
+      ;      if self.is_Masked then message, 'w_Map INFO: for CONTOUR plots the masks are ignored.'
+      ;      ; Make no image but just a contour of it
+      ;      if FINITE(*self.missing) then begin
+      ;        levels = [*self.missing, *self.plot_params.levels]
+      ;        colors = [self.plot_params.neutral, *self.plot_params.colors]
+      ;      endif else begin
+      ;        levels = *self.plot_params.levels
+      ;        colors = *self.plot_params.colors
+      ;      endelse
+      ;      n_colors = N_ELEMENTS(colors)
+      ;      utils_color_rgb,  colors, r,g,b
+      ;      cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=position, XTICKLEN=0,YTICKLEN=0, label = 0, $
+      ;        PALETTE=[[r],[g],[b]], /NORMAL, WINDOW=window, XTICKNAME = REPLICATE(' ', 30), YTICKNAME = REPLICATE(' ', 30)
+      endif else begin
+        img = inf.loc
+        colors = inf.colors
+        if self.is_Masked then self->_add_mask, img, colors    
+        ncolors = N_ELEMENTS(colors)
+        if ncolors eq 3 then row=1
+        if ncolors le 1 then Message, 'N_colors to small, sorry youll have to choose other levels'
+        if ncolors gt 256 then Message, 'N_colors to small, sorry youll have to choose other levels'
+        palette = w_gr_ColorToRGB(colors, ROW=row)  
+        cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
+      endelse
+    endelse
+    
+  endif else message, 'No image set yet...'
+  
+  if self.is_Contoured then ok = self->_draw_contours(WINDOW = window)
+  if self.is_Shaped then ok = self->_draw_shapes(WINDOW = window)
   if self.is_Mapped then ok = self->_draw_Map(WINDOW = window)
   if self.is_Winded then ok = self->_draw_wind(WINDOW = window)
   if self.is_Polygoned then ok = self->_draw_polygons(WINDOW = window)
@@ -2120,15 +2091,14 @@ end
 ; :Description:
 ;    To draw a color bar on an existing plot. 
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
-; :History:
-;     Written by FaM, 2011.
 ;-   
-pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=position, CHARSIZE=charsize, $
-                          BAR_OPEN=bar_open, BAR_FORMAT=bar_format, _EXTRA=extra
+pro w_Map::add_color_bar, TITLE=title, $
+    LABELS=labels, $
+    WINDOW=window, $
+    POSITION=position, $
+    CHARSIZE=charsize, $
+    FORMAT=format, $
+    _EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -2136,24 +2106,16 @@ pro w_Map::add_color_bar, TITLE=title, LABELS=labels, WINDOW=window, POSITION=po
   compile_opt idl2
   @WAVE.inc
   
-  if n_elements(bar_format) eq 0 then bar_format = '(F7.1)'
-  if n_elements(labels) eq 0 then labels = string(*(self.plot_params.levels), FORMAT=bar_format)
-  
-  if self.plot_params.nlevels lt 50 then begin
-    cn = self.plot_params.neutral
-    w_cgDCBar, *(self.plot_params.colors), COLOR = "black", LABELS=LABELS, Position=Position, $
-      TITLE=title, ADDCMD=window, CHARSIZE=charsize, BAR_OPEN=bar_open, NEUTRAL_COLOR=cn, _EXTRA=extra
-  endif else begin
-    utils_color_rgb, *(self.plot_params.colors), r,g,b    
-    if N_ELEMENTS(r) lt 256 then begin
-     r = congrid(r,256) 
-     g = congrid(g,256) 
-     b = congrid(b,256)       
-    end
-    cgColorbar, PALETTE= [[r],[g],[b]], Position=Position, _EXTRA=extra, FORMAT=BAR_FORMAT, $
-        TITLE=title,  MINRANGE=self.plot_params.min_val, CHARSIZE=charsize, $
-        MAXRANGE=self.plot_params.max_val > (self.plot_params.min_val+0.1), ADDCMD=window
-  endelse
+  if PTR_VALID(self.info) then begin
+    inf = *self.info
+    if inf.dcbar then begin
+     w_gr_DCBar, inf, TITLE=title, LABELS=labels, ADDCMD=window, POSITION=position, CHARSIZE=charsize, $
+                                          FORMAT=format, _EXTRA=extra
+    endif else begin
+     w_gr_Colorbar, inf, TITLE=title, LABELS=labels, ADDCMD=window, POSITION=position, CHARSIZE=charsize, $
+                                          FORMAT=format, _EXTRA=extra
+    endelse         
+  endif
   
 end
 
@@ -2161,12 +2123,6 @@ end
 ; :Description:
 ;    Simple function to have a look at the plot.
 ;
-; :Author: Fabien Maussion::
-;            FG Klimatologie
-;            TU Berlin
-;
-; :History:
-;     Written by FaM, 2011.
 ;-   
 pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, MARGIN = margin
 
@@ -2220,7 +2176,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_color_bar, RESIZABLE = resizable, VERTICAL = vertical, _REF_EXTRA=extra
+pro w_Map::show_color_bar, RESIZABLE=resizable, VERTICAL=vertical, _REF_EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -2253,7 +2209,7 @@ pro w_Map::show_color_bar, RESIZABLE = resizable, VERTICAL = vertical, _REF_EXTR
     xwin = !D.WINDOW
   endelse
   
-  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, VERTICAL = vertical, _EXTRA=extra
+  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, VERTICAL=0, _EXTRA=extra
   
   if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
@@ -2271,7 +2227,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = colors, TNT_C = tnt_c
+PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, TNT_C = tnt_c
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2286,8 +2242,6 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, LEVELS = levels, COLORS = 
   
   if ARG_PRESENT(XSIZE) then xsize = self.Xsize
   if ARG_PRESENT(YSIZE) then ysize = self.Ysize
-  if ARG_PRESENT(LEVELS) then levels = *self.plot_params.levels
-  if ARG_PRESENT(COLORS) then colors = *self.plot_params.colors
   if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C = tnt_c
      
 end
@@ -2306,6 +2260,7 @@ pro w_Map::Cleanup
   COMPILE_OPT IDL2  
   
   OBJ_DESTROY, self.grid
+  PTR_FREE, self.info 
   PTR_FREE, self.img 
   PTR_FREE, self.data 
   PTR_FREE, self.sl    
@@ -2379,8 +2334,12 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   self.Ysize = c.ny
   
   ; Defaults
+  self.data = PTR_NEW(BYTARR(self.Xsize, self.Ysize), /NO_COPY)  
+  TVLCT, rr, gg, bb, /GET
+  cgLoadCT, 0, /REVERSE
+  dummy = self->set_plot_params(N_LEVELS=10)    
+  TVLCT, rr, gg, bb
   dummy = self->set_data()
-  dummy = self->set_plot_params(COLORS='white')  
   dummy = self->set_map_params()  
   dummy = self->set_shading_params()
   dummy = self->set_wind()  
@@ -2422,9 +2381,15 @@ PRO w_Map__Define
   ; This is for the colors and data-levels 
   struct = {w_Map_PLOT_PARAMS              , $
             type           : 0L            , $ ; USER or AUTO generated levels
-            nlevels        : 0L            , $ ; number of data levels
-            colors         : PTR_NEW()     , $ ; array of nlevels colors
-            levels         : PTR_NEW()     , $ ; array of nlevels data levels
+            nlevels        : 0L            , $ ; data levels
+            colors         : PTR_NEW()     , $ ; table colors ([r,g,b])
+            levels         : PTR_NEW()     , $ ; array of nlevels data levels (if user set)
+            contour_img    : FALSE         , $ ; the image is generated using contour
+            dcbar          : 0B            , $ ; if a dc bar
+            oob_top        : 0B            , $ ; if a top OOB color
+            oob_bot        : 0B            , $ ; if a bot OOB color
+            cmin           : 0B            , $ ; color index in the table
+            cmax           : 0B            , $ ; color index in the table
             neutral        : 0L            , $ ; neutral color
             min_val        : 0D            , $ ; min data level
             max_val        : 0D              $ ; max data level           
@@ -2453,10 +2418,10 @@ PRO w_Map__Define
   
   ; This is the information for one point to draw
   struct = {w_Map_POINT                    , $ 
-            thick          : 0D            , $ ; thickness or the point
-            psym           : 0L            , $ ; style or the point
-            symsize        : 0D            , $ ; style or the point
-            color          : 0L            , $ ; color or the point
+            thick          : 0D            , $ ; thickness of the point
+            psym           : 0L            , $ ; style of the point
+            symsize        : 0D            , $ ; symsize of the point
+            color          : 0L            , $ ; color of the point
             text           : ''            , $ ; point annotation
             charsize       : 0D            , $ ; point annotation size
             align          : 0D            , $ ; annotation alignement
@@ -2516,7 +2481,7 @@ PRO w_Map__Define
   ; This is for the wind vectors 
   struct = {w_Map_SHADING_PARAMS           , $
             relief_factor : 0D             , $ ; strenght of the shading (default: 0.7)
-            smooth        : 0L               $ ; slope layer smoohting width
+            smooth        : 0L               $ ; slope layer smoothing width
             }
   
   ; Finaly, this is the object
@@ -2524,11 +2489,11 @@ PRO w_Map__Define
              grid          : OBJ_NEW()              , $ ; the grid object (nx = Xsize, ny = Ysize)
              Xsize         : 0L                     , $ ; X size of the image in pixels
              Ysize         : 0L                     , $ ; Y size of the image in pixels
-             img           : PTR_NEW()              , $ ; Byte array ([Xsize,Ysize]) containing the indexes in the colors array
+             img           : PTR_NEW()              , $ ; image to plot
+             info          : PTR_NEW()              , $ ; Output from w_gr_datalevels
              data          : PTR_NEW()              , $ ; active data array ([Xsize,Ysize]) of any numeric type
              missing       : PTR_NEW()              , $ ; missing values in the data array
              sl            : PTR_NEW()              , $ ; shading layer for topography shading
-             contour_img   : FALSE                  , $ ; the imaeg is generated using contour
              nshapes       : 0L                     , $ ; number of active shape files to plot                  
              shapes        : PTR_NEW()              , $ ; array of nshapes {w_Map_SHAPE} structures                               
              npolygons     : 0L                     , $ ; number of active polygons to plot                  
@@ -2545,7 +2510,7 @@ PRO w_Map__Define
              plot_params   : {w_Map_PLOT_PARAMS}    , $ ; the plotting params          
              shading_params: {w_Map_SHADING_PARAMS} , $ ; the shading params          
              wind_params   : {w_Map_WIND_PARAMS}    , $ ; the wind params          
-             is_Shaped     : FALSE                  , $ ; is there at least one shape to draw?
+             is_Shaped     : FALSE                  , $ ; did the user specify a shape to draw?
              is_Shaded     : FALSE                  , $ ; did the user specify a DEM for shading?
              is_Polygoned  : FALSE                  , $ ; did the user specify a polygon to draw?
              is_Pointed    : FALSE                  , $ ; did the user specify a point to draw?

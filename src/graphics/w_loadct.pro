@@ -272,31 +272,6 @@ end
 
 ;+
 ; :Description:
-;    Set the sysvar !W_TABLE_SIZE
-;
-; :Params:
-;    table_size: in, required
-;                the table sixe
-;    
-; :Private:
-;
-;-
-pro w_LoadCT_set_sysvar, table_size
-
-  @WAVE.inc
-  compile_opt idl2  
-  
-  ; Does the system variable !W_TABLE_SIZE exist? If so, set its value.
-  ; If not, create it.
-  DefSysV, '!W_TABLE_SIZE', EXISTS=sysvarExists
-  IF sysvarExists $
-    THEN !W_TABLE_SIZE = table_size $
-      ELSE DefSysV, '!W_TABLE_SIZE', table_size
-  
-end
-
-;+
-; :Description:
 ;   This command is similar to IDL's loadct or Coyote's cgLoadCT and gives
 ;   access to a large number of new color tables.
 ;
@@ -403,7 +378,6 @@ pro w_LoadCT, table, $
         WINID=winID
     endelse
     table_size=!D.TABLE_SIZE
-    w_LoadCT_set_sysvar, table_size
     return
   endif else if arg_okay(table, /INTEGER, N_DIM=2) then begin ; palette case
     dims = Size(table, /DIMENSIONS)
@@ -412,7 +386,6 @@ pro w_LoadCT, table, $
     if cntthree eq 2 then begin
       TVLCT, table
       table_size = 3
-      w_LoadCT_set_sysvar, table_size
       return
     endif else begin
       IF threeIndex[0] EQ 0 THEN begin
@@ -422,7 +395,6 @@ pro w_LoadCT, table, $
         TVLCT, table
         table_size = dims[0]
       endelse
-      w_LoadCT_set_sysvar, table_size
       return
     endelse
   endif else MESSAGE, WAVE_Std_Message('table', /ARG)
@@ -446,7 +418,6 @@ pro w_LoadCT, table, $
     IF Keyword_Set(row) THEN rgb_table = Transpose(rgb_table)
   ENDIF ELSE BEGIN
     TVLCT, r, g, b    
-    w_LoadCT_set_sysvar, table_size
   ENDELSE
   
   ; If the WINDOW keyword is set, send these colors to a cgWindow object.
