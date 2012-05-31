@@ -604,9 +604,9 @@ function w_WPR::get_TimeSerie,varid, x, y, $
   
   if is_original then begin
   
-    for y=0, N_ELEMENTS(*self.years)-1 do begin
+    for yrs=0, N_ELEMENTS(*self.years)-1 do begin
     
-      obj = self.objs->FindByVar(Varid, (*self.years)[y], COUNT=count)
+      obj = self.objs->FindByVar(Varid, (*self.years)[yrs], COUNT=count)
       ok = obj->define_subset(SUBSET=self.subset)
       obj->getProperty, Nvars=Nvars
       tmp = obj->w_GEO_nc::get_TimeSerie(Nvars-1, point_i, point_j, t, $
