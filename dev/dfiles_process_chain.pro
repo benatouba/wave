@@ -29,6 +29,8 @@
 ;                 A reasonable value for temperature would be -0.0098
 ;    CLIP_MIN: in, optional
 ;              clip the computed gradient to a minimum value
+;    CROPBORDER: in, optional, type=integer
+;                number of grid points to crop on each side of the wrf grid
 ;
 ; :Author: CoK, 2012
 ;-
@@ -46,7 +48,7 @@ function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=
   wrfObj->getProperty, nx=nx, ny=ny
   
   ;Test if station is in grid and remove stations near grid borders
-  wrfObj->transform_LonLat, loc_x, loc_y, src, i_dst, j_dst ;warum ist i und j 10 geringer nur weil 10 grids entfernt werden? 
+  wrfObj->transform_LonLat, loc_x, loc_y, src, i_dst, j_dst 
   p = where((i_dst lt (-0.5)) or (j_dst lt (-0.5)) or (i_dst gt (nx+0.5)) or (j_dst gt (ny+0.5)), COMPLEMENT=p_in, NCOMPLEMENT=cnt_in)
   ok=wrfObj->define_subset()
   if cnt_in eq 0 then return, FALSE
