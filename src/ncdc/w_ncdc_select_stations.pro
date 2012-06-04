@@ -83,7 +83,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
     grid->GetProperty, nx=nx, ny=ny
     
     grid->transform_LonLat, _h.lon, _h.lat  > (-89.99), wgs, i_dst, j_dst ; for the AMUNDSEN-SCOTT station!
-    dummy = where((i_dst lt (-0.5)) or (j_dst lt (-0.5)) or (i_dst gt (nx+0.5)) or (j_dst gt (ny+0.5)), COMPLEMENT=p_in, NCOMPLEMENT=cnt_in)
+    dummy = where((i_dst lt (-0.5)) or (j_dst lt (-0.5)) or (i_dst gt (nx-0.5)) or (j_dst gt (ny-0.5)), COMPLEMENT=p_in, NCOMPLEMENT=cnt_in)
     if cnt_in eq 0 then begin
       MESSAGE, 'No NCDC station found!', /INFORMATIONAL
       return
@@ -106,6 +106,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
       map = OBJ_NEW('w_Map', grid, YSIZE=600)
       undefine, grid
     endif
+    
   endif else MESSAGE, WAVE_Std_Message(/ARG)
   
   stations = w_ncdc_select_stations_crop_struct(_h, p_in, cnt_in)
@@ -124,7 +125,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
                                 /NO_BAR, XFACTOR=1.2
     w_gr_Colorbar, info, FORMAT='(I4)', TITLE='Stat. elevation (m)', /FIT, /ADDCMD
     undefine, map
-    TVLCT, rr, gg, bb, /GET    
+    TVLCT, rr, gg, bb
   endif
   
 end
