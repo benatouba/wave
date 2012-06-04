@@ -340,7 +340,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
     ascii_tags = tag_names(ascii_data)
     nvals = N_ELEMENTS(ascii_tags)
     
-    date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda)+D_QMS ;NCDC mean time issue
+    date = w_ncdc_read_gsod_file_parse_time(ascii_data.yearmoda) + D_QMS ; NCDC mean time issue
     
     nb_entries=N_ELEMENTS(date)
     if nb_entries le 2 then continue 
