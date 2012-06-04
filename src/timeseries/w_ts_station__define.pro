@@ -470,6 +470,36 @@ pro w_ts_Station::removeVar, varName
   
 end
 
+;+
+; :Description:
+;    Delete variables from the station.
+;
+; :Params:
+;    varName: in, optional, type=string array
+;             the name(s) of the variables to remove
+;
+;-
+pro w_ts_Station::keepVar, varName
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if ~arg_okay(varName, TYPE=IDL_STRING) then Message, WAVE_Std_Message('varName', /ARG)
+  
+  names=self->GetVarNames(count=n)
+  
+  for i=0, n-1 do begin 
+ 
+  pos=where(varName eq names[i], cnt)
+  if cnt eq 0 then begin 
+  ok = self->HasVar(names[i], OBJECT=object) 
+  self.vars->Remove, object
+  endif
+  endfor  
+  self->setPeriod
+  
+end
 
 ;+
 ; :Description:
