@@ -476,7 +476,7 @@ end
 ;
 ; :Params:
 ;    varName: in, optional, type=string array
-;             the name(s) of the variables to remove
+;             the name(s) of the variables to keep
 ;
 ;-
 pro w_ts_Station::keepVar, varName
