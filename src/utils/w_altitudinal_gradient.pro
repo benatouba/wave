@@ -118,8 +118,13 @@ function w_altitudinal_gradient, var, height, $
         sig[m] = float(cntv)/nk
       endif else begin      
         ;compute alt grad by regress, default setting
-        out_arr[m] = regress(subarr_height[pv], subarr_var[pv], CORRELATION=lr_corr)
-        sig[m] = lr_corr*lr_corr
+        if TOTAL(subarr_height[pv]) ne 0 then begin
+          out_arr[m] = regress(subarr_height[pv], subarr_var[pv], CORRELATION=lr_corr)
+          sig[m] = lr_corr*lr_corr
+        endif else begin
+          out_arr[m] = default_val
+          sig[m] = 0
+        endelse
       endelse            
     endfor
     

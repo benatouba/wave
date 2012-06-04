@@ -463,7 +463,7 @@ pro w_ts_StatSet::removeVar, varName
   
 end
 
-pro w_ts_StatSet::keepVar, varName
+pro w_ts_StatSet::selVar, varName
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -472,9 +472,9 @@ pro w_ts_StatSet::keepVar, varName
   StatCount = self.Stats->Count()  
   IF StatCount EQ 0 THEN return
   
-  FOR j=0,StatCount-1 DO BEGIN
+  FOR j=0, StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    _Stat->keepVar, varName
+    _Stat->selVar, varName
   endfor  
      
   self->setPeriod

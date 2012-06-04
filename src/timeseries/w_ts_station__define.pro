@@ -472,14 +472,14 @@ end
 
 ;+
 ; :Description:
-;    Delete variables from the station.
+;    Delete variables from the station except for selected variable(s)
 ;
 ; :Params:
 ;    varName: in, optional, type=string array
 ;             the name(s) of the variables to keep
 ;
 ;-
-pro w_ts_Station::keepVar, varName
+pro w_ts_Station::selVar, varName
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -487,16 +487,14 @@ pro w_ts_Station::keepVar, varName
   
   if ~arg_okay(varName, TYPE=IDL_STRING) then Message, WAVE_Std_Message('varName', /ARG)
   
-  names=self->GetVarNames(count=n)
+  names = self->GetVarNames(count=n)
   
-  for i=0, n-1 do begin 
- 
-  pos=where(varName eq names[i], cnt)
-  if cnt eq 0 then begin 
-  ok = self->HasVar(names[i], OBJECT=object) 
-  self.vars->Remove, object
-  endif
-  endfor  
+  for i=0, n-1 do begin
+    pos=where(str_equiv(varName) eq str_equiv(names[i]), cnt)
+    if cnt ne 0 then continue
+    self->removeVar, names[i]
+  endfor
+  
   self->setPeriod
   
 end

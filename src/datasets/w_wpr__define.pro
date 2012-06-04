@@ -500,6 +500,134 @@ function w_WPR::get_Var, Varid, $
   
 end
 
+pro w_WPR::altitudinal_gradient, Varid, grad_VarName, $
+    FORCE=force, $
+    KERNEL_SIZE=kernel_size, $
+    DEFAULT_VAL=default_val, $
+    CLIP_MIN=clip_min, $
+    CLIP_MAX=clip_max, $
+    MIN_SIG=min_sig
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ;ON_ERROR, 2
+  
+  undefine, count, offset, time
+  
+  ;Check if the variable is available
+  if ~self->get_Var_Info(Varid, out_id=vid, $
+    units = units, $
+    description = description, $
+    varname = varname , $
+    dims = dims, $
+    dimnames = dimnames, $
+    is_static = is_static, $
+    is_original = is_original) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
+    
+  height = self->get_Var('hgt')
+ 
+  _gradvn = STRLOWCASE(grad_VarName)
+  
+  if N_ELEMENTS(KERNEL_SIZE) eq 0 then kernel_size = 9
+  if N_ELEMENTS(DEFAULT_VAL) eq 0 then default_val = 0.
+  if N_ELEMENTS(MIN_SIG) eq 0 then min_sig = 0.5
+  
+  _y = *self.years
+  for y=0, N_ELEMENTS(_y)-1 do begin
+    obj = self.objs->FindByVar(Varid, (_y)[y], COUNT=count)
+    ok = obj->define_subset(SUBSET=self.subset)
+    obj->getProperty, Nvars=Nvars, PATH=fPath
+    oPath= utils_replace_string(fPath, VarName, _gradvn)
+    
+    ; Check
+    if FILE_TEST(oPath) and ~KEYWORD_SET(FORCE) then Message, 'Output file already here. Set /FORCE if you want to overwrite it.'
+    
+    ; Make File
+    ; Open the source file in read-only mode.
+    sObj = Obj_New('NCDF_FILE', fPath, $
+      ErrorLoggerName='sourcefilelogger', /TIMESTAMP)
+    IF Obj_Valid(sObj) EQ 0 THEN Message, 'Source object cannot be created.'
+    
+    ; Open the destination file for writing.
+    dObj = Obj_New('NCDF_FILE', oPath, /CREATE, CLOBBER=force, /NETCDF4_FORMAT, $
+      ErrorLoggerName='destinationfilelogger', /TIMESTAMP)
+    IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
+    
+    ; Find all the global attributes in the source file and copy them.
+    attrNames = sObj->GetGlobalAttrNames(COUNT=attrCount)
+    FOR j=0,attrCount-1 DO BEGIN
+      if str_equiv(attrNames[j]) eq 'CREATION_DATE' then begin
+        dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), DATATYPE='CHAR'
+        continue
+      endif
+      if str_equiv(attrNames[j]) eq 'VARNAME' then begin
+        dObj->WriteGlobalAttr, 'VARNAME', _gradvn, DATATYPE='CHAR'
+        continue
+      endif
+      sObj->CopyGlobalAttrTo, attrNames[j], dObj
+    ENDFOR
+    
+    ; Find all the dimensions in the source file and copy them.
+    dimNames = sObj -> GetDimNames(COUNT=dimCount)
+    FOR j=0,dimCount-1 DO BEGIN
+      if str_equiv(dimNames[j]) eq 'TIME' then begin
+        dObj->WriteDim, 'time', /UNLIMITED
+        continue
+      endif
+      sObj->CopyDimTo, dimNames[j], dObj
+    ENDFOR
+    
+    ; Find all the variable definitions, attributes and data in the
+    ; source file and copy them.
+    varNames = sObj->GetVarNames(COUNT=varCount)
+    FOR j=0,varCount-1 DO BEGIN
+      if str_equiv(varNames[j]) eq str_equiv(varId) then continue
+      sObj->CopyVarDefTo, varNames[j], dObj
+      varAttrNames = sObj -> GetVarAttrNames(varNames[j], COUNT=varAttrCount)
+      FOR k=0,varAttrCount-1 DO BEGIN
+        sObj->CopyVarAttrTo, varNames[j], varAttrNames[k], dObj
+      ENDFOR
+      sObj->CopyVarDataTo, varNames[j], dObj
+    ENDFOR
+    
+    des_str = 'Altitudinal gradient from var ' + varId
+    des_str += ' KERNEL_SIZE='+str_equiv(KERNEL_SIZE)
+    des_str += ' DEFAULT_VAL='+str_equiv(DEFAULT_VAL)
+    des_str += ' MIN_SIG='+str_equiv(MIN_SIG)
+    if N_ELEMENTS(CLIP_MIN) ne 0 then des_str += ' CLIP_MIN='+str_equiv(CLIP_MIN) else des_str += ' NO_CLIP_MIN'
+    if N_ELEMENTS(CLIP_MAX) ne 0 then des_str += ' CLIP_MAX='+str_equiv(CLIP_MAX) else des_str += ' NO_CLIP_MAX'
+    
+    dObj->WriteVarDef, _gradvn, ['west_east','south_north','time'], DATATYPE='FLOAT'
+    dObj->WriteVarAttr, _gradvn, 'long_name', des_str
+    dObj->WriteVarAttr, _gradvn, 'units', units + '.m-1'
+    dObj->WriteVarAttr, _gradvn, 'agg_method', 'MEAN'
+    
+    ; Compute
+    data = reform(obj->get_Var(Nvars-1, t))
+    grad = w_altitudinal_gradient(data, height, $
+      KERNEL_SIZE=kernel_size, $
+      DEFAULT_VAL=default_val, $
+      CLIP_MIN=clip_min, $
+      CLIP_MAX=clip_max, $
+      SIG=sig)
+            
+    pnok = where(sig lt MIN_SIG, cntnok)
+    if cntnok ne 0 then grad[pnok] = default_val
+       
+    ; Fill with data
+    dObj->SetMode, /DATA
+    dObj->WriteVarData, _gradvn, grad
+    
+    undefine, dObj, sObj
+    
+    self.objs->Add, OBJ_NEW('w_GEO_nc', FILE=oPath)
+    
+  endfor
+  
+end
+
 ;+
 ; :Description:
 ;    This function reads a variable from the file but only
