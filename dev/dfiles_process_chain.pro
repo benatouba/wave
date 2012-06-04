@@ -32,7 +32,8 @@
 ;
 ; :Author: CoK, 2012
 ;-
-function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=res, MIN_DAYS=min_days, GRAD=grad, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, CLIP_MIN=clip_min
+function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=res, MIN_DAYS=min_days, GRAD=grad, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, CLIP_MIN=clip_min, $
+                                        CROPBORDER=cropborder
 
   @WAVE.inc
   COMPILE_OPT IDL2
@@ -41,12 +42,13 @@ function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=
   
   ;Get station location, elevation
   statObj->getProperty, NAME=name, ID=id, LOC_X=loc_x, LOC_Y=loc_y, SRC=src, ELEVATION=elev
+  ok = wrfObj->define_subset(CROPBORDER=cropborder)
   wrfObj->getProperty, nx=nx, ny=ny
   
-  ;Test if station is in grid and crop grid borders
-  wrfObj->transform_LonLat, loc_x, loc_y, src, i_dst, j_dst
+  ;Test if station is in grid and remove stations near grid borders
+  wrfObj->transform_LonLat, loc_x, loc_y, src, i_dst, j_dst ;warum ist i und j 10 geringer nur weil 10 grids entfernt werden? 
   p = where((i_dst lt (-0.5)) or (j_dst lt (-0.5)) or (i_dst gt (nx+0.5)) or (j_dst gt (ny+0.5)), COMPLEMENT=p_in, NCOMPLEMENT=cnt_in)
-  
+  ok=wrfObj->define_subset()
   if cnt_in eq 0 then return, FALSE
   
   ;Test if variable is valid (days missing)
@@ -76,8 +78,11 @@ function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=
     
   h=wrfObj->get_var('hgt') ;STATIC KEYWORD NOT AVAILABLE FOR WPR
   
+     if w_i eq nx then w_i-=1
+   if w_j eq ny then w_j-=1
+
   dist=sqrt(dist_x^2+dist_y^2)
-  dh=elev-h[w_i, w_j]
+  dh=elev-h[w_i, w_j] ; wenn w_j= 180..müsst man nicht -1 settzen?
   
   ;######Altitudinal Gradient#######
   if N_ELEMENTS(KERNEL_SIZE) ne 0 then begin
@@ -90,6 +95,7 @@ function dfiles_process_chain_get_data, statObj, wrfObj, stat_var, wrf_var, RES=
     alt_v=wrfObj->get_var(wrf_var)
     alt_h=wrfObj->get_var('hgt')
     ok=wrfObj->define_subset()
+     
     g=w_altitudinal_gradient(alt_v, alt_h, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, CLIP_MIN=clip_min, SIG=sign)
     grad=REFORM(g[ngrid,ngrid,*])
     sig=REFORM(sign[ngrid,ngrid,*])
@@ -158,7 +164,7 @@ end
 ;
 ; :Author: CoK, 2012
 ;-
-pro dfiles_process_chain, nc_var, wrf_var, MIN_DAYS=min_days, GRAD=grad, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, CLIP_MIN=clip_min
+pro dfiles_process_chain, nc_var, wrf_var, MIN_DAYS=min_days, GRAD=grad, KERNEL_SIZE=kernel_size, DEFAULT_VAL=default_val, CLIP_MIN=clip_min, SAV=sav
 
   @WAVE.inc
   COMPILE_OPT IDL2
@@ -168,10 +174,16 @@ pro dfiles_process_chain, nc_var, wrf_var, MIN_DAYS=min_days, GRAD=grad, KERNEL_
   ;#####Get WRF and Station data#####
   ;  wrf30=OBJ_NEW('w_WPR', DIRECTORY='V:\TIP-PR1\WET\d30km\d')
   ;  wrf10=OBJ_NEW('w_WPR', DIRECTORY='V:\TIP-PR1\WET\d10km\d')
-  ;ncdc=w_ncdc_read_gsod_file( DIRECTORY='D:\Studium\diplomarbeit\DATA\ncdc_filtered_30', KEEP_VARS=nc_var)
-  wrf30=OBJ_NEW('w_WPR', DIRECTORY= 'D:\Studium\Arbeit\zhadang products\d30km\d')
-  wrf10=OBJ_NEW('w_WPR', DIRECTORY= 'D:\Studium\Arbeit\zhadang products\d10km\d')
-  ncdc=w_ncdc_read_gsod_file( DIRECTORY='D:\Studium\diplomarbeit\DATA\test_data', KEEP_VARS=nc_var)
+  wrf30=OBJ_NEW('w_WPR', DIRECTORY='D:\Studium\Arbeit\zhadang products\d30km\d')
+  wrf10=OBJ_NEW('w_WPR', DIRECTORY='D:\Studium\Arbeit\zhadang products\d10km\d')
+  
+  if KEYWORD_SET(SAV) then begin
+  RESTORE, 'D:/Actual workspace/Dipl_stuff/NCDC_STAT_30km_cropped.sav' 
+  ncdc->keepVar, nc_var
+  endif else $
+  ncdc=w_ncdc_read_gsod_file( DIRECTORY='D:\Studium\diplomarbeit\DATA\ncdc_filtered_30', KEEP_VARS=nc_var)
+  
+  ;ncdc=w_ncdc_read_gsod_file( DIRECTORY='D:\Studium\diplomarbeit\DATA\test_data', KEEP_VARS=nc_var)
   
   
   root='D:\Studium\diplomarbeit\DATA\ncdc_wrf_data\'
@@ -190,14 +202,14 @@ pro dfiles_process_chain, nc_var, wrf_var, MIN_DAYS=min_days, GRAD=grad, KERNEL_
     
     
     ok=dfiles_process_chain_get_data(statObj, wrf30, nc_var, wrf_var, RES=30, MIN_DAYS=min_days, KERNEL_SIZE=kernel_size, $
-      DEFAULT_VAL=default_val, CLIP_MIN=clip_min)
+      DEFAULT_VAL=default_val, CLIP_MIN=clip_min, CROPBORDER=10)
     if ~ok then continue
     
     statObj->write_ASCII_file, FILE=root+str_equiv(nc_var)+'/d30km'+'/NCDC_WRF30_'+str_equiv(nc_var)+'_'+ids[i]+'.dat', TITLE='NCDC/WRF30 Timeline'
     d1cnt+=1
     
     ok=dfiles_process_chain_get_data(statObj, wrf10, nc_var, wrf_var, RES=10, MIN_DAYS=min_days, KERNEL_SIZE=kernel_size, $
-      DEFAULT_VAL=default_val, CLIP_MIN=clip_min)
+      DEFAULT_VAL=default_val, CLIP_MIN=clip_min, CROPBORDER=5)
     if ~ok then continue
     
     statObj->write_ASCII_file, FILE=root+str_equiv(nc_var)+'/d10km'+'/NCDC_WRF10_'+str_equiv(nc_var)+'_'+ids[i]+'.dat', TITLE= 'NCDC/WRF10 Timeline'
