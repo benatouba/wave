@@ -38,7 +38,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
     return, 0
   endif
   
-  ; Ceck if everything needed is here  
+  ; Check if everything needed is here  
   if N_ELEMENTS(NAMELIST) eq 0 then namelist = DIALOG_PICKFILE(TITLE='Please select the namelist.wpp file', /MUST_EXIST, FILTER='*.wpp')
   if namelist eq '' then Message, WAVE_Std_Message(/FILE)  
   self.namelist_file = namelist  
@@ -48,7 +48,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   
   ; Let's go
   if self.do_cache then begin
-    self.cachepath = self.output_directory + '/cache'
+    self.cachepath = self.output_directory + '/cache'+Timestamp(11, RANDOM_DIGITS=6, /VALID) 
     FILE_MKDIR, self.cachepath
   endif
   
@@ -71,14 +71,9 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   self.Logger->AddText, '', PRINT=print
   
   ; Parse the variable files. Need a WRF template for this
-  ite = 0L
-  while ~ caching((*self.ifiles)[ite], /CHECK, CACHEPATH=self.cachepath) do begin
-    ite+=1
-    if ite gt self.n_ifiles-1 then message, 'Something got really wrong with caching'
-  endwhile
-  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
-  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, /DELETE)  
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE)  
   self.Logger->AddText, 'Parse variable definitions ...', PRINT=print  
   if ~ self->_Parse_VarDefFile(self.vstatic_file, 'static', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.vstatic_file
   if ~ self->_Parse_VarDefFile(self.v2d_file, '2d', PRINT=print) then Message, 'Unable to parse the vardef file. Please check it: ' + self.v2d_file 
@@ -131,7 +126,7 @@ END
 ;   Parse the namelist file.
 ;
 ;-
-function w_WPP::_Parse_Namelist
+function w_WPP::_parse_Namelist
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -204,6 +199,7 @@ function w_WPP::_Parse_Namelist
         endif
       end
       'OUTPUT_DIRECTORY': begin
+        if str_equiv(val) eq str_equiv('-') then val = utils_clean_path(self.output_directory + '/products', /MARK_DIRECTORY)
         if FILE_TEST(val, /DIRECTORY) then self.output_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
       'PRESSURE_LEVELS': begin
@@ -250,8 +246,7 @@ function w_WPP::_Parse_Namelist
   if self.vsoil_file eq '' then Message, 'Problem while parsing vsoil_file field.'
   if self.project_acronym eq '' then Message, 'Problem while parsing project_acronym field.'
   if self.search_pattern eq '' then Message, 'Problem while parsing search_pattern field.'
-  if self.product_directory eq '' then $
-     self.product_directory = utils_clean_path(self.output_directory + '/products', /MARK_DIRECTORY)
+  if self.product_directory eq '' then Message, 'Problem while parsing product_directory field.'
   
   return, 1
   
@@ -262,7 +257,7 @@ end
 ;    Parse a variables file
 ;    
 ;-
-function w_WPP::_Parse_VarDefFile, file, type, PRINT=print
+function w_WPP::_parse_VarDefFile, file, type, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -694,7 +689,7 @@ pro w_WPP::_add_var_to_h_file
   
   ; Vardata
   if self.active_var.type eq '3d_press' then pressure_levels = *self.pressure_levels
-  data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
+  data = self.active_wrf->get_var(self.active_var.name, dummy, varnt, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
   
   dObj = self.active_dObj
   dObj->SetMode, /DATA
@@ -809,12 +804,22 @@ end
 ;
 ; :Keywords:
 ;    FILES: out
-;           the list of the files found for this year
+;           the list of the files for this year (as many filepaths as days).
+;           Where files are missing the link to the first valid file is given 
+;           as "template". You can can check the validity of the files with 
+;           the output keyword `VALID`
+;    NMISSING: out
+;              the number of missing files (if any)
+;    VALID: out
+;           byte array of same size as `FILES`
 ;
 ; :Returns:
 ;    1 if enough files have been found, 0 if not
 ;-
-function w_WPP::check_filelist, year, FILES=files, NMISSING=nmissing, VALID=valid
+function w_WPP::check_filelist, year, $
+    FILES=files, $
+    NMISSING=nmissing, $
+    VALID=valid
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -829,7 +834,7 @@ function w_WPP::check_filelist, year, FILES=files, NMISSING=nmissing, VALID=vali
 
   if ~arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('YEAR', /ARG)
 
-  ;Time
+  ; Complete timeserie for the year
   if self.domain eq 1 then h=3 else h=1
   t0 = QMS_TIME(year=year,month=1,day=1,hour=h)
   t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
@@ -838,36 +843,34 @@ function w_WPP::check_filelist, year, FILES=files, NMISSING=nmissing, VALID=vali
   PTR_FREE, self.active_time
   self.active_time = PTR_NEW(time)
   
-  ; Find necessary data
+  ; check if files for this year are here
   GEN_date_doy, ret, ndays, YEAR=year, month=12, day=31
   pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
-  
-  files = (*self.ifiles)[matches]  
+  if nfiles eq 0 then Message, 'Zero files found, big problem.'  
+  files = (*self.ifiles)[matches] ; Just this one year first  
   files = files[UNIQ(files,SORT(files))]
-  valid = BYTARR(N_ELEMENTS(files)) + 1B
-  nmissing = ndays - N_ELEMENTS(files)
-  if nmissing eq 0 then return, 1
   
+  ; Now check for the single days
   ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=1), $
                              QMS_TIME(year=year,day=31,month=12), $
                              TIMESTEP=D_QMS)
-  
+  valid = BYTARR(ndays) + 1B 
   ofiles = STRARR(ndays)
   for i=0L, ndays-1 do begin
-    pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ TIME_to_STR(ts[i], MASK='yyyy*mm*dd') +'*'
+    pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ TIME_to_STR(ts[i], MASK='yyyy*mm*dd') +'_*'
     matches = Where(StrMatch(files, pattern), nfiles)
     if nfiles eq 1 then begin
-      ofiles[i] = files[matches] 
+      ofiles[i] = files[matches]       
     endif else begin
       valid[i] = 0
       ofiles[i] = files[0]
     endelse
   endfor
   files = ofiles
-  
-  return, 0
-  
+  dummy = where(~ valid, nmissing)
+  if nmissing eq 0 then return, 1 else return, 0
+   
 end
 
 ;+
@@ -916,15 +919,8 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
        
   ; Define
   ; Tpl Object  
-  if self.do_cache then begin 
-   ite = 0L
-   while ~ caching((*self.ifiles)[ite], /CHECK, CACHEPATH=self.cachepath) do begin
-    ite+=1
-    wait, 5
-    if ite gt 300 then message, 'Something got really wrong with caching'
-   endwhile
-   file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
-  endif else file = (*self.ifiles)[ite]
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
+    else file = (*self.ifiles)[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
  
   self.logger->addText, 'Generating product files ...', PRINT=print
@@ -943,7 +939,7 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
   self.logger->addText, '', PRINT=print
 
   OBJ_DESTROY, self.active_wrf    
-  if self.do_cache then file = caching((*self.ifiles)[ite], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+  if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
       
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
   deltah =  delta / 60L / 60L
@@ -1018,8 +1014,9 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid) then begin
    messg = 'Not enough files to complete (missing ' + str_equiv(nmissing) + '). Continue? (y or n)'
    READ, messg, PROMPT=messg
-   GEN_str_log, ret, messg, ok
+   GEN_str_log, ret, messg, ok   
    if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
+   self.logger->addText, ' !!! Files missing (' + str_equiv(nmissing) + ')', PRINT=print   
   endif
   
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
@@ -1027,15 +1024,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
        
   ; Define
   ; Tpl Object  
-  if self.do_cache then begin 
-   ite = 0L
-   while ~ caching(files[0], /CHECK, CACHEPATH=self.cachepath) do begin
-    ite+=1
-    wait, 5
-    if ite gt 300 then message, 'Something got really wrong with caching'
-   endwhile
-   file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
-  endif else file = files[0]
+  if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
+    else file = files[0]
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
   self.active_valid = valid[0]
   
@@ -1056,44 +1046,45 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   self.logger->addText, 'Now start to fill with data ...', PRINT=print
   self.logger->flush
   
+  if self.domain eq 1 then ntperday = 8 else ntperday = 24
+  
   for f=0, N_ELEMENTS(files)-1 do begin
   
     logti = SYSTIME(/SECONDS)
-  
     if f ne 0 then begin
-      if self.do_cache then begin
-        ite = 0L
-        while ~ caching(files[f], /CHECK, CACHEPATH=self.cachepath) do begin
-          ite+=1
-          wait, 5
-          if ite gt 300 then message, 'Something got really wrong with caching'
-        endwhile
-        file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) 
-      endif else file = files[f]
+      if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
+        else file = files[f]
       self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
       self.active_valid = valid[f]
     endif
-    
-    self.active_wrf->get_time, wtime, wnt, wt0, wt1
-    if self.domain eq 1 then if wnt ne 9 then Message, 'Times in original WRF file?'
-    if self.domain ge 2 then if wnt ne 25 then Message, 'Times in original WRF file?'
-    
-    ;Check for time ok
-    p0 = where(*self.active_time eq wtime[1], cnt)
-    if cnt ne 1 then Message, 'T0 not found?'
-    p1 = where(*self.active_time eq wt1, cnt)
-    if cnt ne 1 then Message, 'T1 not found?'
-    nt = p1-p0+1
-    if self.domain eq 1 then if nt ne 8 then Message, 'Times?'
-    if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
-    
+        
     PTR_FREE, self.active_index
-    self.active_index = PTR_NEW(INDGEN(nt)+p0[0])
+    self.active_index = PTR_NEW(INDGEN(ntperday)+ntperday*f)
     
-    self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[p0], /NOTIME)+ $
+    ; Some useless check but one never knows
+    if self.active_valid then begin
+      self.active_wrf->get_time, wtime, wnt, wt0, wt1
+      if self.domain eq 1 then if wnt ne 9 then Message, 'Times in original WRF file?'
+      if self.domain ge 2 then if wnt ne 25 then Message, 'Times in original WRF file?'
+      p0 = where(*self.active_time eq wtime[1], cnt)
+      if cnt ne 1 then Message, 'T0 not found?'
+      p1 = where(*self.active_time eq wt1, cnt)
+      if cnt ne 1 then Message, 'T1 not found?'
+      nt = p1-p0+1
+      if self.domain eq 1 then if nt ne 8 then Message, 'Times?'
+      if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
+      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg.'      
+    endif
+    
+    if self.active_valid then begin
+      self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
              ' . Indexes in file : [' + str_equiv(min(*self.active_index)) + ',' + $
                 str_equiv(max(*self.active_index)) + '] from ' + str_equiv(self.active_n_time-1) + $
-                   ' ...', PRINT=print                   
+                   ' ...', PRINT=print     
+    endif else begin
+       self.logger->addText, 'File is missing: ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
+             ' . Filling with NaNs ...', PRINT=print     
+    endelse              
     self.logger->flush
     
     vars = (*self.vars)
@@ -1102,14 +1093,19 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
       if is_static then continue
       self->_add_var_to_h_file
     endfor
-    OBJ_DESTROY, self.active_wrf
     
-    if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+    ;Clean
+    OBJ_DESTROY, self.active_wrf    
+    if self.do_cache then begin     
+     del = f eq N_ELEMENTS(files)-1
+     if ~ del then del = self.active_valid or valid[f+1]
+     if del then file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+    endif
     
+    ; Log
     delta =  LONG(SYSTIME(/SECONDS) - logti)
     deltam =  delta / 60L 
-    deltas =  delta-(deltaM*60L)
-   
+    deltas =  delta-(deltaM*60L)   
     self.logger->addText, ' Done. Needed: ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
     self.logger->flush
   endfor

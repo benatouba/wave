@@ -381,7 +381,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
       un = uniq(_t, sort(_t))
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
-      print, sname, id_str
+      print, sname + ' ' + id_str + '. ' + str_equiv(filecnt-1-t) + ' left.'
       
       ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
          ID=id_str, $ ; Station ID
@@ -408,7 +408,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
       endfor
         
         if filecnt gt 1 then begin 
-        if OBJ_VALID(ncdc_station) then station_list->AddStat, ncdc_station 
+        if OBJ_VALID(ncdc_station) then station_list->AddStat, ncdc_station, /NO_SET_PERIOD
         endif else $
         station_list=ncdc_station
         
@@ -418,6 +418,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
   endfor
   
   if stat_val eq 0 then message, 'No valid station.'    
+  if filecnt gt 1 then station_list->setPeriod
   return, station_list
   
 end

@@ -8,7 +8,7 @@ path_to_variables_2d_file = .  ;variables_2d_wpp.csv
 path_to_variables_3d_file = .  ;variables_3d_wpp.csv
 path_to_variables_soil_file = .  ;variables_soil_wpp.csv
 path_to_variables_static_file = .  ;variables_static_wpp.csv
-compress_level = 0 ;gzip compression level (0=no compression)
+compress_level = 0 ;gzip compression level (0=no compression, 9=max compression)
 shuffle = 0 ; shuffle filter (1 or 0)
 project_acronym = tibet ; project short name (to be added as prefix to the product filenames)
 created_by = Fabien Maussion - fabien.maussion@tu-berlin.de

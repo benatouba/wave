@@ -223,17 +223,24 @@ end
 ;
 ; :Keywords:
 ;    REPLACE: in, optional, type=boolean
-;             set this keyword to replace the existing variable (if any)
+;             set this keyword to replace the existing station (if any)
 ;             instead of adding the data to the existing timeserie
 ;    NO_DESTROY: in, optional, type=boolean     
-;                default behavior when a variable allready exists 
+;                default behavior when a station allready exists 
 ;                is to add the data to the stored object and destroy
 ;                the argument. This makes sense in most of the cases
 ;                but sometimes you don't want this. Set this keyword
 ;                to avoid it.
+;   NO_SET_PERIOD: in, optional, type=boolean
+;                  default behavior is to check all stations periods
+;                  before return for consistency. For a station set 
+;                  in creation ths can lead to a large number of useless
+;                  operations. Set this keyword to avoid this check. 
+;                  Howver, it is recommended to do a ->set_period
+;                  by yourself after the station set has been defined
 ;
 ;-
-pro w_ts_StatSet::addStat, stat, REPLACE=replace, NO_DESTROY=no_destroy
+pro w_ts_StatSet::addStat, stat, REPLACE=replace, NO_DESTROY=no_destroy, NO_SET_PERIOD=no_set_period
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -253,7 +260,7 @@ pro w_ts_StatSet::addStat, stat, REPLACE=replace, NO_DESTROY=no_destroy
     self.stats->Add, stat    
   endelse
     
-  self->setPeriod
+  if ~ KEYWORD_SET(NO_SET_PERIOD) then self->setPeriod
   
 end
 
@@ -437,10 +444,19 @@ pro w_ts_StatSet::removeStat, STATNAME=statname, STATID=statid
   COMPILE_OPT IDL2
   
   
-  n = N_ELEMENTS(statname)
+  n = N_ELEMENTS(statname)  
+  for i=0, n-1 do begin
+   if self->Hasstat(STATNAME=statname, OBJECT=object) then begin
+    self.stats->Remove, object
+   endif
+  endfor  
+  n = N_ELEMENTS(statid)  
+  for i=0, n-1 do begin
+   if self->Hasstat(STATID=statid, OBJECT=object) then begin
+    self.stats->Remove, object
+   endif
+  endfor  
   
-  for i=0, n-1 do if self->Hasstat(STATNAME=statname, STATID=statid) then self.vars->Remove, object
-    
   self->setPeriod
   
 end

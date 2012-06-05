@@ -141,6 +141,46 @@ pro w_WPR::Cleanup
   
 END
 
+;+
+; :Description:
+;    Get access to some params. 
+;    
+; :Categories:
+;         WAVE/OBJ_GIS 
+;
+; :Keywords:
+;    
+;    _Ref_Extra: out
+;                all parent classed property
+;    
+; :History:
+;     Written by FaM, 2010.
+;-      
+PRO w_WPR::GetProperty,  $
+    RES=RES,  $
+    TRES=tres,  $
+    DIRECTORY=directory,  $
+    _Ref_Extra=extra
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  IF Arg_Present(RES) NE 0 THEN RES = self.RES
+  IF Arg_Present(tres) NE 0 THEN tres = self.tres
+  IF Arg_Present(directory) NE 0 THEN directory = self.directory
+  
+  self->w_WRF::GetProperty, _Extra=extra
+  
+end
+
 
 ;+
 ; :Description:
@@ -718,6 +758,7 @@ function w_WPR::get_TimeSerie,varid, x, y, $
     varname = varname , $
     dims = dims, $
     dimnames = dimnames, $
+    is_static = is_static, $
     is_original = is_original) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
     
   ; GIS
@@ -732,6 +773,15 @@ function w_WPR::get_TimeSerie,varid, x, y, $
   
   if is_original then begin
   
+     if is_static then begin
+      obj = self.objs->FindByVar(Varid, COUNT=count)
+      ok = obj->define_subset(SUBSET=self.subset)
+      obj->getProperty, Nvars=Nvars
+      out = obj->w_GEO_nc::get_TimeSerie(Nvars-1, point_i, point_j, time, $
+        dims = dims, $ ;
+        dimnames = dimnames)        
+    endif else begin 
+    
     for yrs=0, N_ELEMENTS(*self.years)-1 do begin
     
       obj = self.objs->FindByVar(Varid, (*self.years)[yrs], COUNT=count)
@@ -743,8 +793,10 @@ function w_WPR::get_TimeSerie,varid, x, y, $
       if N_ELEMENTS(out) eq 0 then out = tmp else out = [out,tmp]
       if N_ELEMENTS(time) eq 0 then time = t else time = [time,t]
       
+      
     endfor
     
+    endelse
     nt = N_ELEMENTS(time)
     
   endif else begin

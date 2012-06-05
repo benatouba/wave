@@ -106,7 +106,7 @@ end
 ;    NO_ZIP: in, optional, type=BOOLEAN
 ;            set this keyword to prevent unzipping the file (should not be set normally)
 ;    CHECK: in, optional, type=BOOLEAN
-;           set this keyword to check if the file is allready cached or beeing cached.
+;           set this keyword to check if the file is already cached or beeing cached.
 ;           output is 1 if everything is clear and you can cache it, 0 if not (in this
 ;           case you may want to wait or do something else)
 ;           
@@ -151,7 +151,7 @@ function caching, filename , $
   lockfile = caching_combine_path_file(cachepath, _filename + '.lck')
   
   if KEYWORD_SET(CHECK) then begin
-    if ~ file_test(cachefile) and ~ file_test(lockfile) then return, 1 ; everything is ok
+    if ~ file_test(lockfile) then return, 1 ; everything is ok
     return, 0 ; not ok
   endif
   

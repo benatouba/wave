@@ -38,7 +38,7 @@ pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classe
   if ~OBJ_VALID(map) and ~OBJ_ISA(map, 'w_Map') then message, WAVE_Std_Message('map', /ARG)
   if ~OBJ_VALID(wrf) and ~OBJ_ISA(wrf, 'w_wrf') then message, WAVE_Std_Message('wrf', /ARG)
   
-  toplot = wrf->get_var('lucat')
+  toplot = (wrf->get_var('lucat'))[*,*,0]
   
   levels = [INDGEN(24)+1,28]
   

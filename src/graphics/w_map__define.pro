@@ -2006,6 +2006,7 @@ pro w_Map::add_img, $
     POSITION=position, $
     WINDOW=window, $
     MULTIMARGIN=multimargin, $
+    MARGIN=margin, $
     NOERASE=noerase
     
   ;--------------------------
@@ -2019,9 +2020,9 @@ pro w_Map::add_img, $
     cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
     xwin = !D.WINDOW
     if PTR_VALID(self.img) then begin
-      cgImage, *self.img, /NORMAL, POSITION=position
+      cgImage, *self.img, /NORMAL, POSITION=position, MARGIN=margin, MULTIMARGIN=multimargin
     endif else begin
-      cgImage, (*(self.info)).loc, /NORMAL, POSITION=position
+      cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=position
     endelse
     wdelete, xwin
     wset, tmp
@@ -2030,9 +2031,9 @@ pro w_Map::add_img, $
   ; Std image
   if PTR_VALID(self.img) then begin
     if self.is_Shaded then begin
-      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
     endif else begin
-      cgImage, *self.img, /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+      cgImage, *self.img, /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
     endelse
   endif else if PTR_VALID(self.info) then begin
   
@@ -2045,7 +2046,7 @@ pro w_Map::add_img, $
     endif
     
     if do_shade then begin
-      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
     endif else begin
       if self.plot_params.contour_img then begin
         message, 'contour image, no'
@@ -2071,7 +2072,7 @@ pro w_Map::add_img, $
         if ncolors le 1 then Message, 'N_colors to small, sorry youll have to choose other levels'
         if ncolors gt 256 then Message, 'N_colors to small, sorry youll have to choose other levels'
         palette = w_gr_ColorToRGB(colors, ROW=row)  
-        cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
+        cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MARGIN=margin, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
       endelse
     endelse
     
