@@ -4,7 +4,7 @@
 ;    The following parameters are necessary inputs for the procedure.
 ;
 ; :Params:
-;    precipitation: in, required, the monthly precipitation sum as an array of 12 elements
+;    precipitation: in, required, the monthly precipitation sum per day as an array of 12 elements
 ;    temperature: in, required, the monthly mean temperature as an array of 12 elements
       
 ; 
@@ -16,8 +16,8 @@
 ;    timeperiod: in, optional, 'time period', the time period of years for which the climate diagram is averaged
 ;    max_temp: in, optional, array of 12 values with maximal temperature values measured for the respective months
 ;    min_temp: in, optional, array of 12 values with minimal temperature values measured for the respective months
-;    max_prcp: in, optional, array of 12 values with maximal precipitation values measured for the respective months    
-;    min_prcp: in, optional, array of 12 values with minimal precipitation values measured for the respective months
+;    max_prcp: in, optional, array of 12 values with maximal precipitation values per day measured for the respective months    
+;    min_prcp: in, optional, array of 12 values with minimal precipitation values per day measured for the respective months
 ;    valyears_temp: in, otional, array of 12 values with number of number years of validated temperature for the respective months
 ;    valyears_prcp: in, otional, array of 12 values with number of number years of validated precipitation for the respective months
 ;    
@@ -75,7 +75,7 @@ pro w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, 
   WDELETE, !D.WINDOW  
     
   cgbarplot, precipitation, color='blue', barnames=labels, YSTYLE=8, $
-    ytitle='precipitation [mm]', xstyle=9,  yrange=[0, maxiprcp], $
+    ytitle='precipitation per day [mm/d]', xstyle=9,  yrange=[0, maxiprcp], $
     position=[0.18, 0.15, 0.85, 0.78], /window
 
   if (N_ELEMENTS(max_prcp) ne 0)  and (N_ELEMENTS(min_prcp) ne 0) then $
