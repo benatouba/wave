@@ -10,9 +10,10 @@
 ;
 ; :Keywords:
 ;    DEWPOINT: in optional, array of dewpoint temperature values (in °C), same array size as pressure array needed
+;    HEIGHT: in, otional, array of height values (in m), same array size as pressure array needed
 ;    ANGLE: in, optional, default = 0.,
 ;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
-;    TEMPRANGE: in, optional, default = [-60,60],
+;    TEMPRANGE: in, optional, default = [-30,40],
 ;              set this keyword as deg. Celsius [min.value, max.value] to vary the x range of the diagram
 ;    FIGTITLE: in, optional, default='Skew-T-log-p-diagram'
 ;    PNG: in, optional, type = string
@@ -52,7 +53,7 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas constant [J/mol*K]
@@ -108,15 +109,26 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, T
   wset, cgQuery(/Current)  
    
 
-   ; plot isotherms
+  ; plot isotherms
   T_iso = INDGEN(60)*10 - 100 
   for i=0, N_ELEMENTS(T_iso)-1 do cgplots, skewt_logp_diagram_skewY([T_iso[i],T_iso[i]], yrange, ANGLE=angle, MINP=minp),$
   yrange, /DATA, NOCLIP=0, color='dark grey', WINDOW=window
   
-  ; plot isobars
+   ; plot isobars
    for i = 0, N_ELEMENTS(pticks)-1 do cgplots, [T_iso[0],T_iso[N_ELEMENTS(T_iso)-1]], [pticks[i],pticks[i]], /DATA,  NOCLIP=0,$
    color='dark grey', WINDOW=window
-  
+   
+   ; plot isohypses
+   if N_ELEMENTS(height) ne 0 then begin
+      hticks=fltarr(N_Elements(pticks))
+      for i = 0, (N_Elements(pticks)-1) do begin
+          hticks[i]=interpol(height, pressure, pticks[i], /spline)
+          isohypses=STRING((hticks/1000), FORMAT='(F4.1)')
+          cgtext, (MAX(xrange)+0.5), pticks[i], isohypses[i], /DATA, WINDOW=window
+      endfor
+      cgtext, (MAX(xrange)+6), pticks[4], 'height[km]',/DATA, WINDOW=window
+   endif 
+     
   ; plot dry adiabates
   for nda = 0,60 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5,$
   color='red7', WINDOW=window
@@ -124,7 +136,6 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, T
   ; plot moist adiabates
   for nma = 0,19 do cgplots, skewt_logp_diagram_skewY(T_moistadiab[nma,*], (pp*10), ANGLE=angle, MINP=minp), (pp*10), /DATA, NOCLIP=0,$
   LINESTYLE=2, color='blu7', WINDOW=window
- 
     
   ; plot dewpoint temperature and pressure
   if N_ELEMENTS(dewpoint) ne 0 then cgplot, skewt_logp_diagram_skewY(dewpoint, pressure, ANGLE=angle, MINP=minp), pressure, thick=3.,$
@@ -134,7 +145,6 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, ANGLE=angle, T
   cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=3., /OVERPLOT, color = 'black',$
   WINDOW=window
   cgplots,[xrange(0),xrange(1)],[yrange(1),yrange(1)], color=black, WINDOW=window, /DATA
-
   
  cgControl, EXECUTE=1
  
