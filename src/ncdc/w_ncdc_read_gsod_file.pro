@@ -177,6 +177,12 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       p = where(data gt 500 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
       val = {data:data, vname:ascii_tag, unit:'mm', description:'Snow depth in mm', missing:missing, agg_method:agg_method} 
+    end  
+    
+    'STP': begin
+      data = data/100 ; to hPa
+     
+      val = {data:data, vname:ascii_tag, unit:'hPa', description:'Mean station pressure in hPa', missing:missing, agg_method:agg_method} 
     end    
 ;    'FRSHTT': begin
 ;      missing = ''
