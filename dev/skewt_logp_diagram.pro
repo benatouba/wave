@@ -126,7 +126,7 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height,
           isohypses=STRING((hticks/1000), FORMAT='(F4.1)')
           cgtext, (MAX(xrange)+0.5), pticks[i], isohypses[i], /DATA, WINDOW=window
       endfor
-      cgtext, (MAX(xrange)+6), pticks[4], 'height[km]',/DATA, WINDOW=window
+      cgtext, (MAX(xrange)+8), pticks[4], 'height [km]', ORIENTATION=90., /DATA, WINDOW=window
    endif 
      
   ; plot dry adiabates
