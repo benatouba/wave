@@ -34,13 +34,13 @@ pro plot_diagram_chain, FILE=file
   timeperiod=''+startTime+' - '+stopTime+''   
   
   undefine, data
-
-  monthly_temp = w_ts_monthly_annual_cycle(temp, time, MAXMIN=1, SIGMIN=0.75, N_VALIDYEARS=1)
-  monthly_prcp = w_ts_monthly_annual_cycle(prcp, time, MAXMIN=1, SIGMIN=0.75, N_VALIDYEARS=1)
   
+  monthly_temp = w_ts_monthly_annual_cycle(temp, time, MIN=minTemp, MAX=maxTemp, SIGMIN=0.75, N_VALIDYEARS=n_validyears_temp)
+  monthly_prcp = w_ts_monthly_annual_cycle(prcp, time, MIN=minprcp, MAX=maxprcp, SIGMIN=0.75, N_VALIDYEARS=n_validyears_prcp)
+    
    cgWindow
-   w_climate_diagram,  monthly_prcp[0,*], monthly_temp[0,*], NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
-                       MAX_TEMP=monthly_temp[1,*], MIN_TEMP=monthly_temp[2,*], MAX_PRCP=monthly_prcp[1,*], MIN_PRCP=monthly_prcp[2,*], $
-                       VALYEARS_TEMP=monthly_temp[3,*], VALYEARS_PRCP=monthly_prcp[3,*] 
+   w_climate_diagram,  monthly_prcp, monthly_temp, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
+                       MAX_TEMP=maxTemp, MIN_TEMP=minTemp, MAX_PRCP=maxprcp, MIN_PRCP=minprcp, $
+                       VALYEARS_TEMP=n_validyears_temp, VALYEARS_PRCP=n_validyears_prcp 
   
 end

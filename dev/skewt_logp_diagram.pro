@@ -104,7 +104,7 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height,
   cgplot, temperature, pressure, position=[0.13, 0.1, 0.87, 0.9], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
            xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=figtitle, $
-           YSTYLE=1,XSTYLE=9, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
+           YSTYLE=9,XSTYLE=9, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
   cgControl, EXECUTE=0
   wset, cgQuery(/Current)  
    
@@ -117,18 +117,7 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height,
    ; plot isobars
    for i = 0, N_ELEMENTS(pticks)-1 do cgplots, [T_iso[0],T_iso[N_ELEMENTS(T_iso)-1]], [pticks[i],pticks[i]], /DATA,  NOCLIP=0,$
    color='dark grey', WINDOW=window
-   
-   ; plot isohypses
-   if N_ELEMENTS(height) ne 0 then begin
-      hticks=fltarr(N_Elements(pticks))
-      for i = 0, (N_Elements(pticks)-1) do begin
-          hticks[i]=interpol(height, pressure, pticks[i], /spline)
-          isohypses=STRING((hticks/1000), FORMAT='(F4.1)')
-          cgtext, (MAX(xrange)+0.5), pticks[i], isohypses[i], /DATA, WINDOW=window
-      endfor
-      cgtext, (MAX(xrange)+8), pticks[4], 'height [km]', ORIENTATION=90., /DATA, WINDOW=window
-   endif 
-     
+    
   ; plot dry adiabates
   for nda = 0,60 do cgplots, skewt_logp_diagram_skewY(T_adiab[nda,*], p, ANGLE=angle, MINP=minp), p, /DATA, NOCLIP=0, LINESTYLE=5,$
   color='red7', WINDOW=window
@@ -145,6 +134,12 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height,
   cgplot, skewt_logp_diagram_skewY(temperature, pressure, ANGLE=angle, MINP=minp), pressure, thick=3., /OVERPLOT, color = 'black',$
   WINDOW=window
   cgplots,[xrange(0),xrange(1)],[yrange(1),yrange(1)], color=black, WINDOW=window, /DATA
+  
+   ; plot isohypses
+   if N_ELEMENTS(height) ne 0 then begin
+      hticks=interpol(height, pressure, pticks)/1000.
+      cgAxis, /YAxis, YTICKS=7, YTICKV=pticks, YLOG=1, YTICKNAME=Number_Formatter(hticks), WINDOW=window, YTICKLEN=0., YTITLE='height [km]'
+   endif 
   
  cgControl, EXECUTE=1
  
