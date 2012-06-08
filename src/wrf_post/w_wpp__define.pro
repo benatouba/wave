@@ -52,7 +52,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
     FILE_MKDIR, self.cachepath
   endif
   
-  ; Logger
+  ; Logger  
   logf = self.output_directory + '/wpp_init_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
   ; General info
@@ -166,6 +166,9 @@ function w_WPP::_parse_Namelist
       'SEARCH_PATTERN': begin
         matches = Where(StrMatch(val, '*{domain}*'), count)
         if count gt 0 then self.search_pattern = val
+      end
+      'DOM_SUFFIX': begin
+        if val ne '' then self.dom_suffix = val
       end
       'PRODUCT_DIRECTORY': begin
         if FILE_TEST(val, /DIRECTORY) then self.product_directory = utils_clean_path(val, /MARK_DIRECTORY)
@@ -399,16 +402,11 @@ pro w_WPP::_set_active_var, var, year, agg, obj, IS_STATIC=is_static
   ON_ERROR, 2
 
   case (self.domain) of
-    1: begin 
-      dom_str = 'd30km'
-    end
-    2:  begin 
-      dom_str = 'd10km'
-    end    
-    else: begin
-      dom_str = 'd02km'    
-    end
-  endcase
+    1: dom_str = 'd30km'
+    2:  dom_str = 'd10km'
+    else: dom_str = 'd02km'    
+  endcase  
+  if self.dom_suffix ne '' then dom_str += self.dom_suffix
    
   if var.type eq 'static' then begin
     f_dir = dom_str+'/static'
@@ -974,9 +972,11 @@ end
 ;           set this keyword to overwrite existing NCDF files in the directory
 ;    PRINT: in, optional, type=boolean, default=1
 ;           if set (default), the log messages are printed in the console as well
-;
+;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
+;                        if set the programm will not ask you for permission if files 
+;                        are missing (dangerous)
 ;-
-pro w_WPP::process_h, year, PRINT=print, FORCE=force
+pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
 
   ; Set up environnement and Error handling
   @WAVE.inc
@@ -1002,9 +1002,15 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
   ; Logger
-  logf = self.output_directory + '/wpp_process_h_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  case (self.domain) of
+    1: dom_str = 'd30km'
+    2:  dom_str = 'd10km'
+    else: dom_str = 'd02km'
+  endcase
+  if self.dom_suffix ne '' then dom_str += self.dom_suffix
+  logf = self.output_directory + '/wpp_process_h_' + dom_str + ' ' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
-  
+
   obj_destroy, self.active_wrf
   ptr_free, self.active_time
   ptr_free, self.active_index
@@ -1013,7 +1019,13 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force
   
   if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid) then begin
    messg = 'Not enough files to complete (missing ' + str_equiv(nmissing) + '). Continue? (y or n)'
-   READ, messg, PROMPT=messg
+   if KEYWORD_SET(NO_PROMPT_MISSING) then begin
+     Message, messg, /INFORMATIONAL
+     Print, 'y'
+     messg = 'y'
+   endif else begin
+     READ, messg, PROMPT=messg
+   endelse
    GEN_str_log, ret, messg, ok   
    if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
    self.logger->addText, ' !!! Files missing (' + str_equiv(nmissing) + ')', PRINT=print   
@@ -1302,11 +1314,14 @@ end
 ;           set this keyword to overwrite existing NCDF files in the directory
 ;    PRINT: in, optional, type=boolean, default=1
 ;           if set (default), the log messages are printed in the console as well
+;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
+;                        if set the programm will not ask you for permission if files 
+;                        are missing (dangerous)
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force
+pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
 
-  self->process_h, year, PRINT=print, FORCE=force
+  self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
   self->process_all_means, year, PRINT=print, FORCE=force
   
 end
@@ -1337,6 +1352,7 @@ pro w_WPP__Define, class
   struct = { w_WPP                       ,  $
     namelist_file         : ''           ,  $ ; Path to the namelist.wpp file
     domain                : 0L           ,  $ ; From the namelist: The domain to process
+    dom_suffix            : ''           ,  $ ; From the namelist: a suffix to add to the domain identifier
     input_directory       : ''           ,  $ ; From the namelist: where to find the orginal WRF files
     output_directory      : ''           ,  $ ; From the namelist: where to put the output files
     product_directory     : ''           ,  $ ; From the namelist: where to put the product files. Default: output_directory/products 

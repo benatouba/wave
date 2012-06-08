@@ -1,4 +1,5 @@
 domain = 2 ; The domain to process
+dom_suffix = ; If you have more than one domain having the same resolution, a suffix is needed (eg _01, _02, ...)
 input_directory = /cfs/nas5/WET/Standard_V0_d02/ ; where to find the orginal WRF files
 output_directory =  /home/mowglie/WAVE_POST/WET ; where to put the output files (logs and products)
 product_directory =  - ; alternative product directory. Set to '-' for default (output_directory/products) 

@@ -2126,7 +2126,7 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   
   if FINITE(miss) then pok = where(ABS(_data-miss) gt epsilon, cntok) $
   else pok = where(FINITE(_data), cntok)
-  if cntok eq 0 then Message, 'No valid values in data!'
+
   _data = _data[pok]
   qms1 = qms1[pok]
   
@@ -2423,7 +2423,6 @@ pro TS_AGG_GRID, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_
   
   if FINITE(miss) then pnok = where(ABS(_data-miss) le epsilon, cntnok) $
     else pnok = where(FINITE(_data) eq 0, cntnok, NCOMPLEMENT=cntok)
-  if cntok eq 0 then Message, 'No valid values in data!'
   if cntnok ne 0 then begin
     valid[pnok] = 0B
     CASE dataTypeName OF
