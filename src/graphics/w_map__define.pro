@@ -1408,11 +1408,16 @@ end
 ;   img: in, optional
 ;        sets a true color image on the map. If not set, the true color
 ;        image is generated based on the map data, datalevels and colors.
-;
+; 
+; :Keywords:
+;   interpolate: in, optional, type=boolean, default=0
+;         Is set, bilinear interpolation is used to resize the image. Otherwise,
+;         nearest neighbor sampling is used instead.
+; 
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_img, img
+function w_Map::set_img, img, INTERPOLATE=interpolate
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1433,7 +1438,7 @@ function w_Map::set_img, img
     PTR_FREE, self.img
     PTR_FREE, self.info
     if s[1] ne self.Xsize or s[2] ne self.Ysize then $
-     self.img = PTR_NEW(FSC_Resize_Image(img, self.Xsize, self.Ysize)) $
+     self.img = PTR_NEW(FSC_Resize_Image(img, self.Xsize, self.Ysize, INTERPOLATE=interpolate)) $
        else self.img = PTR_NEW(img)    
     return, 1
   endif  
@@ -2351,13 +2356,13 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   
   if KEYWORD_SET(HR_BLUE_MARBLE) then begin
     w = OBJ_NEW('w_BlueMarble', /HR)
-    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
+    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]))
     undefine, w
   endif
   
   if KEYWORD_SET(BLUE_MARBLE) then begin    
     if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
-    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w), [2,0,1]))
+    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]))
     undefine, w
   endif
                  
