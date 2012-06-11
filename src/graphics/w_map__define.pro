@@ -58,6 +58,7 @@ pro w_Map::_DestroyPlotParams
   
   ptr_free, self.plot_params.colors
   ptr_free, self.plot_params.levels
+  ptr_free, self.plot_params.dcbar_colors
   self.plot_params = {w_Map_PLOT_PARAMS}
   
 end
@@ -634,6 +635,8 @@ end
 ;    OOB_BOT: in, optional, type = boolean
 ;             set this keyword to have a "ot arrow" type colorbar
 ;             this will be done autmatically if there are oob data
+;    COLORS: in, optional
+;            an array of N_LEVELS colors to use (currently accepted only for the /DCBAR case)
 ;    INVERTCOLORS: in, optional, type = boolean
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
 ;    NEUTRAL_COLOR: in, optional, type = color
@@ -651,6 +654,7 @@ function w_Map::set_plot_params, $
     N_LEVELS=n_levels, $
     CMIN=cmin, $
     CMAX=cmax, $
+    COLORS=colors, $
     INVERTCOLORS=invertcolors, $
     DCBAR=dcbar, $
     NEUTRAL_COLOR=neutral_color, $
@@ -697,6 +701,11 @@ function w_Map::set_plot_params, $
      b = Reverse(b)
   ENDIF
   self.plot_params.colors = PTR_NEW([[r], [g], [b]])
+  
+  ; DC bar colors
+  if N_ELEMENTS(COLORS) ne 0 then begin
+    self.plot_params.dcbar_colors = PTR_NEW(colors)
+  endif
    
   self.plot_params.neutral = N_ELEMENTS(NEUTRAL_COLOR) ne 0 ? cgColor(NEUTRAL_COLOR, /DECOMPOSED) : cgColor('white', /DECOMPOSED)
   self.plot_params.cmin = N_ELEMENTS(CMIN) ne 0 ? cmin : 0
@@ -1463,6 +1472,7 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
   neutral_color = self.plot_params.neutral
   dcbar = self.plot_params.dcbar
   if PTR_VALID(self.missing) then missing = *self.missing
+  if PTR_VALID(self.plot_params.dcbar_colors) and dcbar then DC_colors = *self.plot_params.dcbar_colors
   if self.plot_params.oob_top eq 1 then oob_top_color = 1
   if self.plot_params.oob_bot eq 1 then oob_bot_color = 1
   
@@ -1471,6 +1481,7 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
     N_LEVELS=n_levels, $
     NEUTRAL_COLOR=neutral_color, $
     MISSING=missing, $
+    COLORS=dc_colors, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
     CMIN=cmin, $ 
@@ -2392,6 +2403,7 @@ PRO w_Map__Define
             levels         : PTR_NEW()     , $ ; array of nlevels data levels (if user set)
             contour_img    : FALSE         , $ ; the image is generated using contour
             dcbar          : 0B            , $ ; if a dc bar
+            dcbar_colors   : PTR_NEW()     , $ ; if a dc bar, maybe colors
             oob_top        : 0B            , $ ; if a top OOB color
             oob_bot        : 0B            , $ ; if a bot OOB color
             cmin           : 0B            , $ ; color index in the table

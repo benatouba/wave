@@ -23,12 +23,15 @@
 ;    ALL_CLASSES: in, optional
 ;                 if set, all classes are in the legend. Default is to remove
 ;                 clases that are not in the data from the legend                 
+;    TO_PLOT: in, optional
+;             default is to take the first index of the WRF landcat. Set this 
+;             keyword to plot your own landcat instead              
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;
 ;-
-pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classes
+pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES=all_classes, TO_PLOT=to_plot
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -38,7 +41,7 @@ pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classe
   if ~OBJ_VALID(map) and ~OBJ_ISA(map, 'w_Map') then message, WAVE_Std_Message('map', /ARG)
   if ~OBJ_VALID(wrf) and ~OBJ_ISA(wrf, 'w_wrf') then message, WAVE_Std_Message('wrf', /ARG)
   
-  toplot = (wrf->get_var('lucat'))[*,*,0]
+  IF N_ELEMENTS(to_plot) eq 0 then to_plot = (wrf->get_var('lucat'))[*,*,0]
   
   levels = [INDGEN(24)+1,28]
   
@@ -73,7 +76,7 @@ pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classe
   b = [0,60,41,41,122,40,102,111,187,2,102,51,102,51,147,122,184,176,164,157,130,40,40,252,182]
    
   if not KEYWORD_SET(ALL_CLASSES) then begin
-    u = toplot[UNIQ(toplot, SORT(toplot))]    
+    u = to_plot[UNIQ(to_plot, SORT(to_plot))]    
     levels = levels[u-1]
     bar_tags = bar_tags[u-1]
     r = r[u-1]
@@ -84,7 +87,8 @@ pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES = all_classe
   bar_title = 'Category'
   
   d = map->set_Plot_Params()
-  d = map->set_data(toplot, wrf)
-  d = map->set_Plot_Params(COLORS=[[r],[g],[b]] , LEVELS=levels)
+  d = map->set_data(to_plot)
+  d = map->set_Plot_Params(COLORS=BYTE([[r],[g],[b]]), LEVELS=levels, /DCBAR)
+    
   
 end
