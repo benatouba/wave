@@ -315,7 +315,10 @@ function w_gr_DataLevels, data, $
     case dataTypeName of
       'FLOAT' : _missing = !VALUES.F_NAN
       'DOUBLE': _missing = !VALUES.D_NAN
-      else: _missing = -9999
+      'BYTE': _missing = 0B
+      'LONG': _missing = -9999L
+      'INT': _missing = -9999
+      else: Message, 'Data type too exotic for me'
     endcase
   endif else begin
     if ~ arg_okay(missing, /NUMERIC, /SCALAR) then Message, WAVE_Std_Message('MISSING', /ARG)

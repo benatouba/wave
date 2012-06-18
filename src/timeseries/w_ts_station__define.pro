@@ -1,34 +1,33 @@
 ; docformat = 'rst'
 ;+
 ;   Object to store and manage timeseries objects all together.
-;   
-;   The princip of the station is to allow to perform the same actions
-;   on a set of timeseries objects together, and add some usefull information
-;   like location, etc.
-;   
-;   The station accepts variables of the same timestep and validity, but can
-;   accept variables that cover different periods. All the station variables are then
-;   automatically set to the longest period containing all variables.
+;   The station object also stores locations and additional informations. 
 ;   
 ;   The Station object can be seen as a container that performs some actions 
-;   (uniformisation of timesteps, interpolation, aggregation) on all its variables. 
+;   (uniformisation of timesteps, interpolation, aggregation) on all of its variables. 
 ;   Additionally, some tools are provided like writing the variable data into an
-;   ASCII file.
+;   ASCII or NCDF file.
+; 
+;   The station accepts only variables having the same timestep, 
+;   but can accept variables that cover different time periods. 
+;   All the station variables are then automatically set to the 
+;   longest period containing all variables.
+;   
 ; 
 ; Definition::
 ;       
-;       class = {w_ts_Station       , $
-;               name:            '' , $ ; The name of the station
-;               id:              '' , $ ; Station ID
-;               description:     '' , $ ; A short description of the station 
-;               elevation:       0L , $ ; altitude in m
-;               loc_x:           0D , $ ; X location in SRC
-;               loc_y:           0D , $ ; Y location in SRC
-;               src:      PTR_NEW() , $ ; Location information ({TNT_DATUM}, {TNT_PROJ})
-;               t0:             0LL , $ ; User def start Time (0 if default period)
-;               t1:             0LL , $ ; User def end Time (0 if default period)
-;               vars:     OBJ_NEW()   $ ; Variables container (w_ts_Container)
-;               }   
+;       class = {w_ts_Station        , $
+;                  name:            '' , $ ; The name of the station
+;                  id:              '' , $ ; Station ID
+;                  description:     '' , $ ; A short description of the station 
+;                  elevation:       0L , $ ; altitude in m
+;                  loc_x:           0D , $ ; X location in SRC
+;                  loc_y:           0D , $ ; Y location in SRC
+;                  src:      PTR_NEW() , $ ; Location information ({TNT_DATUM} or {TNT_PROJ})
+;                  t0:             0LL , $ ; Start Time
+;                  t1:             0LL , $ ; End Time
+;                  vars:     OBJ_NEW()   $ ; Variables container (w_ts_Container)
+;                  }    
 ;
 ; :Categories:
 ;    Timeseries, Objects
@@ -40,7 +39,7 @@
 
 ;+
 ; :Description:
-;    To create the object instance.
+;    Creates the object instance.
 ;
 ; :Keywords:
 ;    NAME: in, optional, type=string
@@ -57,6 +56,9 @@
 ;           The X location of the station
 ;    SRC: in, optional, type=double
 ;         the source of X and Y ({TNT_DATUM}, {TNT_PROJ})
+;    FILE: in, optional, type=string
+;          path to a station ncdf file (see `NCDFwrite`)
+;          if set, all other keywords are ignored.
 ;
 ; :History:
 ;     Written by FaM, 2012.
@@ -68,7 +70,8 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
                              ELEVATION=elevation, $ ; altitude in m
                              LOC_X=loc_x, $ ; X location in SRC
                              LOC_Y=loc_y, $ ; Y location in SRC
-                             SRC=src ; Location information ({TNT_DATUM}, {TNT_PROJ})
+                             SRC=src, $ ; Location information ({TNT_DATUM}, {TNT_PROJ})
+                             FILE=file ; ncdf file
    
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -81,14 +84,25 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
     RETURN, 0
   ENDIF 
   
-  ; Check input and set defaults
-  if N_ELEMENTS(NAME) eq 0 then _name = 'Station' else _name = name
-  if N_ELEMENTS(ID) eq 0 then _id = _name else _id = id
-  if N_ELEMENTS(DESCRIPTION) eq 0 then _description = '' else _description = description
-  if N_ELEMENTS(ELEVATION) eq 0 then _elevation = -9999L else _elevation = elevation
-  if N_ELEMENTS(LOC_X) eq 0 then _loc_x = -9999d else _loc_x = loc_x
-  if N_ELEMENTS(LOC_Y) eq 0 then _loc_y = -9999d else _loc_y = loc_y
-  if N_ELEMENTS(SRC) eq 0 then GIS_make_datum, ret, _src, NAME = 'WGS-84' else _src = src  
+  ; Initialize object containers for contents.
+  self.vars = Obj_New('w_ts_Container')
+  
+  if N_ELEMENTS(FILE) ne 0 then begin
+  
+    Message, 'File not yet'
+  
+  endif else begin  
+  
+    ; Check input and set defaults
+    if N_ELEMENTS(NAME) eq 0 then _name = 'Station' else _name = name
+    if N_ELEMENTS(ID) eq 0 then _id = _name else _id = id
+    if N_ELEMENTS(DESCRIPTION) eq 0 then _description = '' else _description = description
+    if N_ELEMENTS(ELEVATION) eq 0 then _elevation = -9999L else _elevation = elevation
+    if N_ELEMENTS(LOC_X) eq 0 then _loc_x = -9999d else _loc_x = loc_x
+    if N_ELEMENTS(LOC_Y) eq 0 then _loc_y = -9999d else _loc_y = loc_y
+    if N_ELEMENTS(SRC) eq 0 then GIS_make_datum, ret, _src, NAME = 'WGS-84' else _src = src
+    
+  endelse
   
   self.name = _name
   self.id = _id
@@ -97,10 +111,7 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
   self.loc_x = _loc_x
   self.loc_y = _loc_y
   self.src = PTR_NEW(_src)
-  
-  ; Initialize object containers for contents.
-  self.vars = Obj_New('w_ts_Container')
-  
+ 
   return, 1
     
 end
@@ -110,7 +121,7 @@ end
 ;    Destroys the object instance and frees the memory.
 ;
 ;-
-pro w_ts_Station::Cleanup
+pro w_ts_Station::cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -294,9 +305,9 @@ end
 ;+
 ; :Description:
 ;    Adds a variable to the station. Default behavior is to
-;    check if the variable allready exists and if not, store it. 
-;    If the variable allready exists, the the data is added to the 
-;    existing data.
+;    check if the variable already exists and if not, store it. 
+;    If the variable allready exists, the data is added to the 
+;    existing timeserie.
 ;
 ; :Params:
 ;    var: in, required, type={w_Ts_Data}
@@ -310,8 +321,8 @@ end
 ;                default behavior when a variable allready exists 
 ;                is to add the data to the stored object and destroy
 ;                the argument. This makes sense in most of the cases
-;                but sometimes you don't want this. Set this keyword
-;                to avoid it.
+;                but sometimes you want to keep the original object.
+;                Set this keyword to avoid destroying it.
 ;
 ;-
 pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy
@@ -329,7 +340,7 @@ pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy
       self.vars->Add, var
     endif else begin
       object->addData, var->getData(), var->getTime()
-      if ~KEYWORD_SET(NO_DESTROY) then OBJ_DESTROY, var
+      if ~ KEYWORD_SET(NO_DESTROY) then OBJ_DESTROY, var
     endelse  
   endif else begin
     self.vars->Add, var    
@@ -352,7 +363,7 @@ end
 ; :Returns:
 ;    An string array of COUNT variable names
 ;-
-function w_ts_Station::GetVarNames, COUNT=varCount, PRINT=print
+function w_ts_Station::getVarNames, COUNT=varCount, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -404,7 +415,7 @@ END
 ;    1 if the variable is found, 0 otherwise
 ;    
 ;-
-function w_ts_Station::HasVar, varName, OBJECT=object
+function w_ts_Station::hasVar, varName, OBJECT=object
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -415,7 +426,7 @@ function w_ts_Station::HasVar, varName, OBJECT=object
   ; Can you find a variable object with this name?
   object = self.vars->FindByName(varName, COUNT=count)
   
-  if count gt 0 then return, 1 else return, 0
+  return, count gt 0
   
 END
 
@@ -439,7 +450,7 @@ function w_ts_Station::getVar, varName
   
   if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)
   
-  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found'
+  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
   
   return, object
   
@@ -472,11 +483,12 @@ end
 
 ;+
 ; :Description:
-;    Delete variables from the station except for selected variable(s)
+;    Select variable(s) to be kept by the station. All other variables
+;    are desrtroyed.
 ;
 ; :Params:
 ;    varName: in, optional, type=string array
-;             the name(s) of the variables to keep
+;             the name of the variable(s) to keep
 ;
 ;-
 pro w_ts_Station::selVar, varName
@@ -501,6 +513,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;    Sets the focus period to the shortest period 
 ;    enclosing all variables or to a user defined period.
 ;    Once the user set t0 and/or t1, this parameter are 
@@ -541,6 +554,7 @@ pro w_ts_Station::setPeriod, T0=t0, T1=t1, DEFAULT=default
   
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
+    if KEYWORD_SET(DEFAULT) then _var->setPeriod, /DEFAULT
     if i eq 0 then begin
       _t0 = _var->getProperty('t0')
       _t1 = _var->getProperty('t1')
@@ -571,9 +585,7 @@ pro w_ts_Station::printMissingPeriods
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-  
-  self->setPeriod
-  
+    
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
@@ -605,8 +617,6 @@ pro w_ts_Station::interpol, T0=t0, T1=t1
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  self->setPeriod
-  
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
@@ -616,18 +626,17 @@ pro w_ts_Station::interpol, T0=t0, T1=t1
 end
 
 ;+
-; :Description:
-;   Replaces periods with a value (if omitted, MISSING)
+; :Description: 
+;   Replaces data within a period with a value (if omitted, MISSING)
 ; 
 ; :Params:
 ;    value: in, optional
 ;           
-;    
 ; :Keywords:
 ;    T0: in, optional
-;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        first step where to put the value
 ;    T1: in, optional
-;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        last step where to put the value
 ;        
 ;-
 pro w_ts_Station::insertValue, value, T0=t0, T1=t1
@@ -635,8 +644,6 @@ pro w_ts_Station::insertValue, value, T0=t0, T1=t1
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
-  
-  self->setPeriod
   
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
@@ -648,29 +655,44 @@ end
 
 ;+
 ; :Description:
-;    Aggregates all variables and creates a new station object with the
-;    new variables.
+;    Aggregates all station's variables and creates a new station object with the
+;    new aggregated variables.
 ;    
 ;    See `TS_AGG` for more info on the aggregation.
 ;
 ; :Keywords:
-;    DAY: in, optional, default = none
-;         set to an day interval (e.g: 1, or 7) to compute 
+;    DAY: in, optional, default=none
+;         set to day interval (e.g: 1, or 7) to compute 
 ;         daily or seven-daily statistics
-;    HOUR: in, optional, default = none
-;         set to an hourly interval (e.g: 1, or 6) to compute 
+;    HOUR: in, optional, default=none
+;         set to hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
-;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;    MONH: in, optional, default=none
+;          set to compute monthly statistics
+;    YEAR: in, optional, default=none
+;          set to compute yearly statistics   
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms, default=none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
 ;              n elements of the statistics for each interval [t, t+1]
 ;              (t excluded)
-;
+;              Ignored if HOUR, DAY, MONTH or YEAR are set
+;    MIN_SIG: in, optional, default=none
+;             if set, all intervals having less than MIN_SIG 
+;             (0<min_sig<1) will be set to missing
+;    MIN_NSIG: in, optional, default = none
+;              if set, all intervals having less than MIN_NSIG 
+;              valid values will be set to missing
+;              MIN_NSIG can be eather a scalar or an array of the size
+;              of the number of intervals (N_ELEMENTS(NEW_TIME)- 1)
+;              Ignored if MIN_SIG is set
+;             
 ; :Returns:
 ;    A new object with the aggregated data
 ;
 ;-
-function w_ts_Station::Aggregate, DAY = day, HOUR = hour, NEW_TIME = new_time
+function w_ts_Station::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
   
   ; Make a new identical station
   out = OBJ_NEW('w_ts_Station', NAME=self.name, ID=self.id, DESCRIPTION=self.description, $ ; A short description of the station 
@@ -681,7 +703,8 @@ function w_ts_Station::Aggregate, DAY = day, HOUR = hour, NEW_TIME = new_time
   
   FOR j=0,varCount-1 DO BEGIN
     _var = self.vars->Get(POSITION=j)
-    out->addVar, _var->Aggregate(DAY=day, HOUR=hour, NEW_TIME=new_time)   
+    out->addVar, _var->aggregate(DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig)   
   endfor
   
   return, out
@@ -699,8 +722,6 @@ pro w_ts_Station::plotVars
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  self->setPeriod
-  
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
@@ -712,7 +733,11 @@ end
 
 ;+
 ; :Description:
-;    Writes the variables data in an ASCII file.
+;    Writes the station data in one single ASCII file.
+;    
+;    The ASCII file can be parsed by `w_aws_read_data_file` but
+;    if you want to save the station data for further use within
+;    then wave, it is recommended to use `NCDFwrite`
 ;
 ; :Keywords:
 ;    FILE: in, required, type=string
@@ -723,13 +748,15 @@ end
 ;            the string format code for floats
 ;
 ;-
-pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title, FORMAT=format
+pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
 
   if N_ELEMENTS(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)
+  
+   
   
   if N_ELEMENTS(format) eq 0 then format = '(F9.3)'
   
@@ -820,9 +847,154 @@ pro w_ts_Station::write_ASCII_file, FILE=file, TITLE=title, FORMAT=format
     
     printf, id, text
   endfor
+  
   undefine, datas
   FREE_LUN, id
   
+end
+
+;+
+; :Description:
+;    Writes the station data in one single NCDF file.
+;    
+;    This can be done for save/restore purposes, since the 
+;    NCDF file can be later parsed automatically (and efficiently)
+;    for the object initialisation.
+;
+; :Keywords:
+;    FILE: in, required, type=string
+;          the path to the file to write. The routine
+;          will check for the correct suffix (".nc") and add
+;          it if necessary. If a directory is given as argument,
+;          the routine will define the name automatically using the
+;          station id and name
+;    COMMENT: in, optional, type=string
+;             a comment to add to the file as global attribute
+;    OVERWRITE: in, optional
+;               default behavior is to stop if the file already exists.
+;               Set this keyword to avoid this
+;
+;-
+pro w_ts_Station::NCDFwrite, FILE=file, TITLE=title, OVERWRITE=overwrite
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  ; Count the number of global attribute objects.
+  varCount = self.vars->Count()  
+  IF varCount EQ 0 THEN Message, 'No variables stored in the station!'
+  
+  self->setPeriod
+  
+  if N_ELEMENTS(FILE) eq 0 then Message, WAVE_Std_Message('FILE', /ARG)
+  if FILE_TEST(FILE, /DIRECTORY) then begin
+    _file = utils_clean_path(file, /MARK_DIRECTORY)
+    _file = _file + 'w_ts_' + self.id + '_' + self.name + '.nc' 
+  endif else _file = file
+      
+  dObj = OBJ_NEW('NCDF_FILE', _file, /CREATE, CLOBBER=overwrite, /TIMESTAMP)
+  if ~ OBJ_VALID(dObj) then return
+  
+  dObj->WriteGlobalAttr, 'FILE_INFO', 'WAVE w_ts_Station data', DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'NAME', self.name, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'ID', self.id, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'DESCRIPTION', self.description, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'ELEVATION', self.elevation, DATATYPE='LONG'
+  dObj->WriteGlobalAttr, 'LOC_X', self.loc_x, DATATYPE='DOUBLE'
+  dObj->WriteGlobalAttr, 'LOC_Y', self.loc_y, DATATYPE='DOUBLE'
+  
+  src = *self.src
+  if arg_okay(src, STRUCT={TNT_DATUM}) then begin
+    src_t = 'DATUM'
+    src_str = src.name   
+  endif else if arg_okay(src, STRUCT={TNT_DATUM}) then begin
+    src_t = 'PROJ'
+    src_str = src.proj.envi 
+  endif else message, 'SRC iz what?'  
+  dObj->WriteGlobalAttr, 'SRC', src_t, DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'SRC_INFO', src_str, DATATYPE='CHAR'
+  
+  v = self.vars->Get(POSITION=0)
+  time = v->getTime(nt)
+  time_str = 'seconds since ' + TIME_to_STR(time[0], MASK='YYYY-MM-DD HH:TT:SS')
+  time = LONG((time - time[0]) / 1000)
+  
+  t_dim_name = 'time'
+  dObj->WriteDim, t_dim_name, nt
+  
+  ; Variables
+  vn = 'time'
+  dObj->WriteVarDef, vn, t_dim_name, DATATYPE='LONG'
+  dObj->WriteVarAttr, vn, 'long_name', 'Time'
+  dObj->WriteVarAttr, vn, 'units', time_str
+  dObj->WriteVarData, vn, time
+  
+  for j=0,varCount-1 do begin
+    v = self.vars->Get(POSITION=j)
+    vn = v->GetProperty('NAME')
+    dataTypeName = type_name(v->GetProperty('TYPE'))
+    case dataTypeName of
+      'FLOAT' :
+      'DOUBLE':
+      'BYTE':
+      'LONG':
+      'INT': dataTypeName = 'LONG'
+      else: Message, 'Data type too exotic for me'
+    endcase
+    dObj->WriteVarDef, vn, t_dim_name, DATATYPE=dataTypeName
+    dObj->WriteVarAttr, vn, 'description', v->GetProperty('DESCRIPTION'), DATATYPE='CHAR'
+    dObj->WriteVarAttr, vn, 'units', v->GetProperty('UNIT'), DATATYPE='CHAR'
+    dObj->WriteVarAttr, vn, 'step', v->GetProperty('STEP'), DATATYPE='CHAR'
+    dObj->WriteVarAttr, vn, 'timestep', v->GetProperty('TIMESTEP'), DATATYPE='LONG'
+    dObj->WriteVarAttr, vn, 'agg_method', v->GetProperty('AGG_METHOD'), DATATYPE='CHAR'
+    dObj->WriteVarAttr, vn, 'validity', v->GetProperty('VALIDITY'), DATATYPE='CHAR'
+    
+    dataTypeName = SIZE(v->GetProperty('MISSING'), /TNAME)
+    case dataTypeName of
+      'FLOAT' :
+      'DOUBLE':
+      'BYTE':
+      'LONG':
+      'INT': dataTypeName = 'LONG'      
+      else: Message, 'missing type too exotic for me'
+    endcase
+    dObj->WriteVarAttr, vn, 'missing', v->GetProperty('MISSING'), DATATYPE=dataTypeName
+    dObj->WriteVarData, vn, v->GetData()    
+  endfor
+  
+  undefine, dObj
+  
+end
+
+;+
+; :Description:
+;    Makes a copy of the Station
+; 
+; :Returns:
+;    a copy of the station
+;-
+function w_ts_Station::copy
+
+  out= OBJ_NEW('w_ts_Station', $
+    NAME=self.name, $
+    ID=self.id, $ 
+    DESCRIPTION=self.description, $
+    ELEVATION=self.elevation, $ 
+    LOC_X=self.loc_x, $ 
+    LOC_Y=self.loc_y, $ 
+    SRC=*self.src)
+      
+  vNames = self->GetVarNames(COUNT=varCount)  
+  for i=0, varCount-1 do begin
+    _var = self->getVar(vNames[i])
+    out ->addVar, _var->copy()
+  endfor        
+    
+  out->setPeriod, T0=self.t0, T1=self.t1
+  
+  return, out
+
 end
 
 ;+
@@ -839,16 +1011,16 @@ pro w_ts_Station__Define, class
   COMPILE_OPT idl2
   @WAVE.inc
 
-  class = {w_ts_Station       , $
+  class = {w_ts_Station        , $
            name:            '' , $ ; The name of the station
            id:              '' , $ ; Station ID
            description:     '' , $ ; A short description of the station 
            elevation:       0L , $ ; altitude in m
            loc_x:           0D , $ ; X location in SRC
            loc_y:           0D , $ ; Y location in SRC
-           src:      PTR_NEW() , $ ; Location information ({TNT_DATUM}, {TNT_PROJ})
-           t0:             0LL , $ ; Used def start Time
-           t1:             0LL , $ ; Used def End Time
+           src:      PTR_NEW() , $ ; Location information ({TNT_DATUM} or {TNT_PROJ})
+           t0:             0LL , $ ; Start Time
+           t1:             0LL , $ ; End Time
            vars:     OBJ_NEW()   $ ; Variables container (w_ts_Container)
            }    
 

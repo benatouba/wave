@@ -681,7 +681,7 @@ pro AWS_corr_sr50_basics, distance, time, x, y, airtemp, quality, corrected, new
   out_qual = quality[pqual_210]
   
     
-  CORRECTED_NAN = TS_FILL_MISSING(corrected, new_time, ttime, INDEXES = indexes)
+  CORRECTED_NAN = w_TS_FILL_MISSING(corrected, new_time, ttime, INDEXES = indexes)
   CORRECTED_QUAL = quality
   CORRECTED_QUAL[indexes] = 0
   CORRECTED_INTERP = INTERPOL(corrected, new_time, ttime)

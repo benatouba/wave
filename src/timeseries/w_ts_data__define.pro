@@ -1,7 +1,15 @@
 ; docformat = 'rst'
 ;+
 ;  
-; Object to store, retrieve  and analyse data timeseries.   
+; Object to store, retrieve and analyse data timeseries.
+; 
+; The basic principle of this object is that input data points and
+; associated time stamps are internaly stored and retrieved on demand
+; for any time period selected by the user with the `setPeriod` procedure.
+; 
+; A timeserie is therefore defined by three explicit parameters: t0, t1 and
+; the timestep. The later can be either a regular timestep defined by its "dms" 
+; (delta milli-second) or a monthly or yearly timestep.
 ; 
 ; Definition::
 ;       
@@ -14,7 +22,7 @@
 ;                  t0:             0LL    , $ ; Start Time
 ;                  t1:             0LL    , $ ; End Time
 ;                  step:           ''     , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
-;                  timestep :      0LL    , $ ; Timestep
+;                  timestep :      0LL    , $ ; Timestep. Unit is millisecond, or MONTH, or YEAR
 ;                  agg_method: 'NONE'     , $ ; Aggregation method. See `TS_AGG`
 ;                  validity:  'POINT'     , $ ; Temporal validity of the data values ('INTEGRAL' or 'POINT')
 ;                  missing: PTR_NEW()     , $ ; Missing data value
@@ -32,12 +40,13 @@
 
 ;+
 ; :Description:
-;    To create the object instance.
+;    Creates the object instance.
 ;    
-;    `data` and `time` arrays are required to initialize the object, but
-;    it is also a good idea to set the `NAME`,`UNIT`,`VALIDITY`,`AGG_METHOD`,
-;    and `MISSING` keywords. If the timeserie is exotic, the `STEP` and 
-;    `TIMESTEP` keywords are highly recommended.
+;    `data` and `time` arrays are not required to initialize the object, but 
+;    the instance will be operational only after the first call to add_data()
+;    It is also a good idea to give values to the `NAME`,`UNIT`,`VALIDITY`,
+;    `AGG_METHOD`,and `MISSING` keywords. If the timeserie is exotic, 
+;    the `STEP` and `TIMESTEP` keywords are highly recommended.
 ;
 ; :Params:
 ;    data: in, optional
@@ -121,7 +130,7 @@ end
 ;    Destroys the object instance and frees the memory.
 ;
 ;-
-pro w_ts_Data::Cleanup
+pro w_ts_Data::cleanup
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -188,7 +197,7 @@ pro w_ts_Data::getProperty, NAME=name, $
   VALIDITY=self.validity
   STEP=self.step
   TIMESTEP=self.timestep
-  MISSING=*self.missing
+  if PTR_VALID(self.missing) then MISSING=*self.missing
   AGG_METHOD=self.agg_method
   T0=self.t0
   T1=self.t1
@@ -318,21 +327,19 @@ end
 ; :Keywords:
 ;    STEP: in, optional, type=string
 ;          Either IRREGULAR, TIMESTEP, MONTH or YEAR. 
-;          FIRST CALL ONLY   
+;          First call only, ignored afterwards
 ;    TIMESTEP: in, optional, type=DMS/{TIME_STEP}
-;              Timeserie timestep. 
-;              FIRST CALL ONLY      
+;              Timeserie timestep, unit is dms or month or years
+;              First call only, ignored afterwards  
 ;    MISSING: in, optional, type=string
 ;             value for missing data in the timeserie. 
-;             FIRST CALL ONLY             
+;             First call only, ignored afterwards            
 ;    REPLACE: in, optional, type=boolean
-;             replace the old data? 
-;             Automatically set for the first call
+;             replace the old data?
 ;
 ;-
 pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, REPLACE=replace
 
-  ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
@@ -344,11 +351,16 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   if _first then _replace = TRUE else _replace = KEYWORD_SET(REPLACE)
   
   ;Type
-  if self.type eq 0 then self.type = SIZE(_data, /TYPE);first call
+  if _first then begin
+    self.type = SIZE(_data, /TYPE) ; first call
+  endif else begin
+    if self.type ne SIZE(_data, /TYPE) then Message, 'Data type do not match previous entry (was ' + $
+      type_name(self.type) + ', now ' + SIZE(_data, /TNAME) +').'
+  endelse
   
   ; Define a missing flag
-  if ~ptr_valid(self.missing) then begin ;first call
-    if N_ELEMENTS(MISSING) eq 0 then begin
+  if _first then begin ;first call
+    if N_ELEMENTS(missing) eq 0 then begin
       case self.type of
         IDL_INT: _missing = FIX(-9999)
         IDL_LONG: _missing = LONG(-9999)
@@ -362,34 +374,52 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
     self.missing = PTR_NEW(_missing, /NO_COPY)
   endif
   
-  ; Steps
-  if self.step eq '' then begin ;first call
-    if N_ELEMENTS(STEP) ne 0 then _step = step else _step = 'TIMESTEP'
-    if _step eq 'IRREGULAR' then Message, 'IRREGULAR steps not implemented yet'
-    if _step eq 'MONTH' then Message, 'MONTH steps not implemented yet'
-    if _step eq 'YEAR' then Message, 'YEAR steps not implemented yet'
-    self.step=_step
-  endif
   
-  ; Timestep
-  if (self.timestep eq 0) and self.step eq 'TIMESTEP' then begin ;first call
-    if N_ELEMENTS(TIMESTEP) eq 0 then begin ; find out by myself
-      ok = check_timeserie(qms, _timestep, CONFIDENCE=confidence)
-      if confidence lt 0.75 then begin
-        Message, 'Probable timestep chosen with a low confidence of: ' + $
-          STRING(confidence, FORMAT='(F5.2)') + '. You should check it.'
-      endif
+  ; Steps
+  if _first then begin ; first call
+  
+    ; Did the user specified some stuffs allready
+    if N_ELEMENTS(STEP) ne 0 then self.step = str_equiv(step)
+    if N_ELEMENTS(TIMESTEP) ne 0 then begin
+      if ~ CHECK_WTIMESTEP(timestep, OUT_DMS=_ts) then Message, WAVE_Std_Message('TIMESTEP', /ARG)
+      self.timestep = _ts
+    endif
+    
+    if self.timestep eq 0 then begin ; find out by myself
+      case self.step of
+        'MONTH': _timestep = 1
+        'YEAR': _timestep = 1
+        else: begin
+          ok = check_timeserie(qms, _timestep, CONFIDENCE=confidence)
+          if confidence lt 0.75 then begin
+            Message, 'Probable timestep chosen with a low confidence of: ' + $
+              STRING(confidence, FORMAT='(F5.2)') + '. You should check it.', /INFORMATIONAL
+          endif
+        end
+      endcase
     endif else _timestep = timestep
+    
     if ~ CHECK_WTIMESTEP(_timestep, OUT_DMS=dms) then message, WAVE_Std_Message('TIMESTEP', /ARG)
     if dms le 0 then message, 'Timestep le 0?'
-    if dms ge 2419200000LL and dms le 2678400000LL then begin ; We are probably in a monthly timeserie
-      message, 'Monthly timestep not implemented yet'
-    endif    
-    if dms ge 31449600000LL and dms le 31622400000LL then begin ; We are probably in a yearly timeserie
-      message, 'Yearly timestep not implemented yet'
-    endif    
     
-    self.timestep = dms    
+    if self.step eq '' then begin
+      self.step = 'TIMESTEP'
+      if dms ge 2419200000LL and dms le 2678400000LL then begin ; We are probably in a monthly timeserie
+        message, 'I think this is a monthly timestep', /INFORMATIONAL
+        self.step = 'MONTH'
+        dms = 1
+      endif
+      if dms ge 31449600000LL and dms le 31622400000LL then begin ; We are probably in a yearly timeserie
+        message, 'I think this is a yearly timestep', /INFORMATIONAL
+        self.step = 'YEAR'
+        dms = 1
+      endif
+    endif
+    
+    self.timestep = dms
+    
+    if self.step eq 'IRREGULAR' then message, 'IRREGULAR timestep not implemented yet.'
+    
   endif
  
   ; Check if we have to add the data or replace it
@@ -398,10 +428,24 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
     _data = [*self.data, _data]
   endif
 
-  ;Check for non-finite values in the timeserie anyway
+  ; Check for non-finite values in the timeserie anyway
   pf = where(~finite(_data), cntf)
   if cntf ne 0 then _data[pf]=*self.missing
   
+  ; TODO: Remove non valid points: yes or no?   
+;  fmissing = finite(*self.missing)  
+;  if fmissing then begin
+;    CASE self.type OF
+;      'FLOAT': indices = Where(Abs(_data - *self.missing) gt (MACHAR()).eps, count)
+;      'DOUBLE': indices = Where(Abs(_data - *self.missing) gt (MACHAR(/DOUBLE)).eps, count)
+;      ELSE: indices = Where(_data ne *self.missing, count)
+;    ENDCASE
+;  endif else begin
+;    indices = where(finite(_data), count)
+;  endelse  
+;  _data = _data[indices > 0] ; so if there are no valid data, the first element is kept
+;  qms = qms[indices > 0] ; so if there are no valid data, the first element is kept
+    
   ; Check for the time serie validity
   s = sort(qms)
   if N_ELEMENTS(uniq(qms, s)) ne N_ELEMENTS(qms) then message, 'Times are not unique.'
@@ -414,53 +458,95 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   self.data = PTR_NEW(_data, /NO_COPY)
   self.time = PTR_NEW(qms, /NO_COPY)
   
-  self->setPeriod
+  self->setPeriod, DEFAULT=_first
   
 end
 
 ;+
 ; :Description:
-;    Sets the focus period to its original period
-;    or to a user-defined period. All later
-;    calls to `w_ts_Data::getData`, `w_ts_Data::getTime`
-;    or similar object functions will be affected by this change. 
+;    Sets the focus period to the shortest period 
+;    enclosing all valid data points or to a user 
+;    defined period.
+;    Once the user set t0 and/or t1, this parameter are 
+;    remembered for later calls. Set the `DEFAULT` keyword
+;    to reset to the default period.
 ;
 ; :Keywords:
-;    T0: in, optional, type=qms/{ABS_DATE}, default=first original time in the ts
+;    T0: in, optional, type=qms/{ABS_DATE}
 ;        the first time of the desired period
-;    T1: in, optional, type=qms/{ABS_DATE}, default=last original time in the ts
+;    T1: in, optional, type=qms/{ABS_DATE}
 ;        the last time of the desired period
+;    DEFAULT: in, optional, type=boolean
+;             Reset to the default period         
 ;
 ;-
-pro w_ts_Data::setPeriod, T0=t0, T1=t1
+pro w_ts_Data::setPeriod, T0=t0, T1=t1, DEFAULT=default
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
   if ~ptr_valid(self.time) then return ; no data yet
-   
-  if N_ELEMENTS(T0) ne 0 then begin  
-    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)    
-  endif else _t0 = (*self.time)[0]
   
-  if N_ELEMENTS(T1) ne 0 then begin  
-    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)    
-  endif else _t1 = (*self.time)[N_ELEMENTS(*self.time)-1]
+  if KEYWORD_SET(DEFAULT) then begin
+    _t0 = (*self.time)[0]
+    _t1 = (*self.time)[N_ELEMENTS(*self.time)-1]
+  endif else begin
+    _t0 = self.t0
+    _t1 = self.t1
+  endelse
+  
+  ; User wants something new ? 
+  if N_ELEMENTS(T0) ne 0 then begin
+    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)
+    self.t0 = _t0
+  endif  
+  if N_ELEMENTS(T1) ne 0 then begin
+    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)
+    self.t1 = _t1
+  endif
   
   ; Check the time
-  _nt = (_t1 - _t0) / self.timestep
-  if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
-   Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
-   self->setPeriod
-  endif
-  _nt+=1
+  case self.step of
+    'TIMESTEP': begin
+      _nt = ABS(_t1 - _t0) / self.timestep
+      if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
+        Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
+        self->setPeriod, /DEFAULT
+      endif
+      _nt+=1
+    end
+    'MONTH': begin
+      _t0 = w_time_to_month(_t0)
+      _t1 = w_time_to_month(_t1)
+      _nt = ABS(_t1 - _t0) / self.timestep
+      if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
+        Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
+        self->setPeriod, /DEFAULT
+      endif
+      _t0 = w_month_to_time(_t0)
+      _t1 = w_month_to_time(_t1)
+      _nt+=1
+    end
+    'YEAR': begin
+      _t0 = w_time_to_year(_t0)
+      _t1 = w_time_to_year(_t1)
+      _nt = ABS(_t1 - _t0) / self.timestep
+      if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
+        Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
+        self->setPeriod, /DEFAULT
+      endif
+      _t0 = w_year_to_time(_t0)
+      _t1 = w_year_to_time(_t1)
+      _nt+=1
+    end
+  endcase
   
   ;Fill
   self.t0 = _t0
   self.t1 = _t1
   self.nt = _nt
- 
+  
 end
 
 ;+
@@ -481,26 +567,45 @@ function w_ts_Data::getTime, nt
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  nt = self.nt
-  return, MAKE_ENDED_TIME_SERIE(self.t0, self.t1, TIMESTEP=self.timestep, NSTEPS=nt) 
+  if ~ ptr_valid(self.time) then return, dummy
+    
+  nt = self.nt      
+  ; Check the time
+  case self.step of
+    'TIMESTEP': time = L64INDGEN(nt) * self.timestep + self.t0
+    'MONTH': time = w_month_to_time(LINDGEN(nt) * self.timestep + w_time_to_month(self.t0))
+    'YEAR': time = w_year_to_time(LINDGEN(nt) * self.timestep + w_time_to_year(self.t0))
+  endcase   
   
+  return, time
+
 end
 
 ;+
 ; :Description:
 ;    Get the data
-;   
+;  
+; :Params:
+;    nt: out
+;        the number of times
+;
 ; :Returns:
 ;   A data array of nt elements
 ;
 ;-
-function w_ts_Data::getData
+function w_ts_Data::getData, nt
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
   
-  return, TS_FILL_MISSING(*self.data, *self.time, self->getTime(), FILL_VALUE=*self.missing)
+  if ~ ptr_valid(self.data) then return, dummy
+  t = self->getTime(nt)
+  if nt eq 1 then begin
+    p = where(*self.time eq t[0], cnt)
+    if cnt ne 0 then return, (*self.data)[p] else  return, *self.missing
+  endif
+  return, w_ts_fill_missing(*self.data, *self.time, self->getTime(nt), FILL_VALUE=*self.missing)
   
 end
 
@@ -509,30 +614,34 @@ end
 ; :Description:
 ;   The validity of the data timeserie
 ;   
+; :Params:
+;    nt: out
+;        the number of times
+;
 ; :Returns:
 ;   An array of nt elements (valid = 1)
 ;
 ;-
-function w_ts_Data::Valid
+function w_ts_Data::valid, nt
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  _mask = BYTARR(self.nt)
-  data = self->getData()
+  data = self->getData(nt)
+  _mask = BYTARR(nt)
   
   missing = *self.missing
   
   fmissing = finite(missing)  
   if fmissing then begin
-    CASE self.type OF
+    CASE type_name(self.type) OF
       'FLOAT': indices = Where(Abs(data - missing) gt (MACHAR()).eps, count)
       'DOUBLE': indices = Where(Abs(data - missing) gt (MACHAR(/DOUBLE)).eps, count)
       ELSE: indices = Where(data ne missing, count)
     ENDCASE
   endif else begin
-    indices = Where(finite(data), count)
+    indices = where(finite(data), count)
   endelse
   
   if count ne 0 then _mask[indices] = 1
@@ -628,7 +737,7 @@ end
 ;    
 ; :Keywords:
 ;    TITLE_INFO: in, optional
-;                ssomethingto add to the title
+;                something to add to the title
 ;
 ;-
 pro w_ts_Data::plotTS, TITLE_INFO=title_info
@@ -644,6 +753,7 @@ end
 
 ;+
 ; :Description:
+; 
 ;   Replaces all invalid data values by linear interpolation.
 ;   In case extrapolation is needed, a warning is sent and the closest
 ;   data value is chosen instead.
@@ -706,16 +816,16 @@ end
 
 ;+
 ; :Description:
-;   Replaces periods with a value (if omitted, MISSING)
+;   Replaces data within a period with a value (if omitted, MISSING)
 ; 
 ; :Params:
 ;    value: in, optional
 ;           
 ; :Keywords:
 ;    T0: in, optional
-;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        first step where to put the value
 ;    T1: in, optional
-;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;        last step where to put the value
 ;        
 ;-
 pro w_ts_Data::insertValue, value, T0=t0, T1=t1
@@ -728,13 +838,14 @@ pro w_ts_Data::insertValue, value, T0=t0, T1=t1
   d = self->getdata()
   
   if N_ELEMENTS(value) eq 0 then _val = *self.missing else _val = value
-
+  
+  if N_ELEMENTS(_val) ne 0 then Message, 'VALUE must be as scalar'
   
   if N_ELEMENTS(T0) ne 0 and N_ELEMENTS(T1) ne 0 then begin
     if ~ check_WTIME(t0, OUT_QMS= it0) then message, WAVE_Std_Message('T0')
     v = 0 > VALUE_LOCATE(t, it0) < (nt-1)
     p0 = v[0] 
-    if ~ check_WTIME(t1, OUT_QMS= it1) then message, WAVE_Std_Message('T0')
+    if ~ check_WTIME(t1, OUT_QMS= it1) then message, WAVE_Std_Message('T1')
     v = 0 > VALUE_LOCATE(t, it1) < (nt-1)
     p1 = v[0] 
     d[p0:p1] = _val
@@ -753,27 +864,114 @@ end
 ;    See `TS_AGG` for more info on the aggregation.
 ;
 ; :Keywords:
-;    DAY: in, optional, default = none
-;         set to an day interval (e.g: 1, or 7) to compute 
+;    DAY: in, optional, default=none
+;         set to day interval (e.g: 1, or 7) to compute 
 ;         daily or seven-daily statistics
-;    HOUR: in, optional, default = none
-;         set to an hourly interval (e.g: 1, or 6) to compute 
+;    HOUR: in, optional, default=none
+;         set to hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
-;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;    MONH: in, optional, default=none
+;          set to compute monthly statistics
+;    YEAR: in, optional, default=none
+;          set to compute yearly statistics    
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms, default=none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
 ;              n elements of the statistics for each interval [t, t+1]
 ;              (t excluded)
-;
+;              Ignored if HOUR, DAY, MONTH or YEAR are set
+;    MIN_SIG: in, optional, default=none
+;             if set, all intervals having less than MIN_SIG 
+;             (0<min_sig<1) will be set to missing
+;    MIN_NSIG: in, optional, default = none
+;              if set, all intervals having less than MIN_NSIG 
+;              valid values will be set to missing
+;              MIN_NSIG can be eather a scalar or an array of the size
+;              of the number of intervals (N_ELEMENTS(NEW_TIME)- 1)
+;              Ignored if MIN_SIG is set
+;             
 ; :Returns:
 ;    A new object with the aggregated data
 ;
 ;-
-function w_ts_Data::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
+function w_ts_Data::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
 
-
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if N_ELEMENTS(HOUR) ne 0 then begin
+    d = MAKE_ABS_DATE(QMS=self.t0-1LL)
+    start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+    d = MAKE_ABS_DATE(QMS=self.t1)
+    end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+    if end_D lt self.t1 then end_D += H_QMS
+    new_time = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=H_QMS * LONG64(HOUR))
+    step = 'TIMESTEP'
+    timestep = H_QMS * LONG64(HOUR)
+  endif
+  
+  if N_ELEMENTS(DAY) ne 0 then begin
+    d = MAKE_ABS_DATE(QMS=self.t0-1LL)
+    start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+    d = MAKE_ABS_DATE(QMS=self.t1)
+    end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day)
+    if end_D lt self.t1 then end_D += D_QMS
+    new_time = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=D_QMS * LONG64(DAY))
+    step = 'TIMESTEP'
+    timestep = D_QMS * LONG64(DAY)
+  endif
+  
+  if N_ELEMENTS(MONTH) ne 0 then begin
+    t0 = w_time_to_month(self.t0-1LL)
+    t1 = w_time_to_month(self.t1)
+    if t1 eq w_time_to_month(self.t1-1LL) then t1 += 1
+    new_time = w_month_to_time(INDGEN(t1-t0 + 1)  + t0)
+    step = 'MONTH'
+    timestep = 1
+  endif
+  
+  if N_ELEMENTS(YEAR) ne 0 then begin
+    t0 = w_time_to_year(self.t0-1LL)
+    t1 = w_time_to_year(self.t1)
+    if t1 eq w_time_to_year(self.t1-1LL) then t1 += 1
+    new_time = w_year_to_time(INDGEN(t1-t0 + 1) + t0)
+    step = 'YEAR'
+    timestep = 1
+  endif
+  
+  if N_ELEMENTS(MIN_SIG) ne 0 then begin
+    if N_ELEMENTS(step) eq 0 then MESSAGE, 'MIN_SIG is applicable with H, D, M, Y positional keywords only.'
+    case step of
+      'YEAR': begin
+        if self.step eq 'YEAR' then Message, 'No'
+        if self.step eq 'MONTH' then n = 12
+        if self.step eq 'TIMESTEP' then begin
+          n = 365 + GEN_switch_year(w_time_to_year(new_time[0:N_ELEMENTS(new_time)-2]))
+          n = n *  D_QMS / self.timestep
+        endif
+      end
+      'MONTH': begin
+        if self.step eq 'YEAR' then Message, 'No'
+        if self.step eq 'MONTH' then Message, 'No'
+        if self.step eq 'TIMESTEP' then begin
+          monthly_time = MAKE_ABS_DATE(QMS=new_time[0:N_ELEMENTS(new_time)-2])
+          n = GEN_month_days(monthly_time.month, monthly_time.year)
+          n = n *  D_QMS / self.timestep
+        endif
+      end
+      'TIMESTEP': begin
+        if self.step eq 'YEAR' then Message, 'No'
+        if self.step eq 'MONTH' then Message, 'No'
+        if self.step eq 'TIMESTEP' then n = REPLICATE(timestep / self.timestep, N_ELEMENTS(new_time)-1)
+      end
+    endcase
+    min_nsig = FLOAT(0 > MIN_SIG < 1) * n
+  endif
+  
   TS_AGG, self->getData(), self->getTime(), agg, agg_time, $
-  DAY=day, HOUR=hour, NEW_TIME=new_time, $
+    NEW_TIME=new_time, MIN_NSIG=min_nsig, $
     AGG_METHOD=self.agg_method, MISSING=*self.missing
     
   out= OBJ_NEW('w_ts_Data', agg, agg_time, $
@@ -782,7 +980,8 @@ function w_ts_Data::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
     UNIT=self.unit, $
     VALIDITY='INTERVAL', $
     AGG_METHOD=self.agg_method, $
-    STEP=self.step, $
+    STEP=step, $
+    TIMESTEP=timestep, $
     MISSING=*self.missing)
     
   return, out
@@ -796,7 +995,7 @@ end
 ; :Returns:
 ;    a copy of the time serie
 ;-
-function w_ts_Data::Copy
+function w_ts_Data::copy
 
   out= OBJ_NEW('w_ts_Data', *self.data, *self.time, $
     NAME=self.name, $
@@ -808,7 +1007,7 @@ function w_ts_Data::Copy
     AGG_METHOD=self.agg_method, $
     STEP=self.step, $
     MISSING=*self.missing)
-    
+      
   return, out
 
 end

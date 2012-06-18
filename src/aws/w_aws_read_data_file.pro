@@ -233,7 +233,7 @@ function w_aws_read_data_file, FILE=file, DELTA_QMS=delta_qms, STATION_OBJ=stati
   if ~arg_okay(_ignoretag, TYPE=IDL_STRING) then MESSAGE, WAVE_Std_Message('IGNORETAG', /ARG)
     
   ; Parse the file  
-  template = w_aws_read_data_file_auto_template(file)  
+  template = w_aws_read_data_file_auto_template(file)
   ascii_data = read_ascii(file, TEMPLATE=template)  
   n = n_tags(ascii_data)
   tags = tag_names(ascii_data)

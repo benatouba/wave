@@ -600,12 +600,17 @@ end
 ;              any time serie of n+1 elements. The ouptut will contain
 ;              n elements of the statistics for each interval [t, t+1]
 ;              (t excluded)
-;
+;    MIN_NSIG: in, optional, default = none
+;              if set, all intervals having less than MIN_NSIG 
+;              valid values will be set to missing
+;              MIN_NSIG can be eather a scalar or an array of the size
+;              of the number of intervals (N_ELEMENTS(NEW_TIME) - 1)
+;              
 ; :Returns:
 ;    A new object with the aggregated data
 ;
 ;-
-function w_ts_StatSet::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
+function w_ts_StatSet::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time, MIN_NSIG=min_nsig
   
   ; Make a new identical station
   out = OBJ_NEW('w_ts_StatSet', NAME=self.name, DESCRIPTION=self.description)                             
@@ -615,7 +620,7 @@ function w_ts_StatSet::Aggregate, DAY=day, HOUR=hour, NEW_TIME=new_time
   
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    out->addVar, _stat->Aggregate(DAY=day, HOUR=hour, NEW_TIME=new_time)   
+    out->addVar, _stat->Aggregate(DAY=day, HOUR=hour, NEW_TIME=new_time, MIN_NSIG=min_nsig)   
   endfor
   
   return, out

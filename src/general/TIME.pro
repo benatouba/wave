@@ -1551,7 +1551,7 @@ function CHECK_TIMESERIE, ts, timestep, FULL_TS=full_ts, IND_MISSING=ind_missing
   mytime = mytime[SORT(mytime)]
   n = N_ELEMENTS(mytime)
   steps = mytime[1:n-1] - mytime[0:n-2]
-  bs = min(steps)
+  bs = min(steps) < D_QMS
   if bs eq 0 then Message, 'The timeserie is not valid (some times are not unique)'
   if N_ELEMENTS(FORCE_TIMESTEP) eq 0 then begin
     h = HISTOGRAM(steps, omin = om, /L64, BINSIZE=bs)
@@ -1759,73 +1759,6 @@ function SEARCH_WTIME, ts, time, pos = pos, cnt = cnt
   
   if cnt ge 1 then return, TRUE else return, FALSE
   
-end
-
-;+
-; :Description:
-;    This function fills gaps in a time serie with user defined values or NaN's.
-;    It is based on the IDL value_locate function, which is pretty fast.
-;
-; :Params:
-;    data: in, required, type = numeric
-;          the data serie to complete
-;    time: in, required, type = {ABS_DATE}/qms
-;          the time serie associated to data
-;    new_time: in, required, type = {ABS_DATE}/qms
-;              the output time serie (complete)
-;              
-; :Keywords:
-;    FILL_VALUE: in, optional, default = !VALUES.F_NAN
-;                the value to insert into the gaps
-;    INDEXES: out, type = long
-;             the indexes in 'new_time' where the gaps ere filled (-1 if the time series was complete)           
-; 
-; :Returns:
-;    An array of same size as 'new_time' similar to 'data' but with gaps filled.
-;  
-; :History:
-;     Written by FaM, 2011.
-;-
-function TS_FILL_MISSING, data, time, new_time, FILL_VALUE=fill_value, INDEXES=indexes
-
-  ; Set Up environnement
-  COMPILE_OPT idl2
-  @WAVE.inc
-  
-  ON_ERROR, 2
-  
-  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /NUMERIC)
-  if ~ check_WTIME(time, OUT_QMS=qms1) then message, WAVE_Std_Message('time', /ARG)
-  if ~ check_WTIME(new_time, OUT_QMS=qms2) then message, WAVE_Std_Message('new_time', /ARG)
-  indexes = -1
-   
-  n = N_elements(data) 
-  if n_elements(qms1) ne n then message, 'data and time arrays must have same number of elements'
-  if N_ELEMENTS(qms2) eq n and TOTAL(ABS(qms2-qms1)) eq 0 then return, data ;nothing to do
-  
-  s = VALUE_LOCATE(qms1, qms2) < (n-1) ;Subscript intervals
-  If N_ELEMENTS(FILL_VALUE) eq 0 then FILL_VALUE = !VALUES.F_NAN
-  
-  out = data[s > 0]  
-  sd = s[1:*] - s[0:N_ELEMENTS(s)-2]
-    
-  p1 = WHERE(sd eq 0, cnt)
-  if cnt ne 0 then begin
-   out[p1+1] = FILL_VALUE 
-   indexes = [indexes, p1+1]
-  endif
-  
-  p2 = WHERE(s eq -1, cnt)
-  if cnt ne 0 then begin
-   out[p2] = FILL_VALUE 
-   indexes = [indexes, p2]
-  endif  
-  
-  if N_ELEMENTS(indexes) gt 1 then indexes = indexes[1:*]
-  indexes = indexes[UNIQ(indexes, SORT(indexes))]
-  
-  RETURN, out
-
 end
 
 ;+
@@ -2042,11 +1975,16 @@ end
 ;    HOUR: in, optional, default = none
 ;         set to an hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
-;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
+;    NEW_TIME: in, optional, type = {ABS_DATE}/qms, default = none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
 ;              n elements of the statistics for each interval [t, t+1]
 ;              (t excluded)
+;    MIN_NSIG: in, optional, default = none
+;              if set, all intervals having less than MIN_NSIG 
+;              valid values will be set to missing
+;              MIN_NSIG can be eather a scalar or an array of the size
+;              of the number of intervals (N_ELEMENTS(NEW_TIME) - 1)
 ;    DOUBLE: in, optional
 ;            set this keyword to compute in double precision
 ; 
@@ -2054,15 +1992,20 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_method, $
-    DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+pro TS_AGG, data, time, agg, agg_time, $
+    MISSING=missing, $ 
+    AGG_METHOD=agg_method, $
+    DAY=day, HOUR=hour, $ 
+    NEW_TIME=new_time, $ 
+    MIN_NSIG=min_nsig, $ 
+    DOUBLE=double
     
     
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
   
-  ON_ERROR, 2
+;  ON_ERROR, 2
   
   ; Check Arguments
   if ~ arg_okay(data, /NUMERIC, /ARRAY) then message, WAVE_Std_Message('data', /ARG)
@@ -2073,6 +2016,8 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   if KEYWORD_SET(DOUBLE) then _data = double(_data)
   
   am = CAL_agg_method(AGG_METHOD)
+  
+  if N_ELEMENTS(MIN_NSIG) ne 0 then _donsig = TRUE else _donsig = FALSE
   
   ; Sort the TS
   sor = SORT(qms1)
@@ -2110,6 +2055,21 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
     
   endif else message, 'One of the positionnal keywords must be set.'
   
+  if _donsig then begin
+    TS_AGG, data, time, nsig, $
+      MISSING=missing, $
+      AGG_METHOD='N_SIG', $
+      DAY=day, HOUR=hour, $
+      NEW_TIME=new_time
+    
+    case N_ELEMENTS(MIN_NSIG) of
+      1: _min_nsig = REPLICATE(min_nsig, N_ELEMENTS(nsig))
+      N_ELEMENTS(nsig): _min_nsig = min_nsig
+      else: MESSAGE, WAVE_Std_Message('MIN_NSIG', /NELEMENTS)
+    endcase
+    
+  endif
+  
   dataTypeName = Size(_data, /TNAME)
   _missing = N_ELEMENTS(missing) ne 0
   CASE dataTypeName OF
@@ -2130,16 +2090,24 @@ pro TS_AGG, data, time, agg, agg_time, MISSING = missing, AGG_METHOD = agg_metho
   _data = _data[pok]
   qms1 = qms1[pok]
   
-  s = VALUE_LOCATE(qms1, qms2)
-  
   nnt = N_ELEMENTS(qms2)
+  
+  if cntok eq 1 then begin  
+    s = REPLICATE(-1, nnt)
+  endif else begin
+    s = VALUE_LOCATE(qms1, qms2)
+  endelse 
+  
+  
   if am eq 'N_SIG' then agg = LONARR(nnt-1) $
   else agg = REPLICATE(_data[0], nnt-1) * 0
   
   for i = 0,  N_ELEMENTS(s) - 2 do begin
     a = s[i]+1
     b = s[i+1]
-    if a le b then begin
+    doit = a le b
+    if _donsig then doit = doit and (nsig[i] ge _min_nsig[i])
+    if doit then begin
       tp = _data[a:b]
       n_y = b-a+1
       case str_equiv(am) of

@@ -626,7 +626,7 @@ pro TEST_TS_FILL_MISSING
   missT = [0,5,10,41,42,43,44,45,46,47,48]  
   ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
   if ok eq TRUE then error+=1  
-  filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(badData, badTS, goodTS, SUBSCRIPT=inds)
   if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
   if N_ELEMENTS(filled_Data) ne N_ELEMENTS(goodData) then error +=1
   if total(inds - missT) ne 0 then error +=1
@@ -639,7 +639,7 @@ pro TEST_TS_FILL_MISSING
   missT = [5,10,41,42,43,44,45,46,47]  
   ok = check_TimeSerie(badTS, probableStep, FULL_TS=fullTS, IND_MISSING=mis)
   if ok eq TRUE then error+=1  
-  filled_Data = TS_FILL_MISSING(badData, badTS, goodTS, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(badData, badTS, goodTS, SUBSCRIPT=inds)
   if N_ELEMENTS(inds) ne N_ELEMENTS(missT) then error +=1
   if N_ELEMENTS(filled_Data) ne N_ELEMENTS(goodData) then error +=1
   if total(inds - missT) ne 0 then error +=1
@@ -647,12 +647,12 @@ pro TEST_TS_FILL_MISSING
   if GOODDATA[40] ne filled_Data[40] then error +=1
   if total(filled_data[where(FINITE(filled_Data) eq 1)] - badData) ne 0 then error +=1  
   
-  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, goodTS, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(GOODDATA, goodTS, goodTS, SUBSCRIPT=inds)
   if total(GOODDATA - filled_Data) ne 0 then error +=1  
   if N_ELEMENTS(inds) ne 1 then error +=1 
   if inds[0] ne -1 then error +=1 
   
-  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, badTS, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(GOODDATA, goodTS, badTS, SUBSCRIPT=inds)
   if total(badData - filled_Data) ne 0 then error +=1  
   if N_ELEMENTS(inds) ne 1 then error +=1 
   if inds[0] ne -1 then error +=1   
@@ -660,13 +660,13 @@ pro TEST_TS_FILL_MISSING
   goodTS = QMS_TIME(year=2010,month=01, day=[1,2,3,4])
   badTS = QMS_TIME(year=2010,month=01, day=[2,3])
   GOODDATA = INDGEN(4)
-  filled_Data = TS_FILL_MISSING(GOODDATA, goodTS, badTS, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(GOODDATA, goodTS, badTS, SUBSCRIPT=inds)
   if total([1,2] - filled_Data) ne 0 then error +=1  
   if N_ELEMENTS(inds) ne 1 then error +=1 
   if inds[0] ne -1 then error +=1   
   
   GOODDATA = INDGEN(2)
-  filled_Data = TS_FILL_MISSING(GOODDATA, badTS, goodTS, FILL_VALUE=-1, INDEXES=inds)
+  filled_Data = w_ts_fill_missing(GOODDATA, badTS, goodTS, FILL_VALUE=-1, SUBSCRIPT=inds)
   if total(ABS([-1,0,1,-1] - filled_Data)) ne 0 then error +=1  
   if N_ELEMENTS(inds) ne 2 then error +=1 
   if inds[0] ne 0 then error +=1   
@@ -1167,6 +1167,347 @@ pro TEST_GR_DATALEVELS
  
   if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
   
+  
+end
+
+pro TEST_TS_DATA
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  error = 0
+  
+  ; Check defaults
+  d = OBJ_NEW('w_ts_Data')
+  if ~ OBJ_VALID(d) then error += 1
+  undefine, d
+  
+  ; Check attributes
+  d = OBJ_NEW('w_ts_Data', NAME='name', DESCRIPTION='description', UNIT='unit', VALIDITY='interval')
+  if ~ OBJ_VALID(d) then error += 1
+  d->getProperty, NAME=name, DESCRIPTION=description, UNIT=unit, VALIDITY=validity
+  if validity ne 'interval' then error += 1
+  if name ne 'name' then error += 1
+  if description ne 'description' then error += 1
+  if unit ne 'unit' then error += 1
+  if d->getProperty('VALIDITY') ne 'interval' then error += 1
+  if d->getProperty('name') ne 'name' then error += 1
+  if d->getProperty('description') ne 'description' then error += 1
+  if d->getProperty('unit') ne 'unit' then error += 1  
+  undefine, d
+  
+  ; Check with hourly data
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS  
+  d = OBJ_NEW('w_ts_Data', data, time)
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne H_QMS then error += 1 
+  if finite(missing) then error += 1 
+  if step ne 'TIMESTEP' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne nt then error += 1 
+  
+  ; Now set periods
+  d->setPeriod, T0=time[0], T1=time[3]
+  if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod
+  if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod, /DEFAULT
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod, T0=time[nt-1]+H_QMS, T1=time[nt-1]+2*H_QMS
+  if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[nt-1]+[H_QMS,2*H_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne 2 then error += 1 
+  d->setPeriod, /DEFAULT
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  undefine, d
+  
+  ; Check missing
+  data[1:2] = -9999
+  d = OBJ_NEW('w_ts_Data', data, time, MISSING=-9999.)
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne H_QMS then error += 1 
+  if ~finite(missing) then error += 1 
+  if missing ne -9999. then error += 1 
+  if step ne 'TIMESTEP' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(d->Valid()) ne nt-2 then error += 1 
+  if (d->Valid())[1] ne 0 then error += 1 
+  if (d->Valid())[2] ne 0 then error += 1 
+  if _nt ne nt then error += 1     
+  undefine, d
+  
+  ; Check aggregate
+  data[0:13] = !VALUES.F_NAN
+  d = OBJ_NEW('w_ts_Data', data, time)
+  if ~ OBJ_VALID(d) then error += 1  
+  a = d->Aggregate(DAY=1)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne D_QMS then error += 1 
+  if step ne 'TIMESTEP' then error += 1 
+  if (a->getTime(nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[nt-1] ne QMS_TIME(YEAR=2010, MONTH=1, day=06, HOUR=0) then error += 1  
+  if finite((a->getdata())[0]) then error += 1 
+  undefine, a
+  
+  a = d->Aggregate(DAY=1, MIN_SIG=0.5)
+  if ~ OBJ_VALID(a) then error += 1
+  if finite((a->getdata())[0]) then error += 1 
+  if finite((a->getdata())[1]) then error += 1 
+  if ~ finite((a->getdata())[2]) then error += 1     
+  undefine, d, a
+  
+  
+  ; Check with 10-mins data
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * M_QMS * 10LL  
+  d = OBJ_NEW('w_ts_Data', data, time)
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne M_QMS * 10LL  then error += 1 
+  if finite(missing) then error += 1 
+  if step ne 'TIMESTEP' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne nt then error += 1 
+  undefine, d
+  
+  ; Check with MONTHLY data
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = w_month_to_time(w_time_to_month(QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0)) + INDGEN(nt))
+  d = OBJ_NEW('w_ts_Data', data, time, STEP='MONTH')
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1  then error += 1 
+  if step ne 'MONTH' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne nt then error += 1 
+    
+  ; Now set periods
+  d->setPeriod, T0=time[0], T1=time[3]
+  if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod
+  if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod, /DEFAULT
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  d->setPeriod, T0=time[nt-1]+31*D_QMS, T1=time[nt-1]+61*D_QMS
+  if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[nt-1]+[31*D_QMS,61*D_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne 2 then error += 1 
+  d->setPeriod, T1=time[0]-31*D_QMS, T0=time[0]-61*D_QMS
+  if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time[0]-[61*D_QMS,31*D_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne 2 then error += 1 
+  d->setPeriod, /DEFAULT
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  undefine, d
+  
+  ; Check with daily data and aggregate
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * D_QMS  
+  d = OBJ_NEW('w_ts_Data', data, time)
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne D_QMS then error += 1 
+  if finite(missing) then error += 1 
+  if step ne 'TIMESTEP' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne nt then error += 1 
+   
+  a = d->Aggregate(MONTH=1)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'MONTH' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2010, MONTH=5, day=01, HOUR=0) then error += 1  
+  undefine, a
+  a = d->Aggregate(MONTH=1, MIN_SIG=0.5)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'MONTH' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2010, MONTH=5, day=01, HOUR=0) then error += 1  
+  if finite((a->getdata())[0]) then error += 1 
+  undefine, a  
+  
+  a = d->Aggregate(YEAR=1, MIN_SIG=0.5)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'YEAR' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) then error += 1  
+  if finite((a->getdata())[0]) then error += 1 
+  if finite((a->getdata())[1]) then error += 1 
+  undefine, a  
+  a = d->Aggregate(YEAR=1, MIN_SIG=0.25)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'YEAR' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) then error += 1  
+  if finite((a->getdata())[0]) then error += 1 
+  if ~finite((a->getdata())[1]) then error += 1 
+  if _nt ne 2 then error += 1 
+  undefine, a  
+  
+  undefine, d
+  
+  ; Check with monthly data and aggregate
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = w_month_to_time(w_time_to_month(QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0)) + INDGEN(nt))
+  d = OBJ_NEW('w_ts_Data', data, time, STEP='MONTH')
+  if ~ OBJ_VALID(d) then error += 1  
+  d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'MONTH' then error += 1 
+  if t0 ne time[0] then error += 1 
+  if t1 ne time[nt-1] then error += 1 
+  if _nt ne nt then error += 1 
+  if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if _nt ne nt then error += 1 
+
+  a = d->Aggregate(YEAR=1)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'YEAR' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2019, MONTH=1, day=01, HOUR=0) then error += 1  
+  undefine, a
+  a = d->Aggregate(YEAR=1, MIN_SIG=0.5)
+  if ~ OBJ_VALID(a) then error += 1  
+  a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
+  if timestep ne 1 then error += 1 
+  if step ne 'YEAR' then error += 1 
+  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2019, MONTH=1, day=01, HOUR=0) then error += 1  
+  if finite((a->getdata())[0]) then error += 1 
+  undefine, a  
+  undefine, d
+  
+  if error ne 0 then message, '% TEST_TS_DATA NOT passed', /CONTINUE else print, 'TEST_TS_DATA passed'
+  
+end
+
+pro TEST_TS_STATION
+
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  error = 0
+  
+  ; Check defaults
+  d = OBJ_NEW('w_ts_Station')
+  if ~ OBJ_VALID(d) then error += 1
+  undefine, d
+  
+  ; Check attributes
+  d = OBJ_NEW('w_ts_Station', NAME='name', DESCRIPTION='description', loc_x = 12., loc_y = 13., ELEVATION=14)
+  if ~ OBJ_VALID(d) then error += 1
+  d->getProperty, NAME=name, DESCRIPTION=description
+  if name ne 'name' then error += 1
+  if description ne 'description' then error += 1
+  if d->getProperty('loc_x') ne 12. then error += 1
+  if d->getProperty('loc_y') ne 13. then error += 1
+  if d->getProperty('elevation') ne 14. then error += 1
+  if d->getProperty('name') ne 'name' then error += 1
+  if d->getProperty('description') ne 'description' then error += 1
+  undefine, d
+  
+  ; Check full chain at once
+  f = w_test_file_directory() + 'TS/gsod-389540-99999.dat'
+  s = w_ncdc_read_gsod_file(FILE=f)
+  if ~ OBJ_VALID(s) then error += 1
+    
+  v = s->getvar('TEMP')  
+  if v->getProperty('t0') ne QMS_TIME(year=2001,month=1,day=2) then error += 1
+  if v->getProperty('t1') ne QMS_TIME(year=2012,month=1,day=1) then error += 1
+  
+  d = cgDemoData(0)
+  t = QMS_TIME(YEAR=2005, MONTH=1, day=01, HOUR=0) + INDGEN(N_ELEMENTS(d)) * D_QMS 
+  s->addVar, OBJ_NEW('w_ts_Data', d, t, NAME='DUMMY')  
+  
+  v = s->getvar('DUMMY')  
+  if v->getProperty('t0') ne QMS_TIME(year=2001,month=1,day=2) then error += 1
+  if v->getProperty('t1') ne QMS_TIME(year=2012,month=1,day=1) then error += 1
+  
+  s->setPeriod, t0=QMS_TIME(year=2001,month=02,day=08), t1=QMS_TIME(year=2001,month=02,day=08)
+  v = (s->getvar('TEMP'))->getData()
+  if v ne (27.7 - 32.0) * 5.0/9.0 then error += 1  
+  v = (s->getvar('STP'))->getData()
+  if FINITE(v) then error += 1
+  
+  s->setPeriod, /DEFAULT
+  
+  d = s->aggregate(month=1)
+  if ~ OBJ_VALID(d) then error += 1
+  d->setPeriod, t0=QMS_TIME(year=2001,month=03,day=01), t1=QMS_TIME(year=2001,month=03,day=01)
+  v = (d->getvar('TEMP'))->getData()
+  if ABS(v - (25.9846153846 - 32.0) * 5.0/9.0) gt 0.001 then error += 1  
+  v = (d->getvar('VISIB'))->getData()
+  if ABS(v - 27.9416666667* 1.609344) gt 0.001 then error += 1    
+  undefine, d
+  
+  d = s->aggregate(month=1, MIN_SIG=0.75)
+  if ~ OBJ_VALID(d) then error += 1
+  d->setPeriod, t0=QMS_TIME(year=2001,month=03,day=01), t1=QMS_TIME(year=2001,month=03,day=01)
+  v = (d->getvar('TEMP'))->getData()
+  if ABS(v - (25.9846153846 - 32.0) * 5.0/9.0) gt 0.001 then error += 1  
+  v = (d->getvar('VISIB'))->getData()
+  if FINITE(v) then error += 1    
+  undefine, d
+  
+  f=w_test_file_directory() + 'TS/test_stat.nc'
+  s->NCDFwrite, FILE=f, /OVER
+  
+;  d = OBJ_NEW('w_ts_Station', FILE=f)
+;  if ~ OBJ_VALID(d) then error += 1
+  
+  undefine, s, d
+  
+  if error ne 0 then message, '% TEST_TS_STATION NOT passed', /CONTINUE else print, 'TEST_TS_STATION passed'
   
 end
 
@@ -4169,6 +4510,7 @@ pro TEST_UTILS
   TEST_MOSAIC
   TEST_REGRID
   TEST_GR_DATALEVELS
+  TEST_TS_DATA
 end
 
 pro TEST_POST, REDO = redo
