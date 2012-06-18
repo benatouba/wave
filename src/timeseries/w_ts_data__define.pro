@@ -745,8 +745,8 @@ pro w_ts_Data::plotTS, TITLE_INFO=title_info
   title = self.name
   if self.description ne '' then title = title + ': ' + self.description 
   if N_ELEMENTS(TITLE_INFO) ne 0 then title = title_info + title
-        
-  w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
+  
+  if total(self->valid()) ne 0 then w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
 
 end
 
@@ -970,10 +970,15 @@ function w_ts_Data::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
     min_nsig = FLOAT(0 > MIN_SIG < 1) * n
   endif
   
-  TS_AGG, self->getData(), self->getTime(), agg, agg_time, $
+  if total(self->valid()) eq 0 then begin
+    agg_time = new_time[1:*]
+    agg = REPLICATE(*self.missing, N_ELEMENTS(agg_time))  
+  endif else begin
+    TS_AGG, self->getData(), self->getTime(), agg, agg_time, $
     NEW_TIME=new_time, MIN_NSIG=min_nsig, $
     AGG_METHOD=self.agg_method, MISSING=*self.missing
-    
+  endelse
+      
   out= OBJ_NEW('w_ts_Data', agg, agg_time, $
     NAME=self.name, $
     DESCRIPTION=self.description, $

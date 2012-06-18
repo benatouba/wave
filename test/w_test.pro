@@ -1458,9 +1458,9 @@ pro TEST_TS_STATION
   
   ; Check full chain at once
   f = w_test_file_directory() + 'TS/gsod-389540-99999.dat'
-  s = w_ncdc_read_gsod_file(FILE=f)
+  s = w_ncdc_read_gsod_file(FILE=f, VERBOSE=0)
   if ~ OBJ_VALID(s) then error += 1
-    
+  
   v = s->getvar('TEMP')  
   if v->getProperty('t0') ne QMS_TIME(year=2001,month=1,day=2) then error += 1
   if v->getProperty('t1') ne QMS_TIME(year=2012,month=1,day=1) then error += 1
@@ -1479,6 +1479,22 @@ pro TEST_TS_STATION
   v = (s->getvar('STP'))->getData()
   if FINITE(v) then error += 1
   
+  s->setPeriod, t0=QMS_TIME(year=2001,month=02,day=13), t1=QMS_TIME(year=2001,month=02,day=13)
+  v = (s->getvar('TEMP'))->getData()
+  if v ne (20.4 - 32.0) * 5.0/9.0 then error += 1  
+  v = (s->getvar('WDSP'))->getData()
+  if v ne  0.8 * 0.514 then error += 1  
+  v = (s->getvar('STP'))->getData()
+  if FINITE(v) then error += 1 
+  
+  s->setPeriod, t0=QMS_TIME(year=2001,month=03,day=29), t1=QMS_TIME(year=2001,month=03,day=29)
+  v = (s->getvar('TEMP'))->getData()
+  if v ne (47.1 - 32.0) * 5.0/9.0 then error += 1  
+  v = (s->getvar('MXSPD'))->getData()
+  if v ne  3.9 * 0.514 then error += 1  
+  v = (s->getvar('PRCP'))->getData()
+  if v ne 0.12 * 25.4 then error += 1  
+     
   s->setPeriod, /DEFAULT
   
   d = s->aggregate(month=1)
@@ -1499,11 +1515,29 @@ pro TEST_TS_STATION
   if FINITE(v) then error += 1    
   undefine, d
   
-  f=w_test_file_directory() + 'TS/test_stat.nc'
-  s->NCDFwrite, FILE=f, /OVER
+  ; dumps and so
+  f1=w_test_file_directory() + 'TS/test_stat.nc'
+  s->NCDFwrite, FILE=f1, /OVER
+  d = OBJ_NEW('w_ts_Station', FILE=f1)
+  if ~ OBJ_VALID(d) then error += 1  
+  f2=w_test_file_directory() + 'TS/test_stat_test.nc'
+  d->NCDFwrite, FILE=f2, /OVER
+  n = OBJ_NEW('w_NCDF', FILE=f1)
+  d1 = w_test_file_directory() + 'TS/test_stat.dump'
+  n->dump, FILE=d1
+  undefine, n
+  n = OBJ_NEW('w_NCDF', FILE=f2)
+  d2 = w_test_file_directory() + 'TS/test_stat_test.dump'
+  n->dump, FILE=d2
+  undefine, n
   
-;  d = OBJ_NEW('w_ts_Station', FILE=f)
-;  if ~ OBJ_VALID(d) then error += 1
+  v = s->getVar('temp')
+  v->cleanTS, data1, time1, nt1
+  v = d->getVar('temp')
+  v->cleanTS, data2, time2, nt2  
+  if nt1 ne nt2 then error +=1
+  if TOTAL(ABS(time1 - time2)) ne 0 then error +=1
+  if TOTAL(ABS(data1 - data2)) ne 0 then error +=1  
   
   undefine, s, d
   
@@ -1511,7 +1545,46 @@ pro TEST_TS_STATION
   
 end
 
+pro TEST_TS_STATSET
 
+  ; Set Up environnement
+  COMPILE_OPT idl2
+  @WAVE.inc
+  
+  error = 0
+  fdir = w_test_file_directory() + 'WRF/'
+  
+;  g = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d03_2006-03-01_00_00_00_24h.nc')  
+;  w_ncdc_select_stations, stations, GRID=g
+;  undefine, g
+  
+;  gsod_directory = w_test_file_directory() + 'TS/gsod/'
+  out_directory = w_test_file_directory() + 'TS/set_orig/'
+;  w_ncdc_extract_gsod, stations.usaf, stations.wban, gsod_directory, out_directory, S_YEAR=2001, E_YEAR=2010
+  
+  s = w_ncdc_read_gsod_file(DIRECTORY=out_directory, VERBOSE=0)
+  if ~ OBJ_VALID(s) then error += 1
+  
+  out_directory = w_test_file_directory() + 'TS/set_nc/'
+  s->NCDFwrite, DIRECTORY=out_directory, /OVER
+  
+  d = OBJ_NEW('w_ts_StatSet', DIRECTORY=out_directory)
+  if ~ OBJ_VALID(d) then error += 1
+  
+  a = d->aggregate(MONTH=1)
+  if ~ OBJ_VALID(a) then error += 1  
+  undefine, a
+  
+  a = d->aggregate(MONTH=1, MIN_SIG=0.9)
+  if ~ OBJ_VALID(a) then error += 1  
+  undefine, a  
+  
+  undefine, s, d, a
+  
+  
+  if error ne 0 then message, '% TEST_TS_STATSET NOT passed', /CONTINUE else print, 'TEST_TS_STATSET passed'
+  
+end
 
 pro time_bug
 
@@ -4511,6 +4584,8 @@ pro TEST_UTILS
   TEST_REGRID
   TEST_GR_DATALEVELS
   TEST_TS_DATA
+  TEST_TS_STATION
+  TEST_TS_STATSET
 end
 
 pro TEST_POST, REDO = redo

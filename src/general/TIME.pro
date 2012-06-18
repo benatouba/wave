@@ -2086,19 +2086,19 @@ pro TS_AGG, data, time, agg, agg_time, $
   
   if FINITE(miss) then pok = where(ABS(_data-miss) gt epsilon, cntok) $
   else pok = where(FINITE(_data), cntok)
-
-  _data = _data[pok]
-  qms1 = qms1[pok]
-  
+ 
   nnt = N_ELEMENTS(qms2)
   
-  if cntok eq 1 then begin  
-    s = REPLICATE(-1, nnt)
-  endif else begin
-    s = VALUE_LOCATE(qms1, qms2)
-  endelse 
-  
-  
+  if cntok ne 0 then begin
+    _data = _data[pok]
+    qms1 = qms1[pok]
+    case cntok of
+      1: s = REPLICATE(-1, nnt)
+      else: s = VALUE_LOCATE(qms1, qms2)
+    endcase
+  endif
+   
+
   if am eq 'N_SIG' then agg = LONARR(nnt-1) $
   else agg = REPLICATE(_data[0], nnt-1) * 0
   

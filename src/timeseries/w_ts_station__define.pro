@@ -89,7 +89,42 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
   
   if N_ELEMENTS(FILE) ne 0 then begin
   
-    Message, 'File not yet'
+    n = OBJ_NEW('NCDF_FILE', file)
+    
+    _name = n->GetGlobalAttrValue('NAME')
+    _id =  n->GetGlobalAttrValue('ID')
+    _description =  n->GetGlobalAttrValue('DESCRIPTION')
+    _elevation = n->GetGlobalAttrValue('ELEVATION')
+    _loc_x = n->GetGlobalAttrValue('LOC_X')
+    _loc_y = n->GetGlobalAttrValue('LOC_Y')
+    case  n->GetGlobalAttrValue('SRC') of
+      'DATUM': GIS_make_datum, ret, _src, NAME=n->GetGlobalAttrValue('SRC_INFO')
+      'PROJ': GIS_make_proj, ret, _src, PARAM=n->GetGlobalAttrValue('SRC_INFO')
+      else: Message, 'Error by src'
+    endcase
+    
+    n->GetProperty, FILEID=cdfid
+    ok = utils_nc_coards_time(cdfid, time, time0, time1, nt)
+    if ~ ok then Message, 'Error by time'
+    
+    vnames = n->GetVarNames(COUNT=nv)
+    
+    for i=0, nv-1 do begin
+      vname = vnames[i]
+      if str_equiv(vname) eq 'TIME' then continue
+      v = OBJ_NEW('w_ts_Data', n->GetVarData(vname), time, NAME=vname, $
+        AGG_METHOD=n->GetVarAttrValue(vname,'agg_method'), $
+        DESCRIPTION=n->GetVarAttrValue(vname,'description'), $
+        MISSING=n->GetVarAttrValue(vname,'missing'), $
+        STEP=n->GetVarAttrValue(vname,'step'), $
+        TIMESTEP=n->GetVarAttrValue(vname,'timestep'), $
+        UNIT=n->GetVarAttrValue(vname,'units'), $
+        VALIDITY=n->GetVarAttrValue(vname,'validity'))        
+        self->addVar, v
+        
+    endfor
+     
+    undefine, n
   
   endif else begin  
   
@@ -151,10 +186,6 @@ end
 ;           The X location of the station
 ;    SRC: out, type=double
 ;         the source of X and Y ({TNT_DATUM}, {TNT_PROJ})
-;    T0: out, type=qms/{ABS_DATE}
-;        User def start time
-;    T1: out, type=qms/{ABS_DATE}
-;        User def end time
 ;    TIMESTEP: out, type={TIME_STEP}
 ;              Timeserie timestep
 ;-
@@ -162,10 +193,10 @@ pro w_ts_Station::getProperty, NAME=name, $
                                ID=id, $ 
                                DESCRIPTION=description, $  
                                ELEVATION=elevation, $ 
-                               T0=t0, $
-                               T1=t1, $
                                LOC_X=loc_x, $ 
                                LOC_Y=loc_y, $ 
+                               T0=t0, $ 
+                               T1=t1, $ 
                                SRC=src
                                
 
@@ -220,9 +251,9 @@ function w_ts_Station::getProperty, thisProperty
            'ELEVATION' , $
            'LOC_X' , $
            'LOC_Y' , $
-           'SRC' , $
            'T0' , $
-           'T1' ]
+           'T1' , $
+           'SRC' ]
   
   ; Check if ok
   index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
@@ -323,9 +354,16 @@ end
 ;                the argument. This makes sense in most of the cases
 ;                but sometimes you want to keep the original object.
 ;                Set this keyword to avoid destroying it.
+;   NO_SET_PERIOD: in, optional, type=boolean
+;                  default behavior is to check all variable periods
+;                  before return for consistency. For a station 
+;                  in creation this can lead to a large number of useless
+;                  operations. Set this keyword to avoid this check. 
+;                  However, it is recommended to do a ->set_period
+;                  by yourself after the station has been defined
 ;
 ;-
-pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy
+pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy, NO_SET_PERIOD=no_set_period
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -346,7 +384,7 @@ pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy
     self.vars->Add, var    
   endelse
     
-  self->setPeriod
+  if ~ KEYWORD_SET(NO_SET_PERIOD) then self->setPeriod
   
 end
 
@@ -863,19 +901,15 @@ end
 ;
 ; :Keywords:
 ;    FILE: in, required, type=string
-;          the path to the file to write. The routine
-;          will check for the correct suffix (".nc") and add
-;          it if necessary. If a directory is given as argument,
+;          the path to the file to write. If a directory is given as argument,
 ;          the routine will define the name automatically using the
 ;          station id and name
-;    COMMENT: in, optional, type=string
-;             a comment to add to the file as global attribute
 ;    OVERWRITE: in, optional
 ;               default behavior is to stop if the file already exists.
 ;               Set this keyword to avoid this
 ;
 ;-
-pro w_ts_Station::NCDFwrite, FILE=file, TITLE=title, OVERWRITE=overwrite
+pro w_ts_Station::NCDFwrite, FILE=file, OVERWRITE=overwrite
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -893,7 +927,7 @@ pro w_ts_Station::NCDFwrite, FILE=file, TITLE=title, OVERWRITE=overwrite
     _file = _file + 'w_ts_' + self.id + '_' + self.name + '.nc' 
   endif else _file = file
       
-  dObj = OBJ_NEW('NCDF_FILE', _file, /CREATE, CLOBBER=overwrite, /TIMESTAMP)
+  dObj = OBJ_NEW('NCDF_FILE', _file, /CREATE, CLOBBER=overwrite)
   if ~ OBJ_VALID(dObj) then return
   
   dObj->WriteGlobalAttr, 'FILE_INFO', 'WAVE w_ts_Station data', DATATYPE='CHAR'
