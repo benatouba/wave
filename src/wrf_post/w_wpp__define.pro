@@ -48,18 +48,18 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   
   ; Let's go
   if self.do_cache then begin
-    self.cachepath = self.output_directory + '/cache'+Timestamp(11, RANDOM_DIGITS=6, /VALID) 
+    self.cachepath = self.log_directory + '/cache'+Timestamp(11, RANDOM_DIGITS=6, /VALID) 
     FILE_MKDIR, self.cachepath
   endif
   
   ; Logger  
-  logf = self.output_directory + '/wpp_init_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  logf = self.log_directory + '/wpp_init_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
   ; General info
   self.Logger->AddText, 'WPP logfile ' + self.title + ' - Domain ' + str_equiv(self.domain), PRINT=print
   self.Logger->AddText, '', PRINT=print  
   self.Logger->AddText, '', PRINT=print
-  self.Logger->AddText, 'Output directory: ' + self.output_directory, PRINT=print
+  self.Logger->AddText, 'Log directory: ' + self.log_directory, PRINT=print
   self.Logger->AddText, 'Compression level: ' + str_equiv(self.compress_level), PRINT=print
   t = (self.shuffle EQ 1) ? 'yes' : 'no'
   self.Logger->AddText, 'Shuffle: ' + t, PRINT=print 
@@ -160,8 +160,8 @@ function w_WPP::_parse_Namelist
       'INPUT_DIRECTORY': begin
         if FILE_TEST(val, /DIRECTORY) then self.input_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
-      'OUTPUT_DIRECTORY': begin
-        if FILE_TEST(val, /DIRECTORY) then self.output_directory = utils_clean_path(val, /MARK_DIRECTORY)
+      'LOG_DIRECTORY': begin
+        if FILE_TEST(val, /DIRECTORY) then self.log_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
       'SEARCH_PATTERN': begin
         matches = Where(StrMatch(val, '*{domain}*'), count)
@@ -201,9 +201,8 @@ function w_WPP::_parse_Namelist
           if FILE_TEST(_val) then self.vstatic_file = utils_clean_path(_val)
         endif
       end
-      'OUTPUT_DIRECTORY': begin
-        if str_equiv(val) eq str_equiv('-') then val = utils_clean_path(self.output_directory + '/products', /MARK_DIRECTORY)
-        if FILE_TEST(val, /DIRECTORY) then self.output_directory = utils_clean_path(val, /MARK_DIRECTORY)
+      'PRODUCT_DIRECTORY': begin        
+        if FILE_TEST(val, /DIRECTORY) then self.product_directory = utils_clean_path(val, /MARK_DIRECTORY)
       end
       'PRESSURE_LEVELS': begin
         val = LONG(STRSPLIT(val, ',', /EXTRACT))
@@ -243,7 +242,7 @@ function w_WPP::_parse_Namelist
   ; Check
   if self.domain eq 0 then Message, 'Problem while parsing domain field.'
   if self.input_directory eq '' then Message, 'Problem while parsing input_directory field.'
-  if self.output_directory eq  '' then Message, 'Problem while parsing output_directory field.'
+  if self.log_directory eq  '' then Message, 'Problem while parsing log_directory field.'
   if self.v2d_file eq '' then Message, 'Problem while parsing v2d_file field.'
   if self.v3d_file eq  '' then Message, 'Problem while parsing v3d_file field.'
   if self.vsoil_file eq '' then Message, 'Problem while parsing vsoil_file field.'
@@ -418,9 +417,9 @@ pro w_WPP::_set_active_var, var, year, agg, obj, IS_STATIC=is_static
   
   f_name = self.project_acronym + '_' + utils_replace_string(f_dir, '/', '_') + '_' + var.name + yr_str + '.nc'
   f_path = utils_clean_path(self.product_directory + f_dir + '/' + f_name)
-  l_path = utils_clean_path(self.output_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
+  l_path = utils_clean_path(self.log_directory + '/logs_idl/' + f_dir + '/' + 'check_'+ utils_replace_string(f_name, '.nc', '.sav'))
   f_log = 'log_'+ utils_replace_string(f_name, '.nc', '.log')
-  f_log = utils_clean_path(self.output_directory + '/logs_ncdf/' + f_log)
+  f_log = utils_clean_path(self.log_directory + '/logs_ncdf/' + f_log)
   
   if agg ne 's' then begin
     FILE_MKDIR, FILE_DIRNAME(f_log)
@@ -903,7 +902,7 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
   ; Logger
-  logf = self.output_directory + '/wpp_process_static_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  logf = self.log_directory + '/wpp_process_static_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
   
   obj_destroy, self.active_wrf
@@ -1008,7 +1007,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     else: dom_str = 'd02km'
   endcase
   if self.dom_suffix ne '' then dom_str += self.dom_suffix
-  logf = self.output_directory + '/wpp_process_h_' + dom_str + ' ' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  logf = self.log_directory + '/wpp_process_h_' + dom_str + ' ' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
 
   obj_destroy, self.active_wrf
@@ -1193,7 +1192,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
  
   if ~(agg eq 'd' or agg eq 'm' or agg eq 'y') then Message, '$AGG not valid' 
 
-  logf = self.output_directory + '/wpp_process_m_' + agg + '_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
+  logf = self.log_directory + '/wpp_process_m_' + agg + '_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
     
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
@@ -1354,8 +1353,8 @@ pro w_WPP__Define, class
     domain                : 0L           ,  $ ; From the namelist: The domain to process
     dom_suffix            : ''           ,  $ ; From the namelist: a suffix to add to the domain identifier
     input_directory       : ''           ,  $ ; From the namelist: where to find the orginal WRF files
-    output_directory      : ''           ,  $ ; From the namelist: where to put the output files
-    product_directory     : ''           ,  $ ; From the namelist: where to put the product files. Default: output_directory/products 
+    log_directory         : ''           ,  $ ; From the namelist: where to put the log files
+    product_directory     : ''           ,  $ ; From the namelist: where to put the product files
     search_pattern        : ''           ,  $ ; From the namelist: file search pattern
     v2d_file              : ''           ,  $ ; From the namelist: Path to the variables_2d_wpp.csv
     v3d_file              : ''           ,  $ ; From the namelist: Path to the variables_3d_wpp.csv
