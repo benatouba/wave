@@ -496,6 +496,55 @@ end
 
 ;+
 ; :Description:
+;    Shortcut for the `w_ts_data::getData` function 
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable to get the data from
+;
+;
+;-
+function w_ts_Station::GetVarData, varName
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
+  
+  return, object->getData()
+  
+end
+
+function w_ts_Station::GetVarValid, varName
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
+  
+  return, object->Valid()
+
+end
+
+function w_ts_Station::GetTime
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  ; Count the number of global attribute objects.
+  varCount = self.vars->Count()
+  if varCount eq 0 then return, dummy
+ 
+ thisObj = self.vars->Get(POSITION=0)
+ return, thisObj->GetTime()
+
+end
+
+;+
+; :Description:
 ;    Delete variables from the station.
 ;
 ; :Params:
@@ -950,7 +999,7 @@ pro w_ts_Station::NCDFwrite, FILE=file, OVERWRITE=overwrite
   dObj->WriteGlobalAttr, 'SRC_INFO', src_str, DATATYPE='CHAR'
   
   v = self.vars->Get(POSITION=0)
-  time = v->getTime(nt)
+  time = v->getTime(NT=nt)
   time_str = 'seconds since ' + TIME_to_STR(time[0], MASK='YYYY-MM-DD HH:TT:SS')
   time = LONG((time - time[0]) / 1000)
   

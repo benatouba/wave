@@ -1211,26 +1211,26 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne nt then error += 1 
   
   ; Now set periods
   d->setPeriod, T0=time[0], T1=time[3]
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, /DEFAULT
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, T0=time[nt-1]+H_QMS, T1=time[nt-1]+2*H_QMS
   if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[nt-1]+[H_QMS,2*H_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[nt-1]+[H_QMS,2*H_QMS]-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne 2 then error += 1 
   d->setPeriod, /DEFAULT
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   undefine, d
   
   ; Check missing
@@ -1246,7 +1246,7 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if TOTAL(d->Valid()) ne nt-2 then error += 1 
   if (d->Valid())[1] ne 0 then error += 1 
   if (d->Valid())[2] ne 0 then error += 1 
@@ -1262,7 +1262,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne D_QMS then error += 1 
   if step ne 'TIMESTEP' then error += 1 
-  if (a->getTime(nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[nt-1] ne QMS_TIME(YEAR=2010, MONTH=1, day=06, HOUR=0) then error += 1  
   if finite((a->getdata())[0]) then error += 1 
   undefine, a
@@ -1289,7 +1289,7 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne nt then error += 1 
   undefine, d
   
@@ -1306,30 +1306,30 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne nt then error += 1 
     
   ; Now set periods
   d->setPeriod, T0=time[0], T1=time[3]
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[0:3]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, /DEFAULT
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, T0=time[nt-1]+31*D_QMS, T1=time[nt-1]+61*D_QMS
   if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[nt-1]+[31*D_QMS,61*D_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[nt-1]+[31*D_QMS,61*D_QMS]-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne 2 then error += 1 
   d->setPeriod, T1=time[0]-31*D_QMS, T0=time[0]-61*D_QMS
   if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time[0]-[61*D_QMS,31*D_QMS]-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time[0]-[61*D_QMS,31*D_QMS]-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne 2 then error += 1 
   d->setPeriod, /DEFAULT
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   undefine, d
   
   ; Check with daily data and aggregate
@@ -1346,7 +1346,7 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne nt then error += 1 
    
   a = d->Aggregate(MONTH=1)
@@ -1354,7 +1354,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'MONTH' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2010, MONTH=5, day=01, HOUR=0) then error += 1  
   undefine, a
   a = d->Aggregate(MONTH=1, MIN_SIG=0.5)
@@ -1362,7 +1362,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'MONTH' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2010, MONTH=5, day=01, HOUR=0) then error += 1  
   if finite((a->getdata())[0]) then error += 1 
   undefine, a  
@@ -1372,7 +1372,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) then error += 1  
   if finite((a->getdata())[0]) then error += 1 
   if finite((a->getdata())[1]) then error += 1 
@@ -1382,7 +1382,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) then error += 1  
   if finite((a->getdata())[0]) then error += 1 
   if ~finite((a->getdata())[1]) then error += 1 
@@ -1404,7 +1404,7 @@ pro TEST_TS_DATA
   if t1 ne time[nt-1] then error += 1 
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
-  if TOTAL(ABS(time-d->getTime(_nt))) ne 0 then error += 1 
+  if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne nt then error += 1 
 
   a = d->Aggregate(YEAR=1)
@@ -1412,7 +1412,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2019, MONTH=1, day=01, HOUR=0) then error += 1  
   undefine, a
   a = d->Aggregate(YEAR=1, MIN_SIG=0.5)
@@ -1420,7 +1420,7 @@ pro TEST_TS_DATA
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
-  if (a->getTime(_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
+  if (a->getTime(NT=_nt))[0] ne QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) then error += 1  
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2019, MONTH=1, day=01, HOUR=0) then error += 1  
   if finite((a->getdata())[0]) then error += 1 
   undefine, a  

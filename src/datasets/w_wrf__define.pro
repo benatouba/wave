@@ -20,8 +20,6 @@
 ;
 ;-      
 
-
-
 ;+
 ; :Description:
 ;    Object structure definition. Attributes::
@@ -232,7 +230,6 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
     endif
     if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
       w_QuickPlot, abs(gislon-lon)
-      w_QuickPlot, gislat
       Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
       Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
     endif

@@ -553,7 +553,7 @@ end
 ; :Description:
 ;    Get the time
 ;
-; :Params:
+; :Keywords:
 ;    nt: out
 ;        the number of times
 ;
@@ -561,7 +561,7 @@ end
 ;   A time array of nt elements
 ;
 ;-
-function w_ts_Data::getTime, nt
+function w_ts_Data::getTime, NT=nt
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -585,7 +585,7 @@ end
 ; :Description:
 ;    Get the data
 ;  
-; :Params:
+; :Keywords:
 ;    nt: out
 ;        the number of times
 ;
@@ -593,19 +593,19 @@ end
 ;   A data array of nt elements
 ;
 ;-
-function w_ts_Data::getData, nt
+function w_ts_Data::getData, NT=nt
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
   if ~ ptr_valid(self.data) then return, dummy
-  t = self->getTime(nt)
+  t = self->getTime(NT=nt)
   if nt eq 1 then begin
     p = where(*self.time eq t[0], cnt)
     if cnt ne 0 then return, (*self.data)[p] else  return, *self.missing
   endif
-  return, w_ts_fill_missing(*self.data, *self.time, self->getTime(nt), FILL_VALUE=*self.missing)
+  return, w_ts_fill_missing(*self.data, *self.time, self->getTime(NT=nt), FILL_VALUE=*self.missing)
   
 end
 
@@ -614,7 +614,7 @@ end
 ; :Description:
 ;   The validity of the data timeserie
 ;   
-; :Params:
+; :Keywords:
 ;    nt: out
 ;        the number of times
 ;
@@ -622,13 +622,13 @@ end
 ;   An array of nt elements (valid = 1)
 ;
 ;-
-function w_ts_Data::valid, nt
+function w_ts_Data::valid, NT=nt
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  data = self->getData(nt)
+  data = self->getData(NT=nt)
   _mask = BYTARR(nt)
   
   missing = *self.missing
