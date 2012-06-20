@@ -2380,10 +2380,10 @@ function utils_wrf_td, p, qvapor
   if not array_processing(p, qvapor) then message, WAVE_Std_Message(/ARG)
   
   qv = qvapor > 0
-  p = p*0.01
+  _p = p*0.01
   
   ; vapor pressure
-  tdc = qv * p / (0.622 + qv)
+  tdc = qv * _p / (0.622 + qv)
   
   ;avoid problems near zero
   tdc = tdc > 0.001
