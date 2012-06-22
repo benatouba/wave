@@ -189,6 +189,42 @@ function caching, filename , $
         return, outname
       endelse
     endif
+    if str_equiv(ending) eq 'GZ' then begin
+      if ~ KEYWORD_SET(DELETE) then begin
+        origname = caching(filename, /NO_ZIP, $
+          DELETE=delete,  $
+          CACHEPATH=cachepath,  $
+          LOGGER=logger,  $
+          PRINT=print,  $
+          QUIET=quiet)
+      endif else begin
+        origname = caching_combine_path_file(cachepath, utils_replace_string(filename, '/', '_'))
+      endelse
+      lfile = utils_replace_string(origname, '.gz', '.sav')
+      if keyword_set(delete) then begin
+        if ~ FILE_TEST(lfile) then message, 'Something went wrong. Did you try to delete the file before caching it?'
+        restore, filename=lfile
+        file_delete, outname, lfile
+        caching_log, 'uncompressed file: ' + outname + ' deleted', logger=logger, print=print, quiet=quiet
+        return, origname
+      endif else begin
+        if FILE_TEST(lfile) then begin ; Already here
+          restore, filename=lfile
+          return, outname
+        endif
+        openw,lun,lockfile, /get_lun
+        free_lun,lun
+        spawn, 'gunzip ' + origname, ret, err, exit_status=status
+        if err[0] ne '' then message, 'Error on uncompress: ' + err
+        outname = utils_replace_string(origname, '.gz', '')
+        if ~ file_test(outname) then message, 'Error on uncompress filename'
+        save, outname, filename=lfile
+        ; if it was deleted by someone else
+        if file_test(lockfile) then file_delete, lockfile
+        caching_log, 'file: ' + origname + ' uncompressed', logger=logger, print=print, quiet=quiet
+        return, outname
+      endelse
+    endif
   endif
   
   ; Normal case  

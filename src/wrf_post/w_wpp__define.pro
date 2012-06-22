@@ -1133,6 +1133,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   
   for d=0, N_ELEMENTS(objs)-1 do begin
     o = objs[d]
+    o->Close_File
     obj_Destroy, o
   endfor
   undefine, objs
