@@ -4548,6 +4548,64 @@ pro TEST_WRF_GETVAR
     
 end
 
+pro TEST_WPR, w, wd
+    
+  @WAVE.inc
+  tdir = w_test_file_directory() + 'WRF/'
+  fdir = '/home/mowglie/pr'
+  error = 0
+  years = 2009
+  
+  if ~ OBJ_VALID(w) then w = OBJ_NEW('w_WPR', DIRECTORY=fdir+'/d30km/h', CROPBORDER=97)  
+  w->getTime, time, nt, t0, t1
+  if t0 ne QMS_TIME(year=2001,month=1,day=1,hour=3) then error += 1
+  if t1 ne QMS_TIME(year=2012,month=1,day=1,hour=0) then error += 1  
+  t2 = w->GetVarData('t2c', time, nt, YEARS=2009) 
+  if nt ne 365*8 then error +=1
+  if nt ne N_ELEMENTS(t2[0,0,*]) then error +=1
+  tt = QMS_TIME(year=2009,month=1,day=10,hour=3)
+  t2 = t2[*,*,where(time eq tt)]  
+  o = OBJ_NEW('w_WRF', FILE=tdir+'/wrfpost_d01_2009-01-10_00-00-00_25h.nc', CROPBORDER=97)  
+  ref = o->get_Var('t2c', T0=tt, t1=tt)
+  if TOTAL(ABS(ref-t2)) ne 0 then error += 1  
+  
+  totest = w->GetVarData('rh_eta', time, nt, YEARS=2009)  
+  if nt ne 365*8 then error +=1
+  if nt ne N_ELEMENTS(t2[0,0,0,*]) then error +=1
+  totest = totest[*,*,*,where(time eq tt)]  
+  ref = o->get_Var('rh', T0=tt, t1=tt)
+  if TOTAL(ABS(ref-totest)) ne 0 then error += 1  
+  
+  totest = w->GetVarData('rh_press', time, nt, YEARS=2009)  
+  if nt ne 365*8 then error +=1
+  if nt ne N_ELEMENTS(t2[0,0,0,*]) then error +=1
+  totest = totest[*,*,*,where(time eq tt)]
+  ref = o->get_Var('rh', T0=tt, t1=tt, PRESSURE_LEVELS=w->GetPressureLevels())
+  if TOTAL(ABS(ref-totest)) ne 0 then error += 1  
+   
+     
+  if ~ OBJ_VALID(wd) then  wd = OBJ_NEW('w_WPR', DIRECTORY=fdir+'/d30km/d', CROPBORDER=97)  
+  wd->getTime, time, nt, t0, t1
+  if t0 ne QMS_TIME(year=2001,month=1,day=1,hour=0) then error += 1
+  if t1 ne QMS_TIME(year=2011,month=12,day=31,hour=0) then error += 1  
+  
+  t2 = wd->GetVarData('t2', time, nt, YEARS=2009) 
+  if nt ne 365 then error +=1
+  if nt ne N_ELEMENTS(t2[0,0,*]) then error +=1
+  tt = QMS_TIME(year=2009,month=1,day=10)
+  t2 = t2[*,*,where(time eq tt)]  
+  o = OBJ_NEW('w_WRF', FILE=tdir+'/wrfpost_d01_2009-01-10_00-00-00_25h.nc', CROPBORDER=97)  
+  ref = o->get_Var('t2', T0=tt+H_QMS)
+  if TOTAL(ABS(TOTAL(ref,3)/8-t2)) ne 0 then error += 1  
+  
+  
+  undefine, o
+  
+  
+  if error ne 0 then message, '% TEST_WPR NOT passed', /CONTINUE else print, 'TEST_WPR passed'
+  
+end
+
 pro TEST_TIME
   TEST_MAKE_ABS_DATE
   TEST_QMS_TIME

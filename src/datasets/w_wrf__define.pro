@@ -276,7 +276,7 @@ end
 ; :Keywords:
 ;       FILE      : in, optional, type = string
 ;                   the path to the WRF file. If not set, a dialog window will open
-;       _REF_EXTRA: in, optional
+;       _EXTRA: in, optional
 ;                   all keywords accepted by w_WRF::define_subset
 ;
 ; :Returns:
@@ -286,7 +286,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-Function w_WRF::Init, FILE=file, _REF_EXTRA=extra  
+Function w_WRF::Init, FILE=file, _EXTRA=extra  
            
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -425,14 +425,16 @@ pro w_WRF::Cleanup
   self->w_Grid2D::Cleanup
   self->w_GEO_nc::Cleanup
   
-  for i=0, self.ndiagvar -  1 do begin 
+  if ~ PTR_VALID(self.diagVars) then return
+  
+  for i=0, N_ELEMENTS(*self.diagVars) - 1 do begin 
    tvar = (*self.diagVars)[i]
    PTR_FREE, tvar.dims
    PTR_FREE, tvar.dimnames   
   endfor
   PTR_FREE, self.diagVars
   
-END
+end
 
 ;+
 ; :Description:

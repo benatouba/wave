@@ -325,6 +325,8 @@ END
 ;        resolution in y-direction
 ;    tnt_c: in, optional, type = {TNT_COORD}
 ;        TNT_GIS {TNT_COORD} struct. If set, all previous keywords are ignored.
+;    grid: in, optional, type = w_grid2d
+;          a grid to copy. If set, all previous keywords are ignored.
 ;    proj: in, optional, type = {TNT_PROJ}
 ;        TNT_GIS {TNT_PROJ} struct. MUST be SET.
 ;    meta: in, optional, type = string
@@ -346,8 +348,9 @@ Function w_Grid2D::Init ,  $
     dx = dx           ,  $
     dy = dy           ,  $   
     proj = proj       ,  $ 
-    tnt_c = tnt_c     ,  $   
-    meta = meta      
+    tnt_c = tnt_c     ,  $     
+    grid = grid       ,  $     
+    meta = meta       
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -369,9 +372,10 @@ Function w_Grid2D::Init ,  $
     y1 = y1           ,  $   
     dx = dx           ,  $
     dy = dy           ,  $   
-    tnt_c = tnt_c     ,  $   
     proj = proj       ,  $ 
-    meta = meta ) then return, 0  
+    tnt_c = tnt_c     ,  $     
+    grid = grid       ,  $     
+    meta = meta       ) then return, 0  
     
   RETURN, 1
   
