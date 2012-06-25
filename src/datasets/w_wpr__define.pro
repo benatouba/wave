@@ -658,7 +658,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       'PRESSURE_PRESS': begin
         levs = self->GetPressureLevels()
         if N_ELEMENTS(YEARS) ne 0 then _y = years else _y = *self.years
-        time = self->_makeTime(years)
+        time = self->_makeTime(_y)
         nt = N_ELEMENTS(time)
         if N_ELEMENTS(ZLEVELS) eq 1 then levs = levs[zlevels]
         if N_ELEMENTS(ZLEVELS) eq 2 then levs = levs[zlevels[0]:zlevels[1]]
@@ -669,11 +669,11 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       end
       'TK_PRESS': begin
         p = self->GetVarData('pressure_press', time, nt, YEARS=years, ZLEVELS=zlevels) * 100.
-        t = self->GetVarData('theta_eta', YEARS=years, ZLEVELS=zlevels)
+        t = self->GetVarData('theta_press', YEARS=years, ZLEVELS=zlevels)
         return, utils_wrf_tk(TEMPORARY(p),TEMPORARY(t))
       end
       'TC_PRESS': begin
-        return, self->GetVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels) - 273.15
+        return, self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels) - 273.15
       end
       'T2PBL': begin
         tk = self->get_Var('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels)
@@ -757,6 +757,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         obj = self.objs->FindByVar(id, (_y)[y], COUNT=count)
         if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
         tmp = reform(obj->get_Var(v.name, t, ZLEVELS=zlevels))
+               
         s = SIZE(tmp, /N_DIMENSIONS)
         if s le 3 then begin
           if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
