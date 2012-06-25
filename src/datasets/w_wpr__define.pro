@@ -663,8 +663,8 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         if N_ELEMENTS(ZLEVELS) eq 1 then levs = levs[zlevels]
         if N_ELEMENTS(ZLEVELS) eq 2 then levs = levs[zlevels[0]:zlevels[1]]
         nl = N_ELEMENTS(levs)
-        out = FLTARR(self.tnt_c.nx, self.tnt_c.ny, nt, nl)
-        for i=0, nl-1 do out[*,*,*,i] = levs[i]
+        out = FLTARR(self.tnt_c.nx, self.tnt_c.ny, nl, nt)
+        for i=0, nl-1 do out[*,*,i,*] = levs[i]
         return, out
       end
       'TK_PRESS': begin
@@ -757,20 +757,42 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         obj = self.objs->FindByVar(id, (_y)[y], COUNT=count)
         if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
         tmp = reform(obj->get_Var(v.name, t, ZLEVELS=zlevels))
-               
-        s = SIZE(tmp, /N_DIMENSIONS)
-        if s le 3 then begin
+        
+        if STRMID(v.type, 0, 2) eq '2d' then begin
           if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
         endif else begin
-          if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else begin
-            sout = size(out, /DIMENSIONS)
-            stmp = size(tmp, /DIMENSIONS)
-            out_ = TEMPORARY(out)
-            out = FLTARR(sout+[0,0,0,stmp[3]])
-            out[*,*,*,0:sout[3]-1] = TEMPORARY(out_)
-            out[*,*,*,sout[3]:*] = TEMPORARY(tmp)
-          endelse
-        endelse
+        
+          s = SIZE(tmp, /DIMENSIONS)
+          nd = N_ELEMENTS(s)
+          case nd of
+            2: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
+            3: begin
+              tmp = reform(tmp, [s,1])
+              if N_ELEMENTS(out) eq 0 then begin
+                out = TEMPORARY(tmp)
+              endif else begin
+                sout = size(out, /DIMENSIONS)
+                stmp = size(tmp, /DIMENSIONS)
+                out_ = TEMPORARY(out)
+                out = FLTARR(sout+[0,0,0,stmp[3]])
+                out[*,*,*,0:sout[3]-1] = TEMPORARY(out_)
+                out[*,*,*,sout[3]:*] = TEMPORARY(tmp)
+              endelse
+            end
+            4: begin
+              if N_ELEMENTS(out) eq 0 then begin
+                out = TEMPORARY(tmp)
+              endif else begin
+                sout = size(out, /DIMENSIONS)
+                stmp = size(tmp, /DIMENSIONS)
+                out_ = TEMPORARY(out)
+                out = FLTARR(sout+[0,0,0,stmp[3]])
+                out[*,*,*,0:sout[3]-1] = TEMPORARY(out_)
+                out[*,*,*,sout[3]:*] = TEMPORARY(tmp)
+              endelse
+            end            
+          endcase
+        endelse        
         if N_ELEMENTS(time) eq 0 then time = t else time = [time,t]
       endfor
       nt = N_ELEMENTS(time)
