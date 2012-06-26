@@ -746,7 +746,13 @@ pro w_ts_Data::plotTS, TITLE_INFO=title_info
   if self.description ne '' then title = title + ': ' + self.description 
   if N_ELEMENTS(TITLE_INFO) ne 0 then title = title_info + title
   
-  if total(self->valid()) ne 0 then w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
+  if FINITE(*self.missing) then begin
+     self->cleanTS, dclean
+     min_value=min(dclean)
+  endif  
+  
+  if total(self->valid()) ne 0 then w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, $
+          THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1., MIN_value=min_value
 
 end
 

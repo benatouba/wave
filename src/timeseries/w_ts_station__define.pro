@@ -885,7 +885,7 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
   meta = '% FILE_FORMAT: NAME, DESCRIPTION, UNIT, TYPE'
   printf, id, meta
   
-  time = _var->getTime(nt)    
+  time = _var->getTime(NT=nt)    
   
   sep = '","'  
   text = '"TIMESTAMP","'
@@ -928,6 +928,7 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
       data = (*(datas[i]))[l]
       if str_equiv(types[i]) eq str_equiv('float') then v = strcompress(STRING(data, FORMAT=format),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('long') then v = strcompress(STRING(data,FORMAT = '(I8)'),/REMOVE_ALL)
+      if str_equiv(types[i]) eq str_equiv('string') then v = strcompress(STRING(data),/REMOVE_ALL)
       if i lt nvar - 1 then text += v + sep else text += v
       undefine, v
     endfor
