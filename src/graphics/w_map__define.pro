@@ -1020,7 +1020,7 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
     ddy = c.dy
   endelse
   
-  GIS_xy_derivatives, ret, rotate(z,7), dx = ddx, dy = ddy, DFDX=dhdx,DFDY=dhdy
+  GIS_xy_derivatives, ret, rotate(z,7), dx=ddx, dy=ddy, DFDX=dhdx,DFDY=dhdy
   if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message('Error when calculating derivatives.')
   
   sl = TEMPORARY(dhdx) - TEMPORARY(dhdy) ; shade layer  

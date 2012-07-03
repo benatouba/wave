@@ -784,7 +784,7 @@ pro w_ts_Data::interpol, T0=t0, T1=t1
   if nc eq 0 then return ;nothing to do
   if cnt eq 0 then message, 'No valid data values'
 
-  t = self->getTime(nt)
+  t = self->getTime(NT=nt)
   old = self->getdata()
   self->cleanTS, data, time, nt
   new = INTERPOL(data, time, t) 

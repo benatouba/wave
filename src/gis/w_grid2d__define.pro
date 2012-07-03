@@ -1691,8 +1691,8 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     x = CORNERS[[0,2]]
     y = CORNERS[[1,3]]
     self->transform, x, y, i, j, SRC=src, /NEAREST
-    if i[0] ge i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
-    if j[0] ge j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if i[0] gt i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if j[0] gt j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
     if i[0] lt 0 then begin
       message, 'X Down left corner out of bounds: set to 0', /INFORMATIONAL
       i[0] = 0

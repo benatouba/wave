@@ -783,7 +783,7 @@ function w_ts_Station::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
   
   ; Make a new identical station
   out = OBJ_NEW('w_ts_Station', NAME=self.name, ID=self.id, DESCRIPTION=self.description, $ ; A short description of the station 
-            ELEVATION=self.elevation, LOC_X=self.loc_x, LOC_Y=self.loc_y, SRC=self.src)                             
+            ELEVATION=self.elevation, LOC_X=self.loc_x, LOC_Y=self.loc_y, SRC=*self.src)                             
                              
   varCount = self.vars->Count()  
   IF varCount EQ 0 THEN return, out

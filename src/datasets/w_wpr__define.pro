@@ -756,14 +756,15 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       for y=0, N_ELEMENTS(_y)-1 do begin
         obj = self.objs->FindByVar(id, (_y)[y], COUNT=count)
         if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
-        tmp = reform(obj->get_Var(v.name, t, ZLEVELS=zlevels))
-        
+        tmp = reform(obj->get_Var(v.name, t, ZLEVELS=zlevels))        
+        s = SIZE(tmp, /DIMENSIONS)
+        nd = N_ELEMENTS(s)                
         if STRMID(v.type, 0, 2) eq '2d' then begin
-          if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
+          case nd of
+            1: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [out,TEMPORARY(tmp)]
+            else: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
+          endcase
         endif else begin
-        
-          s = SIZE(tmp, /DIMENSIONS)
-          nd = N_ELEMENTS(s)
           case nd of
             2: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
             3: begin
@@ -798,6 +799,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       nt = N_ELEMENTS(time)
     endelse
     
+    if N_ELEMENTS(out) eq 1 then out = out[0]
     return, out
     
   endelse
