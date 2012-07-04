@@ -283,7 +283,10 @@ end
 ;            - point_lat: the latitude of the selected grid point
 ;            - dist_x: the X distance between the grid point and (X,Y)
 ;            - dist_y: the Y distance between the grid point and (X,Y)
-;           
+;    BILINEAR: in, optional
+;              if set, bilinear interpolation is performed instead of 
+;              nearest neighbor
+;
 ;    _EXTRA: in, optional
 ;            any keyword accepted by `getVarData` (or its child implementations)
 ;
@@ -291,7 +294,7 @@ end
 ;   1 if the subset has been set correctly, 0 if not
 ;   
 ;-
-function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, _EXTRA=extra
+function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, BILINEAR=bilinear, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
@@ -312,16 +315,43 @@ function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, _EXTRA=extra
          LON_DST=point_lon, LAT_DST=point_lat, E_DST=point_x, N_DST=point_y    
   dist_x = _x - point_x
   dist_y = _y - point_y   
+  self.ogrid->getProperty, TNT_C=oc
+  if point_i lt 0 or point_i ge oc.nx $
+   or point_j lt 0 or point_j ge oc.ny then Message, 'Nearest grid point lies outside the grid.'
+  
   
   ; Out 
   _info = {original_grid_i:point_i, original_grid_j:point_j, point_lon:point_lon, point_lat:point_lat, dist_x:dist_x, dist_y:dist_y}
   if arg_okay(info, /STRUCT) then info = CREATE_STRUCT(info, _info) else info = _info
   
   _subset = self.subset
-  self.subset = [point_i, 1, point_j, 1]
-  value = self->getVarData(id, _EXTRA=extra)
+  if KEYWORD_SET(BILINEAR) then begin
+    self.ogrid->transform,  x, y, d_i, d_j, SRC=_src
+    point_i = FLOOR(d_i)
+    point_j = FLOOR(d_j)    
+    if point_i+1 ge oc.nx $
+     or point_j+1 ge oc.ny then Message, 'Nearest grid point for interpolation lies outside the grid.'
+    if point_i lt 0 $
+     or point_j lt 0 then Message, 'Nearest grid point for interpolation lies outside the grid.'
+     
+    self.subset = [point_i, 2, point_j, 2]
+    value = self->getVarData(id, _EXTRA=extra)        
+    if SIZE(value, /TNAME) ne 'DOUBLE' then begin
+      d_i = FLOAT(d_i)
+      d_j = FLOAT(d_j)      
+    endif    
+    d_i -= point_i & d_j -= point_j
+    wx = [1 - d_i, d_i]
+    wy = [1 - d_j, d_j]
+    r0 = wx[0] * value[0,0,*] + wx[1] * value[1,0,*]
+    r1 = wx[0] * value[0,1,*] + wx[1] * value[1,1,*]        
+    value = REFORM(wy[0] * r0 +  wy[1] * r1)     
+  endif else begin    
+    self.subset = [point_i, 1, point_j, 1]
+    value = self->getVarData(id, _EXTRA=extra)    
+  endelse
   self.subset= _subset
- 
+  
   return, value
 
 end
@@ -522,7 +552,7 @@ end
 ;    Class structure definition 
 ;
 ;-
-pro w_gisdata__Define, class
+pro w_gisdata__Define
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

@@ -50,21 +50,21 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean temperature for the day in degC', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean temperature', missing:missing, agg_method:'MEAN'}
     end
     
     'DEWP': begin
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean dew point for the day in degC', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean dew point', missing:missing, agg_method:'MEAN'}
     end
     
     'MAX': begin
       data = float(data)
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'degC', description:'Maximum temperature reported during the day in degC', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'degC', description:'Maximum temperature', missing:missing, agg_method:'MAX'}
     end
     
     'MIN': begin
@@ -72,42 +72,42 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'degC', description:'Minimum temperature reported during the day in degC', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'degC', description:'Minimum temperature', missing:missing, agg_method:'MIN'}
     end
     
     'DIR': begin
       data = float(data)
       p = where(data gt 360 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'deg', description:'Wind direction in compass degrees', missing:missing, agg_method:'MEAN'}   ; tag for hourly only
+      val = {data:data, vname:ascii_tag, unit:'deg', description:'Wind direction', missing:missing, agg_method:'MEAN'}   ; tag for hourly only
     end
     
     'VISIB': begin
       data = data * 1.609344  ; to km
       p = where(data gt 999 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'km', description:'Mean visibility for the day in km', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'km', description:'Mean visibility', missing:missing, agg_method:'MEAN'}
     end
     
     'WDSP': begin
       data = data * 0.514 ; to m/s
       p = where(data gt 90 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Mean wind speed for the day in m/s', missing:missing, agg_method:'MEAN'}
+      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Mean wind speed', missing:missing, agg_method:'MEAN'}
     end
     
     'MXSPD': begin
       data = data * 0.514 ; to m/s
       p = where(data gt 90 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Maximum sustained wind speed reported for the day in m/s', missing:missing, agg_method:'MAX'}  
+      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Maximum sustained wind speed', missing:missing, agg_method:'MAX'}  
     end
     
     'GUST': begin
       data = data * 0.514 ; to m/s
       p = where(data gt 90 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Maximum wind gust reported for the day in m/s', missing:missing, agg_method:'MAX'} 
+      val = {data:data, vname:ascii_tag, unit:'m/s', description:'Maximum wind gust', missing:missing, agg_method:'MAX'} 
     end
     
     'PRCP': begin
@@ -115,25 +115,20 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       data = data * 25.4 ; to mm
       p = where(data gt 500 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'mm/d', description:'Total precipitation (rain/melted snow) reported during the day in mm', missing:missing, agg_method:'MEAN'} 
+      val = {data:data, vname:ascii_tag, unit:'mm/d', description:'Precipitation (rain/melted snow)', missing:missing, agg_method:'MEAN'} 
     end
-       
-    'PRCPFLAG': begin
-       data = ascii_data.prcp[index]
-       val = {data:data, vname:ascii_tag, unit:'', description:'Number of prcp reports in time interval', missing:missing, agg_method:'SUM'} 
-    end
-    
+           
     'SNDP': begin
       data = data * 2.54 * 10 ; to mm
       p = where(data gt 500 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'mm', description:'Snow depth in mm', missing:missing, agg_method:'MEAN'} 
+      val = {data:data, vname:ascii_tag, unit:'mm', description:'Snow depth', missing:missing, agg_method:'MEAN'} 
     end  
     
     'STP': begin
       p = where(data gt 1500 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
-      val = {data:data, vname:ascii_tag, unit:'hPa', description:'Mean station pressure in hPa', missing:missing, agg_method:'MEAN'} 
+      val = {data:data, vname:ascii_tag, unit:'hPa', description:'Mean station pressure', missing:missing, agg_method:'MEAN'} 
     end    
 ;    'FRSHTT': begin
 ;      missing = ''
