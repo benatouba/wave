@@ -807,6 +807,8 @@ end
 ;           the output keyword `VALID`
 ;    NMISSING: out
 ;              the number of missing files (if any)
+;    DAYSMISSING: out
+;                 the days of missing files (if any)
 ;    VALID: out
 ;           byte array of same size as `FILES`
 ;
@@ -816,6 +818,7 @@ end
 function w_WPP::check_filelist, year, $
     FILES=files, $
     NMISSING=nmissing, $
+    DAYSMISSING=daysmissing, $
     VALID=valid
 
   ; SET UP ENVIRONNEMENT
@@ -865,7 +868,8 @@ function w_WPP::check_filelist, year, $
     endelse
   endfor
   files = ofiles
-  dummy = where(~ valid, nmissing)
+  pmissing = where(~ valid, nmissing)
+  if nmissing ne 0 then daysmissing = ts[pmissing]
   if nmissing eq 0 then return, 1 else return, 0
    
 end
@@ -1016,7 +1020,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   
   logt0 = SYSTIME(/SECONDS)
   
-  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid) then begin
+  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, DAYSMISSING=daysmissing) then begin
    messg = 'Not enough files to complete (missing ' + str_equiv(nmissing) + '). Continue? (y or n)'
    if KEYWORD_SET(NO_PROMPT_MISSING) then begin
      Message, messg, /INFORMATIONAL
@@ -1027,7 +1031,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
    endelse
    GEN_str_log, ret, messg, ok   
    if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
-   self.logger->addText, ' !!! Files missing (' + str_equiv(nmissing) + ')', PRINT=print   
+   self.logger->addText, ' !!! Files missing (' + str_equiv(nmissing) + ')', PRINT=print
+   for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='DD.MM.YYYY'), PRINT=print
   endif
   
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print

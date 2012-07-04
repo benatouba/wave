@@ -67,6 +67,100 @@ end
 
 ;+
 ; :Description:
+;    Get access to some object properties.
+;          
+; :Keywords:
+;    OGRID: out, type={w_grid2d}
+;           the original grido object (non subsetted)
+;    ORDER: out, type=long
+;           order of the data in the original file. 0 means origin is Down left, 1 means Upper left
+;    SUBSET: out, type=long array
+;            subset into the original file [x0, nx, y0, ny]
+;
+;-
+pro w_GISdata::getProperty, OGRID=ogrid, $
+                            ORDER=order, $
+                            SUBSET=subset, $
+                            _Ref_Extra=extra
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+    
+  ogrid=self.ogrid
+  order=self.order
+  subset=self.subset
+  self->w_Grid2D::GetProperty, _Extra=extra
+ 
+end
+
+;+
+; :Description:
+;    Returns the properties of the object one at a time. Only
+;    the properties accessible with the homonym routine are 
+;    accessible here.
+;
+;
+; :Params:
+;    thisProperty: in, required
+;                  A string variable that is equivalent to a field in the object's    
+;                  class structure. See the getProperty routine for which properties  
+;                  can be returned. The property is case insensitive.
+;                  
+; :Returns:
+;    The value of a particular object property. Note that pointer       
+;    properties will return the variable the pointer points to.
+;                    
+; :History:
+;    Modifications::
+;     (c) David Fanning
+;     FaM, 2012: Adapted to the WAVE
+;
+;-
+function w_GISdata::getProperty, thisProperty
+
+  ; SET UP ENVIRONNEMENT
+  COMPILE_OPT IDL2
+  ON_ERROR, 2
+  
+  avail = ['TNT_C', $
+           'OGRID', $
+           'ORDER', $
+           'SUBSET']
+  
+  ; Check if ok
+  index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
+  index = index[0]    
+  CASE count OF
+    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
+    1:
+    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
+  ENDCASE
+  
+  ; Now david fanning's stuff
+  
+  ; Get the self structure as a structure, rather than as an object.
+  Call_Procedure, StrLowCase(Obj_Class(self)) + '__define', classStruct
+  
+  ; Find the property in this class structure.
+  index = Where(StrPos(Tag_Names(classStruct), StrUpCase(thisProperty)) EQ 0, count)
+  index = index[0]
+  
+  ; What happened?
+  CASE count OF
+    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
+    1: propertyValue = self.(index)
+    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
+  ENDCASE
+  
+  ; If this is a pointer, you want the thing pointed to.
+  IF Size(propertyValue, /TNAME) EQ 'POINTER' THEN propertyValue = *propertyValue
+  return, propertyValue
+  
+end
+
+;+
+; :Description:
 ;    To obtain the list af available variables in the dataset.
 ;
 ; :Keywords:
@@ -428,7 +522,7 @@ end
 ;    Class structure definition 
 ;
 ;-
-pro w_gisdata__Define
+pro w_gisdata__Define, class
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
