@@ -1,3 +1,8 @@
+;+
+; :Description:
+;    This procedure creates a map showing the lake location and the basin shape
+;
+;-
 pro lnl_map
 
   ;--------------------------
@@ -62,6 +67,7 @@ pro lnl_pt_diagramms_get_Vars, wrf, theta, p, t, z, rh, qv, w, td, time
   t = utils_wrf_tk(P*100.,theta) - 273.15  
   theta = theta - 273.15  
   qvapor = wrf->getvarData('qvapor_eta', years=years) > 0.
+  qv=qvapor
   w = wrf->getvarData('w_eta', years=years) > 0.
   rh = utils_wrf_rh(QVAPOR, P*100., t + 273.15)
   td = utils_wrf_td(P*100.,QVAPOR)
@@ -99,7 +105,23 @@ end
 
 
 
-pro lnl_skew_diags, ipix_l, jpix_l ,ipix_nl, jpix_nl, month
+;+
+; :Description:
+;    This procedure creates SkewT-log(p)-Diagrams for one of the two models (LAKE / NO LAKE) for two different locations
+;
+; :Params:
+;    ipix_l = in, pixel number over lake in x direction
+;    jpix_l = in, pixel number over lake in y direction
+;    ipix_nl = in, pixel number over land in x direction
+;    jpix_nl = in pixel number over land in y direction
+;    month= in
+;
+; :Keywords:
+;    NOLAKEMODEL= in,optional, set this keyword to generate the pt-diagram for the nolake model instead of the lake model
+;
+; :Author: Hinners
+;-
+pro lnl_skew_diags, ipix_l, jpix_l ,ipix_nl, jpix_nl, month, NOLAKEMODEL=nolakemodel
   
   common ADMIN_LNL
  
@@ -109,8 +131,14 @@ pro lnl_skew_diags, ipix_l, jpix_l ,ipix_nl, jpix_nl, month
   in = ipix_nl
   jn = jpix_nl  
    m = month ; investigated month
-   
-  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  
+  if N_Elements(nolakemodel) eq 0 then begin
+      lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time
+      modelname='WRF_STD'
+  endif else begin
+      lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time
+      modelname ='WRF_NL'
+  endelse
   
 
   time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
@@ -121,8 +149,8 @@ pro lnl_skew_diags, ipix_l, jpix_l ,ipix_nl, jpix_nl, month
   p_nlake = REFORM(p[in, jn, *, m])
   td_nlake = REFORM(td[in, jn, *, m])
   
-  skewt_logp_diagram, t_lake, p_lake, DEWPOINT=td_lake, ANGLE=45, TITLE='Profile WRF_STD over lake ' + time_str
-  skewt_logp_diagram, t_nlake, p_nlake, DEWPOINT=td_nlake, ANGLE=45, TITLE='Profile WRF_STD over land ' + time_str
+  skewt_logp_diagram, t_lake, p_lake, DEWPOINT=td_lake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over lake ' + time_str
+  skewt_logp_diagram, t_nlake, p_nlake, DEWPOINT=td_nlake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over land ' + time_str
   
   
 end
@@ -132,13 +160,13 @@ end
 ;    This procedure creates a stability diagram using the Brunt-Väisälä frequency, for a given pixel and a specific month
 ;
 ; :Params:
-;    ipix = pixel number in x direction
-;    jpix = pixel number in y direction
-;    month
+;    ipix = in, pixel number in x direction
+;    jpix = in, pixel number in y direction
+;    month = in
 ;
 ; :Keywords:
 ;    STD_PNG = in, optional, default =0,
-;              Set this keyword to save the igure as a standard png in the output directory
+;              Set this keyword to save the figure as a standard png in the output directory
 ;    OUTPUT_DIR = in optional, default = 0,
 ;                 Set this keyword to determine an output directory.
 ;                 If this keyword is not set although the std_png keyword is set, a window opens to choose an output directory
@@ -158,7 +186,7 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
   j = jpix
   m = month ; investigated month
   
-  
+  ; get variables of lake model
   lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
   time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
   theta_l = theta[i,j,*,m]
@@ -167,7 +195,7 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
   dtheta_l = theta_l[0,0,*] - theta0
   p_l = p[i,j,*,m]
 
-  
+  ; get variables of no lake model
   lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
   theta_nl=theta[i,j,*,m]
   z_nl=z[i,j,*,m]
@@ -175,22 +203,22 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
   dtheta_nl = theta_nl[0,0,*] - theta0
   p_nl = p[i,j,*,m]
   prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ]
-      
+  
+  ; compute Brunt-Väisälä frequency    
   g = 9.81  
   BV_l  = sqrt( (g * dtheta_l[0,0,*])  / (theta_l[0,0,*]  * z_l[0,0,*])  )
   BV_nl = sqrt( (g * dtheta_nl[0,0,*]) / (theta_nl[0,0,*] * z_nl[0,0,*]) )
   BV=[[[BV_l]],[[BV_nl]]]
   xrange=[ min(BV), max(BV)]
   
- 
+ ; plot
   cgplot, BV_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
   Title='stability diagram !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
   position=[0.12, 0.12, 0.9, 0.85], xtitle=ansi_value('Brunt-Väisälä-frequency [1/s]'), ytitle='pressure [hPa]', /WINDOW
   cgplot, BV_nl, p_nl, color='black', /Overplot, /WINDOW
-  
-  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[(max(BV)-(max(BV)/20)),(min(prange)+(max(prange)/20))], /Window
+  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
  
-  
+  ; save figure
   if N_ELEMENTS(std_png) ne 0 then begin
     FILE_MKDIR,output_dir+'StabilityDiagrams'
     pngname='StabilityDiagrams/'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
@@ -202,5 +230,126 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
 end
 
 
+;+
+; :Description:
+;    This procedure generates a relative humidity diagram for both models (LAKE & NOLAKE) at a chosen location
+;
+; :Params:
+;    ipix = in, pixel number in x direction
+;    jpix = in, pixel number in y direction
+;    month = in
+;
+; :Keywords:
+;    STD_PNG = in, optional, default =0,
+;              Set this keyword to save the figure as a standard png in the output directory
+;    OUTPUT_DIR = in optional, default = 0,
+;                 Set this keyword to determine an output directory.
+;                 If this keyword is not set although the std_png keyword is set, a window opens to choose an output directory
+;
+; :Author: JaH 2012
+;-
+pro relHumidity_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
 
+ ; choose output directory if no keyword is set
+  if N_Elements(STD_PNG) ne 0 then $
+      if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+
+  common ADMIN_LNL
+  
+  ;investigated pixels in area
+  i = ipix
+  j = jpix
+  m = month ; investigated month
+  
+  ; get variables of lake model
+  lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
+  time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
+  rh_l = rh[i,j,*,m]
+  p_l = p[i,j,*,m]
+
+  ; get variables of no lake model  
+  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  rh_nl=rh[i,j,*,m]
+  p_nl = p[i,j,*,m]
+  
+  ; plot
+  xrange = [ min( [[[rh_l]],[[rh_nl]]] ), max( [[[rh_l]],[[rh_nl]]] ) ]
+  prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ]
+  cgplot, rh_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
+  Title='relative humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
+  position=[0.12, 0.12, 0.9, 0.85], xtitle='relative humidity [%]', ytitle='pressure [hPa]', /WINDOW
+  cgplot, rh_nl, p_nl, color='black', /Overplot, /WINDOW
+  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
+ 
+  ; save figure
+  if N_ELEMENTS(std_png) ne 0 then begin
+    FILE_MKDIR,output_dir+'HumidityDiagrams'
+    pngname='HumidityDiagrams/RelH_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+    STD_PNG=output_dir+pngname+'.png'  
+    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  endif
+
+end
+
+
+;+
+; :Description:
+;    This procedure generates a specific humidity diagram for both models (LAKE & NOLAKE) at a chosen location
+;
+; :Params:
+;    ipix = in, pixel number in x direction
+;    jpix = in, pixel number in y direction
+;    month = in
+;
+; :Keywords:
+;    STD_PNG = in, optional, default =0,
+;              Set this keyword to save the figure as a standard png in the output directory
+;    OUTPUT_DIR = in optional, default = 0,
+;                 Set this keyword to determine an output directory.
+;                 If this keyword is not set although the std_png keyword is set, a window opens to choose an output directory
+;
+; :Author: JaH 2012
+;-
+pro specHumidity_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
+
+ ; choose output directory if no keyword is set
+  if N_Elements(STD_PNG) ne 0 then $
+      if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+
+  common ADMIN_LNL
+  
+  ;investigated pixels in area
+  i = ipix
+  j = jpix
+  m = month ; investigated month
+  
+  ; get variables of lake model  
+  lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
+  time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
+  qv_l = qv[i,j,*,m]
+  p_l = p[i,j,*,m]
+
+  ; get variables of no lake model  
+  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  qv_nl=qv[i,j,*,m]
+  p_nl = p[i,j,*,m]
+  
+  ; plot
+  xrange = [ min( [[[qv_l]],[[qv_nl]]] ), max( [[[qv_l]],[[qv_nl]]] ) ]
+  prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ] 
+  cgplot, qv_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
+  Title='specific humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
+  position=[0.12, 0.12, 0.9, 0.85], xtitle='specific humidity [g/m^3]', ytitle='pressure [hPa]', /WINDOW
+  cgplot, qv_nl, p_nl, color='black', /Overplot, /WINDOW
+  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
+ 
+  ; save figure
+  if N_ELEMENTS(std_png) ne 0 then begin
+    FILE_MKDIR,output_dir+'HumidityDiagrams'
+    pngname='HumidityDiagrams/SpecH_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+    STD_PNG=output_dir+pngname+'.png'  
+    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  endif
+
+end
 
