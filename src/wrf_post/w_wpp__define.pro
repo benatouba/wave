@@ -1017,11 +1017,18 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   obj_destroy, self.active_wrf
   ptr_free, self.active_time
   ptr_free, self.active_index
+
   
+  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '', PRINT=print  
   logt0 = SYSTIME(/SECONDS)
-  
+ 
   if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, DAYSMISSING=daysmissing) then begin
-   messg = 'Not enough files to complete (missing ' + str_equiv(nmissing) + '). Continue? (y or n)'
+  
+   self.logger->addText, 'Not enough files to complete (missing ' + str_equiv(nmissing) + ')', PRINT=print
+   for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='YYYY.MM.DD'), PRINT=print
+ 
+   messg = 'Continue without those files? (y or n)'
    if KEYWORD_SET(NO_PROMPT_MISSING) then begin
      Message, messg, /INFORMATIONAL
      Print, 'y'
@@ -1031,13 +1038,8 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
    endelse
    GEN_str_log, ret, messg, ok   
    if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
-   self.logger->addText, ' !!! Files missing (' + str_equiv(nmissing) + ')', PRINT=print
-   for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='DD.MM.YYYY'), PRINT=print
-  endif
-  
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
-  self.logger->addText, '', PRINT=print
-       
+   endif
+      
   ; Define
   ; Tpl Object  
   if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
