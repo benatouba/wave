@@ -1,77 +1,18 @@
 ;+
-;
-; :Description:
 ; 
 ;    Makes a Wind rose distribution plot. If a second variable is provided, it also computes 
-;    the distribution of this new variable within the direction bins. 
-;
-; :Params:
-;    wind_dir: in, required
-;              the wind directions (MET convention, from 0 to 360 deg)
-;    wind_speed: in, required
-;                array of the same dimension as wind_dir.
-;
-; :Keywords:
-;    ADD_VAR: in, optional, Default=wind_speed
-;             use ADD_VAR to specify a variable to vizualize as colored
-;             distribution within each direction bin. Default behavior
-;             is to set this keyword automaticaly to `wind_speed`. Set 
-;             `NO_WS` to prevent this behavior and plot only the direction
-;             distribution.
-;    N_BINS: in, optional, Default=16
-;            the number of direction bins. Must be divisible by 4
-;    TITLE: in, optional, Default=''
-;           The plot title
-;    TICKS_ANGLE: in, optional, default=1
-;                 counter clockwize angle of the circle ticknames, in 25 deg intervals.
-;                 Ranges from 0 to 7.
-;                 TICKS_ANGLE=1 and TICKS_ANGLE=7 should suit to most of the situations.
-;    LEVELS: in, optional
-;               default behavior is to compute levels of the second var (see 'ADD_VAR')
-;               automatically. To force a constant scale , you may want to set this 
-;               keyword to an array of N+1 levels providing the desired intervals,
-;                e.g. [0,4,5,6,7,8,12]
-;    VAR_TITLE: in, optional, type=string
-;               the title of the added variable legend
-;    VAR_UNITS: in, optional, type=string
-;               the units of the added variable
-;    DEF_CALM: in, optional, default=0.
-;              use DEF_CALM to specify the wind speed threshold below which winds are 
-;              considered as "calm" and the values removed from the wind rose. If the 
-;              percentage o calm winds exceeds 0%, this value is indicated on the
-;              bottom of the plot (see `CALM_LEGEND`)
-;    MAX_PERC: in, optional
-;              Fix the circle axes to a given scale fixed by this max value.
-;    NO_LEGEND: in, optional, default=0
-;               suppress legend for wind speed
-;    NO_WS: in, optional, default=0
-;           ignore the second variable and make a simple plot of the wind direction
-;           distribution
-;    PNG: in, optional
-;         path of the file
-;    EPS: in, optional
-;         path of the file
-;    STD_PNG: in, optional
-;         path of the file         
-;    GS: in, optional
-;        set this keyword to creat gray scale plots
-;    FORMAT: in, optional
-;            color bar labels stirng format (e.g: '(F4.2)')
-;    CALM_LEGEND: in, optional
-;                 default behavior is to indicate the percentage of calm winds only
-;                 if this percentage exceeds 0%. Set this keyword to 1 to force the
-;                 indication of this information and to 0 to prevent plotting the
-;                 legend
+;    and color-displays the distribution of this new variable within the direction bins. 
 ;                           
 ;
 ; :Author: Fabien Maussion::
 ;            FG Klimatologie
-;            TU Berlin}
+;            TU Berlin
 ; :Version:
 ;       WAVE V 0.1
 ;
 ; :History:
 ;     Written by FaM, 2011.
+;     Modified by FaM, 2012
 ;
 ;-
 
@@ -81,13 +22,8 @@
 ;    
 ; :Private:
 ;
-; :Returns:
-;
-; :History:
-;     Written by FaM, 2011.
-;
 ;-
-function w_windcircle, xcenter, ycenter, radius, NPTS=npts, ANGLE_RANGE=angle_range, ELL_FACTOR=ell_factor
+function w_windrose_circle, xcenter, ycenter, radius, NPTS=npts, ANGLE_RANGE=angle_range, ELL_FACTOR=ell_factor
   
   IF N_Elements(npts) EQ 0 THEN npts = 100
   if N_ELEMENTS(angle_range) eq 0 then begin 
@@ -119,32 +55,116 @@ function w_windcircle, xcenter, ycenter, radius, NPTS=npts, ANGLE_RANGE=angle_ra
   
 END
 
-pro w_windrose_legend, bar_labels, colors, pos, TITLE = title, UNIT = unit, WINDOW = window, CHARSIZE=charsize, _EXTRA=extra
+pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD=addcmd, CHARSIZE=charsize, POSITION=position, FORMAT=format
 
-    w_cgDCBar, colors, COLOR = "black", LABELS=bar_labels, Position=pos, $
-      ADDCMD=window, CHARSIZE=charsize, /VERTICAL, SPACING=0.15, _EXTRA=extra
-    IF N_ELEMENTS(TITLE) eq 0 then bar_title='Wind Speed' else bar_title=title
-    cgText, (pos[0]+pos[2])/2., pos[3]+0.045, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
-      WINDOW=window, /NORMAL, CHARSIZE=charsize
-    IF N_ELEMENTS(UNIT) eq 0 then bar_title='(m.s!u-1!n)' else bar_title=unit
-    cgText, (pos[0]+pos[2])/2., pos[3]+0.015, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
-      WINDOW=window, /NORMAL, CHARSIZE=charsize
-
+  if N_ELEMENTS(FORMAT) eq 0 then FORMAT = '(G0)'
+  
+  w_gr_Colorbar, leginfo, POSITION=position, WINDOW=window, ADDCMD=addcmd, $
+    CHARSIZE=charsize, /VERTICAL, SPACING=0.15, FORMAT=format
+  IF N_ELEMENTS(TITLE) eq 0 then bar_title='Wind Speed' else bar_title=title
+  cgText, (position[0]+position[2])/2., position[3]+0.045, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
+    WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
+  IF N_ELEMENTS(UNIT) eq 0 then bar_title='(m.s!u-1!n)' else bar_title=unit
+  cgText, (position[0]+position[2])/2., position[3]+0.015, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
+    WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
+    
 end
 
-pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=title, $
-                    LEVELS=levels, MAX_PERC=max_perc, DEF_CALM=def_calm, $
-                    NO_WS=no_ws, WINDOW=window,  $
-                    MAX_RADIUS=max_radius, CENTER=center, CHARSIZE=charsize, TICKS_ANGLE=ticks_angle, GS=gs, $
-                    ADD_EDGES=add_edges, AUTO_LEVS=auto_levs, CALM_PERC=calm_perc, COLORS=colors ;OUTPUT
 
+;+
+; :Description:
+;    Makes a Wind rose distribution plot. If a second variable is provided, it also computes 
+;    and color-displays the distribution of this new variable within the direction bins. 
+;
+; :Private:
+;
+; :Params:
+;    wind_dir: in, required
+;              the wind directions (MET convention, from 0 to 360 deg)
+;    wind_speed: in, required
+;                array of the same dimension as wind_dir.
+;
+; :Keywords:
+;    ADD_VAR: in, optional, Default=wind_speed
+;             use ADD_VAR to specify a variable to vizualize as colored
+;             distribution within each direction bin. Default behavior
+;             is to set this keyword automaticaly to `wind_speed`. Set 
+;             `NO_WS` to prevent this behavior and plot only the direction
+;             distribution.
+;    N_BINS: in, optional, Default=16
+;            the number of direction bins. Must be divisible by 4
+;    TITLE: in, optional, Default=''
+;           The plot title
+;    TICKS_ANGLE: in, optional, default=1
+;                 counter clockwize angle of the circle ticknames, in 25 deg intervals.
+;                 Ranges from 0 to 7.
+;                 TICKS_ANGLE=1 and TICKS_ANGLE=7 should suit to most of the situations.
+;    LEVELS: in, optional
+;               default behavior is to compute levels of the second var (see 'ADD_VAR')
+;               automatically. To force a constant scale , you may want to set this 
+;               keyword to an array of N+1 levels providing the desired intervals,
+;                e.g. [0,4,5,6,7,8,12]
+;    OOB_TOP_COLOR: in, optional
+;                   Set this keyword (/OOB_TOP_COLOR) to draw an OOB arrow.
+;                   Set this keyword to a string for an OOB color of your choice
+;    OOB_BOT_COLOR: in, optional
+;                   Set this keyword (/OOB_BOT_COLOR) to draw an OOB arrow.
+;                   Set this keyword to a string for an OOB color of your choice
+;    DEF_CALM: in, optional, default=0.
+;              use DEF_CALM to specify the wind speed threshold below which winds are 
+;              considered as "calm" and the values removed from the wind rose. If the 
+;              percentage o calm winds exceeds 0%, this value is indicated on the
+;              bottom of the plot (see `CALM_LEGEND`)
+;    MAX_RADIUS: in, optional, default = 0.4
+;                in normal coordinates, the radius of the largest circle
+;    CENTER: in, optional
+;            in normal coordinates, the position of the center of the plot
+;    MAX_PERC: in, optional
+;              Fix the circle axes to a given scale fixed by this max value.
+;    NO_WS: in, optional, default=0
+;           ignore the second variable and make a simple plot of the wind direction distribution
+;    GS: in, optional
+;        set this keyword to creat gray scale plots
+;    FORMAT: in, optional
+;            color bar labels stirng format (e.g: '(F4.2)')
+;    CHARSIZE: in, optional
+;              character size
+;    CALM_LEGEND: in, optional
+;                 default behavior is to indicate the percentage of calm winds only
+;                 if this percentage exceeds 0%. Set this keyword to 1 to force the
+;                 indication of this information and to 0 to prevent plotting the
+;                 legend
+;    LEGINFO: out
+;             for the colorbar
+;    CALM_PERC: out
+;               for the calm winds legend
+;                           
+;
+;-
+pro w_WindRose_addrose, wind_dir, wind_speed,  $
+    ADD_VAR=add_var, $
+    N_BINS=n_bins, $
+    TITLE=title, $
+    GS=gs, $
+    TICKS_ANGLE=ticks_angle, $
+    LEVELS=levels, $
+    OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_COLOR=oob_top_color, $
+    DEF_CALM=def_calm, $
+    MAX_PERC=max_perc, $
+    NO_WS=no_ws, $
+    MAX_RADIUS=max_radius,  $
+    CENTER=center, $
+    CHARSIZE=charsize, $
+    WINDOW=window,  $
+    ADDCMD=addcmd,  $
+    LEGINFO=leginfo, $ ; OUT
+    CALM_PERC=calm_perc ; OUT
                 
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
 ;  ON_ERROR, 2
-  
-  TVLCT, rr, gg, bb, /GET ; To restore later
     
   if N_ELEMENTS(N_BINS) eq 0 then nbins = 16L else nbins = LONG(n_bins)
   if N_ELEMENTS(TICKS_ANGLE) eq 0 then ticks_angle = 1
@@ -240,7 +260,6 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   ;*****************
   ; Var2 scale
   ;*****************
-  add_edges = [FALSE,FALSE]
   if do_var2 then begin
     if N_ELEMENTS(LEVELS) eq 0 then begin
       wstep = 1
@@ -254,27 +273,13 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
         if nwsteps gt 6 then step_OK = FALSE else step_OK = TRUE
       endwhile
       wsteps = FLOOR(MIN(_var2)) + [0., (INDGEN(nwsteps)+1)*wstep]
-      auto_levs = TRUE
     endif else begin
       wsteps = LEVELS
-      if max(_var2) gt max(wsteps) then begin
-        wsteps = [wsteps, max(_var2)]
-        add_edges[1] = TRUE
-      endif
-      if min(_var2) lt min(wsteps) then begin
-        wsteps = [min(_var2), wsteps]
-        add_edges[0] = TRUE
-      endif
-      nwsteps = N_ELEMENTS(wsteps)-1
-      auto_levs = FALSE
     endelse
-    ; Plot kind of things
-    if KEYWORD_SET(GS) then CGLOADCT, 0 else CGLOADCT, 13
-    colors = utils_color_convert(NCOLORS = nwsteps, CMIN=30)
-    if add_edges[0] then colors[0] = cgColor('white')
+    
   endif
   
-  ;DRAW
+  ;Draw
   step_radius = max_radius/npercsteps
   npts = 361 ; Circles number of points
  
@@ -284,34 +289,36 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   
   ;First, do the colors if needed, other things will be over plotted anyway
   if do_var2 then begin
+    TVLCT, rr, gg, bb, /GET
+    if KEYWORD_SET(GS) then CGLOADCT, 0 else CGLOADCT, 34
     for i=0, nbins-1 do begin
       radius = perc[i] * max_radius /  maxscale
       if (R[i] gt R[i+1]-1) then continue
-      ws=_var2[R[R[i] : R[i+1]-1]]
-      undefine, wh
-      for j=0, N_ELEMENTS(wsteps)-2 do begin
-        dummy = WHERE(ws ge wsteps[j] and ws lt wsteps[j+1], nw)
-        if N_ELEMENTS(wh) eq 0 then wh = nw else wh = [wh,nw]
-      endfor
+      ws=_var2[R[R[i] : R[i+1]-1]]       
+      leginfo = w_gr_DataLevels(ws, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color)     
+      wh = leginfo.histo
       percw = (float(wh) /  TOTAL(wh))
-      for j=0, nwsteps-1 do begin
-        wradius = TOTAL(percw[0:nwsteps-1-j]) * radius
-        wcir = w_windcircle(xcenter, ycenter, wradius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
-        cgColorFill, [reform(wcir[0,*]), xcenter], [reform(wcir[1,*]), ycenter], WINDOW=window, COLOR=colors[nwsteps-1-j], /NORMAL
-        cgPlotS, wcir, WINDOW=window, /NORMAL
+      nl = N_ELEMENTS(leginfo.colors)
+      for j=0, nl-1 do begin
+        wradius = TOTAL(percw[0:nl-1-j]) * radius
+        wcir = w_windrose_circle(xcenter, ycenter, wradius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
+        rrr = KEYWORD_SET(WINDOW) or KEYWORD_SET(addcmd)
+        cgColorFill, [reform(wcir[0,*]), xcenter], [reform(wcir[1,*]), ycenter], WINDOW=rrr or KEYWORD_SET(addcmd), COLOR=leginfo.colors[nl-1-j], /NORMAL
+        cgPlotS, wcir, WINDOW=window, ADDCMD=addcmd, /NORMAL
       endfor
     endfor
+    TVLCT, rr, gg, bb
   endif
   
   ; Cake peaces
   for i=0, nbins-1 do begin
     radius = perc[i] * max_radius /  maxscale
-    cir = w_windcircle(xcenter, ycenter, radius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
-    cgPlotS, [reform(cir[0,*]),xcenter,cir[0,1]], [reform(cir[1,*]), ycenter,cir[1,1]], WINDOW=window, /NORMAL
+    cir = w_windrose_circle(xcenter, ycenter, radius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
+    cgPlotS, [reform(cir[0,*]),xcenter,cir[0,1]], [reform(cir[1,*]), ycenter,cir[1,1]], WINDOW=window, ADDCMD=addcmd, /NORMAL
   endfor
 
   ; Axes Circles
-  for i=1, npercsteps do cgPlotS, w_windcircle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  for i=1, npercsteps do cgPlotS, w_windrose_circle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
   
   ; Axes
   x_radius = max_radius*rx
@@ -319,12 +326,12 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   as = _charsize * 1.
   delta_x = as * rx * 0.005
   delta_y = as * ry * 0.02
-  cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
-  cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
-  cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
-  cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=cgColor('dark grey'),WINDOW=window, ALIGNMENT=1., /NORMAL, CHARSIZE=as
-  cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
-  cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=cgColor('dark grey'),WINDOW=window, /NORMAL, CHARSIZE=as
+  cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
+  cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, ALIGNMENT=1., /NORMAL, CHARSIZE=as
+  cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
+  cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
   
   ; Ticks
   case (ticks_angle) of
@@ -341,28 +348,27 @@ pro w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=
   for i=1, npercsteps do begin
     xt = xcenter + Cos(angle_ticks) * rx * step_radius*i
     yt = ycenter + Sin(angle_ticks) * ry * step_radius*i
-    cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, COLOR=cgColor('dark grey'), /NORMAL, CHARSIZE=_charsize
+    cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, ADDCMD=addcmd, COLOR=cgColor('dark grey'), /NORMAL, CHARSIZE=_charsize
   endfor
   
   ; White center circle
-  cir = w_windcircle(xcenter, ycenter, step_radius/10., nPts=361, ELL_FACTOR=_wf)
-  cgColorFill, cir[0,*], cir[1,*], WINDOW=window, COLOR=cgColor('white'), /NORMAL
-  cgPlotS, cir, WINDOW=window, /NORMAL
+  cir = w_windrose_circle(xcenter, ycenter, step_radius/10., nPts=361, ELL_FACTOR=_wf)
+  rrr = KEYWORD_SET(WINDOW) or KEYWORD_SET(addcmd)   
+  cgColorFill, cir[0,*], cir[1,*], WINDOW=rrr, COLOR=cgColor('white'), /NORMAL
+  cgPlotS, cir, WINDOW=window, ADDCMD=addcmd, /NORMAL
     
   ; Title
   if N_ELEMENTS(TITLE) eq 0 then title = ''
-  cgText,xcenter, ycenter + max_radius + 0.05, title, WINDOW=window, ALIGNMENT = 0.5, CHARSIZE=1.7*_charsize, /NORMAL
+  cgText,xcenter, ycenter + max_radius + 0.05, title, WINDOW=window, ADDCMD=addcmd, ALIGNMENT = 0.5, CHARSIZE=1.3*_charsize, /NORMAL
   
-  if ARG_PRESENT(LEVELS) then levels = wsteps
-  
-  TVLCT, rr, gg, bb
+  if ARG_PRESENT(LEVELS) and ~ KEYWORD_SET(NO_WS) then levels = wsteps
     
 end
 
 ;+
 ; :Description:
 ;    Makes a Wind rose distribution plot. If a second variable is provided, it also computes 
-;    the distribution of this new variable within the direction bins. 
+;    and color-displays the distribution of this new variable within the direction bins. 
 ;
 ; :Params:
 ;    wind_dir: in, required
@@ -390,6 +396,12 @@ end
 ;               automatically. To force a constant scale , you may want to set this 
 ;               keyword to an array of N+1 levels providing the desired intervals,
 ;                e.g. [0,4,5,6,7,8,12]
+;    OOB_TOP_COLOR: in, optional
+;                   Set this keyword (/OOB_TOP_COLOR) to draw an OOB arrow.
+;                   Set this keyword to a string for an OOB color of your choice
+;    OOB_BOT_COLOR: in, optional
+;                   Set this keyword (/OOB_BOT_COLOR) to draw an OOB arrow.
+;                   Set this keyword to a string for an OOB color of your choice
 ;    VAR_TITLE: in, optional, type=string
 ;               the title of the added variable legend
 ;    VAR_UNITS: in, optional, type=string
@@ -402,33 +414,49 @@ end
 ;    MAX_PERC: in, optional
 ;              Fix the circle axes to a given scale fixed by this max value.
 ;    NO_LEGEND: in, optional, default=0
-;               suppress legend for wind speed
+;               do not draw legend for wind speed
 ;    NO_WS: in, optional, default=0
-;           ignore the second variable and make a simple plot of the wind direction
-;           distribution
+;           ignore the second variable and make a simple plot of the wind direction distribution
 ;    PNG: in, optional
-;         path of the file
+;         path of the output img file
 ;    EPS: in, optional
-;         path of the file
+;         path of the output img file
 ;    STD_PNG: in, optional
-;         path of the file         
+;              path of the output img file   
 ;    GS: in, optional
 ;        set this keyword to creat gray scale plots
 ;    FORMAT: in, optional
 ;            color bar labels stirng format (e.g: '(F4.2)')
+;    CHARSIZE: in, optional
+;              character size
 ;    CALM_LEGEND: in, optional
 ;                 default behavior is to indicate the percentage of calm winds only
 ;                 if this percentage exceeds 0%. Set this keyword to 1 to force the
 ;                 indication of this information and to 0 to prevent plotting the
 ;                 legend
-;                           
-; :History:
-;     Written by FaM, 2011.
 ;
 ;-
-pro w_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=title, TICKS_ANGLE=ticks_angle, GS=gs, $
-                LEVELS=levels, MAX_PERC=max_perc, VAR_TITLE=var_title, VAR_UNITS=var_units, DEF_CALM=def_calm, $
-                NO_LEGEND=no_legend, NO_WS=no_ws, CALM_LEGEND=calm_legend, PNG=png, EPS=eps, STD_PNG=std_png, FORMAT=format
+pro w_WindRose, wind_dir, wind_speed, $
+    ADD_VAR=add_var, $
+    N_BINS=n_bins, $
+    TITLE=title, $
+    TICKS_ANGLE=ticks_angle, $
+    LEVELS=levels, $
+    OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_COLOR=oob_top_color, $
+    VAR_TITLE=var_title, $
+    VAR_UNITS=var_units, $
+    DEF_CALM=def_calm, $
+    MAX_PERC=max_perc, $
+    NO_LEGEND=no_legend, $
+    NO_WS=no_ws, $
+    PNG=png, $
+    EPS=eps, $
+    STD_PNG=std_png, $
+    GS=gs, $
+    FORMAT=format, $
+    CHARSIZE=charsize, $
+    CALM_LEGEND=calm_legend
 
   ; Set Up environnement
   COMPILE_OPT idl2
@@ -436,7 +464,6 @@ pro w_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=titl
 ;  ON_ERROR, 2
   
   ; Window
-  TVLCT, rr, gg, bb, /GET ; To restore later
   xsiz = 650
   ysiz = 600
   
@@ -445,12 +472,23 @@ pro w_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=titl
   WINDOW = true
 
   
-  w_add_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=title, $
-                                        LEVELS=levels, MAX_PERC=max_perc, DEF_CALM=def_calm, $
-                                        NO_WS=no_ws, WINDOW=window, $
-                                        MAX_RADIUS=max_radius, CENTER=[0.45,0.5], CHARSIZE=charsize, TICKS_ANGLE=ticks_angle, GS=gs, $
-                                        ADD_EDGES=add_edges, AUTO_LEVS=auto_levs, CALM_PERC=calm_perc, COLORS=colors ;OUTPUT
-  
+  w_WindRose_addrose, wind_dir, wind_speed, ADD_VAR=add_var, $
+    N_BINS=n_bins, $
+    TITLE=title, $
+    LEVELS=levels, $
+    MAX_PERC=max_perc, $
+    DEF_CALM=def_calm, $
+    NO_WS=no_ws, $
+    ADDCMD=window, $
+    MAX_RADIUS=max_radius, $
+    CENTER=[0.45,0.5], $
+    CHARSIZE=charsize, $
+    TICKS_ANGLE=ticks_angle, $
+    GS=gs, $
+    LEGINFO=leginfo, $
+    CALM_PERC=calm_perc, $
+    OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_COLOR=oob_top_color
   
   if N_ELEMENTS(ADD_VAR) eq 0 then _var2 = wind_speed else _var2 = add_var
   do_var2 = (N_ELEMENTS(_var2) ne 0) and (~KEYWORD_SET(NO_WS))
@@ -458,21 +496,8 @@ pro w_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=titl
   
   ; Var2 legend
   if do_var2 and do_legend then begin
-    if N_ELEMENTS(FORMAT) eq 0 then FORMAT = '(G0)'
     pbar = [0.87, 0.01, 0.9, 0.20]
-    if TOTAL(add_edges) eq 0 then begin
-      bar_labels = STRING(levels, FORMAT=format)
-      w_windrose_legend, bar_labels, colors, pbar, TITLE = VAR_TITLE, UNIT = VAR_UNITS, WINDOW = window, CHARSIZE=charsize
-    endif else if total(add_edges) eq 2 then begin
-      bar_labels = STRING(levels[1:N_ELEMENTS(levels)-2], FORMAT=format)
-      w_windrose_legend, bar_labels, colors[1:*], pbar, TITLE = VAR_TITLE, UNIT = VAR_UNITS, WINDOW = window, CHARSIZE=charsize, /BAR_OPEN
-    endif else if add_edges[0] eq 1 then begin
-      bar_labels = STRING(levels[1:N_ELEMENTS(levels)-1], FORMAT=format)
-      w_windrose_legend, bar_labels, colors[1:*], pbar, TITLE = VAR_TITLE, UNIT = VAR_UNITS, WINDOW = window, CHARSIZE=charsize, /BOT_BAR_OPEN
-    endif else if add_edges[1] eq 1 then begin
-      bar_labels = STRING(levels[0:N_ELEMENTS(levels)-2], FORMAT=format)
-      w_windrose_legend, bar_labels, colors, pbar, TITLE = VAR_TITLE, UNIT = VAR_UNITS, WINDOW = window, CHARSIZE=charsize, /TOP_BAR_OPEN
-    endif
+    w_windrose_addlegend, leginfo, TITLE=VAR_TITLE, UNIT=VAR_UNITS, ADDCMD=window, CHARSIZE=charsize, FORMAT=format, POSITION=pbar
   endif
   
   ; Calm percentage
@@ -481,7 +506,7 @@ pro w_WindRose, wind_dir, wind_speed, ADD_VAR=add_var, N_BINS=n_bins, TITLE=titl
   if ~do_legend then do_legend = calm_perc gt 0 and calm_legend ne 0
   if do_legend ne 0 then begin
    text = 'Calm winds: ' + STRING(calm_perc, FORMAT='(F5.2)') + '%'
-   cgText, 0.02,0.02, text, COLOR=cgColor('dark grey'), WINDOW=window, /NORMAL, CHARSIZE=_charsize
+   cgText, 0.02,0.02, text, COLOR=cgColor('dark grey'), ADDCMD=window, /NORMAL, CHARSIZE=_charsize
   endif
   
   ; Stop

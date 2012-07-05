@@ -603,7 +603,7 @@ function w_Map::_draw_windRoses, WINDOW = window
     c = k.center
     c = CONVERT_COORD(c[0], c[1], /DATA, /DOUBLE, /TO_NORMAL) 
     k.center = [c[0],c[1]]
-    w_add_WindRose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
+    w_WindRose_addrose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
   endfor
   
   return, 1
