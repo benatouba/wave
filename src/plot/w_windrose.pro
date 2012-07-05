@@ -318,7 +318,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   endfor
 
   ; Axes Circles
-  for i=1, npercsteps do cgPlotS, w_windrose_circle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+  for i=1, npercsteps do cgPlotS, w_windrose_circle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
   
   ; Axes
   x_radius = max_radius*rx
