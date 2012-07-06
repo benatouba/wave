@@ -441,6 +441,39 @@ end
 
 ;+
 ; :Description:
+;    Get access to some params. 
+;
+; :Keywords:
+;    HRES: out, optional
+;          product vertical resolution
+;    TRES: out, optional
+;          product time resolution
+;    DIRECTORY: out, optional
+;              product directory
+;    _Ref_Extra: out
+;                all parent classed property
+;                
+;-      
+pro w_WPR::GetProperty,  $
+    HRES=hres,  $
+    TRES=tres,  $
+    DIRECTORY=directory,  $
+    _Ref_Extra=extra
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  IF Arg_Present(HRES) THEN hres = self.hres
+  IF Arg_Present(TRES) THEN tres = self.tres
+  IF Arg_Present(DIRECTORY) THEN directory = self.directory
+  
+  self->w_GISdata::GetProperty, _Extra=extra
+  
+end
+
+;+
+; :Description:
 ;   Retrieve time info.
 ;
 ; :Params:
@@ -800,7 +833,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
     endelse
     
     if N_ELEMENTS(out) eq 1 then out = out[0]
-    return, out
+    return, TEMPORARY(out)
     
   endelse
   
