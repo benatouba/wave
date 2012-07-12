@@ -52,7 +52,7 @@ pro w_gr_tzplot, x, y, $
   dummy = LABEL_DATE(DATE_FORMAT=['%H:%I', '%D.%N.%Y'])
   
   cgZPlot, TIME_to_JD(_x), y, $
-    OBJECT=thisObject, $
+    OBJECT=Object, $
     PARENT=parent, $
     XSIZE=xsize, $
     YSIZE=ysize, $

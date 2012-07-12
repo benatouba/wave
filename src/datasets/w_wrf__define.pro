@@ -1177,13 +1177,16 @@ end
 ;         the coordinate system (w_Grid2D or {TNT_PROJ} or {TNT_DATUM}) in which x and y are defined
 ;    K: in, optional
 ;       if 3D variable, the index in Z dimension where to get the TS
-;
+;    OBJECT: out, optional, type=objref
+;         The object reference to the underlying plot object.
+;         
 ; :History:
 ;     Written by FaM, 2010.
 ;-      
 pro w_WRF::plot_TimeSerie, varid, x, y, $
                            t0=t0, t1=t1, $
-                           src=src, K=k
+                           src=src, K=k, $
+                           OBJECT=object
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1225,7 +1228,7 @@ pro w_WRF::plot_TimeSerie, varid, x, y, $
   title = title + '!C ' + 'Grid point: [' + str_equiv(STRING(wrf_ind_i, FORMAT = '(I3)')) + ',' + str_equiv(STRING(wrf_ind_j, FORMAT = '(I3)')) + ']'
   title = title + '!C ' + 'WRF lon,lat: ' + str_equiv(STRING(wrf_lon, FORMAT='(F7.2)')) + ', ' + str_equiv(STRING(wrf_lat, FORMAT='(F7.2)'))
     
-  w_gr_tzplot, times, var, TITLE=title, YTITLE=units, THICK=2, COLOR='red', position=[0.1,0.15,0.94,0.82], CHARSIZE=1.
+  w_gr_tzplot, times, var, TITLE=title, YTITLE=units, THICK=2, COLOR='red', position=[0.1,0.15,0.94,0.82], CHARSIZE=1., OBJECT=object
   
 ;  w_TimeLinePlot, var, times, varname, COLOR1='red', TITLE='WRF TS plot: ' + description, YTITLE=units, THICKNESS=2
 ;  

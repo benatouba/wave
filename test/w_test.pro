@@ -2319,7 +2319,7 @@ pro TEST_WRF_OUT
     out_grid = dom1->reGrid(/TO_ROI)
     out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
-    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    if ~w_gis_compareGrid(dom1_crop, out_grid) then error+=1
     OBJ_DESTROY, out_grid
     
     ; TEST grid regrid
@@ -2328,7 +2328,7 @@ pro TEST_WRF_OUT
     out_grid = dom1->reGrid(/TO_ROI)
     out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
-    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1
+    if ~w_gis_compareGrid(dom1_crop, out_grid) then error+=1
     
     ok = dom1->set_ROI()
     if ~ ok then error+=1
@@ -2446,7 +2446,7 @@ pro TEST_WRF_OUT
     
     t2_after_crop = dom1->get_var('t2')
     dom1_crop = dom1->reGrid(/TO_ROI)
-    if ~utils_compare_grid(dom1_crop, dom1) then error+=1  
+    if ~w_gis_compareGrid(dom1_crop, dom1) then error+=1  
     
     ok = dom1->define_subset()
     
@@ -2461,7 +2461,7 @@ pro TEST_WRF_OUT
     out_grid = dom1->reGrid(/TO_ROI)
     out_data = out_grid->map_gridded_data(t2_bef_crop, dom1)
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
-    if ~utils_compare_grid(dom1_crop, out_grid) then error+=1    
+    if ~w_gis_compareGrid(dom1_crop, out_grid) then error+=1    
     ok = dom1->set_roi()
 
     OBJ_DESTROY, out_grid
@@ -2480,7 +2480,7 @@ pro TEST_WRF_OUT
     if abs(pLON[0]-90.) gt MEAN(LON[1:*,0]-LON[0:NX-2,0])/2. then error +=1
     if abs(pLAT[0]-29.) gt MEAN(LAT[0,1:*]-LAT[0,0:Ny-2])/2. then error +=1
     
-    dom1->plot_TimeSerie, 'T2', 90.1, 31.2, src = dat 
+    dom1->plot_TimeSerie, 'T2', 90.1, 31.2, src = dat, OBJECT=object
     ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
@@ -3903,7 +3903,7 @@ pro TEST_MOSAIC
   !QUIET = 0  
   
   grids = [h25v05,h25v06,h26v05,h26v05]  
-  mosaic = utils_MOSAIC_grid(grids)
+  mosaic = w_gis_mosaic(grids)
   ok = MOSAIC->set_ROI(GRID = h25v05)
   if ok ne 1 then error+=1
   modata = MOSAIC->map_gridded_data(data1, h25v05, MISSING = 0, /TO_ROI)
