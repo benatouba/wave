@@ -603,9 +603,51 @@ function w_WPR::hasVar, id, INFO=info
   if cnt eq 0 then return, 0
   
   v = (*self.vars)[p]
-  info = {id:v.id, name:v.name, description:v.description, unit:v.unit, type:v.type}
+  info = {id:v.id, name:v.name, description:v.description, unit:v.unit, type:v.type, derived:v.derived}
   
   return, 1
+
+end
+
+;+
+; :Description:
+;    Get access to a single product file object (w_geo_nc)
+;
+; :Params:
+;    id: in, required
+;        the variable ID
+;    year: in, required
+;          the requested year
+;          
+; :Keywords:
+;    INFO: out, optional
+;          a structure containing information about the data
+; 
+; :Returns:
+;     the object
+;
+;-
+function w_WPR::getVarObj, id, year, INFO=info
+
+  if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
+  if info.derived then Message, 'Variable is derived. No object found: ' + str_equiv(id)
+  
+  v = *self.vars
+  pv = where(str_equiv(v.id) eq str_equiv(id))
+  v = v[pv[0]]
+  
+  ; It is a product variable
+  if ~ v.open then begin
+    files = (*self.files)[v.pos[where(v.pos ne -1, nf)]]
+    for i = 0, nf-1 do self.objs->Add, OBJ_NEW('w_GEO_nc', FILE=files[i])
+    v.open = 1
+    (*self.vars)[pv[0]] = v
+  endif    
+  
+  obj = self.objs->FindByVar(id, year, COUNT=count)
+  if count ne 1 then Message, 'Problem to find the object. Is $year set correctly?'
+
+  return, obj
 
 end
 
@@ -666,12 +708,8 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
   undefine, info, time, nt
   
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
-  
-  v = *self.vars
-  pv = where(str_equiv(v.id) eq str_equiv(id))
-  v = v[pv[0]]
-  
-  if v.derived then begin
+    
+  if info.derived then begin
     ; Its a derived variable that we have to compute
     case str_equiv(id) of
       'Z_ETA': begin
@@ -772,27 +810,20 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
     
   endif else begin
   
-    ; It is a product variable
-    if ~ v.open then begin
-      files = (*self.files)[v.pos[where(v.pos ne -1, nf)]]
-      for i = 0, nf-1 do self.objs->Add, OBJ_NEW('w_GEO_nc', FILE=files[i])
-      v.open = 1
-      (*self.vars)[pv[0]] = v
-    endif
     
-    if v.type eq 'static' then begin
-      obj = self.objs->FindByVar(id, COUNT=count)
+    if info.type eq 'static' then begin
+      obj = self->getVarObj(id)
       if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
-      out = obj->get_Var(v.name, time, nt)
+      out = obj->get_Var(info.name, time, nt)
     endif else begin
       if N_ELEMENTS(YEARS) ne 0 then _y = years else _y = *self.years
       for y=0, N_ELEMENTS(_y)-1 do begin
-        obj = self.objs->FindByVar(id, (_y)[y], COUNT=count)
+        obj = self->getVarObj(id, (_y)[y])
         if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
-        tmp = reform(obj->get_Var(v.name, t, ZLEVELS=zlevels))        
+        tmp = reform(obj->get_Var(info.name, t, ZLEVELS=zlevels))        
         s = SIZE(tmp, /DIMENSIONS)
         nd = N_ELEMENTS(s)                
-        if STRMID(v.type, 0, 2) eq '2d' then begin
+        if STRMID(info.type, 0, 2) eq '2d' then begin
           case nd of
             1: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [out,TEMPORARY(tmp)]
             else: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
@@ -844,7 +875,7 @@ end
 ;    Class structure definition 
 ;
 ;-
-pro w_WPR__Define
+pro w_WPR__Define, class
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc

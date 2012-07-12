@@ -91,7 +91,8 @@ function w_aws_read_data_file_auto_template, file
         l = STRSPLIT(l[1], ';', /EXTRACT, /PRESERVE_NULL)
         station_locX = DOUBLE(utils_replace_string(l[0], 'Longitude', ''))
         station_locY = DOUBLE(utils_replace_string(l[1], 'Latitude', ''))
-        station_h = FLOAT(utils_replace_string(l[2], 'Altitude', ''))
+        tmp = utils_replace_string(l[2], 'Altitude', '')
+        if tmp ne '  ****' then station_h = FLOAT(tmp) else station_h = -9999
       endif
       if str_equiv(l[0]) eq '% DATA_VALIDITY' then data_val = GEN_strtrim(l[1], /ALL)
       if str_equiv(l[0]) eq '% FILE_FORMAT' then is_ts = TRUE

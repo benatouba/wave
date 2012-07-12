@@ -123,19 +123,19 @@ function w_GISdata::getProperty, thisProperty
   COMPILE_OPT IDL2
   ON_ERROR, 2
   
-  avail = ['TNT_C', $
-           'OGRID', $
-           'ORDER', $
-           'SUBSET']
-  
-  ; Check if ok
-  index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
-  index = index[0]    
-  CASE count OF
-    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
-    1:
-    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
-  ENDCASE
+;  avail = ['TNT_C', $
+;           'OGRID', $
+;           'ORDER', $
+;           'SUBSET']
+;  
+;  ; Check if ok
+;  index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
+;  index = index[0]    
+;  CASE count OF
+;    0: Message, 'Property ' + StrUpCase(thisProperty) + ' could not be found.'
+;    1:
+;    ELSE: Message, 'Ambiguous property. Use more characters to specify it.'
+;  ENDCASE
   
   ; Now david fanning's stuff
   

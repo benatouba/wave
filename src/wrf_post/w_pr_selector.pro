@@ -9,6 +9,8 @@
 ;                Path to the new products directory
 ;    DRES: in, required, type=string
 ;          the resolution, e.g. DRES=['d30km','d10km']
+;    VTYPE: in, required, type=string
+;           the variable type, e.g. VTYPE=['2d]
 ;    VARIABLES: in, required, type=string
 ;               the variable, e.g. VARIABLES=['hgt', 'landmask', 'prcp', 'prcp_fr', 'psfc', 'q2', 'swdown', 't2', 'u10', 'v10']
 ;    AGG_STEPS: in, required, type=string
@@ -26,6 +28,7 @@
 pro w_pr_selector, INPUT_DIR=input_dir, $
     OUTPUT_DIR=output_dir, $
     DRES=dres, $
+    VTYPE=vtype, $
     VARIABLES=variables, $
     YEARS=years, $
     AGG_STEPS=agg_steps, $
@@ -57,27 +60,32 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
       pok = where(StrMatch(_file_list, '*/'+agg_steps[j]+'/*'), cnt)
       if cnt eq 0 then continue
       __file_list = _file_list[pok]
-      for k=0, N_ELEMENTS(variables)-1 do begin
-        pok = where(StrMatch(__file_list, '*_'+variables[k]+'_2*'), cnt)
-        if cnt eq 0 then begin ; try static case
-          pok = where(StrMatch(__file_list, '*static_'+variables[k]+'.*'), cnt)
-        endif
+      for q=0, N_ELEMENTS(vtype)-1 do begin
+        pok = where(StrMatch(__file_list, '*/'+vtype[q]+'/*'), cnt)
         if cnt eq 0 then continue
         ___file_list = __file_list[pok]
-        for l=0, N_ELEMENTS(___file_list)-1 do begin
-          f = ___file_list[l]
-          arr_file = output_dir + PATH_SEP() + utils_replace_string(f, dir, '') 
-          if FILE_TEST(arr_file) and ~ force then continue
-          FILE_MKDIR, FILE_DIRNAME(arr_file)
-          print, 'Copying file : ' + f
-          print, ' to : ' + arr_file + ' ...'
-          FILE_COPY, f, arr_file, FORCE=force
-          si += (FILE_INFO(arr_file)).size
-          nf += 1
-        endfor        
+        for k=0, N_ELEMENTS(variables)-1 do begin
+          pok = where(StrMatch(___file_list, '*_'+variables[k]+'_2*'), cnt)
+          if cnt eq 0 then begin ; try static case
+            pok = where(StrMatch(___file_list, '*static_'+variables[k]+'.*'), cnt)
+          endif
+          if cnt eq 0 then continue
+          ____file_list = ___file_list[pok]
+          for l=0, N_ELEMENTS(____file_list)-1 do begin
+            f = ____file_list[l]
+            arr_file = output_dir + PATH_SEP() + utils_replace_string(f, dir, '')
+            if FILE_TEST(arr_file) and ~ force then continue
+            FILE_MKDIR, FILE_DIRNAME(arr_file)
+            print, 'Copying file : ' + f
+            print, ' to : ' + arr_file + ' ...'
+            FILE_COPY, f, arr_file, FORCE=force
+            si += (FILE_INFO(arr_file)).size
+            nf += 1
+          endfor
+        endfor
       endfor
     endfor
-  endfor 
+  endfor
   si = Number_Formatter(si/1000000000d) + ' Gb'
   print, 'Done. Number of files copied: ' + str_equiv(nf) + '. Total size copied: ' + si
     
