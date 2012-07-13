@@ -1054,7 +1054,7 @@ end
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-function w_Grid2D::map_gridded_data, data, src_grid, MISSING = missing, BILINEAR = bilinear, CUBIC=cubic, DATA_DST=data_dst, TO_ROI=to_roi
+function w_Grid2D::map_gridded_data, data, src_grid, MISSING=missing, BILINEAR=bilinear, CUBIC=cubic, DATA_DST=data_dst, TO_ROI=to_roi
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
