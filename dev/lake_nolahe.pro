@@ -44,8 +44,7 @@ end
 ;    Get an atmospheric data
 ;
 ; :Params:
-;    wrf: in
-;         wrf object
+;    wrf: in, required, wrf_std or wrf_nl
 ;    theta: out
 ;    p: out
 ;    t: out
@@ -107,7 +106,7 @@ end
 
 ;+
 ; :Description:
-;    This procedure creates SkewT-log(p)-Diagrams for one of the two models (LAKE / NO LAKE) for two different locations
+;    This procedure creates skewT-log(p)-diagrams for one of the two models (LAKE / NO LAKE) for two different locations
 ;
 ; :Params:
 ;    ipix_l = in, pixel number over lake in x direction
@@ -145,15 +144,91 @@ pro lnl_skew_diags, ipix_l, jpix_l ,ipix_nl, jpix_nl, month, NOLAKEMODEL=nolakem
   t_lake = REFORM(t[il, jl, *, m])
   p_lake = REFORM(p[il, jl, *, m])
   td_lake = REFORM(td[il, jl, *, m])
+  z_lake = REFORM(z[il,jl,*,m])
   t_nlake = REFORM(t[in, jn, *, m])
   p_nlake = REFORM(p[in, jn, *, m])
   td_nlake = REFORM(td[in, jn, *, m])
+  z_nlake = REFORM(z[in,jn,*,m])
   
-  skewt_logp_diagram, t_lake, p_lake, DEWPOINT=td_lake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over lake ' + time_str
-  skewt_logp_diagram, t_nlake, p_nlake, DEWPOINT=td_nlake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over land ' + time_str
+  skewt_logp_diagram, t_lake, p_lake, DEWPOINT=td_lake, HEIGHT=z_lake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over lake ' + time_str
+  skewt_logp_diagram, t_nlake, p_nlake, DEWPOINT=td_nlake, HEIGHT=z_nlake, ANGLE=45, TITLE='PT-Profile for '+modelname+' over land ' + time_str
   
   
 end
+
+
+
+
+;+
+; :Description:
+;    This procedure creates skewT_log(p)-diagrams (like the procedure lnl_skewT_diags),
+;    but the two diagrams which are generated are for both models, the Lake and the Nolake model at the same location.
+;
+; :Params:
+;    ipix = in, pixel number in x direction
+;    jpix = in, pixel number in y direction
+;    month = in
+;
+; :Keywords:
+;    STD_PNG = in, optional, default =0,
+;              Set this keyword to save the figure as a standard png in the output directory
+;    OUTPUT_DIR = in optional, default = 0,
+;                 Set this keyword to determine an output directory.
+;                 If this keyword is not set although the std_png keyword is set, a window opens to choose an output directory
+;
+; :Author: JaH 2012
+;-
+pro lakenolake_skewT_diags, ipix, jpix , month, STD_PNG=std_png, OUTPUT_DIR=output_dir
+
+  ; choose output directory if no keyword is set
+  if N_Elements(STD_PNG) ne 0 then $
+      if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+
+  common ADMIN_LNL
+  
+  ;investigated pixels in area
+  i = ipix
+  j = jpix
+  m = month ; investigated month
+  
+    ; get variables of lake model
+  lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
+  time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
+  t_l = REFORM(t[i, j, *, m])
+  p_l = REFORM(p[i,j,*,m])
+  td_l= REFORM(td[i,j,*,m])   
+  z_l = REFORM(z[i,j,*,m])
+
+  ; get variables of no lake model
+  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  t_nl = REFORM(t[i, j, *, m])
+  p_nl = REFORM(p[i,j,*,m])
+  td_nl= REFORM(td[i,j,*,m])   
+  z_nl = REFORM(z[i,j,*,m])
+    
+  skewt_logp_diagram, t_l, p_l, DEWPOINT=td_l, HEIGHT=z_l,  ANGLE=45,$
+  TITLE=' PT-Profile for WRF_STD !C !Ci='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str
+ 
+;  ; save figure
+;  if N_ELEMENTS(std_png) ne 0 then begin
+;    FILE_MKDIR,output_dir+'SkewT-logP-Diagrams'
+;    pngname1='SkewT-logP-Diagrams/Lake_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+;    STD_PNG=output_dir+pngname1+'.png'  
+;    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  
+    skewt_logp_diagram, t_nl, p_nl, DEWPOINT=td_nl,HEIGHT=z_nl, ANGLE=45, $
+    TITLE=' PT-Profile for WRF_NL !C !Ci='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str 
+    
+;  ; save figure
+;  if N_ELEMENTS(std_png) ne 0 then begin
+;    FILE_MKDIR,output_dir+'SkewT-logP-Diagrams'
+;    pngname2='SkewT-logP-Diagrams/NoLake_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+;    STD_PNG=output_dir+pngname2+'.png'  
+;    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+    
+  
+end
+
 
 ;+
 ; :Description:
@@ -213,7 +288,7 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
   
  ; plot
   cgplot, BV_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
-  Title='stability diagram !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
+  Title='stability diagram !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str, $
   position=[0.12, 0.12, 0.9, 0.85], xtitle=ansi_value('Brunt-Väisälä-frequency [1/s]'), ytitle='pressure [hPa]', /WINDOW
   cgplot, BV_nl, p_nl, color='black', /Overplot, /WINDOW
   al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
@@ -276,7 +351,7 @@ pro relHumidity_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_
   xrange = [ min( [[[rh_l]],[[rh_nl]]] ), max( [[[rh_l]],[[rh_nl]]] ) ]
   prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ]
   cgplot, rh_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
-  Title='relative humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
+  Title='relative humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str, $
   position=[0.12, 0.12, 0.9, 0.85], xtitle='relative humidity [%]', ytitle='pressure [hPa]', /WINDOW
   cgplot, rh_nl, p_nl, color='black', /Overplot, /WINDOW
   al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
@@ -338,7 +413,7 @@ pro specHumidity_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output
   xrange = [ min( [[[qv_l]],[[qv_nl]]] ), max( [[[qv_l]],[[qv_nl]]] ) ]
   prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ] 
   cgplot, qv_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
-  Title='specific humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | m='+STRING(month,FORMAT='(I2)')+'', $
+  Title='specific humidity !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str, $
   position=[0.12, 0.12, 0.9, 0.85], xtitle='specific humidity [g/m^3]', ytitle='pressure [hPa]', /WINDOW
   cgplot, qv_nl, p_nl, color='black', /Overplot, /WINDOW
   al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
