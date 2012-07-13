@@ -1,3 +1,50 @@
+pro laura_reproj_temp
+
+  wpr = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/UAC/d02km/m')
+  
+  laura_utm, grid, map, topo
+  
+  grid->getProperty, TNT_C=c
+  
+  wpr->getTime, time, nt
+  h = wpr->getVarData('hgt')
+  t2 = wpr->getVarData('t2c')
+  grad = wpr->getVarData('grad_t2_ks3')
+  gradsig = wpr->getVarData('gradsig_t2_ks3')
+  
+  p = where(gradsig lt 0.8)
+  grad[p] = -0.0098 ; where gradient is not significant, put the dry adiab
+  grad = grad > (-0.0098) ; higher than dry adiab is not allowed
+
+  ; Proj transformation
+  h = grid->map_gridded_data(h, wpr)
+  grad = grid->map_gridded_data(grad, wpr)
+  t2 = grid->map_gridded_data(t2, wpr)
+  
+  ; Put NaN values outside the basin
+  p = where(topo eq MIN(topo))  
+  t2 = reform(t2, c.nx*c.ny, nt)
+  t2[p, *] = !VALUES.F_NAN
+  t2 = reform(t2, c.nx, c.ny, nt)
+  
+  w_LoadCT, 34, TABLE_SIZE=ts
+  ok = map->set_plot_params(N_LEVELS=ts, NEUTRAL_COLOR='light grey')   
+  
+  for i=8, nt-1 do begin
+    _data = t2[*,*,i] + (topo - h) * grad[*,*,i]
+    ok = map->set_data(t2[*,*,i])
+    ts =  TIME_to_STR(time[i], MASK='YYYY_MM')
+    w_standard_2d_plot, map, TITLE='WRF Temp ' + ts, BAR_TITLE='Temp', BAR_FORMAT='(F7.2)', PNG='temp'+ts+'.png'
+    ok = map->set_data(_data)
+    ts =  TIME_to_STR(time[i], MASK='YYYY_MM')
+    w_standard_2d_plot, map, TITLE='Corr Temp ' + ts, BAR_TITLE='Temp', BAR_FORMAT='(F7.2)', PNG='corrtemp'+ts+'.png'
+  endfor
+  
+  undefine, wpr
+  
+end
+
+
 pro laura_reproj
 
   wpr = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/UAC/d02km/y')
