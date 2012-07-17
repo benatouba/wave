@@ -264,26 +264,39 @@ pro stability_diag, ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
   ; get variables of lake model
   lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
   time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
-  theta_l = theta[i,j,*,m]
-  z_l = z[i,j,*,m]
-  theta0 = interpol(theta_l, z_l, 0)
-  dtheta_l = theta_l[0,0,*] - theta0
-  p_l = p[i,j,*,m]
+  theta_l = reform(theta[i,j,*,m])
+  z_l = reform(z[i,j,*,m])
+  p_l = reform(p[i,j,*,m])
+  dtheta_l = fltarr(N_elements(theta_l)-1)
+  dz_l = fltarr(N_elements(z_l)-1)
+  for n = 0,(N_Elements(theta_l)-2) do begin
+    dtheta_l[n] = theta_l[n+1] - theta_l[n]
+    dz_l[n] = z_l[n+1] - z_l[n]
+  endfor 
 
   ; get variables of no lake model
   lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
-  theta_nl=theta[i,j,*,m]
-  z_nl=z[i,j,*,m]
-  theta0 = interpol(theta_nl, z_nl, 0)
-  dtheta_nl = theta_nl[0,0,*] - theta0
-  p_nl = p[i,j,*,m]
-  prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ]
+  theta_nl=reform(theta[i,j,*,m])
+  z_nl=reform(z[i,j,*,m])
+  p_nl = reform(p[i,j,*,m])
+  dtheta_nl = fltarr(N_elements(theta_nl)-1)
+  dz_nl = fltarr(N_elements(z_nl)-1)
+  for n = 0,(N_Elements(theta_nl)-2) do begin
+    dtheta_nl[n] = theta_nl[n+1] - theta_nl[n]
+    dz_nl[n] = z_nl[n+1] - z_nl[n]
+  endfor
+  
+  prange = [ max( [p_l,p_nl] ), min( [p_l,p_nl] ) ]
   
   ; compute Brunt-Väisälä frequency    
   g = 9.81  
-  BV_l  = sqrt( (g * dtheta_l[0,0,*])  / (theta_l[0,0,*]  * z_l[0,0,*])  )
-  BV_nl = sqrt( (g * dtheta_nl[0,0,*]) / (theta_nl[0,0,*] * z_nl[0,0,*]) )
-  BV=[[[BV_l]],[[BV_nl]]]
+  theta_l=theta_l[1:*]
+  theta_nl=theta_nl[1:*]
+  p_l = p_l[1:*]
+  p_nl = p_nl[1:*]
+  BV_l  = sqrt( (g * dtheta_l)  / (theta_l  * dz_l)  )
+  BV_nl = sqrt( (g * dtheta_nl) / (theta_nl * dz_nl) )
+  BV=[BV_l,BV_nl]
   xrange=[ min(BV), max(BV)]
   
  ; plot
@@ -427,4 +440,94 @@ pro specHumidity_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output
   endif
 
 end
+
+
+pro temp_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
+
+ ; choose output directory if no keyword is set
+  if N_Elements(STD_PNG) ne 0 then $
+      if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+
+  common ADMIN_LNL
+  
+  ;investigated pixels in area
+  i = ipix
+  j = jpix
+  m = month ; investigated month
+  
+  ; get variables of lake model  
+  lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
+  time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
+  t_l = t[i,j,*,m]
+  p_l = p[i,j,*,m]
+
+  ; get variables of no lake model  
+  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  t_nl = t[i,j,*,m]
+  p_nl = p[i,j,*,m]
+  
+  ; plot
+  xrange = [ min( [[[t_l]],[[t_nl]]] ), max( [[[t_l]],[[t_nl]]] ) ]
+  prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ] 
+  cgplot, t_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
+  Title='temperature !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str, $
+  position=[0.12, 0.12, 0.9, 0.85], xtitle='temperature ['+cgsymbol('deg')+'C]', ytitle='pressure [hPa]', /WINDOW
+  cgplot, t_nl, p_nl, color='black', /Overplot, /WINDOW
+  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.8],/Normal, /Window
+ 
+  ; save figure
+  if N_ELEMENTS(std_png) ne 0 then begin
+    FILE_MKDIR,output_dir+'TemperatureDiagrams'
+    pngname='TemperatureDiagrams/Temp_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+    STD_PNG=output_dir+pngname+'.png'  
+    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  endif
+
+end
+
+
+
+pro potTemp_diagram,  ipix, jpix, month, STD_PNG=std_png, OUTPUT_DIR=output_dir
+
+ ; choose output directory if no keyword is set
+  if N_Elements(STD_PNG) ne 0 then $
+      if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = DIALOG_PICKFILE(TITLE='Please select output data directory', /MUST_EXIST, /DIRECTORY)
+
+  common ADMIN_LNL
+  
+  ;investigated pixels in area
+  i = ipix
+  j = jpix
+  m = month ; investigated month
+  
+  ; get variables of lake model  
+  lnl_pt_diagramms_get_Vars, wrf_std, theta, p, t, z, rh, qv, w, td, time 
+  time_str = TIME_to_STR(time[m], MASK='YYYY.MM')
+  theta_l = theta[i,j,*,m]
+  p_l = p[i,j,*,m]
+
+  ; get variables of no lake model  
+  lnl_pt_diagramms_get_Vars, wrf_nl, theta, p, t, z, rh, qv, w, td, time 
+  theta_nl = theta[i,j,*,m]
+  p_nl = p[i,j,*,m]
+  
+  ; plot
+  xrange = [ min( [[[theta_l]],[[theta_nl]]] ), max( [[[theta_l]],[[theta_nl]]] ) ]
+  prange = [ max( [[[p_l]],[[p_nl]]] ), min( [[[p_l]],[[p_nl]]] ) ] 
+  cgplot, theta_l,  p_l,  color='blue', yrange=prange, xrange=xrange, $
+  Title='potential temperature !C !C i='+STRING(ipix,FORMAT='(I2)')+' | j='+STRING(jpix,FORMAT='(I2)')+' | ' + time_str, $
+  position=[0.12, 0.12, 0.9, 0.85], xtitle='theta ['+cgsymbol('deg')+'C]', ytitle='pressure [hPa]', /WINDOW
+  cgplot, theta_nl, p_nl, color='black', /Overplot, /WINDOW
+  al_legend, ['Lake', 'No Lake'], color=['blue', 'black'], LineStyle=[0,0], POSITION=[0.66,0.23],/Normal, /Window
+ 
+  ; save figure
+  if N_ELEMENTS(std_png) ne 0 then begin
+    FILE_MKDIR,output_dir+'TemperatureDiagrams'
+    pngname='TemperatureDiagrams/potTemp_'+STRING(ipix,FORMAT='(I2)')+'_'+STRING(jpix,FORMAT='(I2)')+'_'+STRING(month,FORMAT='(I2)')+''
+    STD_PNG=output_dir+pngname+'.png'  
+    cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  endif
+
+end
+
 
