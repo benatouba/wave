@@ -15,7 +15,7 @@
 ;              set this keyword to turn the temperature axis to a certain angle, e.g. 45 degree
 ;    TEMPRANGE: in, optional, default = [-30,40],
 ;              set this keyword as deg. Celsius [min.value, max.value] to vary the x range of the diagram
-;    FIGTITLE: in, optional, default='Skew-T-log-p-diagram'
+;    TITLE: in, optional, default='Skew-T-log-p-diagram'
 ;    PNG: in, optional, type = string
 ;              set to a filename to generate a png output (uses image magick)
 ;    EPS: in, optional, type = string
@@ -53,7 +53,7 @@ function skewt_logp_diagram_skewY, x, y, ANGLE=angle, MINP=minp
 end
 
 
-pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height, ANGLE=angle, TEMPRANGE=temprange, FIGTITLE=figtitle, EPS=eps, PNG=png, STD_PNG=std_png
+pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height, ANGLE=angle, TEMPRANGE=temprange, TITLE=title, EPS=eps, PNG=png, STD_PNG=std_png
 
   ; unsaturated (dry) adiabate formula
   R  =  8.314 ; gas constant [J/mol*K]
@@ -98,12 +98,12 @@ pro skewt_logp_diagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height,
   wysize = 830
   cgWindow, WXSIZE=wxsize, WYSIZE=wysize
   
-  if N_ELEMENTS(figtitle) eq 0 then figtitle='Skew-T-log-p-diagram !C'
+  if N_ELEMENTS(title) eq 0 then title='Skew-T-log-p-diagram !C'
     
   ; prepare plot
   cgplot, temperature, pressure, position=[0.13, 0.1, 0.87, 0.9], $
            yrange=yrange, xrange=xrange, ytitle='pressure [hPa]', $ 
-           xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=figtitle, $
+           xtitle='!C temperature ['+ cgsymbol('deg')+'C]', title=title, $
            YSTYLE=9,XSTYLE=9, WINDOW=window, /NODATA, YTICKS=7, YTICKV=pticks, YLOG=1
   cgControl, EXECUTE=0
   wset, cgQuery(/Current)  
