@@ -197,8 +197,11 @@ function w_DEM::define_subset, SUBSET_LL  = subset_ll,  $
   info.coord = coord
   map_info = utils_replace_string(utils_replace_string(coord.map_info, '{', ''), '}', '')
   proj_name = (STRSPLIT(map_info, ',', /EXTRACT))[0]
-  if PROJ_NAME eq 'Geographic Lat/Lon' then PROJ_NAME = 'Geographic (WGS-84)'
-  GIS_make_proj, ret, proj, NAME=proj_name
+  if proj_name eq 'Geographic Lat/Lon' then begin
+    GIS_make_proj, ret, proj, NAME='Geographic (WGS-84)'
+  endif else begin
+    proj = coord.proj
+  endelse
   
   ;*****************************************
   ; Convert map projection and subset data *
