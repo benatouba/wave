@@ -615,12 +615,15 @@ end
 ;    See `TS_AGG` for more info on the aggregation.
 ;
 ; :Keywords:
-;    DAY: in, optional, default=none
-;         set to day interval (e.g: 1, or 7) to compute 
-;         daily or seven-daily statistics
+;    MINUTE: in, optional, default=none
+;         set to minute interval (e.g: 10, or 30) to compute 
+;         10 minutes or half-hourly statistics
 ;    HOUR: in, optional, default=none
 ;         set to hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
+;    DAY: in, optional, default=none
+;         set to day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
 ;    MONH: in, optional, default=none
 ;          set to compute monthly statistics
 ;    YEAR: in, optional, default=none
@@ -645,7 +648,7 @@ end
 ;    A new object with the aggregated data
 ;
 ;-
-function w_ts_StatSet::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+function w_ts_StatSet::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
   
   ; Make a new identical station
@@ -656,7 +659,7 @@ function w_ts_StatSet::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
   
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    out->addStat, _stat->Aggregate(DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+    out->addStat, _stat->Aggregate(MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig)   
   endfor
   

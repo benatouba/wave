@@ -870,12 +870,15 @@ end
 ;    See `TS_AGG` for more info on the aggregation.
 ;
 ; :Keywords:
-;    DAY: in, optional, default=none
-;         set to day interval (e.g: 1, or 7) to compute 
-;         daily or seven-daily statistics
+;    MINUTE: in, optional, default=none
+;         set to minute interval (e.g: 10, or 30) to compute 
+;         10 minutes or half-hourly statistics
 ;    HOUR: in, optional, default=none
 ;         set to hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
+;    DAY: in, optional, default=none
+;         set to day interval (e.g: 1, or 7) to compute 
+;         daily or seven-daily statistics
 ;    MONH: in, optional, default=none
 ;          set to compute monthly statistics
 ;    YEAR: in, optional, default=none
@@ -900,22 +903,50 @@ end
 ;    A new object with the aggregated data
 ;
 ;-
-function w_ts_Data::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
+function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
+  if N_ELEMENTS(MINUTE) ne 0 then begin
+    d = MAKE_ABS_DATE(QMS=self.t0-1LL)
+    mm = d.minute/LONG(MINUTE)*LONG(MINUTE)
+    start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day, HOUR=D.hour, MINUTE=mm)
+    d = MAKE_ABS_DATE(QMS=self.t1)
+    mm = d.minute/LONG(MINUTE)*LONG(MINUTE)
+    if mm ne d.minute then mm += LONG(MINUTE)
+    do_shift = 0LL
+    while mm ge 60 do begin 
+      mm -= 60
+      do_shift += 1LL
+    endwhile
+    end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour, MINUTE=mm)
+    end_D += do_shift * H_QMS
+    if end_D lt self.t1 then end_D += LONG64(MINUTE) * M_QMS
+    timestep = M_QMS * LONG64(MINUTE)
+    new_time = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=timestep)
+    step = 'TIMESTEP'
+  endif
+  
   if N_ELEMENTS(HOUR) ne 0 then begin
     d = MAKE_ABS_DATE(QMS=self.t0-1LL)
-    start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+    hh = d.hour/LONG(HOUR)*LONG(HOUR)
+    start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=hh)
     d = MAKE_ABS_DATE(QMS=self.t1)
-    end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
-    if end_D lt self.t1 then end_D += H_QMS
-    new_time = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=H_QMS * LONG64(HOUR))
-    step = 'TIMESTEP'
+    hh = d.hour/LONG(HOUR)*LONG(HOUR)
+    do_shift = 0LL
+    while hh ge 24 do begin 
+      mm -= 24
+      do_shift += 1LL
+    endwhile
+    end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=HH)
+    end_D += do_shift * D_QMS
+    if end_D lt self.t1 then end_D += LONG64(HOUR) * H_QMS
     timestep = H_QMS * LONG64(HOUR)
+    new_time = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=timestep)
+    step = 'TIMESTEP'    
   endif
   
   if N_ELEMENTS(DAY) ne 0 then begin
@@ -948,7 +979,7 @@ function w_ts_Data::aggregate, DAY=day, HOUR=hour, MONTH=month, YEAR=year, $
   endif
   
   if N_ELEMENTS(MIN_SIG) ne 0 then begin
-    if N_ELEMENTS(step) eq 0 then MESSAGE, 'MIN_SIG is applicable with H, D, M, Y positional keywords only.'
+    if N_ELEMENTS(step) eq 0 then MESSAGE, 'MIN_SIG is applicable with M, H, D, M, Y positional keywords only.'
     case step of
       'YEAR': begin
         if self.step eq 'YEAR' then Message, 'No'
