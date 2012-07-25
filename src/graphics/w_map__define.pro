@@ -720,6 +720,8 @@ function w_Map::set_plot_params, $
    self.plot_params.levels = PTR_NEW(levels)
   endif
   
+  self.plot_params.nlevels = 3 > self.plot_params.nlevels < 256
+  
   self.plot_params.contour_img  = KEYWORD_SET(CONTOUR)
   self.plot_params.dcbar  = KEYWORD_SET(DCBAR)
   self.plot_params.oob_bot  = KEYWORD_SET(OOB_BOT)
