@@ -1972,7 +1972,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   
   if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   if not array_processing(ud, vd) then Message, WAVE_Std_Message(/ARG)  
-  if density ne 1 and density ne 3 and density ne 5 and density ne 7 then Message, 'Density must be odd-numbered (1,3,5,7).'
+  if _density ne 1 and _density ne 3 and _density ne 5 and _density ne 7 then Message, 'Density must be odd-numbered (1,3,5,7).'
            
   grid->getProperty, tnt_c = c   
   nxg = C.nx
@@ -1980,7 +1980,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
     
   fx = FLOOR(double(nxg)/_density) ; possible points
   fy = FLOOR(double(nyg)/_density) ; possible points
-  s = floor(density/2.) ; where to start (1 for 3, 2 for 5, etc.)
+  s = floor(_density/2.) ; where to start (1 for 3, 2 for 5, etc.)
     
   xi = INDGEN(fx, /DOUBLE) * _density + s
   yi = INDGEN(fy, /DOUBLE) * _density + s
