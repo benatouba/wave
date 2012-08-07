@@ -1,3 +1,54 @@
+pro regional_hydro_product_hourly_add_HGT, wpr, shapeFile, destFile
+
+  ; Make a subset around the shape
+  ok = wpr->definesubset()
+  ok = wpr->definesubset(SHAPE=shapeFile, MARGIN=8)
+  wpr->Get_LonLat, lon, lat, nx, ny
+  wpr->Get_XY, xx, yy, nx, ny
+  wpr->getProperty, TNT_C=c
+  wrf_proj = c.proj
+  
+  H = wpr->getVarData('hgt', INFO=info)
+  
+  ; Show it
+  map = OBJ_NEW('w_Map', wpr, YSIZE=700)
+  ok = map->set_shape_file(SHPFILE = shapeFile, COLOR='blue', THICK=3)
+  ok = map->set_point(lon, lat, PSYM=16, SYMSIZE=1, COLOR='red')
+;  w_standard_2d_plot, map, /NO_BAR, TITLE=FILE_BASENAME(destFile), PNG=utils_replace_string(destFile, '.nc', '.png')
+  
+  w_LoadCT, 'wiki-schwarzwald-cont', TABLE_SIZE=ts
+  ok = map->set_plot_params(N_LEVELS=127, CMAX=ts-1)
+  ok = map->set_data(H)
+  w_standard_2d_plot, map, TITLE=FILE_BASENAME(destFile), PNG=utils_replace_string(FILE_BASENAME(destFile), '.nc', '.png')
+  
+  undefine, map
+  
+  wpr->getTime, time, nt, t0, t1
+  
+  ;find a template file
+  wpr->GetProperty, DIRECTORY=dir, HRES=res
+  file_list=FILE_SEARCH(dir, '*_' + res +'_*.nc', count=filecnt)
+  
+
+  
+  ; Open the destination file for writing.
+  dObj = Obj_New('NCDF_FILE', destFile, /TIMESTAMP, /NETCDF4_FORMAT, /MODIFY)
+  IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
+  
+  t_dim_name = 'time'
+  x_dim_name = 'south_north'
+  y_dim_name = 'west_east'
+  
+  vn = 'hgt'
+  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', info.description
+  dObj->WriteVarAttr, vn, 'units', info.unit
+  dObj->WriteVarData, vn, h
+  
+  undefine, dObj
+  
+end
+
 pro regional_hydro_product_hourly, wpr, shapeFile, destFile
 
   ; Make a subset around the shape
@@ -112,6 +163,32 @@ pro regional_hydro_product_hourly, wpr, shapeFile, destFile
   dObj->WriteVarData, vn, data
   
   undefine, dObj
+  
+end
+
+pro make_sophieprods_hourly_add_HGT
+
+;  wpr = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/WET/d10km/h')
+;  
+;  shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/Dudh_Kosi/Dudh_Kosi_basin.shp'
+;  destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet10km_DudhKosi_Hydro_hourly.nc'
+;  regional_hydro_product_hourly_add_HGT, wpr, shapeFile, destFile
+;  shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/lake_Nam_Co/bsn_namc.shp'
+;  destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet10km_NamCo_Hydro_hourly.nc'
+;  regional_hydro_product_hourly_add_HGT, wpr, shapeFile, destFile
+;  
+;  undefine, wpr
+  
+  wpr = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/WET/d30km/h')
+  
+  shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/Dudh_Kosi/Dudh_Kosi_basin.shp'
+  destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet30km_DudhKosi_Hydro_hourly.nc'
+  regional_hydro_product_hourly_add_HGT, wpr, shapeFile, destFile
+  shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/lake_Nam_Co/bsn_namc.shp'
+  destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet30km_NamCo_Hydro_hourly.nc'
+  regional_hydro_product_hourly_add_HGT, wpr, shapeFile, destFile
+  
+  undefine, wpr
   
 end
 

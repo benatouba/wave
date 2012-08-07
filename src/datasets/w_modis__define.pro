@@ -429,11 +429,21 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   
   res = EOS_GD_PROJINFO(gridID, projcode, zonecode, spherecode, projparm)
   if res eq -1 then message, WAVE_Std_Message(/FILE)  
-  if PROJCODE ne 16 then message, 'EOS Projection code currently not supported. (' + str_equiv(PROJCODE) + ')
-  res = EOS_GD_GRIDINFO(gridID, xdimsize, ydimsize, upleft, lowright)
-  if res eq -1 then message, WAVE_Std_Message(/FILE)  
-  status = EOS_GD_DETACH(gridID) 
   
+  case projcode of
+    16: begin
+      proj_str = str_equiv(projcode) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, WGS-84, EOS Sinusoidal'
+      GIS_make_proj, ret, proj, PARAM = proj_str
+    end
+    0: begin
+      GIS_make_proj, ret, proj, NAME='Geographic (WGS-84)'
+    end
+    else: message, 'EOS Projection code currently not supported. (' + str_equiv(projcode) + ')
+  endcase
+
+  res = EOS_GD_GRIDINFO(gridID, xdimsize, ydimsize, upleft, lowright)
+  if res eq -1 then message, WAVE_Std_Message(/FILE)   
+  status = EOS_GD_DETACH(gridID)   
   status = EOS_GD_CLOSE(eosgdfid)
   
   ; EOS closed. Now make the GIS structures
@@ -452,9 +462,6 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
   y0 += dy
   y1 -= dy  
   
-;  proj_str = str_equiv(37) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, 86400, 0, WGS-84, Integerized Sinusoidal'
-  proj_str = str_equiv(projcode) +  ', ' + STRING(PROJPARM[0], FORMAT='(F11.3)') + ', 0.0, 0.0, 0.0, WGS-84, EOS Sinusoidal'
-  GIS_make_proj, ret, proj, PARAM = proj_str
   
   ;*****************************************
   ; First, define the ORIGINAL grid geoloc *
