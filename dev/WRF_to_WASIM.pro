@@ -283,15 +283,15 @@ pro WRF_to_WASIM_rh
     
     ; Compute RH    
     _data = utils_wrf_rh(data[*,*,i], _psfc, _t2)
-        
-    ; Rotate data for VASIM 
-    _data = rotate(_data, 7)
             
     ; Convert data to string
     ; Missing string are writen as '-9999'
     _data = STRING(_data, FORMAT=str_format)
     _data[p] = '-9999'
     _data = reform(_data, c.nx, c.ny)
+
+    ; Rotate data for VASIM 
+    _data = rotate(_data, 7)
     
     ; Open and write file
     OPENW, lun, file, /GET_LUN
