@@ -423,7 +423,7 @@ function w_MODIS::define_subset, SUBSET_LL = subset_ll, SUBSET_IJ = SUBSET_ij, L
 
   ; Get info from the HDF-EOS file
   eosgdfid = EOS_GD_OPEN(self.path, /READ)
-  if self.NUM_GRIDS ne 1 then message, 'The EOS file has not the expected number of grids (only one is espected)'
+  if self.NUM_GRIDS gt 1 then message, 'The EOS file has not the expected number of grids (only one is espected)'
   dummy = EOS_Query(self.path, info)
   gridID = EOS_GD_ATTACH(eosgdfid, info.GRID_NAMES)
   
