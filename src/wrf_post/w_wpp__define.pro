@@ -563,10 +563,17 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
   dObj->WriteDim, y_dim_name, ny
   if nz ne 0 then dObj->WriteDim, z_dim_name, nz
   
+  ;WRF Version
+  case (self.active_agg) of
+    's':  wver = STRING(self.active_wrf->get_Gatt('TITLE'))
+    'h':  wver = STRING(self.active_wrf->get_Gatt('TITLE'))
+    else: wver = STRING(self.active_wrf->get_Gatt('WRF_VERSION'))
+  endcase
+  
   ; Global attributes
   dObj->WriteGlobalAttr, 'TITLE', self.title, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'DATA_NOTES', self.notes, DATATYPE='CHAR'
-  dObj->WriteGlobalAttr, 'WRF_VERSION', STRING(self.active_wrf->get_Gatt('TITLE')), DATATYPE='CHAR'
+  dObj->WriteGlobalAttr, 'WRF_VERSION', wver, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'CREATED_BY', self.created_by, DATATYPE='CHAR'
   dObj->WriteGlobalAttr, 'INSTITUTION', self.institution , DATATYPE='CHAR' 
   dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), DATATYPE='CHAR'
