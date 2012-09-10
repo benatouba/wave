@@ -3,14 +3,13 @@
 ;+
 ; 
 ; w_Grid2D is a central class in the WAVE library. All geolocalised
-; gridded dataset inherit w_Grid2D and can use the w_Grid2D methods. 
-; These are mainly transformation tools from Grid to Grid or 
-; Lon-Lat to grid, etc.       
+; gridded dataset inherit w_Grid2D and can use the w_Grid2D routines. 
 ;       
-; The transformation computations are internally made by the TNT GIS library:
-; the w_Grid2D class simply provides an object oriented encapsulation of
-; the GIS routines, as well as several improvements, such as remapping,
-; interpolation, LonLat to grid transformations, etc.
+; The transformation computations are performed by the TNT GIS library 
+; and the IDL map_proj engine. The w_Grid2D object simply provides 
+; an object oriented encapsulation of the GIS routines, as well as 
+; several improvements, such as remapping, interpolation, 
+; irregular to regular grid transformations, etc.
 ;       
 ; Currently, only POINT valid grids are supported. This should be sufficient
 ; for most applications.
@@ -22,7 +21,6 @@
 ; with the GIS library, the convention used in the WAVE is based on the 
 ; WRF convention, that means: the (i,j) = (0,0) index refers to the 
 ; DL corner and the (i,j) = (nx-1,ny-1) index refers to the UR corner.
-; One has to be carefull when defining new gridded datasets.
 ; 
 ; It is not recommended to work directly with {TNT_COORD} structures 
 ; anymore, but to define w_Grid2D objects using your {TNT_COORD} structures
@@ -1029,7 +1027,7 @@ end
 ; :Params:
 ;    data: in, required, type = float array
 ;          the data to map on the grid itself. The two first dimenstions are X and Y, the third is handled as time
-;    src_grid: in,  type = w_Grid2D
+;    src_grid: in, required, type = w_Grid2D
 ;              the SOURCE grid associated to the data (w_Grid2D Object)
 ;
 ; :Keywords:
@@ -1051,8 +1049,6 @@ end
 ; :Returns:
 ;    The remaped data array, of the same dimensions of the object grid, with an eventual 3rd dim (time/Z)
 ;    
-; :History:
-;      Written by FaM, 2010.
 ;-
 function w_Grid2D::map_gridded_data, data, src_grid, MISSING=missing, BILINEAR=bilinear, CUBIC=cubic, DATA_DST=data_dst, TO_ROI=to_roi
      
@@ -1092,7 +1088,7 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING=missing, BILINEAR=b
         'FLOAT' : missing = !VALUES.F_NAN
         'DOUBLE': missing = !VALUES.D_NAN
         'BYTE': missing = 0B
-        ELSE: missing = -999
+        ELSE: missing = -9999
       ENDCASE
   endif
   
@@ -1181,11 +1177,17 @@ end
 
 ;+
 ; :Description:
-;    This routine resamples a any other grid into the object grid. This is very
-;    usefull to gather any kind of informations (see example).
+;    This routine performs forward transformation of any grid into the object grid. 
+;    
+;    The principle of forward transform is to obtain, for each grid point of the
+;    object grid, all the indexes in the source grid that are contained into the
+;    given grid point. This transformation makes sense ONLY if the source grid has
+;    a higher resolution than the object grid. Otherwize choose the more general
+;    (and much faster) `w_grid2d->map_gridded_data` method. 
+;    
+;    This is usefull in combination with `w_grid2d->fwd_transform_data` or to gather any 
+;    kind of information (see examples).
 ;       
-; :Categories:
-;         WAVE/OBJ_GIS
 ;
 ; :Params:
 ;    src_grid: in,  type = w_Grid2D
@@ -1195,7 +1197,7 @@ end
 ;
 ; :Returns:
 ;    An array of pointers, of the same dimensions of the object grid. Each valid pointer contains 
-;    an array of indices into the argument data grid (an empty pointer means no element was found0)
+;    an array of indices into the argument data grid (an invalid pointer means no element was found)
 ;    
 ; :Examples:
 ; 
@@ -1204,7 +1206,7 @@ end
 ;      wrf = OBJ_NEW('w_WRF', FILE= TEST_file_directory() + 'WRF/wrfout_d02_2008-10-26', CROPBORDER=12); WRF grid
 ;    
 ;    Get the array of pointers:: 
-;      dd = wrf->resample_grid(lst) ; array of pointers into the modis grid
+;      dd = wrf->fwd_transform_grid(lst) ; array of pointers into the modis grid
 ;      siz = SIZE(dd, /DIMENSIONS)
 ;    
 ;    This is to obtain the number of pixels under each grid point::
@@ -1223,10 +1225,8 @@ end
 ;    This is to free the memory after using all this::
 ;      for i = 0, N_ELEMENTS(dd) - 1 do PTR_free, dd[i]
 ;    
-; :History:
-;      Written by FaM, 2011.
 ;-
-function w_Grid2D::resample_grid, src_grid
+function w_Grid2D::fwd_transform_grid, src_grid
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1243,18 +1243,17 @@ function w_Grid2D::resample_grid, src_grid
   
   src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(src_c.nx, /LONG), INDGEN(src_c.ny, /LONG), xi, yi  
-   
   self->transform_IJ, xi, yi, src_grid, i_dst, j_dst, /NEAREST
   
-  pok = where((i_dst ge 0) and (j_dst ge 0) and (i_dst lt self.tnt_c.nx) and (j_dst lt self.tnt_c.ny), cnt_ok)  ; in the range
+  pok = where(i_dst gt 0 and j_dst gt 0 and i_dst lt self.tnt_c.nx and j_dst lt self.tnt_c.ny, cnt)
   
-  out=ptrarr(self.tnt_c.nx, self.tnt_c.ny)
-  
-  if cnt_ok ne 0 then begin ; we found pixels  
-    o_inds = xi[pok] + src_c.nx * yi[pok]
-    inds = self.tnt_c.nx * j_dst[pok] + i_dst[pok]
-    avail_inds = (inds[UNIQ(inds, SORT(inds))]) ; some optimisation (not very nice)    
-    for i=0, N_ELEMENTS(avail_inds) - 1 do out[avail_inds[i]] = PTR_NEW(o_inds[where(inds eq avail_inds[i])])
+  out = ptrarr(self.tnt_c.nx, self.tnt_c.ny)
+  if cnt ne 0 then begin
+    out_inds = i_dst[pok] + self.tnt_c.nx * j_dst[pok]
+    orig_inds = xi[pok] + src_c.nx * yi[pok]
+    h = HISTOGRAM(out_inds, MIN=0, MAX=self.tnt_c.nx*self.tnt_c.ny-1, BINSIZE=1, REVERSE_INDICES=r)
+    pok = where(h ne 0, cnt) 
+    for i=0LL, cnt - 1 do out[pok[i]] = PTR_NEW(orig_inds[r[r[pok[i]] : r[pok[i]+1]-1]])
   endif
   
   return, out
@@ -1288,8 +1287,6 @@ end
 ; :Returns:
 ;     A new w_Grid2D, which is a resampled version of the object grid
 ;     
-; :History:
-;      Written by FaM, 2010.
 ;-
 function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_roi, MARGIN=margin
 
@@ -1328,6 +1325,147 @@ function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_ro
   
   return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
     
+end
+
+;+
+; :Description:
+;   This function realizes athe forward transformation of a gridded dataset 
+;   into the object grid. The input dataset must be of higher resolution as 
+;   the object grid otherwize this method makes no sense. See the object 
+;   desciption for more information about the different approach
+;   between `w_grid2d->map_gridded_data` and `w_grid2d->fwd_transform_data`
+;
+; :Params:
+;    data: in, required, type = float array
+;          the data to map on the grid itself. The two first dimenstions are X and Y, the third is handled as time
+;    src_grid: in, required, type = w_Grid2D
+;              the SOURCE grid associated to the data (w_Grid2D Object)
+;
+; :Keywords:
+;    MISSING: in, optional
+;             value to set to missing values in the final grid. NaN or 0 are default values depending on the data type
+;    METHOD: in, optional, type = str, default = 'MEAN'
+;            the transform method (currently 'MEAN', 'MIN', 'MAX' are implemented)
+;    IN_FWD_TRAFO: in, optional
+;                  to spare time in computation, the user may want want to perform
+;                  once and only once the `w_Grid2D::fwd_transform_grid` and give its 
+;                  output als argument here
+;    N_VALID: out, optional, type = lonarr
+;             array of the same size as the ouptut containing the number of valid pixels
+;             used for the computation of the pixel value
+;
+;-
+function w_Grid2D::fwd_transform_data, data, src_grid, $
+    MISSING=missing, $
+    METHOD=method, $
+    N_VALID=n_valid, $
+    IN_FWD_TRAFO=in_fwd_trafo
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, -1
+  ENDIF
+  
+  if not OBJ_ISA(src_grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
+  
+  if ~ arg_okay(data, /NUMERIC) then Message, WAVE_Std_Message('data', /ARG)
+  if N_ELEMENTS(data) eq 1 then data=reform(data, 1,1)
+  
+  siz_src = SIZE(data) 
+  if siz_src[0] eq 2 then n = 1 else if siz_src[0] eq 3 then n = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
+  mx = siz_src[1] & my = siz_src[2]
+  
+  dataTypeName = Size(data, /TNAME)
+  
+  if N_ELEMENTS(METHOD) eq 0 then method = 'MEAN'
+  
+  if N_ELEMENTS(missing) eq 0 then begin
+    CASE dataTypeName OF
+      'FLOAT' : missing = !VALUES.F_NAN
+      'DOUBLE': missing = !VALUES.D_NAN
+      'BYTE': missing = 0B
+      ELSE: missing = -9999
+    ENDCASE
+  endif
+  case dataTypeName of
+    'FLOAT' : epsilon = (MACHAR()).eps
+    'DOUBLE': epsilon = (MACHAR(/DOUBLE)).eps
+    else: epsilon = 0
+  endcase
+  
+  ; First check for finite elements
+  pFin = where(finite(data), cntFin, COMPLEMENT=pNoFin, NCOMPLEMENT=cntNoFin)
+    
+  ; Then add the test for missing values if needed
+  if finite(missing) then begin
+    pValid = where(Abs(data - missing) gt epsilon, cntValid, $
+                       COMPLEMENT=pNoValid, NCOMPLEMENT=cntNoValid)
+  endif else begin
+    pValid = TEMPORARY(pFin)
+    cntValid = TEMPORARY(cntFin)
+    pNoValid = TEMPORARY(pNoFin)
+    cntNoValid = TEMPORARY(cntNoFin)   
+  endelse
+  is_Missing = cntNoValid ne 0
+  is_Valid = cntValid ne 0
+  
+  ; Mask
+  valid = BYTARR(SIZE(data, /DIMENSIONS))
+  if is_Valid then valid[pValid] = 1B
+   
+  CASE dataTypeName OF
+    'FLOAT' : out_data = FLTARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    'DOUBLE': out_data = DBLARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    'BYTE': out_data = BYTARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    ELSE: out_data = LONARR(self.tnt_c.nx, self.tnt_c.ny, n)
+  ENDCASE
+  
+  if ARG_PRESENT(N_VALID) then do_valid = TRUE else do_valid = FALSE
+  
+  if do_valid then n_valid = LONG(out_data)
+  out_data[*] = missing
+  
+  if ~ is_Valid then return, out_data ;nothing to do
+  
+  if N_ELEMENTS(IN_FWD_TRAFO) ne 0 then begin
+    dd = in_fwd_trafo
+    if ~ arg_okay(dd, N_ELEM=N_ELEMENTS(out_data)) then Message, WAVE_Std_Message('IN_FWD_TRAFO', /NELEMENTS)
+    if ~ arg_okay(dd, TYPE=10) then Message, WAVE_Std_Message('IN_FWD_TRAFO', /ARG)
+  endif else dd = self->fwd_transform_grid(src_grid) ; array of pointers into the src grid
+
+  for i = 0L, n-1 do begin
+    _data = data[*,*,i]
+    _out_data = out_data[*,*,i]
+    _valid = valid[*,*,i]
+    if do_valid then _n_valid = LONARR(self.tnt_c.nx, self.tnt_c.ny)
+    for j = 0, N_ELEMENTS(dd) - 1 do begin
+      if ~ PTR_VALID(dd[j]) then continue
+      pv = where(_valid[*(dd[j])], cntv)
+      if cntv eq 0 then continue      
+      d = (_data[*(dd[j])])[pv]
+      case str_equiv(METHOD) of
+        'MEAN': _out_data[j] = MEAN(d, /NAN)
+        'MIN': _out_data[j] = MIN(d, /NAN)
+        'MAX': _out_data[j] = MAX(d, /NAN)
+        else: Message, 'Method currently not supported: ' + str_equiv(METHOD)
+      endcase
+      if do_valid then _n_valid[j] = cntv
+    endfor
+    out_data[*,*,i] = _out_data
+    if do_valid then n_valid[*,*,i] = _n_valid
+  endfor
+  
+  if N_ELEMENTS(IN_FWD_TRAFO) eq 0 then undefine, dd
+  
+  if do_valid then n_valid = reform(n_valid)
+  return, reform(out_data) 
+  
 end
 
 ;+
@@ -1411,7 +1549,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTI
   if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
   
   if N_ELEMENTS(shp_src) eq 0 then begin
-   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
+;   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
   endif
   

@@ -65,4 +65,6 @@ popd
 
 WAVE_init
 
+cgWindow_SetDefs, PS_DECOMPOSED=1 
+
 delvar, root

@@ -847,6 +847,14 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
       endif
       
+      d1 = self->get_Var_Info('CLDFRA', DIMNAMES=dnames,DIMS=dims)
+      if d1 then begin
+        var = {name:'SCLD',unit:'-',ndims:N_elements(dims)-1,description:'Total Column Clouds',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'SCLDFRA',unit:'-',ndims:N_elements(dims)-1,description:'Surface cloud fraction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
       d1 = self->get_Var_Info('PMSL', DIMNAMES=dnames,DIMS=dims) ;MET EM
       if d1 then begin
         var = {name:'SLP',unit:'hPa',ndims:N_elements(dims)-1,description:'Sea level pressure',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
@@ -1631,6 +1639,36 @@ function w_WRF::get_Var, Varid, $
           dims = dims, $
           dimnames = dimnames) * 0.01 ; in hPa
       endelse
+    end
+    
+    'SCLD': begin
+      cld = self->get_Var('CLDFRA', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      mdims = SIZE(cld, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for t=0, nt-1 do value[*,*,t] = TOTAL(cld[*,*,*,t], 3)   ; Total
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+    
+    'SCLDFRA': begin
+      cld = self->get_Var('SCLD', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) < 1
+      self->Get_XY, xx, yy, nx, ny
+      cld = reform(cld, [nx * ny, nt])
+      value = cld * 0.
+      radius = 50001.^2
+      for i = 0L, N_ELEMENTS(xx)-1 do begin
+        ; at my point
+        x = xx[i]
+        y = yy[i]
+        _cld = cld
+        mask = ((xx-x)^2 + (yy-y)^2) lt radius
+        _cld[where(mask eq 0.), *] = 0.
+        value[i, *] = TOTAL(_cld,1) / TOTAL(mask)
+      endfor
+      value = reform(value, [nx, ny, nt])
     end
     
     'SLP_B': begin

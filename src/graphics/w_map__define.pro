@@ -1989,14 +1989,15 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   y = yi * c.dy + c.y1
   utils_1d_to_2d, x, y, x, y  
   self.grid->transform_XY, x, y, c.proj, posX, posY
-  posX += 0.5
-  posy += 0.5  
-  pok = where(posX ge 0 and posX le self.Xsize and posY ge 0 and posY le self.Ysize, cnt)
-  if cnt eq 0 then Message, 'Wind grid not compatible.'
   
   utils_1d_to_2d, xi, yi, xi, yi
   velx = ud[xi,yi]
   vely = vd[xi,yi] 
+  
+  posX += 0.5
+  posy += 0.5  
+  pok = where(posX ge 0 and posX le self.Xsize and posY ge 0 and posY le self.Ysize and FINITE(velx) and FINITE(vely), cnt)
+  if cnt eq 0 then Message, 'Wind grid not compatible.'
   
   self->_DestroyWindParams
   self.wind_params.type = type

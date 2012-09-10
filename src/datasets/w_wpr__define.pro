@@ -144,7 +144,7 @@ pro w_WPR::cleanup
   PTR_FREE, self.years
   PTR_FREE, self.pressure_levels
   OBJ_DESTROY, self.objs 
-  
+
 end
 
 ;+
@@ -418,13 +418,15 @@ pro w_WPR::_addDerivedVars
   d1 = self->hasVar('u10')
   d2 = self->hasVar('v10')
   if (d1 and d2) then begin
-    v = self->_varStruct(/DERIVED)
-    v.id = 'ws10'
-    v.name = 'ws10'
-    v.unit = 'm s-1'
-    v.description = '10 m wind speed'
-    v.type = '2d'
-    vars = [vars,v]
+    if ~ self->hasVar('ws10') then begin ; This is because sometimes it is already here as product
+      v = self->_varStruct(/DERIVED)
+      v.id = 'ws10'
+      v.name = 'ws10'
+      v.unit = 'm s-1'
+      v.description = '10 m wind speed'
+      v.type = '2d'
+      vars = [vars,v]
+    endif
     v = self->_varStruct(/DERIVED)
     v.id = 'wd10'
     v.name = 'wd10'

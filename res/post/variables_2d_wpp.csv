@@ -38,3 +38,6 @@
 "LAI","no"
 "LU_INDEX","no"
 "LANDMASK","no"
+"WS10", "mean"
+"SCLD", "mean"
+"SCLDFRA", "mean"

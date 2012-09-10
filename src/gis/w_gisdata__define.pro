@@ -500,7 +500,7 @@ end
 ;            Any keyword accepted by the getVarData() function
 ;    
 ;-
-pro w_GISdata::QuickPlotVar, id, WID=wid, _EXTRA = extra
+pro w_GISdata::QuickPlotVar, id, WID=wid, _EXTRA=extra
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -544,6 +544,49 @@ pro w_GISdata::QuickPlotVar, id, WID=wid, _EXTRA = extra
     end
     else: MESSAGE, 'Variable is not of suitable dimension.'
   endcase      
+
+end
+
+;+
+; :Description:
+;    Plots a desired variable timeserie for quick visualisation purposes
+;             
+; :Params:
+;    id : in, required, type = integer/ string
+;         variable index
+;    x: in, required
+;       the X coordinate of the point, defined in `SRC`
+;    y: in, required
+;       the Y coordinate of the point, defined in `SRC`
+;       
+; :Keywords:
+;    WID: out
+;         the widget id   
+;    _EXTRA: in, optional
+;            Any keyword accepted by the getVarTS() function
+;    
+;-
+pro w_GISdata::QuickPlotTS, id, x, y, WID=wid, _EXTRA=extra
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if ~ self->hasVar(id, INFO=info) then Message, '$' + str_equiv(id) + ' is not a correct variable ID.' 
+  var = self->getVarTS(id, x, y, _EXTRA=extra)
+  
+  self->getTime, time, nt, t0, t1
+    
+  title = info.name + ' - ' + info.description 
+  units = info.unit
+  
+  w_gr_tzplot, time, var, TITLE=title, YTITLE=units, THICK=2, COLOR='red', position=[0.1,0.15,0.94,0.82], CHARSIZE=1., OBJECT=wid
 
 end
 

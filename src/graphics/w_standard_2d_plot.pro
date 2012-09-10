@@ -167,7 +167,7 @@ pro w_standard_2d_plot, map, $
   
   ; Check what we want to do
   if keyword_set(eps) or keyword_set(pdf) or keyword_set(png) or keyword_set(jpeg) and ~KEYWORD_SET(RESIZABLE) then begin
-    if ~KEYWORD_SET(PIXMAP) then Message, 'With the PNG, PDF, JPEG and EPS keyword and without resizable windows, the window cannot be visible. Im setting PIXMAP.', /INFORMATIONAL
+;    if ~KEYWORD_SET(PIXMAP) then Message, 'With the PNG, PDF, JPEG and EPS keyword and without resizable windows, the window cannot be visible. Im setting PIXMAP.', /INFORMATIONAL
     PIXMAP = true
   endif
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
@@ -179,7 +179,7 @@ pro w_standard_2d_plot, map, $
   if visible and keyword_set(resizable) then begin
     WDELETE, xwin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTITLE=WTITLE, WOBJ=wobj
-    cgControl, EXECUTE=0
+    cgControl, EXECUTE=0, PS_DECOMPOSED=1 
     cgWIN = TRUE
     wobj->GetProperty, WID=cgWID
   endif else begin
