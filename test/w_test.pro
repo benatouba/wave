@@ -2535,7 +2535,7 @@ pro TEST_MODIS
     ; Try resample
     ;================
 
-    dd = dom2->resample_grid(lst)
+    dd = dom2->fwd_transform_grid(lst)
     nels = LONARR(126,126)        
     for i = 0, N_ELEMENTS(dd) - 1 do if PTR_VALID(dd[i]) then nels[i] = N_ELEMENTS(*(dd[i]))
     
