@@ -2,7 +2,7 @@
 ;+
 ;  
 ; This is a beefed-up IDL_CONTAINER object written as a utility object
-; for the w_WRF object
+; for the w_WRF object (usefull for variable names and so)
 ;
 ;
 ; :History:
@@ -112,7 +112,18 @@ function w_WRF_Container::FindByVar, searchID, year, $
    
  END
  
- function w_WRF_Container::getVarNames, count=count
+ ;+
+; :Description:
+;    Check for variables in a WRF file. For products only,
+;    since it also looks for pressure and eta dimensions 
+;    and adds a _eta or _presseure to the ID.
+;
+; :Keywords:
+;    count: out
+;           the number of vars
+;
+;-
+function w_WRF_Container::getVarNames, count=count
 
    ; Return to caller on error.
    ON_ERROR, 2

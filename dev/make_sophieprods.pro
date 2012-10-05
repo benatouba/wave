@@ -1,18 +1,31 @@
-pro regional_hydro_product, wpr, shapeFile, destFile
+pro regional_hydro_product, wpr, geo, shapeFile, destFile
 
   ; Make a subset around the shape
   ok = wpr->definesubset()
   ok = wpr->definesubset(SHAPE=shapeFile, MARGIN=5)
+  ok = geo->define_subset()
+  ok = geo->define_subset(SHAPE=shapeFile, MARGIN=5)
   wpr->Get_LonLat, lon, lat, nx, ny
   wpr->Get_XY, xx, yy, nx, ny
   wpr->getProperty, TNT_C=c
   wrf_proj = c.proj
+  
+  
+  lm = geo->get_Var('LU_INDEX')
+  pw = where(lm eq 15)
+  lm = lm*0
+  lm[pw] = 1
   
   ; Show it
   map = OBJ_NEW('w_Map', wpr, YSIZE=700, /HR_BLUE_MARBLE)
   ok = map->set_shape_file(SHPFILE = shapeFile, COLOR='blue', THICK=3)
   ok = map->set_point(lon, lat, PSYM=16, SYMSIZE=1, COLOR='red')
   w_standard_2d_plot, map, /NO_BAR, TITLE=FILE_BASENAME(destFile), PNG=utils_replace_string(destFile, '.nc', '.png')
+  
+  ok = map->set_plot_params(LEVELS=[0,1,2])
+  ok = map->set_data(lm)
+  w_standard_2d_plot, map, /NO_BAR, TITLE=FILE_BASENAME(destFile) + ' Landmask', PNG='lm_' + utils_replace_string(destFile, '.nc', '.png')
+  
   undefine, map
   
   wpr->getTime, time, nt, t0, t1
@@ -129,6 +142,15 @@ pro regional_hydro_product, wpr, shapeFile, destFile
   dObj->WriteVarAttr, vn, 'units', '-'
   dObj->WriteVarData, vn, data
   
+  vn = 'landmask'
+  
+
+  
+  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name,t_dim_name], DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'Skyview cloudfraction'
+  dObj->WriteVarAttr, vn, 'units', '-'
+  dObj->WriteVarData, vn, data
+  
   undefine, dObj
   
 end
@@ -136,17 +158,18 @@ end
 pro make_sophieprods
 
   wpr = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/WET/d10km/d')
+  geo = OBJ_NEW('w_WRF', FILE='/home/mowglie/disk/My Projects/WRF_WET_V01/0_chain_with_lakes/geo_em.d02.nc')
   
   shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/Dudh_Kosi/Dudh_Kosi_basin.shp'
   destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet10km_DudhKosi_Hydro_daily.nc'
-  regional_hydro_product, wpr, shapeFile, destFile
+  regional_hydro_product, wpr, geo, shapeFile, destFile
   shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/lake_Nam_Co/bsn_namc.shp'
   destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet10km_NamCo_Hydro_daily.nc'
-  regional_hydro_product, wpr, shapeFile, destFile
+  regional_hydro_product, wpr, geo, shapeFile, destFile
   shapeFile = '/home/mowglie/disk/Data/GIS/shapes/sophie_ezg/catchments/lake_Manasarovar/bsn_both.shp'
   destFile = '/home/mowglie/disk/Data/WRF/HYDRO_SOPHIE/wet10km_NamCo_Hydro_daily.nc'
-  regional_hydro_product, wpr, shapeFile, destFile
+  regional_hydro_product, wpr, geo, shapeFile, destFile
   
-  undefine, wpr
+  undefine, wpr, geo
   
 end

@@ -1,3 +1,38 @@
+; docformat = 'rst'
+;+
+;  
+; Computes the altitudinal gradient for a product variable and stores it
+; as a new product.
+;        
+; :Categories:
+;    WPP
+;    
+; :Author:
+;       FaM
+;        
+;-
+;
+;+
+; :Description:
+;    Computes the altitudinal gradient for a product variable and stores it
+;    as a new product in the same directory.
+;    
+;    The gradient is computed
+;
+; :Params:
+;    varid: in, required
+;           the variable id to compute the gradient from
+;
+; :Keywords:
+;    DIRECTORY: in, required
+;               the path to the product directory where to take the variable from
+;    FORCE: in, optional
+;           set this keyword to force overwriting old products
+;    KERNEL_SIZE: in, optional, default=3
+;                 size of the kernel where to compute the gradient 
+;                 should be uneven
+;
+;-
 pro w_pr_AltitudinalGradient, varid, $
     DIRECTORY=directory, $
     FORCE=force, $
@@ -6,6 +41,8 @@ pro w_pr_AltitudinalGradient, varid, $
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
+  
+  ON_ERROR, 2
   
   wpr = OBJ_NEW('w_WPR', DIRECTORY=directory)  
   if ~ OBJ_VALID(wpr) then return  
@@ -16,6 +53,7 @@ pro w_pr_AltitudinalGradient, varid, $
   height = wpr->getVarData('hgt')
   
   if N_ELEMENTS(KERNEL_SIZE) eq 0 then kernel_size = 3
+  if kernel_size mod 2 ne 1 then Message, 'Kernel size not uneven'
   
   gvn = 'grad_' + STRLOWCASE(varid) + '_ks' + str_equiv(kernel_size)
   grn = 'gradsig_' + STRLOWCASE(varid) + '_ks' + str_equiv(kernel_size)
