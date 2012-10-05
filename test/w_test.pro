@@ -2483,6 +2483,7 @@ pro TEST_WRF_OUT
     dom1->plot_TimeSerie, 'T2', 90.1, 31.2, src = dat, OBJECT=object
     ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
     if ok eq 'No' then error += 1
+    OBJ_DESTROY, object
     cgDelete, /ALL
     OBJ_DESTROY, dom1     
     if error ne 0 then message, '% TEST_WRF_OUT NOT passed', /CONTINUE else print, 'TEST_WRF_OUT passed'

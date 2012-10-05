@@ -161,6 +161,32 @@ end
 
 ;+
 ; :Description:
+;   Retrieve time info.
+;
+; :Params:
+;    time: out, type = QMS
+;          the time in qms
+;    nt: out, type = integer
+;        number of elements in time
+;    t0: out, type = LL64
+;        first time in qms       
+;    t1: out, type = LL64
+;        end time in qms 
+;        
+;-
+pro w_GISdata::getTime, time, nt, t0, t1
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  nt = 0
+  undefine, time, t0, t1
+      
+end
+
+;+
+; :Description:
 ;    To obtain the list af available variables in the dataset.
 ;
 ; :Keywords:
@@ -230,7 +256,11 @@ end
 ; :Params:
 ;    id: in, required
 ;        the variable ID
-;
+;    time: out, type = qms
+;          the variable time
+;    nt: out, type = long
+;        the variable number of times
+;        
 ; :Keywords:
 ;    INFO: out, optional
 ;          a structure containing information about the data. It can be adapted to your needs,
@@ -245,13 +275,13 @@ end
 ; :Returns:
 ;   the data array
 ;-
-function w_GISdata::getVarData, id, INFO=info, _EXTRA=extra
+function w_GISdata::getVarData, id, time, nt, INFO=info, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
     
-  undefine, info
+  undefine, info, time, nt
   
   Message, "If we arrived here, it is that you didn't implement the w_GISdata interface well", /INFORMATIONAL
   
@@ -270,7 +300,11 @@ end
 ;       the X coordinate of the point, defined in `SRC`
 ;    y: in, required
 ;       the Y coordinate of the point, defined in `SRC`
-;
+;    time: out, type = qms
+;          the variable time
+;    nt: out, type = long
+;        the variable number of times
+;        
 ; :Keywords:
 ;    SRC: in, optional
 ;         the source of the (X,Y) couple. If not set, (X,Y) are understood as (I,J)
@@ -294,7 +328,7 @@ end
 ;   1 if the subset has been set correctly, 0 if not
 ;   
 ;-
-function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, BILINEAR=bilinear, _EXTRA=extra
+function w_GISdata::getVarTS, id, x, y, time, nt, SRC=src, INFO=info, BILINEAR=bilinear, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
@@ -305,7 +339,7 @@ function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, BILINEAR=bilinear, _
   if ~arg_okay(Id, /SCALAR) then MEssage, WAVE_Std_Message('id', /SCALAR)
   
   if ~ self->hasVar(id, INFO=info) then Massage, 'Variable not found: ' + str_equiv(id)
-    
+      
   ; Gis
   if N_ELEMENTS(src) EQ 0 then _src = self else _src = src  
   ; This is to obtain the indexes in the original grid
@@ -348,7 +382,7 @@ function w_GISdata::getVarTS, id, x, y, SRC=src, INFO=info, BILINEAR=bilinear, _
     value = REFORM(wy[0] * r0 +  wy[1] * r1)     
   endif else begin    
     self.subset = [point_i, 1, point_j, 1]
-    value = self->getVarData(id, _EXTRA=extra)    
+    value = self->getVarData(id, time, nt, _EXTRA=extra)    
   endelse
   self.subset= _subset
   
@@ -582,7 +616,7 @@ pro w_GISdata::QuickPlotTS, id, x, y, WID=wid, _EXTRA=extra
   var = self->getVarTS(id, x, y, _EXTRA=extra)
   
   self->getTime, time, nt, t0, t1
-    
+ 
   title = info.name + ' - ' + info.description 
   units = info.unit
   

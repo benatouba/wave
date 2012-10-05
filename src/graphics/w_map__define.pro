@@ -412,9 +412,12 @@ function w_Map::_draw_Map, WINDOW = window
   
   TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
   if TICK_LABEL then begin    
-    spacing = 1.
-    ddy = - 0.023 * spacing * self.ysize
-    ddx = - 0.008 * spacing * self.xsize    
+    x_ddy = - 0.023 * self.ysize + self.map_params.xtick_dy * self.ysize
+    x_ddx = self.map_params.xtick_dx * self.xsize
+    
+    y_ddx = - 0.008 * self.ysize + self.map_params.ytick_dx * self.xsize 
+    y_ddy = self.map_params.ytick_dy * self.ysize + x_ddy/3.
+     
     ; Tick labels
     if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
     charthick = charsize
@@ -424,13 +427,13 @@ function w_Map::_draw_Map, WINDOW = window
     for i=0,N_ELEMENTS(*self.map_params.xticks)-1 do begin
       label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
       if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
-      cgText, (*self.map_params.xticks)[i], ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
+      cgText, (*self.map_params.xticks)[i] + x_ddx, x_ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
     endfor
     for i=0,N_ELEMENTS(*self.map_params.yticks)-1 do begin
       label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
       if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
       if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
-      cgText, ddx, (*self.map_params.yticks)[i]  + ddy/3., GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE = charsize, WINDOW=window, CHARTHICK=charthick, /DATA
+      cgText, y_ddx, (*self.map_params.yticks)[i] + y_ddy, GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE=charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
 
@@ -757,16 +760,36 @@ end
 ;           A 0 means no contour levels are labelled. A 1 means all contour levels are
 ;           labelled. A 2 means label every 2nd contour level is labelled, and so on
 ;           
-;    LABEL_SIZE_FACTOR: in, optional, type=double, default=1
+;    CHARSIZEFACTOR: in, optional, type=double, default=1
 ;                       due to the various possible displays, it makes it soetimes difficult to 
 ;                       know which size must have the labels. This is a factor to apply to
 ;                       the automatic size detection.
-;
+;    XTICK_DX: in, optional, type=float, default=0
+;              apply a factor to place the xtick mark correctly on the map side
+;    XTICK_DY: in, optional, type=float, default=0
+;              apply a factor to place the xtick mark correctly on the map side
+;    YTICK_DX: in, optional, type=float, default=0
+;              apply a factor to place the ytick mark correctly on the map side
+;    YTICK_DY: in, optional, type=float, default=0
+;              apply a factor to place the ytick mark correctly on the map side
+;              
+;    
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick, STYLE = style, COLOR = color, $
-                                LABEL = label, NO_TICK_LABELS = no_tick_labels, LABEL_SIZE_FACTOR = label_size_factor
+function w_Map::set_map_params,  $
+    TYPE=type, $
+    INTERVAL=interval, $
+    THICK=thick, $
+    STYLE=style, $
+    COLOR=color, $
+    LABEL=label, $
+    NO_TICK_LABELS=no_tick_labels, $
+    CHARSIZEFACTOR=charsizefactor, $
+    XTICK_DX=xtick_dx, $
+    XTICK_DY=xtick_dy, $
+    YTICK_DX=ytick_dx, $
+    YTICK_DY=ytick_dy
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -790,6 +813,10 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   _label = 0
   _tick_labels = TRUE
   _label_size_factor = 1.
+  _xtick_dx = 0.
+  _xtick_dy = 0.
+  _ytick_dx = 0.
+  _ytick_dy = 0.
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
@@ -797,8 +824,13 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
   if N_ELEMENTS(LABEL) eq 1 then _label = LABEL
-  if N_ELEMENTS(LABEL_SIZE_FACTOR) eq 1 then _label_size_factor = LABEL_SIZE_FACTOR
+  if N_ELEMENTS(CHARSIZEFACTOR) eq 1 then _label_size_factor = CHARSIZEFACTOR
   if KEYWORD_SET(NO_TICK_LABELS) eq 1 then _tick_labels = FALSE
+  
+  if N_ELEMENTS(XTICK_DX) eq 1 then _xtick_dx = XTICK_DX
+  if N_ELEMENTS(XTICK_DY) eq 1 then _xtick_dy = XTICK_DY
+  if N_ELEMENTS(YTICK_DX) eq 1 then _ytick_dx = YTICK_DX
+  if N_ELEMENTS(YTICK_DY) eq 1 then _ytick_dy = YTICK_DY
   
   self.map_params.type = _type
   self.map_params.thick = _thick
@@ -806,6 +838,11 @@ function w_Map::set_map_params, TYPE = type, INTERVAL = interval, THICK = thick,
   self.map_params.color = cgColor(_color, /DECOMPOSED)
   self.map_params.labeled = _label
   self.map_params.label_size_f = _label_size_factor
+  
+  self.map_params.xtick_dx = _xtick_dx
+  self.map_params.xtick_dy = _xtick_dy
+  self.map_params.ytick_dx = _ytick_dx
+  self.map_params.ytick_dy = _ytick_dy
   
   self.is_Mapped = _type ne ''
   
@@ -2478,6 +2515,10 @@ PRO w_Map__Define
             ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
+            xtick_dx       : 0.            , $ ; tick marks offset factor
+            xtick_dy       : 0.            , $ ; tick marks offset factor            
+            ytick_dx       : 0.            , $ ; tick marks offset factor           
+            ytick_dy       : 0.            , $ ; tick marks offset factor            
             t_Charsize     : 0D            , $ ; Ticks charsizes
             interval       : 0D            , $ ; The interval between ticks
             color          : 0L            , $ ; color of the contour lines

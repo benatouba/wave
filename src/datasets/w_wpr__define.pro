@@ -683,7 +683,11 @@ end
 ; :Params:
 ;    id: in, required
 ;        the variable ID
-;
+;    time: out, type = qms
+;          the variable time
+;    nt: out, type = long
+;        the variable number of times
+;        
 ; :Keywords:
 ;    INFO: out, optional
 ;          a structure containing information about the data. Contains the tags:: 
