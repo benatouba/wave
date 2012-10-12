@@ -536,6 +536,8 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   @WAVE.inc
   COMPILE_OPT IDL2
   
+  ON_ERROR, 2
+    
   if N_Params() eq 0 then Return
   if ~KEYWORD_SET(daxis) then daxis = [0,1]
   
@@ -563,7 +565,7 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   if N_Elements(xtitle) eq 0 then xtitle = ''
   if N_Elements(ytitle) eq 0 then ytitle = ''
   if N_Elements(Title) eq 0 then Title=''
-  if N_Elements(colortable) eq 0 then colortable = 0
+  if N_Elements(colortable) eq 0 then colortable = 13
   if N_Elements(Window_Title) eq 0 then Window_Title = 'w_QuickPlot quick view interface'
   if N_ELEMENTS(CoordX) ne 0 then begin
     addCoord = TRUE

@@ -761,6 +761,7 @@ function utils_nearest_neighbor, ilon, ilat, flon, flat, DISTANCES = distances, 
     if doDist then DISTANCES=sqrt(DISTANCES)
     if doDist then DISTANCES=reform(DISTANCES, N_ELEMENTS(flon[*,0]), N_ELEMENTS(flon[0,*]))
     
+    if n eq 1 then return, out
     return, reform(LONG(out), N_ELEMENTS(flon[*,0]), N_ELEMENTS(flon[0,*]))
   
 end

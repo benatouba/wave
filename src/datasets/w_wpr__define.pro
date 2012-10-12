@@ -699,7 +699,7 @@ end
 ;           if you want to get the data for specific years only
 ;    ZLEVELS: in, optional
 ;             if you want to get the data for specific Z levels only 
-;             (e.g: ZLEVELS=0 for first eta/pressure level, ZLEVELS=[0:12] for the first twelve)
+;             (e.g: ZLEVELS=0 for first eta/pressure level, ZLEVELS=[0,12] for the first twelve)
 ;            
 ; :Returns:
 ;   the data array
@@ -753,11 +753,11 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         return, self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels) - 273.15
       end
       'T2PBL': begin
-        tk = self->get_Var('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels)
+        tk = self->getVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=[0,1])
         dims = SIZE(tk, /DIMENSIONS)
         _dims = dims & _dims[2:*] = 1
-        ter =  rebin(reform(self->GetVarData('ter'),_dims), dims) ; make it same dim as z
-        h = self->GetVarData('z', YEARS=years, ZLEVELS=zlevels) - TEMPORARY(ter)
+        ter =  rebin(reform(self->GetVarData('hgt'),_dims), dims) ; make it same dim as z
+        h = self->GetVarData('z_ETA', ZLEVELS=[0,1], YEARS=years) - TEMPORARY(ter)
         return, reform(utils_wrf_intrp3d(TEMPORARY(tk), TEMPORARY(h), 2., /EXTRAPOLATE))
       end
       'T2PBLC': begin
@@ -870,7 +870,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
     endelse
     
     if N_ELEMENTS(out) eq 1 then out = out[0]
-    return, TEMPORARY(out)
+    return, reform(TEMPORARY(out))
     
   endelse
   

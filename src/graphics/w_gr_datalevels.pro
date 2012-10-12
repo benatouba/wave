@@ -142,7 +142,7 @@ pro w_gr_DataLevels_show, info
         MINUS_ONE=0, /AXIS, TITLE='Data (reformed)', /NOERASE, MARGIN=0.2
       if N_ELEMENTS(img) gt info.dataNel then begin ; put a cross where no data
         inds = ARRAY_INDICES(img, INDGEN(N_ELEMENTS(img)-info.dataNel) + info.dataNel)
-        cgPlotS, inds[0,*]+0.5, inds[1,*]+0.5, PSYM=SymCat(34), /DATA, /ADDCMD, SYMSIZE=1.5
+        cgPlotS, inds[0,*]+0.5, inds[1,*]+0.5, PSYM=34, /DATA, /ADDCMD, SYMSIZE=1.5
       endif
     endelse
     if info.dcbar then w_gr_DCBar, info, /FIT, /ADDCMD else w_gr_Colorbar, info, /FIT, /ADDCMD
