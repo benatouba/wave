@@ -84,6 +84,7 @@
 ;-
 pro w_standard_2d_plot, map, $
     TITLE=title,$
+    BACKGROUND=background,$
     BAR_TITLE=bar_title,  $
     BAR_TAGS=bar_tags, $
     BAR_FORMAT=bar_format, $
@@ -173,12 +174,12 @@ pro w_standard_2d_plot, map, $
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE
   
-  cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE
+  cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE, COLOR=background
   xwin = !D.WINDOW
   
   if visible and keyword_set(resizable) then begin
     WDELETE, xwin
-    cgWindow, WXSIZE=xs, WYSIZE=ys, WTITLE=WTITLE, WOBJ=wobj
+    cgWindow, WXSIZE=xs, WYSIZE=ys, WTITLE=WTITLE, WOBJ=wobj, WBACKGROUND=background
     cgControl, EXECUTE=0, PS_DECOMPOSED=1 
     cgWIN = TRUE
     wobj->GetProperty, WID=cgWID
@@ -194,7 +195,7 @@ pro w_standard_2d_plot, map, $
   map->add_img, POSITION=pos, WINDOW=cgWIN
   
   ; Title
-  cgText, (pos[0]+pos[2])/2., pos[3] + 0.015, title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
+  cgText, (pos[0]+pos[2])/2., pos[3] + 0.015, title, ALIGNMENT=0.5, $
     WINDOW=cgWIN, /NORMAL, CHARSIZE=1.5*sfac, CHARTHICK = 1.*sfac
     
   ; Bar
@@ -203,7 +204,7 @@ pro w_standard_2d_plot, map, $
     map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
       CHARSIZE=1.*sfac, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
     ; Title bar
-    cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, COLOR=cgColor('BLACK'), $
+    cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
       WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
   endif
   
@@ -225,9 +226,9 @@ pro w_standard_2d_plot, map, $
   
     xLegend = pos[0] + [0., xSize_bar_device]
     yLegend = pos[1] / 5. + [0.,0.]
-    cgPlotS, xLegend, yLegend, COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-    cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-    cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], COLOR=cgColor('BLACK'), /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+    cgPlotS, xLegend, yLegend, /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+    cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+    cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
     cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_xSize_map_bar + unit, ALIGNMENT=0.5, $
       CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
     

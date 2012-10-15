@@ -105,7 +105,7 @@ function w_altitudinal_gradient, var, height, $
       subarr_height = height[curcol-ngrid:curcol+ngrid, currow-ngrid:currow+ngrid]
       
       pv = where(subarr_valid, cntv)
-      if cntv lt 1 then continue ; how many points per kernel should be valid?
+      if cntv lt nk then continue ; how many points per kernel should be valid?
       
       subarr_var = var[curcol-ngrid:curcol+ngrid, currow-ngrid:currow+ngrid]
       
