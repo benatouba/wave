@@ -672,17 +672,27 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       if (d1 and d2) then begin
         dnames = utils_replace_string(dnames, '_stag', '')
         var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]      
+        dvars = [dvars,var]
         var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]                 
-      endif          
+        dvars = [dvars,var]
+        d1 = self->get_Var_Info('HGT')
+        if (d1) then begin
+          var = {name:'ZAG',unit:'m',ndims:N_elements(dims),description:'Full model height above ground on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+        endif
+      endif     
       d1 = self->get_Var_Info('GHT', DIMNAMES=dnames,DIMS=dims) ;met_em
       if (d1) then begin
         var = {name:'GEOPOTENTIAL',unit:'m2 s-2',ndims:N_elements(dims),description:'Full model geopotential on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]         
+        dvars = [dvars,var]
         var = {name:'Z',unit:'m',ndims:N_elements(dims),description:'Full model height on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]    
-      endif      
+        dvars = [dvars,var]
+        d1 = self->get_Var_Info('HGT_M', DIMNAMES=dnames,DIMS=dims)
+        if (d1) then begin
+          var = {name:'ZAG',unit:'m',ndims:N_elements(dims),description:'Full model height above ground on mass points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+        endif
+      endif    
         
       ;TK and TC
       d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)      
@@ -692,12 +702,19 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'TK',unit:'K',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         var = {name:'TC',unit:'C',ndims:N_elements(dims),description:'Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
-        dvars = [dvars,var]   
-        var = {name:'T2PBL',unit:'K',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
-        var = {name:'T2PBLC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
-        dvars = [dvars,var]     
-      endif 
+        var = {name:'T2ETA',unit:'K',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from the first two eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+        var = {name:'T2ETAC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (extrapolated from the first two eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+        d4 = self->get_Var_Info('PBLH')
+        if (d4) then begin
+          var = {name:'T2PBL',unit:'K',ndims:N_elements(dims)-1,description:'2 m temperature (linear fit from pbl eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        var = {name:'T2PBLC',unit:'C',ndims:N_elements(dims)-1,description:'2 m temperature (linear fit from pbl eta-levels)',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]
+      endif
       
       ;TD
       d1 = self->get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)      
@@ -1020,7 +1037,7 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if ~arg_okay(VarId, /SCALAR) then MEssage, WAVE_Std_Message('VarId', /SCALAR)
  
   ;Some check
-  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z', 'T2PBL', 'T2PBLC']
+  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z', 'T2PBL', 'T2PBLC', 'T2ETA', 'T2ETAC']
   pni = where(not_implemented eq str_equiv(Varid), cntni)
   if cntni gt 0 then Message, '$' + str_equiv(VarId) + ' is currently not available for w_WRF::get_TimeSerie.'
         
@@ -1286,8 +1303,10 @@ end
 ;             soilbot: Model soil category bot [] (static: no time dimension)
 ;             tc: Temperature [C]
 ;             t2c: 2m Temperature [C]
-;             t2pbl: 2 m temperature (extrapolated from eta-levels) [K]
-;             t2pblc: 2 m temperature (extrapolated from eta-levels) [C]
+;             t2eta: 2 m temperature (extrapolated from the first two eta-levels) [K]
+;             t2etac: 2 m temperature (extrapolated from the first two eta-levels) [C]
+;             t2pbl: 2 m temperature (linear fit from pbl eta-levels) [K]
+;             t2pblc: 2 m temperature (linear fit from pbl eta-levels) [C]
 ;             theta: Potential temperature [K]
 ;             tk: Temperature [K]
 ;             ws10: wind speed at 10m [m.s-1] TODO: rotated to earth coordinates
@@ -1295,6 +1314,7 @@ end
 ;             geopotential: Full model geopotential [m2 s-2] (unstaggered)
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
+;             zag: Full model height above ground (geopotential / 9.81) [m]
 ;             
 ;             TODO: umet10, vmet10, umet, vmet, components of wind rotated to earth coordinates
 ;    
@@ -1384,7 +1404,9 @@ function w_WRF::get_Var, Varid, $
   
   ;Some check
   if str_equiv(Varid) eq 'SLP' and ~self->get_Var_Info('SLP') then varid = 'SLP_B'
-     
+  _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
+  _unstagger = KEYWORD_SET(UNSTAGGER)
+   
   ; Z level handling
   if N_ELEMENTS(ETA_LEVELS) ne 0 then ZLEVELS=eta_levels
   _do_eta = N_ELEMENTS(ZLEVELS) ne 0
@@ -1392,6 +1414,7 @@ function w_WRF::get_Var, Varid, $
   _do_h = N_ELEMENTS(HEIGHT_LEVELS) ne 0
   _do_ag = N_ELEMENTS(ABOVE_GROUND_LEVELS) ne 0
   if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
+  if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 0 and _unstagger then Message, 'You are playing with UNSTAGGER and some Z-dimension tools. That could be dangerous.'
   
   
   ;Check if the variable is available
@@ -1402,9 +1425,7 @@ function w_WRF::get_Var, Varid, $
     dims = dims, $
     dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
     
-  _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
-  _unstagger = KEYWORD_SET(UNSTAGGER)
-  
+
   ; Check for the known diagnostic variable names
   case str_equiv(vid) of
       
@@ -1552,11 +1573,43 @@ function w_WRF::get_Var, Varid, $
         dimnames = dimnames) - 273.15
     end
     
-    'T2PBL': begin
+    'T2ETA': begin
       value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, ABOVE_GROUND_LEVELS=2., $
         dimnames = dimnames)      
      end
+    
+    'T2ETAC': begin
+      value = self->get_Var('T2ETA', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) - 273.15      
+     end
+    
+    'T2PBL': begin
+      tk = self->get_Var('TK', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      z = self->get_Var('ZAG', t0 = t0, t1 = t1)
+      pblh = self->get_Var('PBLH', t0 = t0, t1 = t1)
+      pdimtochange = where(strmatch(str_equiv(dimnames), 'BOTTOM_TOP'), cntdimtochange)
+      if cntdimtochange ne 1 then Message, 'aaarg'
+      utils_array_remove, pdimtochange, dimnames
+      value = REFORM(tk[*,*,0,*]) * 0
+      for t=0, nt-1 do begin
+        tmptk = REFORM(tk[*,*,*,t], dims[0]*dims[1], dims[2])
+        tmpz = REFORM(z[*,*,*,t], dims[0]*dims[1], dims[2])        
+        tmppblh = REFORM(pblh[*,*,t], dims[0]*dims[1])        
+        tmpval = FLTARR(dims[0], dims[1])  
+        tmpcorr = FLTARR(dims[0], dims[1])  
+        for e=0, N_ELEMENTS(value[*,*,0,0])-1 do begin
+          ph = where(tmpz[e,*] le (tmppblh[e])[0], cnth)
+          if cnth le 1 then ph = [0,1]
+          a = REGRESS((tmpz[e,ph])[*], (tmptk[e,ph])[*], CONST=b)
+          tmpval[e] = a * 2 + b 
+        endfor
+        value[*,*,t] = tmpval
+      endfor
+    end
     
     'T2PBLC': begin
       value = self->get_Var('T2PBL', time, nt, t0 = t0, t1 = t1,  $
@@ -1715,6 +1768,7 @@ function w_WRF::get_Var, Varid, $
     
     'GEOPOTENTIAL': begin
       if self->get_Var_Info('PH') then begin
+        ; This is the only variable one unstaggers
         value = self->get_Var('PH', time, nt, T0=t0, T1=t1,  $
           dims = dims, $
           dimnames = dimnames, ZLEVELS=zlevels)
@@ -1731,6 +1785,15 @@ function w_WRF::get_Var, Varid, $
         value = self->get_Var('GEOPOTENTIAL', time, nt, T0=t0, T1=t1,  $
           dims = dims, $
           dimnames = dimnames, ZLEVELS=zlevels) / 9.81
+    end
+    
+    'ZAG': begin
+        value = self->get_Var('Z', time, nt, T0=t0, T1=t1,  $
+          dims = dims, $
+          dimnames = dimnames, ZLEVELS=zlevels)          
+        _dims = dims & _dims[2:*] = 1
+        ter =  rebin(reform(self->get_Var('ter'),_dims), dims) ; make it same dim as z
+        value = value - TEMPORARY(ter)
     end
     
     else:
@@ -1792,7 +1855,7 @@ function w_WRF::get_Var, Varid, $
     endif
     
     if _do_h then begin
-      h = self->get_Var('z', T0=t0, T1=t1)
+      h = self->get_Var('z', T0=t0, T1=t1, ZLEVELS=zlevels)
       value = reform(utils_wrf_intrp3d(value, h, height_levels))
       nlocs = N_ELEMENTS(height_levels)
       if nlocs eq 1 then utils_array_remove, pdimtochange, dimnames $
@@ -1800,13 +1863,11 @@ function w_WRF::get_Var, Varid, $
     endif
     
     if _do_ag then begin
-      _dims = dims & _dims[2:*] = 1
-      ter =  rebin(reform(self->get_Var('ter'),_dims), dims) ; make it same dim as z
-      h = self->get_Var('z', T0=t0, T1=t1) - TEMPORARY(ter)
+      h = self->get_Var('zag', T0=t0, T1=t1)
       value = reform(utils_wrf_intrp3d(value, h, above_ground_levels, /EXTRAPOLATE))
       nlocs = N_ELEMENTS(above_ground_levels)
       if nlocs eq 1 then utils_array_remove, pdimtochange, dimnames $
-      else dimnames[pdimtochange] = 'height_above_ground'
+       else dimnames[pdimtochange] = 'height_above_ground'
     endif
      
   endif

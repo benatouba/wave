@@ -266,6 +266,16 @@ pro w_WPR::_addDerivedVars
     v.description = 'Full model height'
     v.type = '3d_eta'
     vars = [vars,v]
+    d1 = self->hasVar('hgt')
+    if d1 then begin
+      v = self->_varStruct(/DERIVED)
+      v.id = 'zag_eta'
+      v.name = 'z'
+      v.unit = 'm'
+      v.description = 'Full model height above ground'
+      v.type = '3d_eta'
+      vars = [vars,v]
+    endif
   endif
   d1 = self->hasVar('geopotential_press')
   if d1 then begin
@@ -276,6 +286,16 @@ pro w_WPR::_addDerivedVars
     v.description = 'Full model height'
     v.type = '3d_press'
     vars = [vars,v]
+    d1 = self->hasVar('hgt')
+    if d1 then begin
+      v = self->_varStruct(/DERIVED)
+      v.id = 'zag_press'
+      v.name = 'z'
+      v.unit = 'm'
+      v.description = 'Full model height above ground'
+      v.type = '3d_press'
+      vars = [vars,v]
+    endif
   endif
   
   d1 = self->hasVar('theta_eta')
@@ -664,6 +684,8 @@ end
 ;       - pressure_press     pressure        Full model pressure (on pressure levels ;-)       hPa        3d_press (derived)             
 ;       - z_eta              z               Full model height                                 m          3d_eta (derived)               
 ;       - z_press            z               Full model height                                 m          3d_press (derived)             
+;       - zag_eta            z               Full model height above ground                                 m          3d_eta (derived)               
+;       - zag_press          z               Full model height above ground                                m          3d_press (derived)             
 ;       - tk_eta             tk              Temperature                                       K          3d_eta (derived)               
 ;       - tc_eta             tc              Temperature                                       C          3d_eta (derived)               
 ;       - t2pbl              t2pbl           2 m temperature (extrapolated from eta-levels)    K          2d (derived)                   
@@ -721,8 +743,22 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       'Z_ETA': begin
         return, self->GetVarData('geopotential_eta', time, nt, YEARS=years, ZLEVELS=zlevels) / 9.81
       end
+      'ZAG_ETA': begin
+        z = self->GetVarData('Z_ETA', time, nt, YEARS=years, ZLEVELS=zlevels)
+        dims = SIZE(z, /DIMENSIONS)
+        _dims = dims & _dims[2:*] = 1
+        ter =  rebin(reform(self->GetVarData('HGT'),_dims), dims) ; make it same dim as z
+        return, TEMPORARY(z) - TEMPORARY(ter)
+      end
       'Z_PRESS': begin
         return, self->GetVarData('geopotential_press', time, nt, YEARS=years, ZLEVELS=zlevels) / 9.81
+      end
+      'ZAG_PRESS': begin
+        z = self->GetVarData('Z_PRESS', time, nt, YEARS=years, ZLEVELS=zlevels)
+        dims = SIZE(z, /DIMENSIONS)
+        _dims = dims & _dims[2:*] = 1
+        ter =  rebin(reform(self->GetVarData('HGT'),_dims), dims) ; make it same dim as z
+        return, TEMPORARY(z) - TEMPORARY(ter)
       end
       'TK_ETA': begin
         p = self->GetVarData('pressure_eta', time, nt, YEARS=years, ZLEVELS=zlevels) * 100.
