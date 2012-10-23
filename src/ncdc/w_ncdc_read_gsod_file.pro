@@ -62,6 +62,7 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
     
     'MAX': begin
       data = float(data)
+      data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
       val = {data:data, vname:ascii_tag, unit:'degC', description:'Maximum temperature', missing:missing, agg_method:'MAX'}
