@@ -419,17 +419,21 @@ function w_Map::_draw_Map, WINDOW = window
     y_ddy = self.map_params.ytick_dy * self.ysize + x_ddy/3.
      
     ; Tick labels
-    if !D.NAME eq 'PS' then charsize = 0.8 else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
+    if !D.NAME eq 'PS' then charsize = 0.8 * self.map_params.label_size_f else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
     charthick = charsize
-    if self.map_params.interval lt 0.1 then format = '(F8.2)' $
-     else if self.map_params.interval lt 1. then format = '(F8.1)' $
-       else format = '(I4)'
-    for i=0,N_ELEMENTS(*self.map_params.xticks)-1 do begin
+    format = self.map_params.tick_format
+    incr = self.map_params.tick_interval
+    if format eq '' then begin
+      if self.map_params.interval lt 0.1 then format = '(F8.2)' $
+        else if self.map_params.interval lt 1. then format = '(F8.1)' $
+          else format = '(I4)'
+    endif
+    for i=self.map_params.xtick_start, N_ELEMENTS(*self.map_params.xticks)-1, incr do begin
       label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
       if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
       cgText, (*self.map_params.xticks)[i] + x_ddx, x_ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
     endfor
-    for i=0,N_ELEMENTS(*self.map_params.yticks)-1 do begin
+    for i=self.map_params.ytick_start,N_ELEMENTS(*self.map_params.yticks)-1, incr do begin
       label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
       if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
       if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
@@ -743,31 +747,33 @@ end
 ;    TYPE: in, optional, type = string, default = 'LONLAT'
 ;          currently, only 'LONLAT' accepted. If set to '', removes the map contours.
 ;          TODO: soon, 'UTM' will be implemented.
-;    
 ;    INTERVAL: in, optional, type = float, default = 10
-;              interval between contours 
-;              
+;              interval between contours
+;    TICK_INTERVAL: in, optional, type=long, default=1
+;                   Tick annotations every TICK_INTERVAL contours
+;    TICK_FORMAT: in, optional, type=string
+;                 Tick annotations format (default is automatic)
 ;    THICK: in, optional, type = float, default = 1
 ;           thickness of the contour lines
-;    
 ;    STYLE: in, optional, type = float, default = 2
 ;           style of the contour lines
-;           
 ;    COLOR: in, optional, type = color, default ='dark grey'
 ;           color of the contour lines
-;           
 ;    LABEL: in, optional, type=integer, default=0
 ;           A 0 means no contour levels are labelled. A 1 means all contour levels are
 ;           labelled. A 2 means label every 2nd contour level is labelled, and so on
-;           
 ;    CHARSIZEFACTOR: in, optional, type=double, default=1
 ;                       due to the various possible displays, it makes it soetimes difficult to 
 ;                       know which size must have the labels. This is a factor to apply to
 ;                       the automatic size detection.
+;    XTICK_START: in, optional, type=long, default=0
+;                 in combination with TICK_INTERVAL, startig index of the xticks
 ;    XTICK_DX: in, optional, type=float, default=0
 ;              apply a factor to place the xtick mark correctly on the map side
 ;    XTICK_DY: in, optional, type=float, default=0
 ;              apply a factor to place the xtick mark correctly on the map side
+;    YTICK_START: in, optional, type=long, default=0
+;                 in combination with TICK_INTERVAL, startig index of the xticks
 ;    YTICK_DX: in, optional, type=float, default=0
 ;              apply a factor to place the ytick mark correctly on the map side
 ;    YTICK_DY: in, optional, type=float, default=0
@@ -780,14 +786,18 @@ end
 function w_Map::set_map_params,  $
     TYPE=type, $
     INTERVAL=interval, $
+    TICK_INTERVAL=tick_interval, $
+    TICK_FORMAT=tick_format, $
     THICK=thick, $
     STYLE=style, $
     COLOR=color, $
     LABEL=label, $
     NO_TICK_LABELS=no_tick_labels, $
     CHARSIZEFACTOR=charsizefactor, $
+    XTICK_START=xtick_start, $
     XTICK_DX=xtick_dx, $
     XTICK_DY=xtick_dy, $
+    YTICK_START=ytick_start, $
     YTICK_DX=ytick_dx, $
     YTICK_DY=ytick_dy
     
@@ -812,14 +822,20 @@ function w_Map::set_map_params,  $
   _color = 'Dark Grey'
   _label = 0
   _tick_labels = TRUE
+  _tick_interval = 1
+  _tick_format = ''
   _label_size_factor = 1.
+  _xtick_start = 0
   _xtick_dx = 0.
   _xtick_dy = 0.
+  _ytick_start = 0
   _ytick_dx = 0.
   _ytick_dy = 0.
   
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
+  if N_ELEMENTS(TICK_INTERVAL) eq 1 then _tick_interval = TICK_INTERVAL
+  if N_ELEMENTS(TICK_FORMAT) eq 1 then _tick_format = TICK_FORMAT
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   if N_ELEMENTS(STYLE) eq 1 then _style = STYLE
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
@@ -827,6 +843,8 @@ function w_Map::set_map_params,  $
   if N_ELEMENTS(CHARSIZEFACTOR) eq 1 then _label_size_factor = CHARSIZEFACTOR
   if KEYWORD_SET(NO_TICK_LABELS) eq 1 then _tick_labels = FALSE
   
+  if N_ELEMENTS(XTICK_START) eq 1 then _xtick_start = XTICK_START
+  if N_ELEMENTS(YTICK_START) eq 1 then _ytick_start = YTICK_START
   if N_ELEMENTS(XTICK_DX) eq 1 then _xtick_dx = XTICK_DX
   if N_ELEMENTS(XTICK_DY) eq 1 then _xtick_dy = XTICK_DY
   if N_ELEMENTS(YTICK_DX) eq 1 then _ytick_dx = YTICK_DX
@@ -839,6 +857,8 @@ function w_Map::set_map_params,  $
   self.map_params.labeled = _label
   self.map_params.label_size_f = _label_size_factor
   
+  self.map_params.xtick_start = _xtick_start
+  self.map_params.ytick_start = _ytick_start
   self.map_params.xtick_dx = _xtick_dx
   self.map_params.xtick_dy = _xtick_dy
   self.map_params.ytick_dx = _ytick_dx
@@ -890,6 +910,8 @@ function w_Map::set_map_params,  $
     self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
     self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY)
     self.map_params.interval = _interval
+    self.map_params.tick_format = _tick_format
+    self.map_params.tick_interval = _tick_interval
     
   endif else Message, 'Currently only LONLAT type is supported'
   
@@ -1272,11 +1294,12 @@ function w_Map::set_polygon, x, y, SRC=src, COLOR=color, THICK=thick, STYLE=styl
    return, 1
   endif
     
-  if ~KEYWORD_SET(src) then GIS_make_datum, ret, src, NAME = 'WGS-84'
+  if N_ELEMENTS(src) eq 0 then GIS_make_datum, ret, src, NAME = 'WGS-84'
 
   if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
   if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
-  if OBJ_VALID(src) and OBJ_ISA(src, 'w_Grid2D') then is_grid = TRUE else is_grid = FALSE 
+  is_grid = FALSE 
+  if OBJ_VALID(src) then if OBJ_ISA(src, 'w_Grid2D') then is_grid = TRUE
   if ~is_proj and ~is_dat and ~is_grid then Message, WAVE_Std_Message('src', /ARG)
 
   if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message('Y', /ARG)
@@ -2515,12 +2538,16 @@ PRO w_Map__Define
             ytickvalues    : PTR_new()     , $ ; value of the ticks on the Yaxis
             xlevels        : PTR_new()     , $ ; values of the plotted contours in Xcoordinates
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
+            xtick_start    : 0L            , $ ; tick marks start
+            ytick_start    : 0L            , $ ; tick marks start
             xtick_dx       : 0.            , $ ; tick marks offset factor
             xtick_dy       : 0.            , $ ; tick marks offset factor            
             ytick_dx       : 0.            , $ ; tick marks offset factor           
             ytick_dy       : 0.            , $ ; tick marks offset factor            
             t_Charsize     : 0D            , $ ; Ticks charsizes
             interval       : 0D            , $ ; The interval between ticks
+            tick_interval  : 0L            , $ ; The interval between tick annotations
+            tick_format    : ''            , $ ; The tick annotations format
             color          : 0L            , $ ; color of the contour lines
             labeled        : 0L            , $ ; if the contours have to labelled
             label_size_f   : 0D            , $ ; charsize factor
