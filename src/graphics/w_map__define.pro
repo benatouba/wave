@@ -1161,9 +1161,9 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
   if KEYWORD_SET(OCEANS) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
-   if N_ELEMENTS(fill) eq 0 then fill = 1   
-   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/oceans/10m_ocean.shp', SHP_SRC=shp_src, $
-             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+   if N_ELEMENTS(fill) eq 0 then fill = 0
+   return, self->set_shape_file(SHPFILE='/home/mowglie/Downloads/named/Export_Output_2.shp', SHP_SRC=shp_src, $
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill, KEEP_ENTITITES=8)
   endif  
   
   if KEYWORD_SET(LAKES) then begin
@@ -1509,7 +1509,7 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
     PTR_FREE, self.img
     PTR_FREE, self.info
     if s[1] ne self.Xsize or s[2] ne self.Ysize then $
-     self.img = PTR_NEW(FSC_Resize_Image(img, self.Xsize, self.Ysize, INTERPOLATE=interpolate)) $
+     self.img = PTR_NEW(cgResizeImage(img, self.Xsize, self.Ysize, INTERPOLATE=interpolate)) $
        else self.img = PTR_NEW(img)    
     return, 1
   endif  

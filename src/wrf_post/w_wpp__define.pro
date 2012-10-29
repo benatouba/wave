@@ -768,7 +768,6 @@ pro w_WPP::_add_var_to_mean_file, ts
     endcase 
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))
-    if agg_method eq 'WIND' then agg_method = 'MEAN'      
     if self.active_agg eq 'm' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     if self.active_agg eq 'y' then for j=0, N_ELEMENTS(vartime)-1 do vartime[j] = MAKE_REL_DATE(vartime[j], MONTH=1)
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]

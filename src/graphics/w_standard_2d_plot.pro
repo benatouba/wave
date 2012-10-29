@@ -128,7 +128,7 @@ pro w_standard_2d_plot, map, $
   if n_elements(title) eq 0 then title = ''
   if n_elements(WTITLE) eq 0 then wtitle = 'WAVE standard plot'
   if n_elements(BAR_TITLE) eq 0 then bar_title = ''
-  if n_elements(IM_RESIZE) eq 0 then im_resize = 75
+  if n_elements(IM_RESIZE) eq 0 then im_resize = 50
   
   ar =  float(xsize) / ysize
   if ar ge 1. then begin

@@ -469,7 +469,7 @@ function w_gr_DataLevels, data, $
   ; Colors
   if user_Colors then begin
     if size(colors, /n_dimensions) eq 2 then begin ;Palette
-      _colors = Color24(colors)
+      _colors = cgColor24(colors)
     endif else begin
       _colors = cgColor(colors)
     endelse
@@ -517,6 +517,9 @@ function w_gr_DataLevels, data, $
   is_ooTopColor = is_ooTop or user_oob_top
   is_ooBotColor = is_ooBot or user_oob_bot
   
+  if  N_ELEMENTS(_colors) eq 3 then row = 1
+  _palette = w_gr_ColorToRGB(_colors, ROW=row)
+  
     
   if ~ is_data then begin 
     ; we give back the colors and levels and that's all
@@ -524,6 +527,7 @@ function w_gr_DataLevels, data, $
            is_data : FALSE, $
            levels : _levels, $ 
            colors : _colors, $ 
+           palette : _palette, $ 
            dcbar : user_dcbar, $   
            is_ooTopColor : is_ooTopColor, $
            is_ooBotColor : is_ooBotColor, $
@@ -537,7 +541,8 @@ function w_gr_DataLevels, data, $
    out = { $
     is_data : TRUE, $
     levels : _levels, $
-    colors : _colors, $
+    colors : _colors, $ 
+    palette : _palette, $ 
     dcbar : user_dcbar, $
     is_ooTopColor : is_ooTopColor, $
     is_ooBotColor : is_ooBotColor, $

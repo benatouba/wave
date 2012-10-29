@@ -897,6 +897,15 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'WD10',unit:'degrees',ndims:N_elements(dims),description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
       endif      
+      d1 = self->get_Var_Info('U', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('V') 
+      if (d1 and d2) then begin
+        dnames = utils_replace_string(dnames, '_stag', '')
+        var = {name:'WS',unit:'m s-1',ndims:N_elements(dims),description:'Horizontal wind speed on mass grid points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'WD',unit:'degrees',ndims:N_elements(dims),description:'Horizontal wind direction on mass grid points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]        
+      endif      
            
       self.ndiagvar = N_ELEMENTS(dvars) - 1
       if self.ndiagvar ne 0 then begin      
@@ -1309,8 +1318,10 @@ end
 ;             t2pblc: 2 m temperature (linear fit from pbl eta-levels) [C]
 ;             theta: Potential temperature [K]
 ;             tk: Temperature [K]
-;             ws10: wind speed at 10m [m.s-1] TODO: rotated to earth coordinates
-;             wd10: wind direction [degrees] TODO: rotated to earth coordinates
+;             ws10: Wind speed at 10m [m.s-1]
+;             wd10: Wind direction [degrees]
+;             ws: Horizontal wind speed at mass grid points [m.s-1]
+;             wd: Horizontal wind direction at mass grid points [degrees]
 ;             geopotential: Full model geopotential [m2 s-2] (unstaggered)
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
@@ -1728,8 +1739,8 @@ function w_WRF::get_Var, Varid, $
       ps = self->get_Var('PSFC', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
         dimnames = dimnames) * 0.01 ; in hPa
-      T2 = self->get_Var('T2') - 273.15 ; in degC
-      zs = self->get_Var('TER') ; in m
+      T2 = self->get_Var('T2', T0=t0, T1=t1) - 273.15 ; in degC
+      zs = self->get_Var('TER', T0=t0, T1=t1) ; in m
       mdims = SIZE(t2, /DIMENSIONS)
       value = FLTARR(mdims[0],mdims[1],nt)
       for k=0,Nt-1 do value[*,*,k] = MET_barometric(ps[*,*,k], zs, T2[*,*,k], 0.)
@@ -1740,15 +1751,31 @@ function w_WRF::get_Var, Varid, $
       u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
         dimnames = dimnames)
-      v10 = self->get_Var('V10')      
-      MET_u_v_to_ws_wd, ret, u10, v10, WS=value
+      v10 = self->get_Var('V10', T0=t0, T1=t1)      
+      value = SQRT(u10^2 + v10^2)
     end
 
+    'WS': begin
+      u = self->get_Var('U', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames, /UNSTAGGER)
+      v = self->get_Var('V', T0=t0, T1=t1, /UNSTAGGER)      
+      value = SQRT(u^2 + v^2)
+    end
+
+    'WD': begin
+      u = self->get_Var('U', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      v = self->get_Var('V', T0=t0, T1=t1)      
+      MET_u_v_to_ws_wd, ret, u, v, WD=value
+    end
+    
     'WD10': begin
       u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
-        dimnames = dimnames)
-      v10 = self->get_Var('V10')      
+        dimnames = dimnames, /UNSTAGGER)
+      v10 = self->get_Var('V10', T0=t0, T1=t1, /UNSTAGGER)      
       MET_u_v_to_ws_wd, ret, u10, v10, WD=value
     end
     

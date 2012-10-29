@@ -1711,7 +1711,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
     if arg_okay(colors, N_DIM=2) then begin
       dims = SIZE(colors, /DIMENSIONS)
       if dims[1] ne 3 then message, WAVE_Std_Message('colors', /ARG)
-      _colors = COLOR24(colors)
+      _colors = cgColor24(colors)
     endif else _colors = colors
   endelse
   
@@ -1756,7 +1756,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
         TVLCT, r, g, b, /GET
         temp = LonArr(ncolors)
         FOR j=0,ncolors-1 DO BEGIN
-          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+          temp[j] = cgColor24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
         ENDFOR
         _colors = Temporary(temp)
       END
@@ -1769,7 +1769,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
           TVLCT, r, g, b, /GET
           temp = LonArr(ncolors)
           FOR j=0,ncolors-1 DO BEGIN
-            temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+            temp[j] = cgColor24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
           ENDFOR
           _colors = Temporary(temp)
         ENDIF
@@ -1782,7 +1782,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
           TVLCT, r, g, b, /GET
           temp = LonArr(ncolors)
           FOR j=0,ncolors-1 DO BEGIN
-            temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+            temp[j] = cgColor24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
           ENDFOR
           _colors = Temporary(temp)
         ENDIF
@@ -1791,7 +1791,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
         TVLCT, r, g, b, /GET
         temp = LonArr(ncolors)
         FOR j=0,ncolors-1 DO BEGIN
-          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+          temp[j] = cgColor24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
         ENDFOR
         _colors = Temporary(temp)
       END
@@ -1799,7 +1799,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
         TVLCT, r, g, b, /GET
         temp = LonArr(ncolors)
         FOR j=0,ncolors-1 DO BEGIN
-          temp[j] = Color24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
+          temp[j] = cgColor24([r[_colors[j]], g[_colors[j]], b[_colors[j]]])
         ENDFOR
         _colors = Temporary(temp)
       END

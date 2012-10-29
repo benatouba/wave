@@ -513,6 +513,7 @@ function w_gisdata::defineSubset, $
     undefine, new_grid
   endif else begin
     self.subset = [0,0,0,0]
+    IF NOT self->w_Grid2D::ReInit(GRID=self.ogrid) then Message, 'Something went wrong while making a new grid.'
   endelse
     
   return, 1

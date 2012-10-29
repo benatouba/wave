@@ -410,6 +410,32 @@ pro w_WPR::_addDerivedVars
     vars = [vars,v]
   endif    
   
+  d1 = self->hasVar('u_eta')
+  d2 = self->hasVar('v_eta')
+  d3 = ~ self->hasVar('ws_eta')
+  if (d1 and d2 and d3) then begin 
+    v = self->_varStruct(/DERIVED)
+    v.id = 'ws_eta'
+    v.name = 'ws'
+    v.unit = 'm.s-1'
+    v.description = 'Horizontal wind speed'
+    v.type = '3d_eta'
+    vars = [vars,v]
+  endif    
+  
+  d1 = self->hasVar('u_press')
+  d2 = self->hasVar('v_press')
+  d3 = ~ self->hasVar('ws_press')
+  if (d1 and d2 and d3) then begin 
+    v = self->_varStruct(/DERIVED)
+    v.id = 'ws_press'
+    v.name = 'ws'
+    v.unit = 'm.s-1'
+    v.description = 'Horizontal wind speed'
+    v.type = '3d_press'
+    vars = [vars,v]
+  endif    
+  
   d1 = self->hasVar('theta_press')
   d2 = self->hasVar('qvapor_press')
   if (d1 and d2) then begin 
@@ -729,12 +755,15 @@ end
 ;    T1: in, optional, type = qms/{ABS_DATE}
 ;        set this keyword to a date to obtain a subset of the WPR timeserie 
 ;        ending at T1 (or before, if T1 is not found)
+;    MONTH: in, optional, type = long
+;           set this keyword to a date to obtain a subset of the WPR timeserie 
+;           for a specific month only
 ;            
 ; :Returns:
 ;   the data array
 ;   
 ;-
-function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1
+function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month
 
   ; Set up environnement
   @WAVE.inc
@@ -748,32 +777,32 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
     ; Its a derived variable that we have to compute
     case str_equiv(id) of
       'Z_ETA': begin
-        return, self->GetVarData('geopotential_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) / 9.81
+        return, self->GetVarData('geopotential_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) / 9.81
       end
       'ZAG_ETA': begin
-        z = self->GetVarData('Z_ETA', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        z = self->GetVarData('Z_ETA', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         dims = SIZE(z, /DIMENSIONS)
         _dims = dims & _dims[2:*] = 1
         ter =  rebin(reform(self->GetVarData('HGT'),_dims), dims) ; make it same dim as z
         return, TEMPORARY(z) - TEMPORARY(ter)
       end
       'Z_PRESS': begin
-        return, self->GetVarData('geopotential_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) / 9.81
+        return, self->GetVarData('geopotential_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) / 9.81
       end
       'ZAG_PRESS': begin
-        z = self->GetVarData('Z_PRESS', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        z = self->GetVarData('Z_PRESS', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         dims = SIZE(z, /DIMENSIONS)
         _dims = dims & _dims[2:*] = 1
         ter =  rebin(reform(self->GetVarData('HGT'),_dims), dims) ; make it same dim as z
         return, TEMPORARY(z) - TEMPORARY(ter)
       end
       'TK_ETA': begin
-        p = self->GetVarData('pressure_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) * 100.
-        t = self->GetVarData('theta_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        p = self->GetVarData('pressure_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) * 100.
+        t = self->GetVarData('theta_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_tk(TEMPORARY(p),TEMPORARY(t))
       end
       'TC_ETA': begin
-        return, self->GetVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) - 273.15
+        return, self->GetVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) - 273.15
       end
       'PRESSURE_PRESS': begin
         levs = self->GetPressureLevels()
@@ -788,15 +817,15 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         return, out
       end
       'TK_PRESS': begin
-        p = self->GetVarData('pressure_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) * 100.
-        t = self->GetVarData('theta_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        p = self->GetVarData('pressure_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) * 100.
+        t = self->GetVarData('theta_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_tk(TEMPORARY(p),TEMPORARY(t))
       end
       'TC_PRESS': begin
-        return, self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) - 273.15
+        return, self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) - 273.15
       end
       'T2PBL': begin
-        tk = self->getVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=[0,1], T0=t0, T1=t1)
+        tk = self->getVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=[0,1], T0=t0, T1=t1, MONTH=month)
         dims = SIZE(tk, /DIMENSIONS)
         _dims = dims & _dims[2:*] = 1
         ter =  rebin(reform(self->GetVarData('hgt'),_dims), dims) ; make it same dim as z
@@ -804,53 +833,63 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         return, reform(utils_wrf_intrp3d(TEMPORARY(tk), TEMPORARY(h), 2., /EXTRAPOLATE))
       end
       'T2PBLC': begin
-        return, self->GetVarData('t2pbl', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) - 273.15
+        return, self->GetVarData('t2pbl', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) - 273.15
       end
       'TD_ETA': begin
-        p = self->GetVarData('pressure_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) *100.
-        qvapor = self->GetVarData('qvapor_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        p = self->GetVarData('pressure_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) *100.
+        qvapor = self->GetVarData('qvapor_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_td(temporary(p),temporary(qvapor))
       end
       'TD_PRESS': begin
-        p = self->GetVarData('pressure_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) *100.
-        qvapor = self->GetVarData('qvapor_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        p = self->GetVarData('pressure_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) *100.
+        qvapor = self->GetVarData('qvapor_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_td(temporary(p),temporary(qvapor))
       end
       'TD2': begin
-        p = self->GetVarData('psfc', time, nt, YEARS=years, T0=t0, T1=t1)
-        qvapor = self->GetVarData('q2', YEARS=years, T0=t0, T1=t1)
+        p = self->GetVarData('psfc', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        qvapor = self->GetVarData('q2', YEARS=years, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_td(temporary(p),temporary(qvapor))
       end
       'T2C': begin
-        return, self->GetVarData('t2', time, nt, YEARS=years, T0=t0, T1=t1) - 273.15
+        return, self->GetVarData('t2', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month) - 273.15
       end
       'RH_ETA': begin
-        TK = self->GetVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
-        P = self->GetVarData('pressure_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) *100.
-        QVAPOR = self->GetVarData('qvapor_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        TK = self->GetVarData('tk_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        P = self->GetVarData('pressure_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) *100.
+        QVAPOR = self->GetVarData('qvapor_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_rh(TEMPORARY(QVAPOR), TEMPORARY(P), TEMPORARY(tk))
       end
       'RH_PRESS': begin
-        TK = self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
-        P = self->GetVarData('pressure_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1) *100.
-        QVAPOR = self->GetVarData('qvapor_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1)
+        TK = self->GetVarData('tk_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        P = self->GetVarData('pressure_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month) *100.
+        QVAPOR = self->GetVarData('qvapor_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_rh(TEMPORARY(QVAPOR), TEMPORARY(P), TEMPORARY(tk))
       end
+      'WS_ETA': begin
+        u = self->GetVarData('u_eta', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        v = self->GetVarData('v_eta', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        return, sqrt(TEMPORARY(u)^2+TEMPORARY(v)^2)
+      end
+      'WS_PRESS': begin
+        u = self->GetVarData('u_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        v = self->GetVarData('v_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        return, sqrt(TEMPORARY(u)^2+TEMPORARY(v)^2)
+      end
       'RH2': begin
-        TK = self->GetVarData('t2', time, nt, YEARS=years, T0=t0, T1=t1)
-        P = self->GetVarData('psfc', YEARS=years, T0=t0, T1=t1)
-        QVAPOR = self->GetVarData('q2', YEARS=years, T0=t0, T1=t1)
+        TK = self->GetVarData('t2', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        P = self->GetVarData('psfc', YEARS=years, T0=t0, T1=t1, MONTH=month)
+        QVAPOR = self->GetVarData('q2', YEARS=years, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_rh(TEMPORARY(QVAPOR), TEMPORARY(P), TEMPORARY(tk))
       end
       'WS10': begin
-        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1)
-        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1)
+        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1, MONTH=month)
         MET_u_v_to_ws_wd, ret, TEMPORARY(u10), TEMPORARY(v10), WS=value
         return, value
       end
       'WD10': begin
-        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1)
-        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1)
+        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1, MONTH=month)
         MET_u_v_to_ws_wd, ret, TEMPORARY(u10), TEMPORARY(v10), WD=value
         return, value
       end
@@ -868,7 +907,10 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       ; Some time subsetting
       do_ts = N_ELEMENTS(T0) eq 1 or N_ELEMENTS(T1) eq 1
       do_y = N_ELEMENTS(YEARS) ne 0
-      if do_y and do_ts then message, 'Incompatible keywords (T0 or T1 and YEARS)'
+      do_m = N_ELEMENTS(MONTH) ne 0
+      if (do_y and do_ts) then message, 'Incompatible keywords (T0 or T1 and YEARS)'
+      if (do_m and do_ts) then message, 'Incompatible keywords (T0 or T1 and MONTH)'
+      
       _y = *self.years
       if do_y then _y = years
       if do_ts then begin
@@ -880,6 +922,13 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         ot = MAKE_ABS_DATE(QMS=ot[p0:p1])
         _y = (ot.year)[uniq(ot.year, sort(ot.year))]
       endif
+      if do_m then begin
+        if N_ELEMENTS(month) ne 1 then Message, WAVE_Std_Message('MONTH', NELEMENTS=1)
+        dummy = where(month gt 12 or month lt 1, nok)
+        if nok ne 0 then Message, WAVE_Std_Message('MONTH', /RANGE)
+        if self.tres eq 'y' then Message, '$MONTH not compatible with yearly products'
+      endif
+      
       ; let's loop over the yearly files
       for y=0, N_ELEMENTS(_y)-1 do begin
         obj = self->getVarObj(id, (_y)[y])
@@ -895,6 +944,14 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
           if check_WTIME(t1, OUT_QMS=it1) and cnot gt 1 then p1 = 0 > max(where(ot le it1)) < (cnot-1)
           _t0 = ot[p0]
           _t1 = ot[p1]          
+        endif
+        if do_m then begin
+          obj->get_Time, ot, cnot
+          ot = MAKE_ABS_DATE(QMS=ot)
+          pmo = where(ot.month eq month, ntmo)
+          if ntmo eq 0 then Message, 'Huge error'
+          _t0 = ot[min(pmo)]
+          _t1 = ot[max(pmo)]          
         endif
         tmp = reform(obj->get_Var(info.name, t, ZLEVELS=zlevels, T0=_t0, T1=_t1))      
         s = SIZE(tmp, /DIMENSIONS)
