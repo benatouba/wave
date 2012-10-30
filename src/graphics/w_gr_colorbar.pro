@@ -116,6 +116,7 @@ pro w_gr_Colorbar, info, $
   
   if N_ELEMENTS(VERTICAL) eq 0 then VERTICAL=1
   if N_ELEMENTS(RIGHT) eq 0 then RIGHT=1
+  if N_ELEMENTS(DIVISIONS) eq 0 then divisions=0
   
   if ~arg_okay(info, /STRUCT) then Message, '$INFO should be a structure.'
   if ~ tag_exist(info, 'dcbar') then  Message, '$INFO should contain a "DCBAR" tag.'
