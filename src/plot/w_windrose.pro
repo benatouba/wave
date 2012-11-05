@@ -62,10 +62,10 @@ pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD
   w_gr_Colorbar, leginfo, POSITION=position, WINDOW=window, ADDCMD=addcmd, $
     CHARSIZE=charsize, /VERTICAL, SPACING=0.15, FORMAT=format
   IF N_ELEMENTS(TITLE) eq 0 then bar_title='Wind Speed' else bar_title=title
-  cgText, (position[0]+position[2])/2., position[3]+0.045, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
+  cgText, (position[0]+position[2])/2., position[3]+0.065, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
     WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
   IF N_ELEMENTS(UNIT) eq 0 then bar_title='(m.s!u-1!n)' else bar_title=unit
-  cgText, (position[0]+position[2])/2., position[3]+0.015, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
+  cgText, (position[0]+position[2])/2., position[3]+0.035, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
     WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
     
 end
@@ -424,6 +424,8 @@ end
 ;           ignore the second variable and make a simple plot of the wind direction distribution
 ;    PNG: in, optional
 ;         path of the output img file
+;    IM_RESIZE: in, optional
+;               Size of the png. for png only
 ;    EPS: in, optional
 ;         path of the output img file
 ;    STD_PNG: in, optional
@@ -458,6 +460,7 @@ pro w_WindRose, wind_dir, wind_speed, $
     PNG=png, $
     EPS=eps, $
     STD_PNG=std_png, $
+    IM_RESIZE=im_resize, $
     GS=gs, $
     FORMAT=format, $
     CHARSIZE=charsize, $
@@ -466,16 +469,26 @@ pro w_WindRose, wind_dir, wind_speed, $
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
-;  ON_ERROR, 2
+  ON_ERROR, 2
   
   ; Window
   xsiz = 650
   ysiz = 600
+  cgDisplay, xsiz, ysiz, /PIXMAP
+  wd = !D.WINDOW
+  window = 0
+  if N_ELEMENTS(png) ne 0 then begin
+    PS_Start, FILENAME=png, /DECOMPOSED, /LAND
+  endif else if N_ELEMENTS(EPS) ne 0 then begin
+    PS_Start, FILENAME=eps, /DECOMPOSED, /LAND
+  endif else if N_ELEMENTS(std_png) ne 0 then begin
+     
+  endif else window = 1
   
-  cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_WindRose', WOBJ=wobj
-  cgControl, EXECUTE=0
-  WINDOW = true
-
+  if window then begin
+    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_WindRose', WOBJ=wobj
+    cgControl, EXECUTE=0
+  endif
   
   w_WindRose_addrose, wind_dir, wind_speed, ADD_VAR=add_var, $
     N_BINS=n_bins, $
@@ -515,9 +528,21 @@ pro w_WindRose, wind_dir, wind_speed, $
   endif
   
   ; Stop
-  cgControl, EXECUTE=1
-  if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=75, /IM_RASTER
-  if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
-  if KEYWORD_SET(STD_PNG) then cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  if WINDOW then begin
+    cgControl, EXECUTE=1
+    if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=75, /IM_RASTER
+    if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
+    if KEYWORD_SET(STD_PNG) then cgControl, CREATE_PNG=std_png, IM_RASTER=0
+  endif
   
+  if N_ELEMENTS(png) ne 0 then begin
+    PS_End, /PNG, RESIZE=im_resize
+  endif else if N_ELEMENTS(EPS) ne 0 then begin
+    PS_End
+  endif else if N_ELEMENTS(std_png) ne 0 then begin
+    write_png, std_png, tvrd(TRUE=1)
+  endif
+  
+  WDELETE, wd
+
 end
