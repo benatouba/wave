@@ -725,6 +725,38 @@ pro w_ts_StatSet::plotStats
 end
 
 ;+
+; :Description:
+;   Plot a standard Climate Diagram from the stations data. 
+;   
+;   This routine implies that both variables TEMP and PRCP are available. 
+;   Timesteps must be less or equal a month. Prcp is assumed to be in mm/d.
+;
+; :Keywords:
+;    MIN_SIG: in, optional, Default=0.75
+;             minimal significant values for the aggregation in monthly values
+;    VALID: in, optional
+;           Plot the number of valid months used to compute the climatology
+;
+;-
+pro w_ts_StatSet::ClimateDiagram, MIN_SIG=min_sig, VALID=valid
+  
+   ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  self->setPeriod
+  
+  StatCount = self.Stats->Count()  
+  IF StatCount EQ 0 THEN return
+  
+  FOR j=0,StatCount-1 DO BEGIN
+    _stat = self.Stats->Get(POSITION=j)
+    _stat->ClimateDiagram, MIN_SIG=min_sig, VALID=valid
+  endfor        
+      
+end
+
+;+
 ; Class definition module. 
 ;
 ; :Params:

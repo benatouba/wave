@@ -454,10 +454,9 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-function w_Map::_draw_shapes, WINDOW = window  
+function w_Map::_draw_shapes, WINDOW=window  
   
-  shapes = *(self.shapes)
-    
+  shapes = *(self.shapes)    
   for i = 0LL, self.nshapes-1 do begin
     sh = shapes[i]
     index = 0
@@ -466,8 +465,8 @@ function w_Map::_draw_shapes, WINDOW = window
       idx = (*sh.conn)[index+1:index+nbElperConn]      
       index += nbElperConn + 1       
       _coord = (*sh.coord) [*,idx]     
-      if sh.fill then cgColorFill,  _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window $
-      else cgPlots, _coord[0,*] > 0, _coord[1,*] > 0, /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW = window
+      if sh.fill then cgColorFill, _coord[0,*], _coord[1,*], /DATA, Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window  $
+      else cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window
     endwhile  
   endfor
   
@@ -1161,9 +1160,9 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
   if KEYWORD_SET(OCEANS) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
-   if N_ELEMENTS(fill) eq 0 then fill = 0
-   return, self->set_shape_file(SHPFILE='/home/mowglie/Downloads/named/Export_Output_2.shp', SHP_SRC=shp_src, $
-             THICK=thick, STYLE=style, COLOR=color, FILL=fill, KEEP_ENTITITES=8)
+   if N_ELEMENTS(fill) eq 0 then fill = 1
+   return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/oceans/10m_ocean.shp', SHP_SRC=shp_src, $
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
   endif  
   
   if KEYWORD_SET(LAKES) then begin
@@ -1201,7 +1200,7 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    return, 1
   endif
   
-  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC = shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites
+  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, NO_PARTS=fill
   n_coord = N_ELEMENTS(x) 
   if n_coord eq 0 then return, 0
   coord = [1#x,1#y]
@@ -1944,9 +1943,9 @@ function w_Map::set_WindRose, wind_dir, wind_speed, x, y, SRC=SRC, _EXTRA = extr
   wr.wind_speed = PTR_NEW(wind_speed)
   
   if N_ELEMENTS(extra) ne 0 then begin
-   if utils_tag_exist(extra, 'CENTER') then utils_remove_tag, extra, 'CENTER'
-   if utils_tag_exist(extra, 'WIN_FACTOR') then utils_remove_tag, extra, 'WIN_FACTOR'
-   if ~utils_tag_exist(extra, 'MAX_RADIUS') then extra = CREATE_STRUCT(extra, 'MAX_RADIUS', 0.1)
+   if tag_exist(extra, 'CENTER') then utils_remove_tag, extra, 'CENTER'
+   if tag_exist(extra, 'WIN_FACTOR') then utils_remove_tag, extra, 'WIN_FACTOR'
+   if ~tag_exist(extra, 'MAX_RADIUS') then extra = CREATE_STRUCT(extra, 'MAX_RADIUS', 0.1)
   endif else begin
     extra = CREATE_STRUCT('MAX_RADIUS', 0.1)
   endelse

@@ -1508,6 +1508,9 @@ end
 ;    NO_COORD_SHIFT: in, optional, type = boolean
 ;                    prevent the shift of the coordinates of a half pixel.
 ;
+;    NO_PARTS: in, optional, type = boolean
+;              If entities have parts in it, don't treat them as parts (usefull for polygon /FILL)
+;
 ; :Examples:
 ;    
 ;    Plot the world boundaries on a device::
@@ -1534,7 +1537,12 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;- 
-pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES = remove_entitites, KEEP_ENTITITES = keep_entitites, NO_COORD_SHIFT = no_coord_shift
+pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
+  SHP_SRC=shp_src, $
+  REMOVE_ENTITITES=remove_entitites, $
+  KEEP_ENTITITES=keep_entitites, $
+  NO_COORD_SHIFT=no_coord_shift, $
+  NO_PARTS=no_parts
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1552,6 +1560,8 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTI
 ;   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
   endif
+  
+  _f = KEYWORD_SET(NO_PARTS)
   
   if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
   if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
@@ -1586,34 +1596,41 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTI
   mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
   mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
   mg_conn = obj_new('MGcoArrayList', type=IDL_LONG) 
-  for i=0L, N_ent-1 do begin         
-    ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)    
+  for i=0L, N_ent-1 do begin
+    ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)
     if not ptr_valid(ent.vertices) then continue
     
     _x = reform((*ent.vertices)[0,*])
     _y = reform((*ent.vertices)[1,*])
-    n_vert = n_elements(_x)    
+    n_vert = n_elements(_x)
     
     if n_vert lt 3 $
-    or min(_y) gt range[3] $ 
-    or max(_y) lt range[2] $ 
-    or min(_x) gt range[1] $ 
-    or max(_x) lt range[0] then begin
-      shpmodel->IDLffShape::DestroyEntity, ent 
+      or min(_y) gt range[3] $
+      or max(_y) lt range[2] $
+      or min(_x) gt range[1] $
+      or max(_x) lt range[0] then begin
+      shpmodel->IDLffShape::DestroyEntity, ent
       continue
     endif
     
     mg_x->add, _x
     mg_y->add, _y    
-        
-    parts = *ent.parts
-    for k=0L, ent.n_parts-1 do begin
-      if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
+    
+    if _F then begin
+      n_vert = ent.n_vertices
       mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
-      n_coord += n_vert      
-    endfor           
-    shpmodel->IDLffShape::DestroyEntity, ent 
-  endfor  
+      n_coord += n_vert
+    endif else begin
+      parts = *ent.parts
+      for k=0L, ent.n_parts-1 do begin
+        if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
+        mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
+        n_coord += n_vert
+      endfor
+    endelse
+    shpmodel->IDLffShape::DestroyEntity, ent
+    
+  endfor
   
   x = mg_x->get(/all)
   y = mg_y->get(/all)
@@ -1624,11 +1641,11 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTI
   undefine, shpModel, mg_x, mg_y, mg_conn
     
   if N_ELEMENTS(CONN) eq 0 then begin
-   message, 'Did not find anything in the shapefile that matches to the grid.', /INFORMATIONAL
+   message, 'Did not find anything in the shapefile that matches to the grid (' + FILE_BASENAME(shpfile) +')', /INFORMATIONAL
    undefine, x, y, conn
    return
   endif  
-  
+  if FILE_BASENAME(shpfile) eq '10m_ocean.shp' then y = y < 90. ;TODO: dirty temporary workaround
   self->transform, x, y, x, y, SRC = shp_src
 
   if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin ; Because Center point of the pixel is not the true coord
@@ -1863,4 +1880,34 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   
   return, 1
   
+end
+
+function w_Grid2D::roi_to_mask, SHAPE=shape,  $
+                            POLYGON=polygon, MASK=mask,  $
+                            CROPBORDER=cropborder,  $
+                            GRID=grid,    $                          
+                            CORNERS=corners, $
+                            NO_ERASE=no_erase, $ 
+                            SRC=src, $
+                            REMOVE_ENTITITES=remove_entitites, $ 
+                            KEEP_ENTITITES=keep_entitites, $
+                            ROI_MASK_RULE=roi_mask_rule
+   
+   if ~ self->set_ROI(SHAPE=shape,  $
+                            POLYGON=polygon, MASK=mask,  $
+                            CROPBORDER=cropborder,  $
+                            GRID=grid,    $                          
+                            CORNERS=corners, $
+                            NO_ERASE=no_erase, $ 
+                            SRC=src, $
+                            REMOVE_ENTITITES=remove_entitites, $ 
+                            KEEP_ENTITITES=keep_entitites, $
+                            ROI_MASK_RULE=roi_mask_rule) then message, 'Error in the ROI generation' 
+  
+  
+  self->get_ROI, MASK=mask
+  if ~ self->set_ROI() then message, 'Error in the ROI destruction' 
+  
+  return, mask
+                            
 end

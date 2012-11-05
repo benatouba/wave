@@ -3,7 +3,8 @@ function w_make_mercamap, $
     EASTWEST=eastwest, $
     SOUTHNORTH=southnorth, $
     XSIZE=xsize, $
-    YSIZE=ysize
+    YSIZE=ysize, $
+    GRID_out=grid_out
 
   if N_ELEMENTS(center) eq 0 then center = [13.4, 52.52]
   if N_ELEMENTS(EASTWEST) eq 0 then eastwest = 2000000.
@@ -40,7 +41,8 @@ function w_make_mercamap, $
   map = OBJ_NEW('w_Map', grid, XSIZE=xsize, YSIZE=ysize)
   if ~ OBJ_VALID(map) then Message, 'map not ok'
   
-  undefine, grid
+  if ARG_PRESENT(GRID_OUT) then grid_out = grid else undefine, grid
+  
   return, map 
   
   

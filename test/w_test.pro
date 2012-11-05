@@ -1426,6 +1426,23 @@ pro TEST_TS_DATA
   undefine, a  
   undefine, d
   
+  ; Check adding data
+  data = cgDemoData(0)
+  nt = N_ELEMENTS(data)
+  time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS
+  d = OBJ_NEW('w_ts_Data', data, time)
+  if ~ OBJ_VALID(d) then error += 1
+  data2 = cgDemoData(0)
+  nt2 = N_ELEMENTS(data)
+  time2 = QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS
+  d->addData, data2, time2
+  d->setPeriod, /DEFAULT  
+  tt = d->getTime()
+  if total(utils_minmax(tt) - utils_minmax([time, time2])) ne 0 then error +=1
+ 
+  
+  undefine, s, a, d
+  
   if error ne 0 then message, '% TEST_TS_DATA NOT passed', /CONTINUE else print, 'TEST_TS_DATA passed'
   
 end

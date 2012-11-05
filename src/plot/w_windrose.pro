@@ -176,7 +176,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
     _wf = FLOAT(!D.X_Size)/!D.Y_Size
   endif else begin
     dims = SIZE(cgSnapshot(WID=wid), /DIMENSIONS)
-    _wf = FLOAT(dims[1])/dims[2]
+    if N_ELEMENTS(dims) eq 3 then _wf = FLOAT(dims[1])/dims[2] else _wf = FLOAT(dims[0])/dims[1]
   endelse
     
   if _wf gt 1. then begin
@@ -286,6 +286,11 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   ;************
   ; Camemberts
   ;************
+  
+  ; Check for all data to set top/bot arrows 
+  _dinfo = w_gr_DataLevels(_var2, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color) 
+  if _dinfo.is_ootop eq 1 and N_ELEMENTS(OOB_TOP_COLOR) eq 0 then oob_top_color = 1
+  if _dinfo.is_oobot eq 1 and N_ELEMENTS(OOB_BOT_COLOR) eq 0 then oob_bot_color = 1
   
   ;First, do the colors if needed, other things will be over plotted anyway
   if do_var2 then begin

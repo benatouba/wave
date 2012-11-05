@@ -696,9 +696,11 @@ end
 ;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
 ;    T1: in, optional
 ;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    MAXSTEPS: in, optional
+;              datagaps larger than maxsteps will not be interpolated
 ;        
 ;-
-pro w_ts_Station::interpol, T0=t0, T1=t1
+pro w_ts_Station::interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
   
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -707,7 +709,7 @@ pro w_ts_Station::interpol, T0=t0, T1=t1
   vNames = self->GetVarNames(COUNT=varCount)  
   for i=0, varCount-1 do begin
     _var = self->getVar(vNames[i])
-    _var->interpol, T0=t0, T1=t1
+    _var->interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
   endfor        
       
 end
@@ -818,6 +820,90 @@ pro w_ts_Station::plotVars
     _var->plotTS, TITLE_INFO = self.name + ': '
   endfor        
       
+end
+
+
+;+
+; :Description:
+;   Plot a standard Climate Diagram from the station data. 
+;   
+;   This routine implies that both variables TEMP and PRCP are available. 
+;   Timesteps must be less or equal a month. Prcp is assumed to be in mm/d.
+;
+; :Keywords:
+;    MIN_SIG: in, optional, Default=0.75
+;             minimal significant values for the aggregation in monthly values
+;    PNG: in, optional
+;         png output
+;    EPS: in, optional
+;         eps output
+;    STD_PNG: in, optional
+;             std_png output
+;    VALID: in, optional
+;           Plot the number of valid months used to compute the climatology
+;
+;-
+pro w_ts_Station::ClimateDiagram, MIN_SIG=min_sig, PNG=png, EPS=eps, STD_PNG=std_png, VALID=valid
+  
+   ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  SetDefaultValue, min_sig, 0.75
+  
+  if ~ self->hasVar('TEMP') then Message, 'TEMP variable not found'
+  if ~ self->hasVar('PRCP') then Message, 'PRCP variable not found'
+  
+  do_agg = 0
+  _v = self->getVar('TEMP')
+  if _v->getProperty('step') eq 'YEAR' then Message, 'Timestep not valid'
+  if _v->getProperty('step') eq 'MONTH' and _v->getProperty('timestep') gt 1 then Message, 'Timestep not valid'
+  if _v->getProperty('step') eq 'TIMESTEP' then begin 
+   do_agg = 1
+   a = self->aggregate(MONTH=1, MIN_SIG=min_sig) 
+  endif else a = self
+  
+  tt = MAKE_ABS_DATE(QMS=w_month_to_time(w_time_to_month(a->getTime())-1))
+  
+  to = a->getVarData('TEMP') 
+  po = a->getVarData('PRCP')  * GEN_month_days(tt.month, tt.year)
+  
+  if do_agg then undefine, a 
+     
+  t = FLTARR(12)
+  p = FLTARR(12)  
+  nvalt = lonARR(12)  
+  nvalp = lonARR(12)  
+  for i=0, 12-1 do begin
+    pm = WHERE(tt.month eq i+1, cntok)
+    if cntok eq 0 then continue
+    tmp = to[pm]
+    nvalt[i] = TOTAL(FINITE(tmp)) 
+    t[i] = mean(tmp, /NAN)
+    tmp = po[pm]
+    nvalp[i] =  TOTAL(FINITE(tmp)) 
+    p[i] = mean(tmp, /NAN)
+  endfor   
+  
+  dummy = where(nvalt eq 0, cnt)
+  if cnt ne 0 then begin
+   Message, 'Not enough valid temperature values for station: ' + self.name, /INFORMATIONAL
+   return
+  endif
+  dummy = where(nvalp eq 0, cnt)
+  if cnt ne 0 then begin
+   Message, 'Not enough valid precipitation values for station: ' + self.name, /INFORMATIONAL
+   return
+  endif
+  
+  if ~ KEYWORD_SET(VALID) then undefine,  nvalp, nvalt
+          
+  timeperiod = str_equiv((tt.year)[0]) + '-' + str_equiv((tt.year)[N_ELEMENTS(tt)-1])  
+  
+  w_climateDiagram, p, t, NAME=self.name, LAT=self.loc_y, LON=self.loc_x, $
+     HEIGHT=self.elevation, TIMEPERIOD=timeperiod, PNG=png, EPS=eps, STD_PNG=std_png, $
+      VALYEARS_TEMP=nvalt, VALYEARS_PRCP=nvalp
+     
 end
 
 

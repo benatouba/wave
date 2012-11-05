@@ -431,20 +431,6 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   ; Check for non-finite values in the timeserie anyway
   pf = where(~finite(_data), cntf)
   if cntf ne 0 then _data[pf]=*self.missing
-  
-  ; TODO: Remove non valid points: yes or no?   
-;  fmissing = finite(*self.missing)  
-;  if fmissing then begin
-;    CASE self.type OF
-;      'FLOAT': indices = Where(Abs(_data - *self.missing) gt (MACHAR()).eps, count)
-;      'DOUBLE': indices = Where(Abs(_data - *self.missing) gt (MACHAR(/DOUBLE)).eps, count)
-;      ELSE: indices = Where(_data ne *self.missing, count)
-;    ENDCASE
-;  endif else begin
-;    indices = where(finite(_data), count)
-;  endelse  
-;  _data = _data[indices > 0] ; so if there are no valid data, the first element is kept
-;  qms = qms[indices > 0] ; so if there are no valid data, the first element is kept
     
   ; Check for the time serie validity
   s = sort(qms)
@@ -772,9 +758,11 @@ end
 ;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
 ;    T1: in, optional
 ;        if the interpolation have to be made on a section of the data only (remaining data is unchanged)
+;    MAXSTEPS: in, optional
+;              datagaps larger than maxsteps will not be interpolated
 ;        
 ;-
-pro w_ts_Data::interpol, T0=t0, T1=t1
+pro w_ts_Data::interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
 
    ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -805,6 +793,7 @@ pro w_ts_Data::interpol, T0=t0, T1=t1
   ;Carefull with extrapolating
   ents = LABEL_REGION([0,~self->valid(),0])
   ents = ents[1:N_elements(ents)-2]
+  n_ents = max(ents)
   if ents[0] ne 0 then begin
     val0 = (self->getData())[min(where(ents eq 0))]
     message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
@@ -814,6 +803,13 @@ pro w_ts_Data::interpol, T0=t0, T1=t1
     val0 = (self->getData())[max(where(ents eq 0))]
     message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
     new[where(ents eq ents[nt-1])] = val0
+  endif
+  
+  if N_ELEMENTS(MAXSTEPS) ne 0 then begin
+    for e=1, n_ents do begin
+      pent = where(ents eq e, cp)
+      if cp gt maxsteps then new[pent] = *self.missing
+    endfor
   endif
   
   self->addData, new, t, /REPLACE
@@ -879,8 +875,8 @@ end
 ;    DAY: in, optional, default=none
 ;         set to day interval (e.g: 1, or 7) to compute 
 ;         daily or seven-daily statistics
-;    MONH: in, optional, default=none
-;          set to compute monthly statistics
+;    MONTH: in, optional, default=none
+;           set to compute monthly statistics
 ;    YEAR: in, optional, default=none
 ;          set to compute yearly statistics    
 ;    NEW_TIME: in, optional, type = {ABS_DATE}/qms, default=none
