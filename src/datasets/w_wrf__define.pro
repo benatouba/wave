@@ -896,6 +896,14 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
         var = {name:'WD10',unit:'degrees',ndims:N_elements(dims),description:'10 m wind direction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
+        d1 = self->get_Var_Info('COSALPHA')
+        d2 = self->get_Var_Info('SINALPHA') 
+        if d1 and d2 then begin
+          var = {name:'UMET10',unit:'m s-1',ndims:N_elements(dims),description:'U component of 10m wind rotated to earth coordinates',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'VMET10',unit:'m s-1',ndims:N_elements(dims),description:'V component of 10m wind rotated to earth coordinates',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+        endif         
       endif      
       d1 = self->get_Var_Info('U', DIMNAMES=dnames,DIMS=dims)
       d2 = self->get_Var_Info('V') 
@@ -1326,8 +1334,10 @@ end
 ;             pressure: Full model pressure [hPa]
 ;             z: Full model height (geopotential / 9.81) [m]
 ;             zag: Full model height above ground (geopotential / 9.81) [m]
+;             umet10: U component of 10m wind rotated to earth coordinates [m.s-1]
+;             vmet10: V component of 10m wind rotated to earth coordinates  [m.s-1]
 ;             
-;             TODO: umet10, vmet10, umet, vmet, components of wind rotated to earth coordinates
+;             TODO:  umet, vmet, components of wind rotated to earth coordinates
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -1747,6 +1757,36 @@ function w_WRF::get_Var, Varid, $
       if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
     end
     
+    'UMET10': begin
+      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      v10 = self->get_Var('V10', T0=t0, T1=t1)      
+      cosalpha = self->get_Var('COSALPHA', T0=t0, T1=t1)
+      sinalpha = self->get_Var('SINALPHA', T0=t0, T1=t1)
+      if SIZE(cosalpha, /N_DIMENSIONS) ne size(u10, /N_DIMENSIONS) then begin ; has been cropped
+        _dims = dims & _dims[2:*] = 1
+        cosalpha =  rebin(reform(cosalpha,_dims), dims) ; make it same dim
+        sinalpha =  rebin(reform(sinalpha,_dims), dims) ; make it same dim        
+      endif
+      value = u10*cosalpha + v10*sinalpha
+    end
+
+    'VMET10': begin
+      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      v10 = self->get_Var('V10', T0=t0, T1=t1)      
+      cosalpha = self->get_Var('COSALPHA', T0=t0, T1=t1)
+      sinalpha = self->get_Var('SINALPHA', T0=t0, T1=t1)
+      if SIZE(cosalpha, /N_DIMENSIONS) ne size(u10, /N_DIMENSIONS) then begin ; has been cropped
+        _dims = dims & _dims[2:*] = 1
+        cosalpha =  rebin(reform(cosalpha,_dims), dims) ; make it same dim
+        sinalpha =  rebin(reform(sinalpha,_dims), dims) ; make it same dim        
+      endif
+      value = v10*cosalpha - u10*sinalpha
+    end
+
     'WS10': begin
       u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
@@ -1754,7 +1794,15 @@ function w_WRF::get_Var, Varid, $
       v10 = self->get_Var('V10', T0=t0, T1=t1)      
       value = SQRT(u10^2 + v10^2)
     end
-
+    
+    'WD10': begin
+      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames, /UNSTAGGER)
+      v10 = self->get_Var('V10', T0=t0, T1=t1, /UNSTAGGER)      
+      MET_u_v_to_ws_wd, ret, u10, v10, WD=value
+    end
+    
     'WS': begin
       u = self->get_Var('U', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
@@ -1769,14 +1817,6 @@ function w_WRF::get_Var, Varid, $
         dimnames = dimnames)
       v = self->get_Var('V', T0=t0, T1=t1)      
       MET_u_v_to_ws_wd, ret, u, v, WD=value
-    end
-    
-    'WD10': begin
-      u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
-        dims = dims, $
-        dimnames = dimnames, /UNSTAGGER)
-      v10 = self->get_Var('V10', T0=t0, T1=t1, /UNSTAGGER)      
-      MET_u_v_to_ws_wd, ret, u10, v10, WD=value
     end
     
     'PRESSURE': begin

@@ -479,7 +479,25 @@ pro w_WPR::_addDerivedVars
     v.unit = 'degrees'
     v.description = '10 m wind direction'
     v.type = '2d'
-    vars = [vars,v]    
+    vars = [vars,v]
+    d1 = self->hasVar('cosalpha')
+    d2 = self->hasVar('sinalpha')
+    if d1 and d2 then begin
+      v = self->_varStruct(/DERIVED)
+      v.id = 'umet10'
+      v.name = 'umet10'
+      v.unit = 'm s-1'
+      v.description = 'U component of 10m wind rotated to earth coordinates'
+      v.type = '2d'
+      vars = [vars,v]
+      v = self->_varStruct(/DERIVED)
+      v.id = 'vmet10'
+      v.name = 'vmet10'
+      v.unit = 'm s-1'
+      v.description = 'V component of 10m wind rotated to earth coordinates'
+      v.type = '2d'
+      vars = [vars,v]
+    endif    
   endif
   
   PTR_FREE, self.vars 
@@ -880,6 +898,32 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         P = self->GetVarData('psfc', YEARS=years, T0=t0, T1=t1, MONTH=month)
         QVAPOR = self->GetVarData('q2', YEARS=years, T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_rh(TEMPORARY(QVAPOR), TEMPORARY(P), TEMPORARY(tk))
+      end
+      'UMET10': begin
+        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1, MONTH=month)
+        cosalpha = self->GetVarData('COSALPHA')
+        sinalpha = self->GetVarData('SINALPHA')
+        if SIZE(cosalpha, /N_DIMENSIONS) ne size(u10, /N_DIMENSIONS) then begin ; has been cropped
+          dims = SIZE(u10, /DIMENSIONS)
+          _dims = dims & _dims[2:*] = 1
+          cosalpha =  rebin(reform(TEMPORARY(cosalpha),_dims), dims) ; make it same dim
+          sinalpha =  rebin(reform(TEMPORARY(sinalpha),_dims), dims) ; make it same dim
+        endif
+        return, TEMPORARY(u10)*TEMPORARY(cosalpha) + TEMPORARY(v10)*TEMPORARY(sinalpha)
+      end
+      'VMET10': begin
+        u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1, MONTH=month)
+        cosalpha = self->GetVarData('COSALPHA')
+        sinalpha = self->GetVarData('SINALPHA')
+        if SIZE(cosalpha, /N_DIMENSIONS) ne size(u10, /N_DIMENSIONS) then begin ; has been cropped
+          dims = SIZE(u10, /DIMENSIONS)
+          _dims = dims & _dims[2:*] = 1
+          cosalpha =  rebin(reform(TEMPORARY(cosalpha),_dims), dims) ; make it same dim
+          sinalpha =  rebin(reform(TEMPORARY(sinalpha),_dims), dims) ; make it same dim
+        endif
+        return, TEMPORARY(v10)*TEMPORARY(cosalpha) - TEMPORARY(u10)*TEMPORARY(sinalpha)
       end
       'WS10': begin
         u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
