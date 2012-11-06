@@ -836,12 +836,12 @@ pro w_ts_Data::insertValue, value, T0=t0, T1=t1
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  t = self->getTime(nt)
+  t = self->getTime(NT=nt)
   d = self->getdata()
   
   if N_ELEMENTS(value) eq 0 then _val = *self.missing else _val = value
   
-  if N_ELEMENTS(_val) ne 0 then Message, 'VALUE must be as scalar'
+  if N_ELEMENTS(_val) gt 1 then Message, 'VALUE must be as scalar'
   
   if N_ELEMENTS(T0) ne 0 and N_ELEMENTS(T1) ne 0 then begin
     if ~ check_WTIME(t0, OUT_QMS= it0) then message, WAVE_Std_Message('T0')

@@ -903,6 +903,8 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
           dvars = [dvars,var]
           var = {name:'VMET10',unit:'m s-1',ndims:N_elements(dims),description:'V component of 10m wind rotated to earth coordinates',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
+          var = {name:'WDMET10',unit:'degrees',ndims:N_elements(dims),description:'10m wind direction rotated to earth coordinates',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]          
         endif         
       endif      
       d1 = self->get_Var_Info('U', DIMNAMES=dnames,DIMS=dims)
@@ -1798,8 +1800,16 @@ function w_WRF::get_Var, Varid, $
     'WD10': begin
       u10 = self->get_Var('U10', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
-        dimnames = dimnames, /UNSTAGGER)
-      v10 = self->get_Var('V10', T0=t0, T1=t1, /UNSTAGGER)      
+        dimnames = dimnames)
+      v10 = self->get_Var('V10', T0=t0, T1=t1)      
+      MET_u_v_to_ws_wd, ret, u10, v10, WD=value
+    end
+    
+    'WDMET10': begin
+      u10 = self->get_Var('Umet10', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      v10 = self->get_Var('Vmet10', T0=t0, T1=t1)      
       MET_u_v_to_ws_wd, ret, u10, v10, WD=value
     end
     
@@ -1814,8 +1824,8 @@ function w_WRF::get_Var, Varid, $
     'WD': begin
       u = self->get_Var('U', time, nt, T0=t0, T1=t1,  $
         dims = dims, $
-        dimnames = dimnames)
-      v = self->get_Var('V', T0=t0, T1=t1)      
+        dimnames = dimnames, /UNSTAGGER)
+      v = self->get_Var('V', T0=t0, T1=t1, /UNSTAGGER)      
       MET_u_v_to_ws_wd, ret, u, v, WD=value
     end
     

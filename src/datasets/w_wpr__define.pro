@@ -497,6 +497,14 @@ pro w_WPR::_addDerivedVars
       v.description = 'V component of 10m wind rotated to earth coordinates'
       v.type = '2d'
       vars = [vars,v]
+      v = self->_varStruct(/DERIVED)
+      v = self->_varStruct(/DERIVED)
+      v.id = 'wdmet10'
+      v.name = 'wdmet10'
+      v.unit = 'degrees'
+      v.description = '10m wind direction rotated to earth coordinates'
+      v.type = '2d'
+      vars = [vars,v]
     endif    
   endif
   
@@ -725,11 +733,11 @@ end
 ;    (depending on the available product variables)::
 ;    
 ;         ID                NAME            DESCRIPTION                                       UNIT       TYPE
-;       - pressure_press     pressure        Full model pressure (on pressure levels ;-)       hPa        3d_press (derived)             
+;       - pressure_press     pressure        Full model pressure                               hPa        3d_press (derived)             
 ;       - z_eta              z               Full model height                                 m          3d_eta (derived)               
+;       - zag_eta            z               Full model height above ground                    m          3d_eta (derived)               
 ;       - z_press            z               Full model height                                 m          3d_press (derived)             
-;       - zag_eta            z               Full model height above ground                                 m          3d_eta (derived)               
-;       - zag_press          z               Full model height above ground                                m          3d_press (derived)             
+;       - zag_press          z               Full model height above ground                    m          3d_press (derived)             
 ;       - tk_eta             tk              Temperature                                       K          3d_eta (derived)               
 ;       - tc_eta             tc              Temperature                                       C          3d_eta (derived)               
 ;       - t2pbl              t2pbl           2 m temperature (extrapolated from eta-levels)    K          2d (derived)                   
@@ -741,11 +749,16 @@ end
 ;       - td2                td2             2m Dewpoint Temperature                           C          2d (derived)                   
 ;       - t2c                t2c             2m Temperature                                    C          2d (derived)                   
 ;       - rh_eta             rh              Relative Humidity                                 %          3d_eta (derived)               
+;       - ws_eta             ws              Horizontal wind speed                             m.s-1      3d_eta (derived)               
+;       - ws_press           ws              Horizontal wind speed                             m.s-1      3d_press (derived)             
 ;       - rh_press           rh              Relative Humidity                                 %          3d_press (derived)             
 ;       - rh2                rh2             2 m Relative Humidity                             %          2d (derived)                   
 ;       - ws10               ws10            10 m wind speed                                   m s-1      2d (derived)                   
-;       - wd10               wd10            10 m wind direction                               degrees    2d (derived)      
-;
+;       - wd10               wd10            10 m wind direction                               degrees    2d (derived)                   
+;       - umet10             umet10          U component of 10m wind rotated to earth coordinatm s-1      2d (derived)                   
+;       - vmet10             vmet10          V component of 10m wind rotated to earth coordinatm s-1      2d (derived)                   
+;       - wdmet10            wdmet10         10m wind direction rotated to earth coordinates   degrees    2d (derived) ;
+; 
 ; :Params:
 ;    id: in, required
 ;        the variable ID
@@ -934,6 +947,12 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       'WD10': begin
         u10 = self->GetVarData('U10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
         v10 = self->GetVarData('V10', YEARS=years, T0=t0, T1=t1, MONTH=month)
+        MET_u_v_to_ws_wd, ret, TEMPORARY(u10), TEMPORARY(v10), WD=value
+        return, value
+      end
+      'WDMET10': begin
+        u10 = self->GetVarData('Umet10', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+        v10 = self->GetVarData('Vmet10', YEARS=years, T0=t0, T1=t1, MONTH=month)
         MET_u_v_to_ws_wd, ret, TEMPORARY(u10), TEMPORARY(v10), WD=value
         return, value
       end

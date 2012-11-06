@@ -103,7 +103,7 @@ pro w_gr_Colorbar, info, $
     TOP=top, $
     VERTICAL=vertical, $
     WINDOW=window, $
-    _REF_EXTRA=extra
+    _EXTRA=extra
     
     
   @WAVE.inc
