@@ -615,14 +615,14 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d2 = self->get_Var_Info('RAINC')
       d3 = self->get_Var_Info('SR')
       if (d1 and d2) then begin
-        var = {name:'PRCP',unit:'mm',ndims:N_elements(dims),description:'Total precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP',unit:'mm h-1',ndims:N_elements(dims),description:'Total precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'PRCP_NC',unit:'mm',ndims:N_elements(dims),description:'Grid scale precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP_NC',unit:'mm h-1',ndims:N_elements(dims),description:'Grid scale precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
-        var = {name:'PRCP_C',unit:'mm',ndims:N_elements(dims),description:'Cumulus precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'PRCP_C',unit:'mm h-1',ndims:N_elements(dims),description:'Cumulus precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
         if d3 then begin
-          var = {name:'PRCP_FR',unit:'mm',ndims:N_elements(dims),description:'Frozen precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          var = {name:'PRCP_FR',unit:'mm h-1',ndims:N_elements(dims),description:'Frozen precipitation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
         endif
       endif
@@ -630,19 +630,19 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       ;snowfall
       d1 = self->get_Var_Info('SNOWNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'SNOWFALL',unit:'mm',ndims:N_elements(dims),description:'Grid scale snow and ice (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'SNOWFALL',unit:'mm h-1',ndims:N_elements(dims),description:'Grid scale snow and ice (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       ;graupel
       d1 = self->get_Var_Info('GRAUPELNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'GRAUPEL',unit:'mm',ndims:N_elements(dims),description:'Grid scale graupel (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'GRAUPEL',unit:'mm h-1',ndims:N_elements(dims),description:'Grid scale graupel (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       ;hail
       d1 = self->get_Var_Info('HAILNC', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'HAIL',unit:'mm',ndims:N_elements(dims),description:'Grid scale hail (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'HAIL',unit:'mm h-1',ndims:N_elements(dims),description:'Grid scale hail (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -650,6 +650,23 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d1 = self->get_Var_Info('POTEVP', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
         var = {name:'POTEVAP',unit:'w m-2',ndims:N_elements(dims),description:'Potential evaporation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;Mixing ratios
+      ; qliquid: Liquid water mixing ratio [kg.kg-1]
+      d1 = self->get_Var_Info('QRAIN', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QCLOUD', DIMNAMES=dnames,DIMS=dims)
+      if (d1 or d2) then begin
+        var = {name:'QLIQUID',unit:'kg kg-1',ndims:N_elements(dims),description:'Liquid water mixing ratio',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      ; qsolid: Solid water mixing ratio [kg.kg-1]
+      d1 = self->get_Var_Info('QSNOW', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QGRAUP', DIMNAMES=dnames,DIMS=dims)
+      d3 = self->get_Var_Info('QICE', DIMNAMES=dnames,DIMS=dims)
+      if (d1 or d2 or d3) then begin
+        var = {name:'QSOLID',unit:'kg kg-1',ndims:N_elements(dims),description:'Solid water mixing ratio',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -722,6 +739,13 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       d3 = self->get_Var_Info('PB')   
       if (d1 and d2 and d3) then begin
         var = {name:'TD',unit:'C',ndims:N_elements(dims),description:'Dewpoint Temperature',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var] 
+      endif 
+      
+      ;ET
+      d1 = self->get_Var_Info('ACLHF', DIMNAMES=dnames,DIMS=dims)      
+      if (d1) then begin
+        var = {name:'ET',unit:'mm h-1',ndims:N_elements(dims),description:'Evapotranspiration (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var] 
       endif 
       
@@ -1301,13 +1325,13 @@ end
 ;    variables are present. Check the available variables with
 ;    `w_WRF::get_Varlist, /DIAGNOSTIC, /PRINT`) ::
 ;              
-;             prcp: total precipitation (step-wize) [mm]
-;             snowfall: Grid scale snow and ice (step-wize) [mm]
-;             prcp_c: Cumulus precipitation (step-wize) [mm]
-;             prcp_nc: Grid scale precipitation (step-wize) [mm]
-;             prcp_fr: Frozen precipitation (step-wize) [mm]
-;             graupel: Grid scale graupel (step-wize) [mm]
-;             hail: Grid scale hail (step-wize) (step-wize) [mm]             
+;             prcp: total precipitation (step-wize) [mm hr-1]
+;             snowfall: Grid scale snow and ice (step-wize) [mm hr-1]
+;             prcp_c: Cumulus precipitation (step-wize) [mm hr-1]
+;             prcp_nc: Grid scale precipitation (step-wize) [m hr-1m]
+;             prcp_fr: Frozen precipitation (step-wize) [mm hr-1]
+;             graupel: Grid scale graupel (step-wize) [mm hr-1]
+;             hail: Grid scale hail (step-wize) (step-wize) [mm hr-1]             
 ;             potevap:  Potential evaporation (step-wize) [w m-2]             
 ;             rh: Relative Humidity [%]
 ;             rh2: 2m Relative Humidity [%]
@@ -1338,6 +1362,10 @@ end
 ;             zag: Full model height above ground (geopotential / 9.81) [m]
 ;             umet10: U component of 10m wind rotated to earth coordinates [m.s-1]
 ;             vmet10: V component of 10m wind rotated to earth coordinates  [m.s-1]
+;             wdmet10: 10m wind direction rotated to earth coordinates  [m.s-1]
+;             qliquid: Liquid water mixing ratio [kg.kg-1]
+;             qsolid: Solid water mixing ratio [kg.kg-1]
+;             et: Evapotranspiration (step-wize) [mm.h-1]
 ;             
 ;             TODO:  umet, vmet, components of wind rotated to earth coordinates
 ;    
@@ -1437,7 +1465,7 @@ function w_WRF::get_Var, Varid, $
   _do_h = N_ELEMENTS(HEIGHT_LEVELS) ne 0
   _do_ag = N_ELEMENTS(ABOVE_GROUND_LEVELS) ne 0
   if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
-  if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 0 and _unstagger then Message, 'You are playing with UNSTAGGER and some Z-dimension tools. That could be dangerous.'
+  if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 0 and _unstagger then Message, 'You are playing with UNSTAGGER and some Z-dimension tools. That could be dangerous.', /INFO
   
   
   ;Check if the variable is available
@@ -1456,6 +1484,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames) + self->get_Var('RAINC', t0 = t0, t1 = t1)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1463,6 +1493,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('SNOWNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1481,6 +1513,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('RAINNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE      
     end
     
@@ -1488,6 +1522,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('RAINC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1495,6 +1531,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('GRAUPELNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1502,6 +1540,8 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('HAILNC', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1543,6 +1583,42 @@ function w_WRF::get_Var, Varid, $
       value += lwdown - swup - lwup
     end
     
+    'QLIQUID': begin
+      if self->get_Var_Info('QRAIN') then begin
+        tmp = self->get_Var('QRAIN', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
+      endif
+      if self->get_Var_Info('QCLOUD') then begin
+        tmp = self->get_Var('QCLOUD', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
+      endif
+    end  
+    
+    'QSOLID': begin
+      if self->get_Var_Info('QSNOW') then begin
+        tmp = self->get_Var('QSNOW', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
+      endif
+      if self->get_Var_Info('QGRAUP') then begin
+        tmp = self->get_Var('QGRAUP', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
+      endif
+      if self->get_Var_Info('QICE') then begin
+        tmp = self->get_Var('QICE', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+        if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
+      endif      
+    end  
+    
     'TK': begin
       if self->get_Var_Info('T') then begin
         T = self->get_Var('T', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
@@ -1564,6 +1640,15 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('TK', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
         dims = dims, $
         dimnames = dimnames) - 273.15
+    end
+        
+    'ET': begin
+      value = self->get_Var('ACLHF', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames) / 2.5e6       ; Heat of vaporization
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE      
     end
         
     'TD': begin

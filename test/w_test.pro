@@ -3750,14 +3750,14 @@ pro TEST_WRF_AGG_MASSGRID
     dom2 = OBJ_NEW('w_WRF', FILE=fdir+'wrfout_d02_2008-10-26', CROPBORDER=3)
     
     d2pcp = total(dom2->get_var('prcp'),3)
-    d1pcp = dom2->map_gridded_data(total(dom1->get_var('prcp'),3), dom1)
+    d1pcp = dom2->map_gridded_data(total(dom1->get_var('prcp'),3), dom1) * 3.
     
     d2pcp = UTILS_aggregate_Grid_data(d2pcp, 3)
     d1pcp = UTILS_aggregate_Grid_data(d1pcp, 3)
     
     ok = DOM2->define_subset()
     ok = DOM1->define_subset(GRID=dom2)
-    orig = total(DOM1->get_var('prcp'),3)
+    orig = total(DOM1->get_var('prcp'),3) * 3.
     
     if max(abs(d1pcp - d2pcp)) gt 0.2 then error +=1
     if max(abs(d1pcp - orig[1:48,1:48])) gt 0.001 then error +=1
@@ -4021,27 +4021,27 @@ pro TEST_WRF_GETVAR
     
     ;PRCP and so
     all = wrf->w_geo_nc::get_Var('RAINNC') +  wrf->w_geo_nc::get_Var('RAINC')
-    mine = wrf->get_Var('PRCP', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    mine = wrf->get_Var('PRCP', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims) * 3.
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     all = wrf->w_geo_nc::get_Var('RAINNC')
-    mine = wrf->get_Var('PRCP_NC', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    mine = wrf->get_Var('PRCP_NC', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims) * 3.
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     all = wrf->w_geo_nc::get_Var('RAINC')
-    mine = wrf->get_Var('PRCP_C', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    mine = wrf->get_Var('PRCP_C', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims) * 3.
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     all = wrf->w_geo_nc::get_Var('SNOWNC')
-    mine = wrf->get_Var('SNOWFALL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    mine = wrf->get_Var('SNOWFALL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims) * 3.
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     all = wrf->w_geo_nc::get_Var('POTEVP')
     mine = wrf->get_Var('POTEVAP', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     all = wrf->w_geo_nc::get_Var('GRAUPELNC')
-    mine = wrf->get_Var('GRAUPEL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims)
-    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.001 then error+=1 
+    mine = wrf->get_Var('GRAUPEL', DESCRIPTION=des, DIMNAMES=dnam, DIMS=dims) * 3.
+    if total(ABS(all[*,*,nt-1] - TOTAL(mine,3))) gt 0.01 then error+=1 
     
     all = wrf->w_geo_nc::get_Var('SR') * wrf->get_Var('PRCP')
     mine = wrf->get_Var('PRCP_FR')
-    if total(ABS(all - mine)) gt 0.001 then error+=1 
+    if total(ABS(all - mine)) gt 0.01 then error+=1 
     
     ncldir = w_test_file_directory() + 'WRF/ncl_out/'
        

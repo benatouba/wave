@@ -1,6 +1,8 @@
 "variable","agg_method","to_press"
 "THETA","mean","yes"
 "QVAPOR","mean","yes"
+"QLIQUID","mean","yes"
+"QSOLID","mean","yes"
 "CLDFRA","mean","no"
 "U","mean","yes"
 "V","mean","yes"
