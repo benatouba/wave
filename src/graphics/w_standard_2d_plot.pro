@@ -72,6 +72,12 @@
 ;            set this keyword if you don't want to plot the color bar
 ;    NO_LEGEND: in, optional
 ;               set this keyword if you don't want to add a legend to the plot
+;    NO_SOURCE_INFO: in, optional
+;                    set this keyword if you don't want to add a source information text to the plot
+;    NO_SCALE_INFO: in, optional
+;                   set this keyword if you don't want to add a scale bar to the plot
+;    NO_PROJ_INFO: in, optional
+;                  set this keyword if you don't want to add a projection information text to the plot
 ;    IM_RESIZE: in, optional, type=integer, default=50
 ;                Set this keyword to percentage that the raster image file created my ImageMagick
 ;                from PostScript output should be resized.
@@ -100,6 +106,9 @@ pro w_standard_2d_plot, map, $
     XFACTOR=xfactor, $
     NO_BAR=no_bar, $
     NO_LEGEND=no_legend, $
+    NO_SOURCE_INFO=no_source_info, $
+    NO_SCALE_INFO=no_scale_info, $
+    NO_PROJ_INFO=no_proj_info, $
     IM_RESIZE=im_resize
     
   ;--------------------------
@@ -207,22 +216,23 @@ pro w_standard_2d_plot, map, $
       WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
   endif
   
-  if ~KEYWORD_SET(NO_LEGEND) then begin
+  if ~ KEYWORD_SET(NO_LEGEND) then begin
   
-    ; Scale
-    xSize_map = tnt_C.dx * tnt_C.nx
-    xSize_map_bar =  nicenumber(xSize_map/5.)
-    if tnt_c.proj.name eq 'Geographic (WGS-84)' then unit = ' deg' else unit = ' m'
-    xSize_bar_device =  xSize_map_bar / xSize_map * (pos[2] - pos[0])
-    if xSize_map_bar ge 1000. then begin
-      xSize_map_bar =  xSize_map_bar / 1000.
-      unit = ' km'
-    endif
+    if ~ KEYWORD_SET(NO_SCALE_INFO) then begin
+      ; Scale
+      xSize_map = tnt_C.dx * tnt_C.nx
+      xSize_map_bar =  nicenumber(xSize_map/5.)
+      if tnt_c.proj.name eq 'Geographic (WGS-84)' then unit = ' deg' else unit = ' m'
+      xSize_bar_device =  xSize_map_bar / xSize_map * (pos[2] - pos[0])
+      if xSize_map_bar ge 1000. then begin
+        xSize_map_bar =  xSize_map_bar / 1000.
+        unit = ' km'
+      endif
+      
+      if xSize_map_bar ge 5. then str_xSize_map_bar = str_equiv(LONG(xSize_map_bar)) $
+      else if xSize_map_bar ge 1. then str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F3.1)') $
+    else str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F4.2)')
     
-    if xSize_map_bar ge 5. then str_xSize_map_bar = str_equiv(LONG(xSize_map_bar)) $
-     else if xSize_map_bar ge 1. then str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F3.1)') $
-      else str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F4.2)')
-  
     xLegend = pos[0] + [0., xSize_bar_device]
     yLegend = pos[1] / 5. + [0.,0.]
     cgPlotS, xLegend, yLegend, /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
@@ -230,23 +240,31 @@ pro w_standard_2d_plot, map, $
     cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
     cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_xSize_map_bar + unit, ALIGNMENT=0.5, $
       CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
-    
+      
+  endif
+  
+  if ~KEYWORD_SET(NO_PROJ_INFO) then begin
+  
     ; Projection
     proj_name = 'Projection: ' + tnt_c.proj.name
     cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
     proj_name = 'Datum: ' + tnt_c.proj.datum.name
     cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+    
+  endif
+  
+  if ~KEYWORD_SET(NO_SOURCE_INFO) then begin
   
     ; Legend info
-    
     if N_ELEMENTS(SOURCE_INFO) eq 0 then source_info = cgSymbol('copyright') + ' '+ $
       TIME_to_STR(QMS_TIME(), MASK='YYYY') +' TU Berlin!C!CChair of Climatology'
-      
     if arg_okay(source_info, TYPE=IDL_STRING) then begin
       cgText, 0.80,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
     endif
-  
+    
   endif
+  
+endif
   
   ; Output
   if visible then begin

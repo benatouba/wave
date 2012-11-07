@@ -228,8 +228,8 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
                 N_ELEMENTS(millisecond) ne 0 then begin  ; Make an absolute date from gregorian params
   
     if N_ELEMENTS(year) eq 0 then year = 1899L
-    if N_ELEMENTS(month) eq 0 then month = 12L
-    if N_ELEMENTS(day) eq 0 then day = 30L
+    if N_ELEMENTS(month) eq 0 then month = 1L
+    if N_ELEMENTS(day) eq 0 then day = 1L
     if N_ELEMENTS(hour) eq 0 then hour = 0L
     if N_ELEMENTS(minute) eq 0 then minute = 0L
     if N_ELEMENTS(second) eq 0 then second = 0L

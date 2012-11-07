@@ -1770,7 +1770,7 @@ function w_Map::set_mask, mask, grid, BILINEAR=bilinear, COLOR=color
     _mask = self.grid->map_gridded_data(mask, grid, MISSING=0, BILINEAR=bilinear)
   endelse
   
-  _mask = BYTE(0 > _mask < 1)
+  _mask = BYTE(0 > CEIL(_mask) < 1)
   _color = 'grey'
   if N_ELEMENTS(color) ne 0 then _color = color
   
