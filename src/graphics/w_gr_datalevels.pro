@@ -174,14 +174,16 @@ function w_gr_DataLevels_dataloc, info, data
 
   ; Som temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
-  if cnt_ooBot ne 0 and ~ info.is_ooBot then Message, 'Internal error by OO_Bot'
+  if cnt_ooBot ne 0 and ~ info.is_ooBot then Message, 'Internal error by OO_Bot. Fabi ist schuld.'
   
   p_ooTop = where(loc ge N_ELEMENTS(info.levels)-1, cnt_ooTop)  
   if cnt_ooTop ne 0 and ~ info.is_ooTop then begin
     ; check for the "on the bound" case 
     ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
-    if cnton ne cnt_ooTop then Message, 'Internal error by OO_Top'
-    if ~info.dcbar then loc[p_ooTop] = loc[p_ooTop]-1
+    if cnton ne cnt_ooTop then begin
+      Message, 'Internal error by OO_Top. Fabi ist schuld. Sollte nicht zu schlimm sein.', /INFORMATIONAL
+    endif
+    if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-1
   endif
     
   if info.is_ooBotColor then loc+=1
