@@ -91,7 +91,6 @@ pro w_standard_2d_plot, map, $
     BAR_OPEN=bar_open,  $
     TOP_BAR_OPEN=top_bar_open, $
     BOT_BAR_OPEN=bot_bar_open, $
-    BAR_SPACING=BAR_spacing,  $
     PIXMAP=pixmap,  $
     SOURCE_INFO=source_info, $
     RESIZABLE=resizable, $
@@ -202,7 +201,7 @@ pro w_standard_2d_plot, map, $
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   if ~KEYWORD_SET(NO_BAR) then begin
     map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
-      CHARSIZE=1.*sfac, SPACING=BAR_spacing, CHARTHICK = 1.* sfac
+      CHARSIZE=1.*sfac, CHARTHICK = 1.* sfac
     ; Title bar
     cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
       WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac

@@ -60,7 +60,7 @@ pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD
   if N_ELEMENTS(FORMAT) eq 0 then FORMAT = '(G0)'
   
   w_gr_Colorbar, leginfo, POSITION=position, WINDOW=window, ADDCMD=addcmd, $
-    CHARSIZE=charsize, /VERTICAL, SPACING=0.15, FORMAT=format
+    CHARSIZE=charsize, /VERTICAL, FORMAT=format
   IF N_ELEMENTS(TITLE) eq 0 then bar_title='Wind Speed' else bar_title=title
   cgText, (position[0]+position[2])/2., position[3]+0.065, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
     WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
