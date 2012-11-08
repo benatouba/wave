@@ -7,7 +7,8 @@
 ; your data on the display and have access to some easy statistics.
 ; 
 ; The output of `w_gr_data_levels` is a structure containing all necessary 
-; information to generate a colored plot. Her the most important tags::
+; information to generate a colored plot and/or a colorbar. 
+; Here its most important tags::
 ;   
 ;     info.levels: array of the data levels that the routine chose for you or
 ;                  that you specified by yourself
@@ -65,7 +66,6 @@
 ;      w_LoadCT, 'wiki-schwarzwald-cont'
 ;      info = w_gr_DataLevels(cgDemoData(7), /SHOW)
 ;         
-;    
 ;    
 ; :History:
 ;     Written by FaM, 2012.
@@ -172,21 +172,22 @@ function w_gr_DataLevels_dataloc, info, data
   if N_ELEMENTS(INFO.levels) lt 2 then loc = LONG(data*0) $ 
    else loc = VALUE_LOCATE(info.levels, data)  
 
-  ; Som temporary checks
+  ; Some temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
-  if cnt_ooBot ne 0 and ~ info.is_ooBot then Message, 'Internal error by OO_Bot. Fabi ist schuld.'
-  
-  p_ooTop = where(loc ge N_ELEMENTS(info.levels)-1, cnt_ooTop)  
+  if cnt_ooBot ne 0 and ~ info.is_ooBot then begin
+   Message, 'Internal error by OO_Bot. Fabi ist schuld. Sollte nicht zu schlimm sein, aber sag ihm mal falls sowas passiert.', /INFORMATIONAL
+  endif
+  p_ooTop = where(loc ge (N_ELEMENTS(info.levels)-1), cnt_ooTop)  
   if cnt_ooTop ne 0 and ~ info.is_ooTop then begin
     ; check for the "on the bound" case 
     ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
     if cnton ne cnt_ooTop then begin
-      Message, 'Internal error by OO_Top. Fabi ist schuld. Sollte nicht zu schlimm sein.', /INFORMATIONAL
+      Message, 'Internal error by OO_Top. Fabi ist schuld. Sollte nicht zu schlimm sein, aber sag ihm mal falls sowas passiert.', /INFORMATIONAL
     endif
-    if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-1
+    if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-2
   endif
     
-  if info.is_ooBotColor then loc+=1
+  if info.is_ooBotColor then loc += 1
   if info.is_Missing then begin 
     loc+=1
     loc[info.pmissing] = 0
@@ -216,7 +217,8 @@ end
 ;    TABLE_SIZE: in, optional, default=!D.TABLE_SIZE
 ;                the size of the color table that is currently loaded in IDL    
 ;    COLORS: in, optional
-;            an array of N_LEVELS colors to use (currently accepted only for the /DCBAR case)
+;            an array of N_LEVELS colors to use (for the /DCBAR case)
+;            or N_LEVELS+1 colors to use (for the normal case)          
 ;    NEUTRAL_COLOR: in, optional, default='grey'
 ;                   the color to assign to missing values
 ;    MISSING: in, optional, default=NaN
@@ -235,11 +237,15 @@ end
 ;          (usefull if the last colors are too dark for example)
 ;    INVERTCOLORS: in, optional, type=boolean, default=0
 ;                  If this keyword is set, the color table vectors are reversed.
-;    OOB_TOP_COLOR: in, optional
-;                   Set this keyword (/OOB_TOP_COLOR) to force an OOB arrow.
+;    OOB_TOP_ARROW: in, optional, Default=1
+;                   Set this keyword to 0 to stop drawing an OOB arrow.
+;    OOB_TOP_COLOR: in, optional, Default=0
+;                   Set this keyword (/OOB_TOP_COLOR) to force an OOB arrow color.
 ;                   Set this keyword to a string for an OOB color of your choice
-;    OOB_BOT_COLOR: in, optional
-;                   Set this keyword (/OOB_BOT_COLOR) to force an OOB arrow.
+;    OOB_TOP_ARROW: in, optional, Default=1
+;                   Set this keyword to 0 to stop drawing an OOB arrow.
+;    OOB_BOT_COLOR: in, optional, Default=0
+;                   Set this keyword (/OOB_BOT_COLOR) to force an OOB arrow color.
 ;                   Set this keyword to a string for an OOB color of your choice
 ;    DCBAR: in, optional, type=boolean, default=0
 ;           Set this keyword to make a DCBar (categorical level values)
@@ -266,6 +272,8 @@ function w_gr_DataLevels, data, $
     INVERTCOLORS=invertcolors, $
     OOB_TOP_COLOR=oob_top_color, $ 
     OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_ARROW=oob_top_arrow, $ 
+    OOB_BOT_ARROW=oob_bot_arrow, $
     DCBAR=dcbar, $
     DOUBLE=double, $
     SHOW=show
@@ -279,14 +287,25 @@ function w_gr_DataLevels, data, $
   user_Colors = N_ELEMENTS(COLORS) ne 0  
   user_Max = N_ELEMENTS(MAX_VALUE) ne 0
   user_Min = N_ELEMENTS(MIN_VALUE) ne 0
-  user_oob_top = N_ELEMENTS(OOB_TOP_COLOR) ne 0
-  user_oob_bot = N_ELEMENTS(OOB_BOT_COLOR) ne 0
   user_MinMax = user_Max and user_Min
   user_dcbar = BYTE(KEYWORD_SET(DCBAR))
+  SetDefaultValue, oob_top_arrow, ~ user_dcbar
+  SetDefaultValue, oob_bot_arrow, ~ user_dcbar
+  oob_top_str = arg_okay(oob_top_color, TYPE=IDL_STRING)
+  oob_bot_str = arg_okay(oob_bot_color, TYPE=IDL_STRING)
+
+  ;Give a value to maxncolors
+  if N_ELEMENTS(table_size) ne 0 then begin
+    maxncolors = long(table_size)
+  endif else begin
+    maxncolors = !D.TABLE_SIZE
+  endelse
   
-  if user_Colors and ~ user_dcbar then $
-   Message, 'The keyword $COLORS is currently accepted only together with the $DCBAR option'
   
+  
+  if oob_top_str and ~ oob_top_arrow then Message, 'Conflicting keywords OOB_TOP_ARROW and OOB_TOP_STR'
+  if oob_bot_str and ~ oob_bot_arrow then Message, 'Conflicting keywords OOB_BOT_ARROW and OOB_BOT_STR'
+    
   if (user_Levels and user_Max) or (user_Levels and user_Min) then $
    Message, 'Ambiguous keyword combination of MIN/MAX with LEVELS.'
   
@@ -366,13 +385,24 @@ function w_gr_DataLevels, data, $
     
   ; Now go for the levels and check the user decisions
   if user_Levels then begin
-     if ~ arg_okay(levels, /NUMERIC, /ARRAY) then Message, WAVE_Std_Message('LEVELS', /ARG)
-  endif  
+    if ~ arg_okay(levels, /NUMERIC, /ARRAY) then Message, WAVE_Std_Message('LEVELS', /ARG)
+    if is_data then begin
+      ; Make the levels the same type as data
+      case dataTypeName of
+        'FLOAT' : _levels = FLOAT(levels)
+        'DOUBLE': _levels = DOUBLE(levels)
+        'BYTE': _levels = BYTE(levels)
+        'LONG': _levels = LONG(levels)
+        'INT': _levels = FIX(levels)
+        else: Message, 'Data type too exotic for me'
+      endcase
+    endif else _levels = levels
+  endif
   
   ; Define level max and min
   if user_Levels then begin 
-    _min_level = min(levels)
-    _max_level = max(levels)
+    _min_level = min(_levels)
+    _max_level = max(_levels)
     if _min_level eq _max_level then Message, '$LEVELS is not valid: min and max are the same'
   endif else begin
     if user_Min then begin
@@ -394,37 +424,35 @@ function w_gr_DataLevels, data, $
   p_ooTop = where(valid and (_data gt _max_level), cnt_ooTop)
   p_ooBot = where(valid and (_data lt _min_level), cnt_ooBot)
   is_ooTop = is_data and (cnt_ooTop ne 0)
-  is_ooBot = is_data and (cnt_ooBot ne 0)
+  is_ooBot = is_data and (cnt_ooBot ne 0) 
   
   if (is_ooBot or is_ooTop) and user_dcbar then $
   message, 'There are out of bound values. $DCBAR is not compatible with such values, treat them as missing data.'
+ 
+  if is_ooBot then oob_bot_arrow = 1 ; Force it
+  if is_ooTop then oob_top_arrow = 1 ; Force it   
     
   same_minmax = _min_level eq _max_level
-  
-  ;Give a value to maxncolors
-  if N_ELEMENTS(TABLE_SIZE) ne 0 then begin
-    maxncolors = long(table_size)
-  endif else begin
-    maxncolors = !D.TABLE_SIZE
-  endelse
-   
+     
   ; Give a value to _n_levels   
   if n_elements(n_levels) eq 0 then begin
     ; With top OOB, ncolors eq nlevels else ncolors eq nlevels-1
     if user_Colors then begin 
       if user_dcbar then begin
         _n_levels = N_Elements(colors[*,0,0])
+        if user_Levels then if N_ELEMENTS(_levels) ne _n_levels then Message, 'If COLORS and LEVELS are set for a DCBAR, they should have the same number as elements.'
       endif else begin
-         Message, 'Should not be here'         
+        _n_levels = N_Elements(colors[*,0,0]) - 1
+        if user_Levels then if N_ELEMENTS(_levels) ne _n_levels then Message, 'If COLORS and LEVELS are set, COLORS should have one more element than LEVELS.'
       endelse  
     endif
-    if user_Levels then _n_levels = N_Elements(levels)
-    if N_ELEMENTS(_n_levels) eq 0 then begin
+    if user_Levels then _n_levels = N_Elements(_levels)
+    if N_ELEMENTS(_n_levels) eq 0 then begin    
       ; if min and max are the same, one level one color
       if same_minmax then _n_levels = 2 else begin
-        if user_dcbar then _n_levels = maxncolors else _n_levels = maxncolors + 1 ; default value
-        if is_ooTop or user_oob_top then _n_levels-=1
-        if is_ooBot or user_oob_bot then _n_levels-=1
+        if user_dcbar then _n_levels = maxncolors else _n_levels = maxncolors - 1 ; default value
+        if ~ oob_bot_arrow then _n_levels += 1
+        if ~ oob_top_arrow then _n_levels += 1
         if is_Missing then _n_levels-=1
       endelse
     endif
@@ -438,13 +466,11 @@ function w_gr_DataLevels, data, $
   if _n_levels lt 1 then Message, 'Less then 1 level? Something got really wrong.'
    
   ; A few more checks for the crasiest cases
-  if user_Levels then if _n_levels ne N_ELEMENTS(levels) then $
+  if user_Levels then if _n_levels ne N_ELEMENTS(_levels) then $
    Message, '$LEVELS and $N_LEVELS are incompatible.'
   
   ; Compute the levels
-  if user_Levels then begin
-    _levels = levels
-  endif else begin
+  if ~ user_Levels then begin
     case dataTypeName of
       'FLOAT':  _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
       'DOUBLE':  _levels = (double(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
@@ -455,17 +481,15 @@ function w_gr_DataLevels, data, $
           _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
       end
     endcase
-  endelse
-  
-  ; decide n_colors to compute automatically    
-  auto_oob_top = is_ooTop or (user_oob_top and ~ arg_okay(oob_top_color, TYPE=IDL_STRING))
-  auto_oob_bot = is_ooBot or (user_oob_bot and ~ arg_okay(oob_bot_color, TYPE=IDL_STRING))
+  endif
+    
+  ; decide n_colors to compute automatically  
   if user_dcbar then begin
     _n_colors = _n_levels     
   endif else begin
-    _n_colors = _n_levels - 1 
-    if auto_oob_top then _n_colors += 1 ; last color will be OOT
-    if auto_oob_bot then _n_colors += 1 ; first color will be OOB
+    _n_colors = _n_levels + 1
+    if ~ oob_bot_arrow or oob_bot_str then _n_colors -= 1
+    if ~ oob_top_arrow or oob_top_str then _n_colors -= 1
   endelse
   
   ; Colors
@@ -495,13 +519,17 @@ function w_gr_DataLevels, data, $
   endelse
 
   ; OOB colors
-  if user_oob_bot and arg_okay(oob_bot_color, TYPE=IDL_STRING) then begin
+  if oob_bot_str then begin
     _colors = [cgColor(oob_bot_color), _colors]
-  endif
-  if user_oob_top and arg_okay(oob_top_color, TYPE=IDL_STRING) then begin
-    _colors = [_colors,cgColor(oob_top_color)]
-  endif
-    
+  endif else begin
+    if ~ is_ooBot and oob_bot_arrow and ~ KEYWORD_SET(oob_bot_color) then _colors[0] = cgColor('white')
+  endelse
+  if oob_top_str then begin
+    _colors = [_colors, cgColor(oob_top_color)]
+  endif else begin
+    if ~ is_ooTop and oob_top_arrow and ~ KEYWORD_SET(oob_top_color) then _colors[N_ELEMENTS(_colors)-1] = cgColor('white')
+  endelse
+      
   ; Neutral Color
   if N_ELEMENTS(NEUTRAL_COLOR) ne 0 then begin
     if ~ arg_okay(neutral_color, /SCALAR) then Message, WAVE_Std_Message('NEUTRAL_COLOR', /ARG)
@@ -510,14 +538,14 @@ function w_gr_DataLevels, data, $
   
   if is_Missing then _colors = [_neutral_color, _colors]
   
-  if N_ELEMENTS(_colors) gt 256 then Message, 'Internal error'
+  if N_ELEMENTS(_colors) gt 256 then Message, 'Internal error (more than 256 colors). Contact Fabi'
   
   ; some common sense
   _levels = _levels[SORT(_levels)]
   if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then Message, 'Levels are not unique?'
   
-  is_ooTopColor = is_ooTop or user_oob_top
-  is_ooBotColor = is_ooBot or user_oob_bot
+  is_ooTopColor = oob_top_arrow
+  is_ooBotColor = oob_bot_arrow
   
   if  N_ELEMENTS(_colors) eq 3 then row = 1
   _palette = w_gr_ColorToRGB(_colors, ROW=row)

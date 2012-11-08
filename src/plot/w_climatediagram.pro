@@ -80,7 +80,7 @@ pro w_climateDiagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, H
   sumPrcp = STRING(total(precipitation), FORMAT='(I4)')
 
   ; trick
-  cgDisplay,/PIXMAP  
+  cgDisplay, /PIXMAP, /FREE, /WINDOW 
   cgbarplot, precipitation, BARCOORDS=x, xstyle=9, YSTYLE=8,  yrange=[0, maxiprcp]
   cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, YTICK_GET=yt
   WDELETE, !D.WINDOW  

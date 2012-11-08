@@ -952,13 +952,20 @@ pro TEST_GR_DATALEVELS
   
   ; Test default
   info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=1, SHOW=show)  
+  if N_ELEMENTS(info.levels) ne 255 then error += 1
+  if N_ELEMENTS(info.colors) ne 256 then error += 1
+  if MAX(info.LEVELS) ne 1 then error += 1
+  if MIN(info.LEVELS) ne 0 then error += 1
+  if info.LEVELS[1] ne 1./254 then error += 1
+   
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=1, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 257 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 1 then error += 1
   if MIN(info.LEVELS) ne 0 then error += 1
   if info.LEVELS[1] ne 1./256 then error += 1
    
-  info = w_gr_DataLevels(MIN_VALUE=0.25, MAX_VALUE=0.75, SHOW=show)  
+  info = w_gr_DataLevels(MIN_VALUE=0.25, MAX_VALUE=0.75, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)  
   if N_ELEMENTS(info.levels) ne 257 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 0.75 then error += 1
@@ -967,14 +974,21 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 0 then error += 1
   if info.is_ooBotColor ne 0 then error += 1
     
-  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10, SHOW=show) 
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0) 
   if N_ELEMENTS(info.levels) ne 257 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 10 then error += 1
   if MIN(info.LEVELS) ne 0 then error += 1
   if info.LEVELS[1] ne 10./256 then error += 1
   
-  info = w_gr_DataLevels(LEVELS=[0,1,2,3,4,5,6,7,8,9,10], SHOW=show) 
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10, SHOW=show) 
+  if N_ELEMENTS(info.levels) ne 255 then error += 1
+  if N_ELEMENTS(info.colors) ne 256 then error += 1
+  if MAX(info.LEVELS) ne 10 then error += 1
+  if MIN(info.LEVELS) ne 0 then error += 1
+  if info.LEVELS[1] ne 10./254 then error += 1
+  
+  info = w_gr_DataLevels(LEVELS=[0,1,2,3,4,5,6,7,8,9,10], SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0) 
   if N_ELEMENTS(info.levels) ne 11 then error += 1
   if N_ELEMENTS(info.colors) ne 10 then error += 1
   if MAX(info.LEVELS) ne 10 then error += 1
@@ -998,6 +1012,26 @@ pro TEST_GR_DATALEVELS
   
   info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
+  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0) 
+  if N_ELEMENTS(info.levels) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 11 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooBotColor ne 0 then error += 1
+      
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown', SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0) 
+  if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 11 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
   if MIN(info.LEVELS) ne 1 then error += 1
@@ -1008,15 +1042,15 @@ pro TEST_GR_DATALEVELS
     
   info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown', SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
-  if  N_ELEMENTS(info.colors) ne 11 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
   if MIN(info.LEVELS) ne 1 then error += 1
   if info.LEVELS[1] ne 2 then error += 1
   if info.LEVELS[8] ne 9 then error += 1
-  if info.is_ooTopColor ne 0 then error += 1
-  if info.is_ooBotColor ne 0 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
     
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink', SHOW=show, OOB_BOT_ARROW=0) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 12 then error += 1
   if info.colors[ N_ELEMENTS(info.colors)-1] ne cgColor('pink') then error += 1
@@ -1027,15 +1061,26 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 0 then error += 1
   
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, /OOB_TOP_COLOR, SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink', SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
-  if  N_ELEMENTS(info.colors) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
+  if info.colors[ N_ELEMENTS(info.colors)-1] ne cgColor('pink') then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
   if MIN(info.LEVELS) ne 1 then error += 1
   if info.LEVELS[1] ne 2 then error += 1
   if info.LEVELS[8] ne 9 then error += 1
   if info.is_ooTopColor ne 1 then error += 1
-  if info.is_ooBotColor ne 0 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
+  
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, /OOB_BOT_COLOR, SHOW=show) 
+  if N_ELEMENTS(info.levels) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
+  if MAX(info.LEVELS) ne 12 then error += 1
+  if MIN(info.LEVELS) ne 1 then error += 1
+  if info.LEVELS[1] ne 2 then error += 1
+  if info.LEVELS[8] ne 9 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
+  if info.is_ooBotColor ne 1 then error += 1
   
   info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_TOP_COLOR='pink', OOB_BOT_COLOR='grey', SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
@@ -1051,23 +1096,23 @@ pro TEST_GR_DATALEVELS
   
   info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_BOT_COLOR='grey', NEUTRAL_COLOR='brown', SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
-  if  N_ELEMENTS(info.colors) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if info.colors[0] ne cgColor('grey') then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
   if MIN(info.LEVELS) ne 1 then error += 1
   if info.LEVELS[1] ne 2 then error += 1
   if info.LEVELS[8] ne 9 then error += 1
-  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 1 then error += 1
       
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /OOB_BOT_COLOR, NEUTRAL_COLOR='brown', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /OOB_TOP_COLOR, NEUTRAL_COLOR='brown', SHOW=show) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
-  if  N_ELEMENTS(info.colors) ne 12 then error += 1
+  if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
   if MIN(info.LEVELS) ne 1 then error += 1
   if info.LEVELS[1] ne 2 then error += 1
   if info.LEVELS[8] ne 9 then error += 1
-  if info.is_ooTopColor ne 0 then error += 1
+  if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 1 then error += 1
       
   info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /DCBAR, SHOW=show) 
@@ -1097,7 +1142,7 @@ pro TEST_GR_DATALEVELS
   ;----------------------------------------
   
   data = [1., 0.8,.25,0.4,0.]
-  info = w_gr_DataLevels(data, SHOW=show)
+  info = w_gr_DataLevels(data, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 257 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 1. then error += 1
@@ -1106,7 +1151,7 @@ pro TEST_GR_DATALEVELS
   if info.loc[0] ne 255 then error += 1
   if info.loc[4] ne 0 then error += 1
   
-  info = w_gr_DataLevels(data, N_LEVELS=5, SHOW=show)
+  info = w_gr_DataLevels(data, N_LEVELS=5, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 5 then error += 1
   if N_ELEMENTS(info.colors) ne 4 then error += 1
   if MAX(info.LEVELS) ne 1. then error += 1
@@ -1114,7 +1159,7 @@ pro TEST_GR_DATALEVELS
   if info.loc[0] ne 3 then error += 1
   if info.loc[4] ne 0 then error += 1
   
-  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., SHOW=show)
+  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 5 then error += 1
   if N_ELEMENTS(info.colors) ne 5 then error += 1
   if MAX(info.LEVELS) ne 1. then error += 1
@@ -1122,7 +1167,7 @@ pro TEST_GR_DATALEVELS
   if info.loc[0] ne 4 then error += 1
   if info.loc[4] ne 0 then error += 1
   
-  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., MAX_VALUE=0.95, SHOW=show)
+  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., MAX_VALUE=0.95, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 5 then error += 1
   if N_ELEMENTS(info.colors) ne 6 then error += 1
   if MAX(info.LEVELS) ne 0.95 then error += 1
@@ -1132,7 +1177,7 @@ pro TEST_GR_DATALEVELS
   if ~ info.is_ooTop then error += 1
   if ~ info.is_ooTopColor then error += 1
   
-  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., MAX_VALUE=0.95, MIN_VALUE=0.3, SHOW=show)
+  info = w_gr_DataLevels(data, N_LEVELS=5, MISSING=0., MAX_VALUE=0.95, MIN_VALUE=0.3, SHOW=show, OOB_BOT_ARROW=0, OOB_TOP_ARROW=0)
   if N_ELEMENTS(info.levels) ne 5 then error += 1
   if N_ELEMENTS(info.colors) ne 7 then error += 1
   if MAX(info.LEVELS) ne 0.95 then error += 1
@@ -1146,7 +1191,7 @@ pro TEST_GR_DATALEVELS
   if ~ info.is_ooBot then error += 1
   if ~ info.is_ooBotColor then error += 1
   
-  info = w_gr_DataLevels(data, OOB_TOP_COLOR='pink', SHOW=show)
+  info = w_gr_DataLevels(data, OOB_TOP_COLOR='pink', SHOW=show, OOB_BOT_ARROW=0)
   if N_ELEMENTS(info.levels) ne 256 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 1. then error += 1

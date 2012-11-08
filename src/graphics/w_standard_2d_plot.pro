@@ -182,7 +182,7 @@ pro w_standard_2d_plot, map, $
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE
   
-  cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE, COLOR=background
+  cgDisplay, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE, COLOR=background, /PIXMAP, /FREE, /WINDOW
   xwin = !D.WINDOW
   
   if visible and keyword_set(resizable) then begin

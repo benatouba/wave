@@ -474,8 +474,9 @@ pro w_WindRose, wind_dir, wind_speed, $
   ; Window
   xsiz = 650
   ysiz = 600
-  cgDisplay, xsiz, ysiz, /PIXMAP
+  cgDisplay, XSIZE=xsiz, YSIZE=ysiz, /PIXMAP, /FREE, /WINDOW
   wd = !D.WINDOW
+  
   window = 0
   if N_ELEMENTS(png) ne 0 then begin
     PS_Start, FILENAME=png, /DECOMPOSED, /LAND
@@ -486,7 +487,7 @@ pro w_WindRose, wind_dir, wind_speed, $
   endif else window = 1
   
   if window then begin
-    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_WindRose', WOBJ=wobj
+    cgWindow, WXSIZE=xsiz, WYSIZE=ysiz, Title='w_WindRose'
     cgControl, EXECUTE=0
   endif
   
