@@ -175,14 +175,14 @@ function w_gr_DataLevels_dataloc, info, data
   ; Some temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
   if cnt_ooBot ne 0 and ~ info.is_ooBot then begin
-   Message, 'Internal error by OO_Bot. Fabi ist schuld. Sollte nicht zu schlimm sein, aber sag ihm mal falls sowas passiert.', /INFORMATIONAL
+   Message, 'Internal error by OO_Bot. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
   endif
   p_ooTop = where(loc ge (N_ELEMENTS(info.levels)-1), cnt_ooTop)  
   if cnt_ooTop ne 0 and ~ info.is_ooTop then begin
     ; check for the "on the bound" case 
     ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
     if cnton ne cnt_ooTop then begin
-      Message, 'Internal error by OO_Top. Fabi ist schuld. Sollte nicht zu schlimm sein, aber sag ihm mal falls sowas passiert.', /INFORMATIONAL
+      Message, 'Internal error by OO_Top. Fabi ist schuld. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
     endif
     if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-2
   endif
@@ -240,12 +240,14 @@ end
 ;    OOB_TOP_ARROW: in, optional, Default=1
 ;                   Set this keyword to 0 to stop drawing an OOB arrow.
 ;    OOB_TOP_COLOR: in, optional, Default=0
-;                   Set this keyword (/OOB_TOP_COLOR) to force an OOB arrow color.
+;                   Set this keyword (/OOB_TOP_COLOR) to force an OOB arrow color 
+;                   (this color will be taken from the current color table).
 ;                   Set this keyword to a string for an OOB color of your choice
-;    OOB_TOP_ARROW: in, optional, Default=1
+;    OOB_BOT_ARROW: in, optional, Default=1
 ;                   Set this keyword to 0 to stop drawing an OOB arrow.
 ;    OOB_BOT_COLOR: in, optional, Default=0
 ;                   Set this keyword (/OOB_BOT_COLOR) to force an OOB arrow color.
+;                   (this color will be taken from the current color table).
 ;                   Set this keyword to a string for an OOB color of your choice
 ;    DCBAR: in, optional, type=boolean, default=0
 ;           Set this keyword to make a DCBar (categorical level values)

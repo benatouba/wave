@@ -2579,6 +2579,7 @@ pro TEST_MODIS
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
     CTLOAD, 13
     d=map->set_Plot_Params(N_LEVELS=126, MIN_VALUE=-24, MAX_VALUE = 29)
+
     map->show_img, /RESIZABLE
     map->show_color_bar, /RESIZABLE
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)

@@ -55,12 +55,21 @@ function w_windrose_circle, xcenter, ycenter, radius, NPTS=npts, ANGLE_RANGE=ang
   
 END
 
-pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD=addcmd, CHARSIZE=charsize, POSITION=position, FORMAT=format
+pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD=addcmd, CHARSIZE=charsize, POSITION=position, FORMAT=format, OOB_FACTOR=oob_factor
 
   if N_ELEMENTS(FORMAT) eq 0 then FORMAT = '(G0)'
   
+  wid = cgQuery(/CURRENT, COUNT=cnt)
+  if cnt eq 0 then begin 
+    _wf = FLOAT(!D.X_Size)/!D.Y_Size
+  endif else begin
+    dims = SIZE(cgSnapshot(WID=wid), /DIMENSIONS)
+    if N_ELEMENTS(dims) eq 3 then _wf = FLOAT(dims[1])/dims[2] else _wf = FLOAT(dims[0])/dims[1]
+  endelse
+  SetDefaultValue, OOB_FACTOR, _wf
+  
   w_gr_Colorbar, leginfo, POSITION=position, WINDOW=window, ADDCMD=addcmd, $
-    CHARSIZE=charsize, /VERTICAL, FORMAT=format
+    CHARSIZE=charsize, /VERTICAL, FORMAT=format, OOB_FACTOR=oob_factor
   IF N_ELEMENTS(TITLE) eq 0 then bar_title='Wind Speed' else bar_title=title
   cgText, (position[0]+position[2])/2., position[3]+0.065, bar_title, ALIGNMENT=0.35, COLOR=cgColor('BLACK'), $
     WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=charsize
@@ -148,8 +157,10 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
     GS=gs, $
     TICKS_ANGLE=ticks_angle, $
     LEVELS=levels, $
+    OOB_TOP_COLOR=oob_top_color, $ 
     OOB_BOT_COLOR=oob_bot_color, $
-    OOB_TOP_COLOR=oob_top_color, $
+    OOB_TOP_ARROW=oob_top_arrow, $ 
+    OOB_BOT_ARROW=oob_bot_arrow, $
     DEF_CALM=def_calm, $
     MAX_PERC=max_perc, $
     NO_WS=no_ws, $
@@ -288,7 +299,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   ;************
   
   ; Check for all data to set top/bot arrows 
-  _dinfo = w_gr_DataLevels(_var2, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color) 
+  _dinfo = w_gr_DataLevels(_var2, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color, OOB_TOP_ARROW=oob_top_arrow, OOB_BOT_ARROW=oob_bot_arrow) 
   if _dinfo.is_ootop eq 1 and N_ELEMENTS(OOB_TOP_COLOR) eq 0 then oob_top_color = 1
   if _dinfo.is_oobot eq 1 and N_ELEMENTS(OOB_BOT_COLOR) eq 0 then oob_bot_color = 1
   
@@ -300,7 +311,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
       radius = perc[i] * max_radius /  maxscale
       if (R[i] gt R[i+1]-1) then continue
       ws=_var2[R[R[i] : R[i+1]-1]]       
-      leginfo = w_gr_DataLevels(ws, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color)     
+      leginfo = w_gr_DataLevels(ws, LEVELS=wsteps, OOB_BOT_COLOR=oob_bot_color, OOB_TOP_COLOR=oob_top_color, OOB_TOP_ARROW=oob_top_arrow, OOB_BOT_ARROW=oob_bot_arrow)    
       wh = leginfo.histo
       percw = (float(wh) /  TOTAL(wh))
       nl = N_ELEMENTS(leginfo.colors)
@@ -401,12 +412,19 @@ end
 ;               automatically. To force a constant scale , you may want to set this 
 ;               keyword to an array of N+1 levels providing the desired intervals,
 ;                e.g. [0,4,5,6,7,8,12]
-;    OOB_TOP_COLOR: in, optional
-;                   Set this keyword (/OOB_TOP_COLOR) to draw an OOB arrow.
+;    OOB_TOP_ARROW: in, optional, Default=1
+;                   Set this keyword to 0 to stop drawing an OOB arrow.
+;    OOB_TOP_COLOR: in, optional, Default=0
+;                   Set this keyword (/OOB_TOP_COLOR) to force an OOB arrow color 
+;                   (this color will be taken from the current color table).
 ;                   Set this keyword to a string for an OOB color of your choice
-;    OOB_BOT_COLOR: in, optional
-;                   Set this keyword (/OOB_BOT_COLOR) to draw an OOB arrow.
-;                   Set this keyword to a string for an OOB color of your choice
+;    OOB_BOT_ARROW: in, optional, Default=0
+;                   Set this keyword to 1 to start drawing an OOB arrow.
+;    OOB_BOT_COLOR: in, optional, Default=0
+;                   Set this keyword (/OOB_BOT_COLOR) to force an OOB arrow color.
+;                   (this color will be taken from the current color table).
+;    OOB_FACTOR: in, optional, Default=1
+;                get control on the siz of the OOB arrows with a factor (from 0 to ..) 
 ;    VAR_TITLE: in, optional, type=string
 ;               the title of the added variable legend
 ;    VAR_UNITS: in, optional, type=string
@@ -449,8 +467,11 @@ pro w_WindRose, wind_dir, wind_speed, $
     TITLE=title, $
     TICKS_ANGLE=ticks_angle, $
     LEVELS=levels, $
+    OOB_TOP_COLOR=oob_top_color, $ 
     OOB_BOT_COLOR=oob_bot_color, $
-    OOB_TOP_COLOR=oob_top_color, $
+    OOB_TOP_ARROW=oob_top_arrow, $ 
+    OOB_BOT_ARROW=oob_bot_arrow, $
+    OOB_FACTOR=oob_factor, $
     VAR_TITLE=var_title, $
     VAR_UNITS=var_units, $
     DEF_CALM=def_calm, $
@@ -506,8 +527,10 @@ pro w_WindRose, wind_dir, wind_speed, $
     GS=gs, $
     LEGINFO=leginfo, $
     CALM_PERC=calm_perc, $
+    OOB_TOP_COLOR=oob_top_color, $ 
     OOB_BOT_COLOR=oob_bot_color, $
-    OOB_TOP_COLOR=oob_top_color
+    OOB_TOP_ARROW=oob_top_arrow, $ 
+    OOB_BOT_ARROW=oob_bot_arrow
   
   if N_ELEMENTS(ADD_VAR) eq 0 then _var2 = wind_speed else _var2 = add_var
   do_var2 = (N_ELEMENTS(_var2) ne 0) and (~KEYWORD_SET(NO_WS))
@@ -516,7 +539,7 @@ pro w_WindRose, wind_dir, wind_speed, $
   ; Var2 legend
   if do_var2 and do_legend then begin
     pbar = [0.87, 0.01, 0.9, 0.20]
-    w_windrose_addlegend, leginfo, TITLE=VAR_TITLE, UNIT=VAR_UNITS, ADDCMD=window, CHARSIZE=charsize, FORMAT=format, POSITION=pbar
+    w_windrose_addlegend, leginfo, TITLE=VAR_TITLE, UNIT=VAR_UNITS, ADDCMD=window, CHARSIZE=charsize, FORMAT=format, POSITION=pbar, OOB_FACTOR=oob_factor
   endif
   
   ; Calm percentage

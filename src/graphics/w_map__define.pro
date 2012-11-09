@@ -59,6 +59,10 @@ pro w_Map::_DestroyPlotParams
   ptr_free, self.plot_params.colors
   ptr_free, self.plot_params.levels
   ptr_free, self.plot_params.dcbar_colors
+  ptr_free, self.plot_params.oob_bot_color
+  ptr_free, self.plot_params.oob_top_color
+  ptr_free, self.plot_params.oob_bot_arrow
+  ptr_free, self.plot_params.oob_top_arrow
   self.plot_params = {w_Map_PLOT_PARAMS}
   
 end
@@ -263,42 +267,6 @@ pro w_Map::_DestroyMasks
   
 end
 
-;;+
-;; :Description:
-;;    Change image color palette indexes into rgb image for plot without shading
-;; 
-;; :Private:
-;;
-;; :History:
-;;     Written by FaM, 2011.
-;;-    
-;function w_Map::_img_to_rgb
-;
-;  ; Make an indexed image
-;  colors = [self.plot_params.neutral, *self.plot_params.colors]
-;  img = *self.img
-;  if self.is_Masked then begin
-;    for m=0, self.nmasks-1 do begin
-;      mask = (*self.masks)[m]
-;      pm = where(*mask.mask eq 1, cntm)
-;      if cntm ne 0 then img[pm] = N_ELEMENTS(colors)
-;      colors = [colors,mask.color]
-;    endfor
-;  endif
-;  
-;  utils_color_rgb, colors, s_r, s_g, s_b
-;  r = byte(0 > s_r[img] < 255)
-;  g = byte(0 > s_g[img] < 255)
-;  b = byte(0 > s_b[img] < 255)
-;  img = bytarr(3, self.Xsize, self.Ysize)
-;  img[0,*,*] = r[*,*]
-;  img[1,*,*] = g[*,*]
-;  img[2,*,*] = b[*,*]
-;  
-;  return, img
-;  
-;end    
-
 pro w_Map::_add_mask, img, colors
 
   for i=0L, N_ELEMENTS(*self.masks)-1 do begin
@@ -330,7 +298,6 @@ function w_Map::_shading
     img = inf.loc
     colors = inf.colors
     if self.is_Masked then self->_add_mask, img, colors    
-    if N_ELEMENTS(colors) gt 127 then Message, 'N_colors to small, sorry youll have to choose other levels to do shading'
     dummy = w_gr_ColorToRGB(colors, s_r, s_g, s_b)  
   endif else begin
     message, 'Shading on what??'
@@ -642,7 +609,7 @@ end
 ;             set this keyword to have a "ot arrow" type colorbar
 ;             this will be done autmatically if there are oob data
 ;    COLORS: in, optional
-;            an array of N_LEVELS colors to use (currently accepted only for the /DCBAR case)
+;            an array of N_LEVELS colors to use
 ;    INVERTCOLORS: in, optional, type = boolean
 ;                  if the colors in the color table have to be inverted (ignored if COLORS is set)
 ;    NEUTRAL_COLOR: in, optional, type = color
@@ -664,8 +631,10 @@ function w_Map::set_plot_params, $
     INVERTCOLORS=invertcolors, $
     DCBAR=dcbar, $
     NEUTRAL_COLOR=neutral_color, $
-    OOB_TOP=oob_top, $
-    OOB_BOT=oob_bot, $
+    OOB_TOP_COLOR=oob_top_color, $ 
+    OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_ARROW=oob_top_arrow, $ 
+    OOB_BOT_ARROW=oob_bot_arrow, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
     CONTOUR=contour
@@ -730,8 +699,10 @@ function w_Map::set_plot_params, $
   
   self.plot_params.contour_img  = KEYWORD_SET(CONTOUR)
   self.plot_params.dcbar  = KEYWORD_SET(DCBAR)
-  self.plot_params.oob_bot  = KEYWORD_SET(OOB_BOT)
-  self.plot_params.oob_top  = KEYWORD_SET(OOB_TOP)
+  self.plot_params.oob_bot_color  = PTR_NEW(OOB_BOT_COLOR)
+  self.plot_params.oob_top_color  = PTR_NEW(OOB_TOP_COLOR)
+  self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW)
+  self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW)
   
   return, self->set_img()
 
@@ -1527,29 +1498,24 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
   if t eq 3 or t eq 6 then min_value = self.plot_params.min_val
   if t eq 4 or t eq 6 then max_value = self.plot_params.max_val
   if t eq 0 then levels = *self.plot_params.levels
-  n_levels = self.plot_params.nlevels
-  cmin = self.plot_params.cmin
-  cmax = self.plot_params.cmax
-  neutral_color = self.plot_params.neutral
-  dcbar = self.plot_params.dcbar
   if PTR_VALID(self.missing) then missing = *self.missing
-  if PTR_VALID(self.plot_params.dcbar_colors) and dcbar then DC_colors = *self.plot_params.dcbar_colors
-  if self.plot_params.oob_top eq 1 then oob_top_color = 1
-  if self.plot_params.oob_bot eq 1 then oob_bot_color = 1
+  if PTR_VALID(self.plot_params.dcbar_colors) then DC_COLORS = *self.plot_params.dcbar_colors
   
   info = w_gr_DataLevels(*self.data, $
     LEVELS=levels, $
-    N_LEVELS=n_levels, $
-    NEUTRAL_COLOR=neutral_color, $
+    N_LEVELS=self.plot_params.nlevels, $
+    NEUTRAL_COLOR=self.plot_params.neutral, $
     MISSING=missing, $
     COLORS=dc_colors, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
-    CMIN=cmin, $ 
-    CMAX=cmax, $
-    OOB_TOP_COLOR=oob_top_color, $ 
-    OOB_BOT_COLOR=oob_bot_color, $
-    DCBAR=dcbar) 
+    CMIN=self.plot_params.cmin, $ 
+    CMAX=self.plot_params.cmax, $
+    OOB_TOP_COLOR=*self.plot_params.oob_top_color, $ 
+    OOB_BOT_COLOR=*self.plot_params.oob_bot_color, $
+    OOB_TOP_ARROW=*self.plot_params.oob_top_arrow, $ 
+    OOB_BOT_ARROW=*self.plot_params.oob_bot_arrow, $
+    DCBAR=self.plot_params.dcbar) 
   
   if self.plot_params.contour_img then begin
     message, 'contour image, no'
@@ -2106,7 +2072,7 @@ pro w_Map::add_img, $
     wset, tmp
   endif
   
-  ; Std image
+    ; Std image
   if PTR_VALID(self.img) then begin
     if self.is_Shaded then begin
       cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
@@ -2118,9 +2084,14 @@ pro w_Map::add_img, $
     inf = *self.info
     
     do_shade = self.is_Shaded and self.shading_params.relief_factor ne 0
-    if (N_ELEMENTS(inf.colors) eq 0 or N_ELEMENTS(inf.colors) gt 128) and do_shade then begin
-      MESSAGE, 'w_Map INFO: _shading impossible - number of colors too high - max 128 (including neutral color and nmasks)', /INFORMATIONAL
+    if do_shade then begin
+      img = inf.loc
+      colors = inf.colors
+      if self.is_Masked then self->_add_mask, img, colors
+      if N_ELEMENTS(colors) gt 128 then begin
+        Message, 'To many colors to do shading (' + str_equiv(N_ELEMENTS(colors)) +', should be less or equal 128). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR', /INFORMATIONAL
       do_shade = FALSE
+      endif
     endif
     
     if do_shade then begin
@@ -2144,12 +2115,12 @@ pro w_Map::add_img, $
       endif else begin
         img = inf.loc
         colors = inf.colors
-        if self.is_Masked then self->_add_mask, img, colors    
+        if self.is_Masked then self->_add_mask, img, colors
         ncolors = N_ELEMENTS(colors)
         if ncolors eq 3 then row=1
-        if ncolors le 1 then Message, 'N_colors to small, sorry youll have to choose other levels'
-        if ncolors gt 256 then Message, 'N_colors to small, sorry youll have to choose other levels'
-        palette = w_gr_ColorToRGB(colors, ROW=row)  
+        if ncolors le 1 then Message, 'Too few colors. Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
+        if ncolors gt 256 then Message, 'Too many colors ('+str_equiv(ncolors)+'). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
+        palette = w_gr_ColorToRGB(colors, ROW=row)
         cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MARGIN=margin, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
       endelse
     endelse
@@ -2203,7 +2174,7 @@ end
 ;    Simple function to have a look at the plot.
 ;
 ;-   
-pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, MARGIN = margin
+pro w_Map::show_img, WINDOW=window, TITLE=title, MARGIN=margin
 
   ;--------------------------
   ; Set up environment
@@ -2216,24 +2187,24 @@ pro w_Map::show_img, RESIZABLE = resizable, TITLE = title, PIXMAP = pixmap, MARG
   
   DEVICE, RETAIN=2, DECOMPOSED=1  
   
-  if NOT KEYWORD_SET(title) then title = 'Map Plot'
-  if NOT KEYWORD_SET(margin) then margin = 0.07
+  SetDefaultValue, title, 'Map Plot'
+  SetDefaultValue, margin, 0.07
+  SetDefaultValue, window, 1
   
   xs = self.Xsize * (1.+2.*margin)
   ys = self.Ysize * (1.+2.*margin)
   
-  if KEYWORD_SET(RESIZABLE) then begin
+  if KEYWORD_SET(window) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
     cgControl, EXECUTE=0
-    cgWIN = true
   endif else begin
     cgDisplay, Xs, Ys, /FREE, /PIXMAP
     xwin = !D.WINDOW
   endelse
   
-  self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=cgWIN
+  self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=window
      
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
+  if KEYWORD_SET(window) then cgControl, EXECUTE=1 else begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
     cgDisplay, Xs, Ys, /FREE, Title=title
@@ -2255,7 +2226,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-pro w_Map::show_color_bar, RESIZABLE=resizable, VERTICAL=vertical, _REF_EXTRA=extra
+pro w_Map::show_color_bar, WINDOW=window, VERTICAL=vertical, _REF_EXTRA=extra
 
   ;--------------------------
   ; Set up environment
@@ -2268,29 +2239,33 @@ pro w_Map::show_color_bar, RESIZABLE=resizable, VERTICAL=vertical, _REF_EXTRA=ex
   
   DEVICE, RETAIN=2, DECOMPOSED=1    
   title = 'Color bar'
+  SetDefaultValue, window, 1
   
   if KEYWORD_SET(VERTICAL) then begin
     xs = self.Ysize * 0.2
     ys = self.Ysize * 0.75  
     _Position=[0.20,0.05,0.30,0.95]
+    _VERTICAL = 1
+    oob_fac = FLOAT(xs)/ys
   endif else begin
     xs = self.Xsize * 0.75
     ys = self.Xsize * 0.15  
     _Position=[0.10,0.4,0.90,0.6]
+    _VERTICAL = 0
+    oob_fac = FLOAT(ys)/xs
   endelse
   
-  if KEYWORD_SET(RESIZABLE) then begin
+  if KEYWORD_SET(WINDOW) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
     cgControl, EXECUTE=0
-    cgWIN = true
   endif else begin
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title=title
     xwin = !D.WINDOW
   endelse
+
+  self->add_color_bar, POSITION=_Position, WINDOW=window, OOB_FACTOR=oob_fac, VERTICAL=_VERTICAL, _EXTRA=extra
   
-  self->add_color_bar, POSITION=_Position, WINDOW=cgWIN, VERTICAL=0, _EXTRA=extra
-  
-  if KEYWORD_SET(RESIZABLE) then cgControl, EXECUTE=1 else begin 
+  if KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 else begin 
     img = Transpose(tvrd(/TRUE), [1,2,0])
     WDELETE, xwin
     cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title=title
@@ -2466,8 +2441,10 @@ PRO w_Map__Define
             contour_img    : FALSE         , $ ; the image is generated using contour
             dcbar          : 0B            , $ ; if a dc bar
             dcbar_colors   : PTR_NEW()     , $ ; if a dc bar, maybe colors
-            oob_top        : 0B            , $ ; if a top OOB color
-            oob_bot        : 0B            , $ ; if a bot OOB color
+            oob_top_color  : PTR_NEW()     , $ ; if a top OOB color
+            oob_bot_color  : PTR_NEW()     , $ ; if a bot OOB color
+            oob_top_arrow  : PTR_NEW()     , $ ; if a top OOB arrow
+            oob_bot_arrow  : PTR_NEW()     , $ ; if a bot OOB arrow
             cmin           : 0B            , $ ; color index in the table
             cmax           : 0B            , $ ; color index in the table
             neutral        : 0L            , $ ; neutral color
