@@ -30,24 +30,18 @@
 ;    BAR_TITLE: in, optional, type = string, default = 'Data levels'
 ;               The title of the color bar
 ;    BAR_TAGS: in, optional, type = string array
-;              the levels tags for the color bar (ignored if the color bar is continuous)
-;    BAR_FORMAT: in, optional, type = string, default = '(F5.1)'
+;              the levels tags for the color bar (only for the DCBAR case)
+;    BAR_FORMAT: in, optional, type = string
 ;                if `BAR_TAGS` is not set, the tags will be generated automatically from the data levels.
-;                set this keyword to a format accepted by the IDL `STRING()` function to format the tags. 
-;    BAR_SPACING: in, optional, type = float
-;                 This keyword gives the user some control over the location of the tags
-;                 with respect to the bar. 
-;                 The default spacing is 1.0. The location "spacer" is
-;                 multiplied by this amount. So, for example, to move the labels a little
-;                 further away from the color bar, make this number greater than 1 (e.g, 1.25).
-;                 To move the labels a little closer, use a number less than 1 (e.g, 0.75).
+;                set this keyword to a format accepted by the IDL `STRING()` function to format the tags.                
 ;    PIXMAP: in, optional, type = boolean
-;            set this keyword to plot everything in the pixmap buffer (usefull for automatic output generation)
-;    SOURCE_INFO: in, optional, type = string, default = ''
-;                 A subtitile to the plot. To generate multiple lines, use the '!C' symbol 
+;            set this keyword to make a plot without displaying it
+;            (usefull for automatic output generation - STD_PNG)
+;    SOURCE_INFO: in, optional, type = string, default = 'TU Berlin Chair of Climatology'
+;                 A subtitle to the plot. To generate multiple lines, use the '!C' symbol 
 ;                 (e.g: LEGEND_INFO = 'line1 blabla' + '!C' + 'line2 blabla')
-;    RESIZABLE: in, optional, type = boolean
-;               set this keyword to generate the plot in a cgWindow
+;    WINDOW: in, optional, type=boolean
+;            set this keyword to generate the plot in a cgWindow
 ;    PNG: in, optional, type = string
 ;         set to a filename to generate a png output (uses image magick)
 ;    JPEG: in, optional, type = string
@@ -55,7 +49,10 @@
 ;    EPS: in, optional, type = string
 ;         set to a filename to generate an encapsulated postscript output
 ;    PDF: in, optional, type = string
-;         set to a filename to generate a PDF output
+;         set to a filename to generate a PDF output (uses an external converting tool)
+;    IM_RESIZE: in, optional, type=integer, default=50
+;               Set this keyword to percentage that the raster image file created my ImageMagick
+;               from PostScript output should be resized.
 ;    STD_PNG: in, optional, type = string
 ;             set to a filename to generate a standard png output (without image magick)
 ;    STD_JPEG: in, optional, type = string
@@ -63,11 +60,12 @@
 ;    DISP_IMG: out, type = byte array
 ;              the plot image in RGB colours (dimensions: [3, nx, ny])
 ;    ANTI_ALIASING: in, optional, type = boolean
-;                   if set, an anti-aliasing is made "on the fly". 
-;                   (ignored if the `RESIZABLE`, `JPEG`, `EPS` or `PNG` keywords are set)
+;                   if set, an anti-aliasing is made "on the fly". This improves the quality 
+;                   of the displayed output.  
+;                   (ignored if the `WINDOW`, `PDF`, `JPEG`, `EPS` or `PNG` keywords are set)
 ;    XFACTOR: in, optional, type=float, default=1.
 ;             This is a way to control the X size of the plot. This factor will be multipled 
-;             to the default computed lenght of the plot
+;             to the default length of the plot (usefull if your colorbar is too wide for example)
 ;    NO_BAR: in, optional
 ;            set this keyword if you don't want to plot the color bar
 ;    NO_LEGEND: in, optional
@@ -78,38 +76,38 @@
 ;                   set this keyword if you don't want to add a scale bar to the plot
 ;    NO_PROJ_INFO: in, optional
 ;                  set this keyword if you don't want to add a projection information text to the plot
-;    IM_RESIZE: in, optional, type=integer, default=50
-;                Set this keyword to percentage that the raster image file created my ImageMagick
-;                from PostScript output should be resized.
-;
+;    OOB_FACTOR: in, optional, type=float, default=1.0
+;       The default is to make the length of the out-of-bounds triangle the
+;       same distance as the height (or width, in the case of a vertical
+;       color bar) of the color bar. If you would prefer a shorted triangle length, 
+;       set this keyword to a value less than zero (e.g., 0.5). If you prefer a 
+;       longer length, set this keyword to a value greater than zero. The "standard"
+;       length will be multiplied by this value.
 ;
 ; :History:
-;     Written by FaM, DiS, 2011.
-;
+;     Written by FaM, DiS, 2011, 2012.
 ;
 ;-
 pro w_standard_2d_plot, map, $
     TITLE=title,$
-    BACKGROUND=background,$
-    BAR_TITLE=bar_title,  $
+    BACKGROUND=background, $
+    BAR_TITLE=bar_title, $
     BAR_TAGS=bar_tags, $
     BAR_FORMAT=bar_format, $
-    BAR_OPEN=bar_open,  $
-    TOP_BAR_OPEN=top_bar_open, $
-    BOT_BAR_OPEN=bot_bar_open, $
     PIXMAP=pixmap,  $
     SOURCE_INFO=source_info, $
-    RESIZABLE=resizable, $
+    WINDOW=window, $
     PNG=png, JPEG=jpeg, EPS=eps, PDF=pdf, STD_PNG=std_png, STD_JPEG=std_jpeg, $
+    IM_RESIZE=im_resize, $
     DISP_IMG=disp_img, $
     ANTI_ALIASING=anti_aliasing, $
     XFACTOR=xfactor, $
+    OOB_FACTOR=oob_factor, $
     NO_BAR=no_bar, $
     NO_LEGEND=no_legend, $
     NO_SOURCE_INFO=no_source_info, $
     NO_SCALE_INFO=no_scale_info, $
-    NO_PROJ_INFO=no_proj_info, $
-    IM_RESIZE=im_resize
+    NO_PROJ_INFO=no_proj_info
     
   ;--------------------------
   ; Set up environment
@@ -127,10 +125,7 @@ pro w_standard_2d_plot, map, $
     message, WAVE_Std_Message('PLOT_MAP', OBJ='w_Map')
     return
   endif
-  if KEYWORD_SET(BAR_OPEN) then message, 'BAR_OPEN keyword is now obsolete. See w_map->set_plot_params() for controling the color bar', /INFORMATIONAL
-  if KEYWORD_SET(TOP_BAR_OPEN) then message, 'TOP_BAR_OPEN keyword is now obsolete. See w_map->set_plot_params() for controling the color bar', /INFORMATIONAL
-  if KEYWORD_SET(BOT_BAR_OPEN) then message, 'BOT_BAR_OPEN keyword is now obsolete. See w_map->set_plot_params() for controling the color bar', /INFORMATIONAL
-  
+   
   map->GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_c = tnt_c
   
   if n_elements(title) eq 0 then title = ''
@@ -158,11 +153,15 @@ pro w_standard_2d_plot, map, $
   
   sfac = 1. ; Font size factor
   
+  xyFactor = FLOAT(imgX)/imgY
+  SetDefaultValue, OOB_FACTOR, xyFactor
+  SetDefaultValue, WINDOW, 1
+  
   ; Anti aliasing
   do_as = FALSE
   if KEYWORD_SET(anti_aliasing) $
     and ~KEYWORD_SET(PNG) $
-    and ~KEYWORD_SET(RESIZABLE) $
+    and ~KEYWORD_SET(WINDOW) $
     and ~KEYWORD_SET(EPS) $
     and ~KEYWORD_SET(PDF) $
     and ~KEYWORD_SET(JPEG) then begin
@@ -175,17 +174,17 @@ pro w_standard_2d_plot, map, $
   endif
   
   ; Check what we want to do
-  if keyword_set(eps) or keyword_set(pdf) or keyword_set(png) or keyword_set(jpeg) and ~KEYWORD_SET(RESIZABLE) then begin
+  if keyword_set(eps) or keyword_set(pdf) or keyword_set(png) or keyword_set(jpeg) and ~KEYWORD_SET(WINDOW) then begin
 ;    if ~KEYWORD_SET(PIXMAP) then Message, 'With the PNG, PDF, JPEG and EPS keyword and without resizable windows, the window cannot be visible. Im setting PIXMAP.', /INFORMATIONAL
     PIXMAP = true
   endif
   if keyword_set(pixmap) then visible = FALSE else visible = TRUE
   cgWIN = FALSE
   
-  cgDisplay, XSIZE=xs, YSIZE=ys, /PIXMAP, TITLE=WTITLE, COLOR=background, /PIXMAP, /FREE, /WINDOW
+  cgDisplay, XSIZE=xs, YSIZE=ys, TITLE=WTITLE, COLOR=background, /PIXMAP, /FREE, /WINDOW
   xwin = !D.WINDOW
   
-  if visible and keyword_set(resizable) then begin
+  if visible and keyword_set(WINDOW) then begin
     WDELETE, xwin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTITLE=WTITLE, WOBJ=wobj, WBACKGROUND=background
     cgControl, EXECUTE=0, PS_DECOMPOSED=1 
@@ -210,7 +209,7 @@ pro w_standard_2d_plot, map, $
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   if ~KEYWORD_SET(NO_BAR) then begin
     map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
-      CHARSIZE=1.*sfac, CHARTHICK = 1.* sfac
+      CHARSIZE=1.*sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor
     ; Title bar
     cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
       WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
