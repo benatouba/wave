@@ -282,6 +282,8 @@ function w_gr_DataLevels, data, $
     
   @WAVE.inc
   compile_opt idl2
+  
+  ON_ERROR, 2
     
   if N_ELEMENTS(data) ne 0 then is_data = TRUE else is_data = FALSE  
   
@@ -540,7 +542,7 @@ function w_gr_DataLevels, data, $
   
   if is_Missing then _colors = [_neutral_color, _colors]
   
-  if N_ELEMENTS(_colors) gt 256 then Message, 'Internal error (more than 256 colors). Contact Fabi'
+  if N_ELEMENTS(_colors) gt 256 then Message, 'More than 256 colors. Impossible'
   
   ; some common sense
   _levels = _levels[SORT(_levels)]

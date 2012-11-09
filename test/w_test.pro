@@ -2580,8 +2580,8 @@ pro TEST_MODIS
     CTLOAD, 13
     d=map->set_Plot_Params(N_LEVELS=126, MIN_VALUE=-24, MAX_VALUE = 29)
 
-    map->show_img, /RESIZABLE
-    map->show_color_bar, /RESIZABLE
+    map->show_img, /WINDOW
+    map->show_color_bar, /WINDOW
     ok = DIALOG_MESSAGE('Do you see a modis projected image?', /QUESTION)
     if ok eq 'No' then error += 1
     
@@ -2589,8 +2589,8 @@ pro TEST_MODIS
     vv = lst->get_var('LST_Day_1km')-273.15
     d = map->set_data(vv, lst, missing = -273.15)
     
-    map->show_img, /RESIZABLE
-    map->show_color_bar, /RESIZABLE
+    map->show_img, /WINDOW
+    map->show_color_bar, /WINDOW
     ok = DIALOG_MESSAGE('Do you now see a subset of it?', /QUESTION)
     if ok eq 'No' then error += 1
         
@@ -2605,8 +2605,8 @@ pro TEST_MODIS
     
     d = map->set_Plot_Params(N_LEVELS=126)
     d = map->set_data(FLOAT(nels), dom2, MISSING=0)
-    map->show_img, /RESIZABLE
-    map->show_color_bar, /RESIZABLE
+    map->show_img
+    map->show_color_bar
     ok = DIALOG_MESSAGE('Do you now see a map containing the number of pixels per grid point?', /QUESTION)
     if ok eq 'No' then error += 1
     
@@ -2863,12 +2863,12 @@ pro TEST_W_MAP
     ok = map->set_wind(u, v, wrf, density = 3)
     if not ok then error +=1
     
-    map->show_img, /RESIZABLE
+    map->show_img
     ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
        
     ok = map->set_wind()
-    map->show_img, /RESIZABLE
+    map->show_img
     if not ok then error +=1
     ok = DIALOG_MESSAGE('Do you see a temperature plot without wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
@@ -2893,7 +2893,7 @@ pro TEST_W_MAP
     d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     if not ok then error +=1
     
-    map->show_img, /RESIZABLE
+    map->show_img
     ok = DIALOG_MESSAGE('Do you see a ZOOMED temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
@@ -2927,7 +2927,7 @@ pro TEST_Map_Plots
 ;  cgLoadCT, 34
 ;  ok = map->set_plot_params(N_LEVELS=5, MIN_VALUE=1,/OOB_TOP)
   
-  w_standard_2d_plot, map, /RESIZABLE
+  w_standard_2d_plot, map
   
       
   undefine, wrf, map
@@ -2967,7 +2967,6 @@ pro TEST_W_STANDARD_PLOT
                              BAR_TITLE='DegC',  $
                              /BAR_OPEN,  $
                              SOURCE_INFO='(c) FG Klimatologie', $
-                             /RESIZABLE,  $
                              PNG='test_400.png', $
                             IM_RESIZE = 75               
                             
@@ -3940,7 +3939,7 @@ pro TEST_MOSAIC
   OBJ_DESTROY, dom1  
   
   CTLOAD, 13
-  ok = map->set_plot_params(N_LEVELS=255, MAX_VALUE=240, MIN_VALUE=1)
+  ok = map->set_plot_params(N_LEVELS=254, MAX_VALUE=240, MIN_VALUE=1)
   
   ; Modiss
   !QUIET = 1
@@ -3948,22 +3947,22 @@ pro TEST_MOSAIC
   h25v05->getProperty, tnt_c = c
   data1 = FLTARR(c.nx, c.ny) + 20
   ok = map->set_data(data1, h25v05, MISSING=0)
-  map->show_img, /RESIZABLE, TITLE= 'h25v05'
+  map->show_img, TITLE= 'h25v05'
   h25v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h25v06.005.2008299213852.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h25v06->getProperty, tnt_c = c
   data2 = FLTARR(c.nx, c.ny) + 80
   ok = map->set_data(data2, h25v06, MISSING=0)
-  map->show_img , /RESIZABLE, TITLE= 'h25v06' 
+  map->show_img , TITLE= 'h25v06' 
   h26v05 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v05.005.2008299222304.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v05->getProperty, tnt_c = c
   data3 = FLTARR(c.nx, c.ny) + 160
   ok = map->set_data(data3, h26v05, MISSING=0)
-  map->show_img , /RESIZABLE, TITLE= 'h26v05' 
+  map->show_img , TITLE= 'h26v05' 
   h26v06 = OBJ_NEW('w_MODIS', FILE=fdir+'MODIS/MOSAIC/MOD10A1.A2008294.h26v06.005.2008299220621.hdf', SUBSET_LL=[89.,33.,94.,28.])
   h26v06->getProperty, tnt_c = c
   data4 = fLTARR(c.nx, c.ny) + 240
   ok = map->set_data(data4, h26v06, MISSING=0)
-  map->show_img  , /RESIZABLE, TITLE= 'h26v05'
+  map->show_img  , TITLE= 'h26v05'
   !QUIET = 0  
   
   grids = [h25v05,h25v06,h26v05,h26v05]  
@@ -3980,7 +3979,7 @@ pro TEST_MOSAIC
   if cnt ne 0 then error+=1
   
   ok = map->set_data(modata, mosaic, MISSING=0)
-  map->show_img, /RESIZABLE, TITLE= 'Mosaic'    
+  map->show_img, TITLE= 'Mosaic'    
   
   ok = DIALOG_MESSAGE('Do you see nice mosaic?', /QUESTION)
   if ok eq 'No' then error += 1
