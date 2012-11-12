@@ -422,7 +422,8 @@ end
 ;     Written by FaM, 2011.
 ;-   
 function w_Map::_draw_shapes, WINDOW=window
-  _W = KEYWORD_SET(WINDOW)
+  _w = KEYWORD_SET(WINDOW)
+  
   shapes = *(self.shapes)
   for i = 0LL, self.nshapes-1 do begin
     sh = shapes[i]
@@ -443,6 +444,7 @@ function w_Map::_draw_shapes, WINDOW=window
         roi->Add,roi_
         if next_is eq 0 then begin
           cgDRAW_ROI, roi, NOCLIP=0, /DATA,  Color=sh.color, ADDCMD=window
+          if ~ _w then OBJ_DESTROY, roi
           new_roi = 1
         endif
         cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window

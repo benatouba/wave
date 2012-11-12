@@ -1705,15 +1705,21 @@ function w_WRF::get_Var, Varid, $
       value = REFORM(tk[*,*,0,*]) * 0
       for t=0, nt-1 do begin
         tmptk = REFORM(tk[*,*,*,t], dims[0]*dims[1], dims[2])
-        tmpz = REFORM(z[*,*,*,t], dims[0]*dims[1], dims[2])        
-        tmppblh = REFORM(pblh[*,*,t], dims[0]*dims[1])        
-        tmpval = FLTARR(dims[0], dims[1])  
-        tmpcorr = FLTARR(dims[0], dims[1])  
+        tmpz = REFORM(z[*,*,*,t], dims[0]*dims[1], dims[2])
+        tmppblh = REFORM(pblh[*,*,t], dims[0]*dims[1])
+        tmpval = FLTARR(dims[0], dims[1])
+        tmpcorr = FLTARR(dims[0], dims[1])
         for e=0, N_ELEMENTS(value[*,*,0,0])-1 do begin
           ph = where(tmpz[e,*] le (tmppblh[e])[0], cnth)
           if cnth le 1 then ph = [0,1]
-          a = REGRESS((tmpz[e,ph])[*], (tmptk[e,ph])[*], CONST=b)
-          tmpval[e] = a * 2 + b 
+          tmptmptk = (tmptk[e,ph])[*]
+          if max(ABS(tmptmptk-mean(tmptmptk))) lt 0.00001 then begin
+            a = 0.
+            lr_corr = 1.
+          endif else begin
+            a = REGRESS((tmpz[e,ph])[*], tmptmptk, CONST=b)
+          endelse
+          tmpval[e] = a * 2 + b
         endfor
         value[*,*,t] = tmpval
       endfor

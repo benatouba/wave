@@ -1780,7 +1780,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'
     if _roi_mask_rule eq 3 then begin
       utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
-      _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+      if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
     endif
     index = 0
     is_int = 0
