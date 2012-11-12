@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ;  
-; Computes the altitudinal gradient for a product variable and stores it
+; Computes the pbl gradient for a product variable and stores it
 ; as a new product.
 ;        
 ; :Categories:
@@ -14,7 +14,7 @@
 ;
 ;+
 ; :Description:
-;    Computes the altitudinal gradient for a product variable and stores it
+;    Computes the pbl gradient for a product variable and stores it
 ;    as a new product in the same directory.
 ;    
 ;    The gradient is computed
@@ -28,15 +28,15 @@
 ;               the path to the product directory where to take the variable from
 ;    FORCE: in, optional
 ;           set this keyword to force overwriting old products
-;    KERNEL_SIZE: in, optional, default=3
-;                 size of the kernel where to compute the gradient 
-;                 should be uneven
+;    MIN_PBL: in, optional, default=2
+;             the gradient is computed below the pbl height. If the height is 
+;             too low, at least MIN_PBL levels are used for the computation
 ;
 ;-
-pro w_pr_AltitudinalGradient, varid, $
+pro w_pr_PBLGradient, $
     DIRECTORY=directory, $
     FORCE=force, $
-    KERNEL_SIZE=kernel_size
+    MIN_PBL=min_pbl
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -46,17 +46,19 @@ pro w_pr_AltitudinalGradient, varid, $
   
   wpr = OBJ_NEW('w_WPR', DIRECTORY=directory, /IGNORE_ALTERNATE)  
   if ~ OBJ_VALID(wpr) then return  
-    
+  
+  varid = 't2'
+     
   ;Check if the variable is available
-  if ~ wpr->hasVar(varid, INFO=info) then Message, 'Did not find variable: ' + str_equiv(varid)
+  if ~ wpr->hasVar('tk_eta', INFO=info) then Message, 'Did not find variable: ' + 'TK'
+  if ~ wpr->hasVar('pblh', INFO=info) then Message, 'Did not find variable: ' + 'PBLH'
+  if ~ wpr->hasVar('zag_eta', INFO=info) then Message, 'Did not find variable: ' + 'ZAG'
     
-  height = wpr->getVarData('hgt')
+  if N_ELEMENTS(MIN_PBL) eq 0 then min_pbl = 2
+  if min_pbl lt 2 then Message, '$MIN_PBL not valid'
   
-  if N_ELEMENTS(KERNEL_SIZE) eq 0 then kernel_size = 3
-  if kernel_size mod 2 ne 1 then Message, 'Kernel size not uneven'
-  
-  gvn = 'grad_' + STRLOWCASE(varid) + '_ks' + str_equiv(kernel_size)
-  grn = 'gradsig_' + STRLOWCASE(varid) + '_ks' + str_equiv(kernel_size)
+  gvn = 'gradpbl_mp' + str_equiv(min_pbl)
+  grn = 'gradpblsig_mp' + str_equiv(min_pbl)
     
   _y = wpr->getProperty('YEARS')
   for y=0, N_ELEMENTS(_y)-1 do begin
@@ -133,27 +135,51 @@ pro w_pr_AltitudinalGradient, varid, $
     ENDFOR
     
     vn = gvn
-    des_str = 'Altitudinal gradient from var ' + varId
-    des_str += '; KERNEL_SIZE='+str_equiv(KERNEL_SIZE)
+    des_str = 'PBL gradient from TK' 
+    des_str += '; MIN_PBL='+str_equiv(min_pbl)
     dObj->WriteVarDef, vn, ['west_east','south_north','time'], DATATYPE='FLOAT', GZIP=5, SHUFFLE=1
     dObj->WriteVarAttr, vn, 'long_name', des_str
     dObj->WriteVarAttr, vn, 'units', info.unit + '.m-1'
     dObj->WriteVarAttr, vn, 'agg_method', 'MEAN'
     
     vn = grn
-    des_str = 'Altitudinal gradient significance from var ' + varId
-    des_str += '; KERNEL_SIZE='+str_equiv(KERNEL_SIZE)
+    des_str = 'PBL gradient significance from TK'
+    des_str += '; MIN_PBL='+str_equiv(min_pbl)
     dObjSig->WriteVarDef, vn, ['west_east','south_north','time'], DATATYPE='FLOAT', GZIP=5, SHUFFLE=1
     dObjSig->WriteVarAttr, vn, 'long_name', des_str
     dObjSig->WriteVarAttr, vn, 'units', '-'
     dObjSig->WriteVarAttr, vn, 'agg_method', 'MEAN'
     
     ; Compute
-    data = reform(obj->get_Var(Nvars-1, t))
-    grad = w_altitudinal_gradient(data, height, $
-      KERNEL_SIZE=kernel_size, $
-      DEFAULT_VAL=0., $
-      SIG=sig)
+    tk = wpr->getVarData('tk_eta', t, nt, YEARS=(_y)[y])
+    z = wpr->getVarData('zag_eta', YEARS=(_y)[y])
+    pblh = wpr->getVarData('pblh', YEARS=(_y)[y])
+    dims = SIZE(tk, /DIMENSIONS)
+    grad = FLTARR(dims[0], dims[1], nt)
+    sig = FLTARR(dims[0], dims[1], nt)
+   
+    for t=0, nt-1 do begin
+      tmptk = REFORM(tk[*,*,*,t], dims[0]*dims[1], dims[2])
+      tmpz = REFORM(z[*,*,*,t], dims[0]*dims[1], dims[2])
+      tmppblh = REFORM(pblh[*,*,t], dims[0]*dims[1])
+      tmpgrad = FLTARR(dims[0], dims[1])
+      tmpcorr = FLTARR(dims[0], dims[1])
+      for e=0, dims[0]*dims[1]-1 do begin
+        ph = where(tmpz[e,*] le (tmppblh[e])[0], cnth)
+        if cnth le 1 then ph = indgen(min_pbl)
+        tmptmptk = (tmptk[e,ph])[*]
+        if max(ABS(tmptmptk-mean(tmptmptk))) lt 0.000001 then begin
+          a = 0.
+          lr_corr = 1.
+        endif else begin
+          a = REGRESS((tmpz[e,ph])[*], tmptmptk, CORRELATION=lr_corr)
+        endelse
+        tmpgrad[e] = a
+        tmpcorr[e] = lr_corr
+      endfor
+      grad[*,*,t] = tmpgrad
+      sig[*,*,t] = tmpcorr
+    endfor  
        
     ; Fill with data
     dObj->SetMode, /DATA

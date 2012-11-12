@@ -15,6 +15,8 @@
 ; :Keywords:
 ;    DIRECTORY: in, required
 ;               the path to the WRF files directory. either m, d, h or y
+;    IGNORE_ALTERNATE: in, optional
+;                      set this keyword to ignore the 2d_alternate folder in the product dir.
 ;    _EXTRA: in, optional
 ;            any keyword accepted by `w_GISdata::defineSubset`
 ;            
@@ -23,7 +25,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_WPR::init, DIRECTORY=directory, _EXTRA=extra
+function w_WPR::init, DIRECTORY=directory, IGNORE_ALTERNATE=ignore_alternate, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
@@ -57,6 +59,14 @@ function w_WPR::init, DIRECTORY=directory, _EXTRA=extra
     
   file_list=FILE_SEARCH([self.directory, statdir], '*_' + self.hres +'_*.nc', count=filecnt)  
   if filecnt eq 0 then MESSAGE, 'No files in the directory?'  
+  
+  if KEYWORD_SET(IGNORE_ALTERNATE) then begin
+    matches = Where(StrMatch(file_list, '*2d_alternate*'), cm)
+    if cm ne 0 then begin
+      utils_array_remove, matches, file_list
+      filecnt = N_ELEMENTS(file_list)
+    endif
+  endif
     
   fnames = FILE_BASENAME(file_list, '.nc')
   years = LONARR(filecnt)
@@ -85,8 +95,9 @@ function w_WPR::init, DIRECTORY=directory, _EXTRA=extra
   vars = REPLICATE(self->_varStruct(), nv)
   for i=0, nv-1 do begin
     v = vars[i]
-    v.type = FILE_BASENAME(FILE_DIRNAME(file_list[uv[i]]))  
-    
+    v.type = FILE_BASENAME(FILE_DIRNAME(file_list[uv[i]]))
+    if v.type eq '2d_alternate' then v.type = '2d'
+      
     id = NCDF_OPEN(file_list[uv[i]])
     NCDF_ATTGET, id , 'VARNAME', Value, /GLOBAL
     v.name = STRING(Value)
