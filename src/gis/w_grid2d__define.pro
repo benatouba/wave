@@ -1508,6 +1508,10 @@ end
 ;    NO_COORD_SHIFT: in, optional, type = boolean
 ;                    prevent the shift of the coordinates of a half pixel.
 ;
+;    MARK_INTERIOR: in, optional, type = boolean
+;                   this is for shapes with islands in it, and if you want
+;                   to make ROIs with them or filled plot them
+;
 ;    NO_PARTS: in, optional, type = boolean
 ;              If entities have parts in it, don't treat them as parts (usefull for polygon /FILL)
 ;
@@ -1542,7 +1546,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   REMOVE_ENTITITES=remove_entitites, $
   KEEP_ENTITITES=keep_entitites, $
   NO_COORD_SHIFT=no_coord_shift, $
-  NO_PARTS=no_parts
+  MARK_INTERIOR=mark_interior
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1557,11 +1561,10 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
   
   if N_ELEMENTS(shp_src) eq 0 then begin
-;   MESSAGE, '$SHP_SRC is not set. Setting to WGS-84' , /INFORMATIONAL
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
   endif
   
-  _f = KEYWORD_SET(NO_PARTS)
+  _mi = KEYWORD_SET(MARK_INTERIOR)
   
   if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
   if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
@@ -1593,9 +1596,9 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   N_ent = N_ELEMENTS(entities)
   n_coord = 0L
   
-  mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
-  mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE) 
-  mg_conn = obj_new('MGcoArrayList', type=IDL_LONG) 
+  mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE)
+  mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE)
+  mg_conn = obj_new('MGcoArrayList', type=IDL_LONG)
   for i=0L, N_ent-1 do begin
     ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)
     if not ptr_valid(ent.vertices) then continue
@@ -1614,14 +1617,22 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
     endif
     
     mg_x->add, _x
-    mg_y->add, _y    
+    mg_y->add, _y
     
-    if _F then begin
-      n_vert = ent.n_vertices
-      mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
-      n_coord += n_vert
+    parts = *ent.parts
+    if _mi then begin
+      for k=0L, ent.n_parts-1 do begin
+        if k eq ent.n_parts-1 then begin
+          n_vert = ent.n_vertices - parts[k]
+          next_is = 0
+        endif else begin
+          n_vert = parts[k+1]-parts[k]
+          next_is = 1
+        endelse
+        mg_conn->add, [n_vert, next_is, (lindgen(n_vert)) + n_coord]
+        n_coord += n_vert
+      endfor
     endif else begin
-      parts = *ent.parts
       for k=0L, ent.n_parts-1 do begin
         if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
         mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
@@ -1764,29 +1775,41 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   if KEYWORD_SET(NO_ERASE) and self.is_roi then _mask = *self.roi
   
   if do_shape then begin
-    self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, /NO_COORD_SHIFT
+    self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
+      /NO_COORD_SHIFT, /MARK_INTERIOR
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'
+    if _roi_mask_rule eq 3 then begin
+      utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
+      _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+    endif
     index = 0
-    if _roi_mask_rule eq 3 then utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
+    is_int = 0
     while index lt N_ELEMENTS(conn) do begin
       nbElperConn = conn[index]
-      idx = conn[index+1:index+nbElperConn]
-      index += nbElperConn + 1
-      roi = OBJ_NEW('IDLanROI', x[idx], y[idx])
-      if _roi_mask_rule eq 3 then begin
-        if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
-        pok = where(roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=2), cntok)
-        if cntok eq 0 then continue
-        _i = i[pok]
-        _j = j[pok]
-        cont = roi->ContainsPoints(_i, _j)
-        p_in = where(cont ge 1, cnt_in)
-        if cnt_in ne 0 then _mask[_i[p_in],_j[p_in]] = 1
-      endif else begin
-        if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
-        else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
-      endelse
-      OBJ_DESTROY, roi
+      next_is = conn[index+1]
+      idx = conn[index+2:index+nbElperConn+1]
+      index += nbElperConn + 2
+      if ~ OBJ_VALID(roi) then roi = OBJ_NEW('IDLanROIGroup')
+      roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx])
+      roi_->SetProperty, INTERIOR=is_int
+      roi->Add,roi_
+      if next_is eq 0 then begin
+        if _roi_mask_rule eq 3 then begin
+          pok = where(roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=2), cntok)
+          if cntok ne 0 then begin
+            _i = i[pok]
+            _j = j[pok]
+            cont = roi->ContainsPoints(_i, _j)
+            p_in = where(cont ge 1, cnt_in)
+            if cnt_in ne 0 then _mask[_i[p_in],_j[p_in]] = 1
+          endif
+        endif else begin
+          if N_ELEMENTS(_mask) eq 0 then _mask = roi->ComputeMask(DIMENSIONS=[self.tnt_c.nx,self.tnt_c.ny], MASK_RULE=_roi_mask_rule) $
+          else _mask = roi->ComputeMask(MASK_IN=_mask, MASK_RULE=_roi_mask_rule)
+        endelse
+        OBJ_DESTROY, roi
+      endif
+      is_int = next_is
     endwhile
     _mask = _mask < 1B
   endif

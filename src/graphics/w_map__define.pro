@@ -421,20 +421,42 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-   
-function w_Map::_draw_shapes, WINDOW=window  
-  
-  shapes = *(self.shapes)    
+function w_Map::_draw_shapes, WINDOW=window
+  _W = KEYWORD_SET(WINDOW)
+  shapes = *(self.shapes)
   for i = 0LL, self.nshapes-1 do begin
     sh = shapes[i]
     index = 0
-    while index lt N_ELEMENTS((*sh.conn)) do begin    
-      nbElperConn = (*sh.conn)[index]      
-      idx = (*sh.conn)[index+1:index+nbElperConn]      
-      index += nbElperConn + 1       
-      _coord = (*sh.coord) [*,idx]     
-      if sh.fill then cgColorFill, _coord[0,*], _coord[1,*], /DATA, Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window  $
-      else cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window
-    endwhile  
+    if sh.fill then begin
+      is_int = 0
+      new_roi = 1
+      while index lt N_ELEMENTS((*sh.conn)) do begin
+        nbElperConn = (*sh.conn)[index]
+        next_is = (*sh.conn)[index+1]
+        idx = (*sh.conn)[index+2:index+nbElperConn+1]
+        index += nbElperConn + 2
+        _coord = (*sh.coord) [*,idx]
+        if new_roi then roi = OBJ_NEW('IDLanROIGroup')
+        new_roi = 0
+        roi_ = OBJ_NEW('IDLanROI', _coord[0,*], _coord[1,*])
+        roi_->SetProperty, INTERIOR=is_int
+        roi->Add,roi_
+        if next_is eq 0 then begin
+          cgDRAW_ROI, roi, NOCLIP=0, /DATA,  Color=sh.color, ADDCMD=window
+          new_roi = 1
+        endif
+        cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window
+        is_int = next_is
+      endwhile
+    endif else begin
+      while index lt N_ELEMENTS((*sh.conn)) do begin
+        nbElperConn = (*sh.conn)[index]
+        idx = (*sh.conn)[index+1:index+nbElperConn]
+        index += nbElperConn + 1
+        _coord = (*sh.coord) [*,idx]
+        cgPlots, _coord[0,*], _coord[1,*], /DATA,  Color=sh.color, THICK=sh.thick, LINESTYLE=sh.style, NOCLIP=0, WINDOW=window
+      endwhile
+    endelse
   endfor
   
   return, 1
@@ -1171,7 +1193,7 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    return, 1
   endif
   
-  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, NO_PARTS=fill
+  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, MARK_INTERIOR=fill
   n_coord = N_ELEMENTS(x) 
   if n_coord eq 0 then return, 0
   coord = [1#x,1#y]

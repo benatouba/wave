@@ -182,7 +182,7 @@ function w_gr_DataLevels_dataloc, info, data
     ; check for the "on the bound" case 
     ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
     if cnton ne cnt_ooTop then begin
-      Message, 'Internal error by OO_Top. Fabi ist schuld. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
+      Message, 'Internal error by OO_Top. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
     endif
     if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-2
   endif
