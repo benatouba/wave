@@ -1777,7 +1777,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   if do_shape then begin
     self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
       /NO_COORD_SHIFT, /MARK_INTERIOR
-    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile'
+    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile: ' + shape
     if _roi_mask_rule eq 3 then begin
       utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j
       if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
@@ -1789,7 +1789,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       next_is = conn[index+1]
       idx = conn[index+2:index+nbElperConn+1]
       index += nbElperConn + 2
-      if ~ OBJ_VALID(roi) then roi = OBJ_NEW('IDLanROIGroup')
+      if ~ OBJ_VALID(roi) then roi = OBJ_NEW('w_ROIGroup')
       roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx])
       roi_->SetProperty, INTERIOR=is_int
       roi->Add,roi_
