@@ -43,8 +43,8 @@ function w_make_mercamap, $
 ;   a, b, lat0, lon0, x0, y0, k0, [datum], name
 
   str = '3, '
-  str += Number_Formatter(wgs.ellipsoid.a) + ', '
-  str += Number_Formatter(wgs.ellipsoid.b) + ', '
+  str += cgNumber_Formatter(wgs.ellipsoid.a) + ', '
+  str += cgNumber_Formatter(wgs.ellipsoid.b) + ', '
   str += str_equiv(center[1]) + ', '
   str += str_equiv(center[0]) + ', '
   str += '0, 0, 0.9996, WGS-84, Mercator'

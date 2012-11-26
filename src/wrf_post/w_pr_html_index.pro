@@ -21,7 +21,7 @@ pro w_pr_html_index_downfile, sfile, file_list, www_path, dir, si, filecnt, RES=
     endfor
   endfor
   filecnt = N_ELEMENTS(my_file_list)
-  si = Number_Formatter(si/1000000000d) + ' Gb'
+  si = cgNumber_Formatter(si/1000000000d) + ' Gb'
   
   OPENW, lu, sfile, /GET_LUN
     
@@ -175,7 +175,7 @@ pro w_pr_html_index, FILE=file, PR_ROOT_DIR=pr_root_dir
       for l=0, N_ELEMENTS(__file_list)-1 do begin
         f = __file_list[l]
         s = FILE_INFO(dir + f)
-        s = Number_Formatter(s.SIZE/1000000.) + ' Mb'
+        s = cgNumber_Formatter(s.SIZE/1000000.) + ' Mb'
         printf, lu, '<a href="'+ www_path + f + '">' + FILE_BASENAME(f) + '</a> ('+s+')<br>'
       endfor
     endfor

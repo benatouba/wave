@@ -2777,16 +2777,16 @@ function TS_FIT_SERIES, data1, time1,  data2, time2, CUMUL = cumul, VERBOSE = ve
   mt0 = MIN(qms2) > MIN(qms1)
   mt1 = MAX(qms2) < MAX(qms1)
   
-  p0 = where(qms1 eq mt0)
-  if mt0 eq 0 then Message, 'Time0 not found in ts1'
-  p1 = where(qms1 eq mt1)
-  if mt1 eq 0 then Message, 'Time1 not found in ts1'
+  p0 = where(qms1 eq mt0, n)
+  if n eq 0 then Message, 'Time0 not found in ts1'
+  p1 = where(qms1 eq mt1, n)
+  if n eq 0 then Message, 'Time1 not found in ts1'
   data1 = _data1[p0:p1]
   time1 = qms1[p0:p1]
-  p0 = where(qms2 eq mt0)
-  if mt1 eq 0 then Message, 'Time0 not found in ts2'
-  p1 = where(qms2 eq mt1)
-  if mt1 eq 0 then Message, 'Time1 not found in ts2'
+  p0 = where(qms2 eq mt0, n)
+  if n eq 0 then Message, 'Time0 not found in ts2'
+  p1 = where(qms2 eq mt1, n)
+  if n eq 0 then Message, 'Time1 not found in ts2'
   data2 = _data2[p0:p1]
   time2 = qms2[p0:p1]
   

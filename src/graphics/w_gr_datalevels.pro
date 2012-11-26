@@ -104,12 +104,12 @@ pro w_gr_DataLevels_show, info
     
     ;Histogram
     if info.dcbar then begin
-      labels = Number_Formatter(info.levels)
+      labels = cgNumber_Formatter(info.levels)
       if info.is_Missing then labels = ['Miss', labels]
     endif else begin
-      labels = Number_Formatter(info.levels[0:N_ELEMENTS(info.levels)-2]) + ' to ' + Number_Formatter(info.levels[1:*])
-      if info.is_ooBotColor then labels = ['< '+ Number_Formatter(info.levels[0]), labels]
-      if info.is_ooTopColor then labels = [labels, '> '+Number_Formatter(MAX(info.levels))]
+      labels = cgNumber_Formatter(info.levels[0:N_ELEMENTS(info.levels)-2]) + ' to ' + cgNumber_Formatter(info.levels[1:*])
+      if info.is_ooBotColor then labels = ['< '+ cgNumber_Formatter(info.levels[0]), labels]
+      if info.is_ooTopColor then labels = [labels, '> '+cgNumber_Formatter(MAX(info.levels))]
       if info.is_Missing then labels = ['Missing', labels]
     endelse
     if N_ELEMENTS(labels) le 60 then begin

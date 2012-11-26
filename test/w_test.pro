@@ -2577,7 +2577,7 @@ pro TEST_MODIS
     d = map->set_map_params(INTERVAL=5)
     d = map->set_shape_file(SHPFILE= w_test_file_directory() + '/MAPPING/namco_shore.shp', SHP_SRC=utm, REMOVE_ENTITITES=53)    
     d = map->set_data(lst->get_var('LST_Day_1km')-273.15, lst, missing = -273.15)
-    CTLOAD, 13
+    cgLoadct, 13
     d=map->set_Plot_Params(N_LEVELS=126, MIN_VALUE=-24, MAX_VALUE = 29)
 
     map->show_img, /WINDOW
@@ -3938,7 +3938,7 @@ pro TEST_MOSAIC
   map = OBJ_NEW('w_Map', dom1, XSIZE= 400)
   OBJ_DESTROY, dom1  
   
-  CTLOAD, 13
+  cgLoadct, 13
   ok = map->set_plot_params(N_LEVELS=254, MAX_VALUE=240, MIN_VALUE=1)
   
   ; Modiss

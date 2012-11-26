@@ -138,7 +138,7 @@ pro w_skewPTdiagram, temperature, pressure, DEWPOINT=dewpoint, HEIGHT=height, AN
   ; plot isohypses
   if N_ELEMENTS(height) ne 0 then begin
     hticks=interpol(height, pressure, pticks)/1000.
-    cgAxis, /YAxis, YTICKS=7, YTICKV=pticks, YLOG=1, YTICKNAME=Number_Formatter(hticks), WINDOW=window, YTICKLEN=0., YTITLE='height [km]'
+    cgAxis, /YAxis, YTICKS=7, YTICKV=pticks, YLOG=1, YTICKNAME=cgNumber_Formatter(hticks), WINDOW=window, YTICKLEN=0., YTITLE='height [km]'
   endif
   
   cgControl, EXECUTE=1

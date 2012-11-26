@@ -86,7 +86,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
       endfor
     endfor
   endfor
-  si = Number_Formatter(si/1000000000d) + ' Gb'
+  si = cgNumber_Formatter(si/1000000000d) + ' Gb'
   print, 'Done. Number of files copied: ' + str_equiv(nf) + '. Total size copied: ' + si
     
 end
