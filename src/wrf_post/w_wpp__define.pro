@@ -768,8 +768,7 @@ pro w_WPP::_add_var_to_mean_file, ts
     endcase 
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))
-    if self.active_agg eq 'm' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
-    if self.active_agg eq 'y' then for j=0, N_ELEMENTS(vartime)-1 do vartime[j] = MAKE_REL_DATE(vartime[j], MONTH=1)
+    if self.active_agg eq 'm' or self.active_agg eq 'y' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
     TS_AGG_GRID, data, vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
     sig = sig / float(varnt)
@@ -1248,7 +1247,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
     case (agg) of
       'd': self->_set_active_var, vars[i], year, 'h'
       'm': self->_set_active_var, vars[i], year, 'd'
-      'y': self->_set_active_var, vars[i], year, 'm'
+      'y': self->_set_active_var, vars[i], year, 'd'
     endcase    
     hfile = self.active_ofile
     if ~ FILE_TEST(hfile) then message, 'Necessary file not here. You sure you did everything in the right order?'
