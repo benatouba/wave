@@ -24,7 +24,7 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, _EXTRA=ex
   obj_destroy, template
   
   if KEYWORD_SET(COMPRESS) then begin
-    chunk_dimensions = [nx, ny, cfiles]
+    chunk_dimensions = [nx, ny, 1]
     gzip = 5
     shuffle = 1
     netcdf4_format = 1
