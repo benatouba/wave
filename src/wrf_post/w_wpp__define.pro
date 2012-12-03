@@ -771,6 +771,7 @@ pro w_WPP::_add_var_to_mean_file, ts
     endcase 
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))   
+    if str_equiv(agg_method) eq 'WIND' then agg_method = 'MEAN'
     ; Set some tolerance level to avoid underflows
     pu = where(data lt (machar()).eps, cntu)
     if cntu ne 0 then data[pu] = 0.    
