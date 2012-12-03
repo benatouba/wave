@@ -648,6 +648,7 @@ pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset, MARGIN=margin
     subset = [xmin, (xmax-xmin)+1, ymin, (ymax-ymin)+1]
     
     if arg_okay(MARGIN, /INTEGER) then subset += [-margin,margin*2,-margin,margin*2]
+            
   endif
   
 end

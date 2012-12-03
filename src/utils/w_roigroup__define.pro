@@ -44,7 +44,6 @@ pro w_ROIGroup::_filter_rois
       self->remove,  r
       OBJ_DESTROY, r
     endfor
-    undefine, all
   endif
   
 end

@@ -293,8 +293,8 @@ function w_gr_DataLevels, data, $
   user_Min = N_ELEMENTS(MIN_VALUE) ne 0
   user_MinMax = user_Max and user_Min
   user_dcbar = BYTE(KEYWORD_SET(DCBAR))
-  SetDefaultValue, oob_top_arrow, ~ user_dcbar
-  SetDefaultValue, oob_bot_arrow, ~ user_dcbar
+  SetDefaultValue, oob_top_arrow, 0
+  SetDefaultValue, oob_bot_arrow, 0
   oob_top_str = arg_okay(oob_top_color, TYPE=IDL_STRING)
   oob_bot_str = arg_okay(oob_bot_color, TYPE=IDL_STRING)
 

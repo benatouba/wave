@@ -998,14 +998,14 @@ function w_GEO_nc::define_subset, SUBSET = subset
     self.cropped = 'FALSE'
   endif else begin
     if ~ arg_okay(SUBSET, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('SUBSET', /ARG)
-    do_init = SUBSET[0] ne 0
+    do_init = SUBSET[1] ne 0
     if ~ do_init then do_init = SUBSET[1] ne 0
     if ~ do_init then do_init = SUBSET[2] ne 0
     if ~ do_init then do_init = SUBSET[3] ne 0
     if do_init then begin    
       if SUBSET[0] lt 0 or SUBSET[0] gt ((*self.dimSizes)[self.XID]) then MESSAGE, WAVE_Std_Message('SUBSET[0]', /RANGE)
-      if SUBSET[1] lt 0 or SUBSET[1] gt ((*self.dimSizes)[self.XID] - SUBSET[0]) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
-      if SUBSET[2] lt 1 or SUBSET[2] gt ((*self.dimSizes)[self.YID]) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
+      if SUBSET[1] lt 1 or SUBSET[1] gt ((*self.dimSizes)[self.XID] - SUBSET[0]) then MESSAGE, WAVE_Std_Message('SUBSET[1]', /RANGE)
+      if SUBSET[2] lt 0 or SUBSET[2] gt ((*self.dimSizes)[self.YID]) then MESSAGE, WAVE_Std_Message('SUBSET[2]', /RANGE)
       if SUBSET[3] lt 1 or SUBSET[3] gt ((*self.dimSizes)[self.YID] - SUBSET[2]) then MESSAGE, WAVE_Std_Message('SUBSET[3]', /RANGE)
       self.subset  = SUBSET
       self.cropped = 'TRUE'
