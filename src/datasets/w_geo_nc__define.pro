@@ -357,6 +357,8 @@ end
 ;       if set, it defines the first time of the variable timeserie
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
+;   HOUROFDAY: in, optional, type = long
+;              to get strides of the time serie at specific hours of day
 ;   STATIC: in, optional, boolean
 ;           set this keyword to automaticaly retrieve only the first
 ;           element of the variable in the time dimension
@@ -391,6 +393,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                             nt,  $
                             T0=t0, $
                             T1=t1, $
+                            HOUROFDAY=hourofday, $
                             STATIC=static , $
                             ZLEVELS=zlevels, $
                             ZDIM_ID=zdim_id, $
@@ -426,6 +429,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   ndims = N_ELEMENTS(dims)
   count = LONARR(ndims) - 1
   offset = LONARR(ndims) - 1
+  stride = LONARR(ndims) + 1
   
   if self.cropped ne 'FALSE' and self.cropped ne '' then begin
     p = where(dimnames eq (*self.dimNames)[self.XID], cnt)
@@ -470,7 +474,23 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
       time = time[p0:p1]
       offset[p[0]] = p0
       count[p[0]] = p1 - p0 + 1
-                  
+      
+      ; Check for stride
+      if N_ELEMENTS(HOUROFDAY) eq 1 then begin
+        ok = CHECK_WTIME(time, OUT_ABSDATE=absd)
+        phour = where(absd.hour eq hourofday, cnthour)
+        if cnthour eq 0 then message, 'Hour of day not found in the time serie'
+        if cnthour lt 2 then message, 'You asking me strange things: not even 2 elements with hour of day?'
+        mphour = min(phour)      
+        time = time[phour]  
+        phour = phour-mphour
+        diffs = phour[1:*] - phour[0:cnthour-2]
+        dh = phour[1]-phour[0]
+        if total(diffs - dh) ne 0 then Message, 'Timeserie not regular!'
+        offset[p[0]] = offset[p[0]] + mphour
+        count[p[0]] = cnthour
+        stride[p[0]] = dh           
+      endif                  
     endif else begin ; the variable has no time dimension
       time = self.t0
     endelse
@@ -516,7 +536,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
   pnok = where(count lt 0, cnt)
   if cnt ne 0 then for i=0, cnt-1 do count[pnok[i]] = dims[pnok[i]]
     
-  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset, $
+  value = self->w_NCDF::get_Var(vid, COUNT=count, OFFSET=offset, STRIDE=stride, $
                                      units = units, $
                                      description = description, $
                                      varname = varname , $

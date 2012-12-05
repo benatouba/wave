@@ -800,12 +800,15 @@ end
 ;    MONTH: in, optional, type = long
 ;           set this keyword to a date to obtain a subset of the WPR timeserie 
 ;           for a specific month only
+;    HOUROFDAY: in, optional, type = long
+;               set this keyword to a date to obtain a subset of the WPR timeserie 
+;               for a specific hour of day only
 ;            
 ; :Returns:
 ;   the data array
 ;   
 ;-
-function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month
+function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month, HOUROFDAY=hourofday
 
   ; Set up environnement
   @WAVE.inc
@@ -982,8 +985,10 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       do_ts = N_ELEMENTS(T0) eq 1 or N_ELEMENTS(T1) eq 1
       do_y = N_ELEMENTS(YEARS) ne 0
       do_m = N_ELEMENTS(MONTH) ne 0
+      do_h = N_ELEMENTS(HOUROFDAY) ne 0
       if (do_y and do_ts) then message, 'Incompatible keywords (T0 or T1 and YEARS)'
       if (do_m and do_ts) then message, 'Incompatible keywords (T0 or T1 and MONTH)'
+      if do_h and self.tres ne 'h' then message, 'Incompatible keywords (HOUROFDAY) with product time resolution: ' + self.tres
       
       _y = *self.years
       if do_y then _y = years
@@ -1027,7 +1032,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
           _t0 = ot[min(pmo)]
           _t1 = ot[max(pmo)]          
         endif
-        tmp = reform(obj->get_Var(info.name, t, ZLEVELS=zlevels, T0=_t0, T1=_t1))      
+        tmp = reform(obj->get_Var(info.name, t, ZLEVELS=zlevels, T0=_t0, T1=_t1, HOUROFDAY=hourofday))      
         s = SIZE(tmp, /DIMENSIONS)
         nd = N_ELEMENTS(s)                
         if (STRMID(info.type, 0, 2) eq '2d') or (STRMID(info.type, 0, 2) eq '3d' and n_elements(zlevels) eq 1) then begin
