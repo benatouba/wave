@@ -5,30 +5,13 @@
 ; 
 ; The basic principle of this object is that input data points and
 ; associated time stamps are internaly stored and retrieved on demand
-; for any time period selected by the user with the `setPeriod` procedure.
-; 
+; for any time period selected by the user with the `setPeriod` procedure. 
 ; A timeserie is therefore defined by three explicit parameters: t0, t1 and
 ; the timestep. The later can be either a regular timestep defined by its "dms" 
 ; (delta milli-second) or a monthly or yearly timestep.
 ; 
-; Definition::
-;       
-;         class = {w_ts_Data              , $
-;                  name:           ''     , $ ; The name of the variable
-;                  description:    ''     , $ ; A short description of the variable
-;                  unit:           ''     , $ ; The variable unit
-;                  type:           0L     , $ ; The variable type (IDL)
-;                  nt:             0L     , $ ; Number of times
-;                  t0:             0LL    , $ ; Start Time
-;                  t1:             0LL    , $ ; End Time
-;                  step:           ''     , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
-;                  timestep :      0LL    , $ ; Timestep. Unit is millisecond, or MONTH, or YEAR
-;                  agg_method: 'NONE'     , $ ; Aggregation method. See `TS_AGG`
-;                  validity:  'POINT'     , $ ; Temporal validity of the data values ('INTEGRAL' or 'POINT')
-;                  missing: PTR_NEW()     , $ ; Missing data value
-;                  time:    PTR_NEW()     , $ ; Array of QMS/ABS_DATE
-;                  data:    PTR_NEW()       $ ; Array of data values
-;                  }
+; Other statistical tools are therefore also available, for example: aggregation,
+; interpolation, filtering, plot, etc.
 ;
 ; :Categories:
 ;    Timeseries, Objects
@@ -45,8 +28,8 @@
 ;    `data` and `time` arrays are not required to initialize the object, but 
 ;    the instance will be operational only after the first call to add_data()
 ;    It is also a good idea to give values to the `NAME`,`UNIT`,`VALIDITY`,
-;    `AGG_METHOD`,and `MISSING` keywords. If the timeserie is exotic, 
-;    the `STEP` and `TIMESTEP` keywords are highly recommended.
+;    `AGG_METHOD`, and `MISSING` keywords. If the timeserie is exotic, 
+;    the `STEP` and `TIMESTEP` keywords are recommended.
 ;
 ; :Params:
 ;    data: in, optional
@@ -67,12 +50,6 @@
 ;              Temporal validity of the data values ('INTEGRAL' or 'POINT')
 ;    AGG_METHOD: in, optional, type=string
 ;                Aggregation method. See `TS_AGG`
-;    T0: in, optional, type=qms/{ABS_DATE}
-;        The first time of the period (see `w_ts_Data::setPeriod`)
-;        Ignored if `data` and `time` are not set
-;    T1: in, optional, type=qms/{ABS_DATE}
-;        The last time of the period (see `w_ts_Data::setPeriod`)
-;        Ignored if `data` and `time` are not set
 ;    STEP: in, optional, type=string
 ;          Either IRREGULAR, TIMESTEP, MONTH or YEAR (see `w_ts_Data::addData`)
 ;          Ignored if `data` and `time` are not set
@@ -89,13 +66,11 @@ function w_ts_Data::init, data, time, NAME=name, $
                                       UNIT=unit, $
                                       VALIDITY=validity, $
                                       AGG_METHOD=agg_method, $
-                                      T0=t0, $
-                                      T1=t1, $
                                       STEP=step, $
                                       TIMESTEP=timestep, $ 
                                       MISSING=missing
   
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
       
@@ -119,7 +94,6 @@ function w_ts_Data::init, data, time, NAME=name, $
   self.validity = _validity
   
   if N_PARAMS() eq 2 then self->addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing
-  self->setPeriod, T0=t0, T1=t1
   
   return, 1
     
@@ -132,9 +106,9 @@ end
 ;-
 pro w_ts_Data::cleanup
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
 
   PTR_FREE, self.time
   PTR_FREE, self.data
@@ -186,9 +160,10 @@ pro w_ts_Data::getProperty, NAME=name, $
                             MISSING=missing, $
                             AGG_METHOD=agg_method
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   NAME=self.name
   DESCRIPTION=self.description
@@ -211,7 +186,6 @@ end
 ;    the properties accessible with the homonym routine are 
 ;    accessible here.
 ;
-;
 ; :Params:
 ;    thisProperty: in, required
 ;                  A string variable that is equivalent to a field in the object's    
@@ -230,9 +204,10 @@ end
 ;-
 function w_ts_Data::getProperty, thisProperty
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
+  @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   avail = ['NAME', $
            'DESCRIPTION', $
@@ -301,10 +276,10 @@ pro w_ts_Data::setProperty, NAME=name, $
                             VALIDITY=validity, $
                             AGG_METHOD=agg_method
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   if N_ELEMENTS(NAME) ne 0 then self.name = name
   if N_ELEMENTS(DESCRIPTION) ne 0 then self.description = description
@@ -340,8 +315,10 @@ end
 ;-
 pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, REPLACE=replace
 
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
+  COMPILE_OPT IDL2  
+  on_error, 2
   
   if N_PARAMS() ne 2 then MESSAGE, WAVE_Std_Message(/NARG)
   if ~array_processing(data, time, REP_A0=_data) then MESSAGE, '$DATA and $TIME arrays not compatible'
@@ -374,18 +351,17 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
     self.missing = PTR_NEW(_missing, /NO_COPY)
   endif
   
-  
   ; Steps
   if _first then begin ; first call
   
-    ; Did the user specified some stuffs allready
+    ; Did the user specified some stuffs already
     if N_ELEMENTS(STEP) ne 0 then self.step = str_equiv(step)
     if N_ELEMENTS(TIMESTEP) ne 0 then begin
-      if ~ CHECK_WTIMESTEP(timestep, OUT_DMS=_ts) then Message, WAVE_Std_Message('TIMESTEP', /ARG)
+      if ~ check_wtimestep(timestep, OUT_DMS=_ts) then Message, WAVE_Std_Message('TIMESTEP', /ARG)
       self.timestep = _ts
     endif
     
-    if self.timestep eq 0 then begin ; find out by myself
+    if self.timestep eq 0 then begin ; i have to find out by myself
       case self.step of
         'MONTH': _timestep = 1
         'YEAR': _timestep = 1
@@ -399,7 +375,7 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
       endcase
     endif else _timestep = timestep
     
-    if ~ CHECK_WTIMESTEP(_timestep, OUT_DMS=dms) then message, WAVE_Std_Message('TIMESTEP', /ARG)
+    if ~ check_wtimestep(_timestep, OUT_DMS=dms) then message, WAVE_Std_Message('TIMESTEP', /ARG)
     if dms le 0 then message, 'Timestep le 0?'
     
     if self.step eq '' then begin
@@ -444,8 +420,6 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   self.data = PTR_NEW(_data, /NO_COPY)
   self.time = PTR_NEW(qms, /NO_COPY)
   
-  self->setPeriod, DEFAULT=_first
-  
 end
 
 ;+
@@ -454,42 +428,42 @@ end
 ;    enclosing all valid data points or to a user 
 ;    defined period.
 ;    Once the user set t0 and/or t1, this parameter are 
-;    remembered for later calls. Set the `DEFAULT` keyword
-;    to reset to the default period.
+;    remembered for later calls to getData, getTime, etc.
 ;
 ; :Keywords:
 ;    T0: in, optional, type=qms/{ABS_DATE}
 ;        the first time of the desired period
 ;    T1: in, optional, type=qms/{ABS_DATE}
 ;        the last time of the desired period
-;    DEFAULT: in, optional, type=boolean
-;             Reset to the default period         
 ;
 ;-
-pro w_ts_Data::setPeriod, T0=t0, T1=t1, DEFAULT=default
+pro w_ts_Data::setPeriod, T0=t0, T1=t1
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
+  COMPILE_OPT IDL2  
   
-  if ~ptr_valid(self.time) then return ; no data yet
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    self.t0 = 0
+    self.t1 = 0
+    self.nt = 0
+    return ; no data yet
+  ENDIF 
   
-  if KEYWORD_SET(DEFAULT) then begin
-    _t0 = (*self.time)[0]
-    _t1 = (*self.time)[N_ELEMENTS(*self.time)-1]
-  endif else begin
-    _t0 = self.t0
-    _t1 = self.t1
-  endelse
+  if ~ptr_valid(self.time) then Message, 'No data was set yet.'
+  
+  _t0 = (*self.time)[0]
+  _t1 = (*self.time)[N_ELEMENTS(*self.time)-1]
   
   ; User wants something new ? 
   if N_ELEMENTS(T0) ne 0 then begin
     if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)
-    self.t0 = _t0
   endif  
   if N_ELEMENTS(T1) ne 0 then begin
     if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)
-    self.t1 = _t1
   endif
   
   ; Check the time
@@ -498,7 +472,7 @@ pro w_ts_Data::setPeriod, T0=t0, T1=t1, DEFAULT=default
       _nt = ABS(_t1 - _t0) / self.timestep
       if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
         Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
-        self->setPeriod, /DEFAULT
+        self->setPeriod
       endif
       _nt+=1
     end
@@ -508,7 +482,7 @@ pro w_ts_Data::setPeriod, T0=t0, T1=t1, DEFAULT=default
       _nt = ABS(_t1 - _t0) / self.timestep
       if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
         Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
-        self->setPeriod, /DEFAULT
+        self->setPeriod
       endif
       _t0 = w_month_to_time(_t0)
       _t1 = w_month_to_time(_t1)
@@ -520,7 +494,7 @@ pro w_ts_Data::setPeriod, T0=t0, T1=t1, DEFAULT=default
       _nt = ABS(_t1 - _t0) / self.timestep
       if _nt ne DOUBLE(_t1 - _t0) / self.timestep then begin
         Message, 'T0, T1 and TIMESTEP are incompatible. Reset to default.', /INFORMATIONAL
-        self->setPeriod, /DEFAULT
+        self->setPeriod
       endif
       _t0 = w_year_to_time(_t0)
       _t1 = w_year_to_time(_t1)
@@ -549,13 +523,14 @@ end
 ;-
 function w_ts_Data::getTime, NT=nt
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
-  
-  if ~ ptr_valid(self.time) then return, dummy
-    
-  nt = self.nt      
+  on_error, 2
+
+  nt = self.nt    
+  if nt eq 0 then Message, 'No times yet in the timeserie. Set Period?'
+   
   ; Check the time
   case self.step of
     'TIMESTEP': time = L64INDGEN(nt) * self.timestep + self.t0
@@ -581,20 +556,23 @@ end
 ;-
 function w_ts_Data::getData, NT=nt
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2 
   
-  if ~ ptr_valid(self.data) then return, dummy
-  t = self->getTime(NT=nt)
+  nt = self.nt    
+  if nt eq 0 then Message, 'No times yet in the timeserie. Set Period?'
+  
+  t = self->getTime()
   if nt eq 1 then begin
     p = where(*self.time eq t[0], cnt)
     if cnt ne 0 then return, (*self.data)[p] else  return, *self.missing
   endif
+  
   return, w_ts_fill_missing(*self.data, *self.time, self->getTime(NT=nt), FILL_VALUE=*self.missing)
   
 end
-
 
 ;+
 ; :Description:
@@ -608,17 +586,20 @@ end
 ;   An array of nt elements (valid = 1)
 ;
 ;-
-function w_ts_Data::valid, NT=nt
+function w_ts_Data::getValid, NT=nt
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
+  on_error, 2 
+  
+  nt = self.nt    
+  if nt eq 0 then Message, 'No times yet in the timeserie. Set Period?'
   
   data = self->getData(NT=nt)
   _mask = BYTARR(nt)
   
-  missing = *self.missing
-  
+  missing = *self.missing  
   fmissing = finite(missing)  
   if fmissing then begin
     CASE type_name(self.type) OF
@@ -651,16 +632,17 @@ end
 ;        number of times
 ;
 ;-
-pro w_ts_Data::cleanTS, data, time, nt
+pro w_ts_Data::getCleanData, data, time, nt
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
-  
+  on_error, 2 
+    
   data = self->getData()
   time = self->getTime() 
 
-  p = where(self->Valid(), cnt)
+  p = where(self->getValid(), cnt)
   if cnt ne 0 then begin
     data = data[p]
     time = time[p]    
@@ -674,37 +656,42 @@ end
 
 ;+
 ; :Description:
-;    to know if there are missing values in the TS
+;    To know if there are missing values in the TS
 ;
 ; :Returns:
 ;    1 if the TS is clean, 0 otherwise
 ;
 ;-
 function w_ts_Data::isClean
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  on_error, 2 
   
-  return, TOTAL(self->valid()) eq self.nt
+  return, TOTAL(self->getValid()) eq self.nt
   
 end
   
   
 ;+
 ; :Description:
-;    Just prints the missing periods of a TS in the console
+;    Makes a console print of the missing periods of the time serie
 ;
 ;-
 pro w_ts_Data::printMissingPeriods
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
+  on_error, 2
   
   t = self->getTime()
-  ents = LABEL_REGION([0,~self->valid(),0])
+  ents = LABEL_REGION([0,~self->getValid(),0])
   ents = ents[1:N_elements(ents)-2]
   n_ents = max(ents)
   print, '  ' + str_equiv(n_ents) + ' missing periods'
   if n_ents gt 15 then ok = DIALOG_MESSAGE(str_equiv(n_ents) + ' missing periods, sure you want to print them?', /QUESTION) else ok = 'YES'
-  
   if ok eq 'No' then return
   
   for e=1, n_ents do begin
@@ -719,29 +706,33 @@ end
 
 ;+
 ; :Description:
-;    Just plots the time serie
+;    Makes a plot of the time serie
 ;    
 ; :Keywords:
 ;    TITLE_INFO: in, optional
 ;                something to add to the title
 ;
 ;-
-pro w_ts_Data::plotTS, TITLE_INFO=title_info
+pro w_ts_Data::plot, TITLE_INFO=title_info
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  on_error, 2
 
   title = self.name
   if self.description ne '' then title = title + ': ' + self.description 
   if N_ELEMENTS(TITLE_INFO) ne 0 then title = title_info + title
   
-  if FINITE(*self.missing) then begin
+  if finite(*self.missing) then begin
      self->cleanTS, dclean
-     min_value=min(dclean)
+     min_value = min(dclean)
   endif  
   
-  if total(self->valid()) ne 0 then w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, $
+  if total(self->getValid()) ne 0 then w_gr_tzplot, self->getTime(), self->getData(), TITLE=title, YTITLE=self.unit, $
           THICK=2, COLOR='blue', position=[0.1,0.15,0.94,0.82], CHARSIZE=1., MIN_value=min_value
 
 end
-
 
 ;+
 ; :Description:
@@ -764,11 +755,14 @@ end
 ;-
 pro w_ts_Data::interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
 
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
+  on_error, 2
+  
+  valid = self->getValid()
     
-  pv = where(self->valid(), cnt, NCOMPLEMENT=nc)
+  pv = where(valid, cnt, NCOMPLEMENT=nc)
   if nc eq 0 then return ;nothing to do
   if cnt eq 0 then message, 'No valid data values'
 
@@ -791,17 +785,17 @@ pro w_ts_Data::interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
   endif
          
   ;Carefull with extrapolating
-  ents = LABEL_REGION([0,~self->valid(),0])
+  ents = LABEL_REGION([0,~valid,0])
   ents = ents[1:N_elements(ents)-2]
   n_ents = max(ents)
   if ents[0] ne 0 then begin
     val0 = (self->getData())[min(where(ents eq 0))]
-    message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
+    message, self.name + ': carefull! Extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
     new[where(ents eq ents[0])] = val0
   endif
   if ents[N_ELEMENTS(ents)-1] ne 0 then begin
     val0 = (self->getData())[max(where(ents eq 0))]
-    message, self.name + ': carefull, extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
+    message, self.name + ': carefull! Extrapolating prohibited we put the nearest valid value instead.', /INFORMATIONAL
     new[where(ents eq ents[nt-1])] = val0
   endif
   
@@ -818,10 +812,11 @@ end
 
 ;+
 ; :Description:
-;   Replaces data within a period with a value (if omitted, MISSING)
+;   Replaces data within a period with a given value (if omitted, MISSING)
 ; 
 ; :Params:
 ;    value: in, optional
+;           scalar to put in place of the data
 ;           
 ; :Keywords:
 ;    T0: in, optional
@@ -832,9 +827,10 @@ end
 ;-
 pro w_ts_Data::insertValue, value, T0=t0, T1=t1
 
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
+  on_error, 2
   
   t = self->getTime(NT=nt)
   d = self->getdata()
@@ -860,7 +856,7 @@ end
 
 ;+
 ; :Description:
-;    Aggregates the timeserie data and creates a new TS object with the
+;    Aggregates the timeserie data and returns a new TS object with the
 ;    new timeserie.
 ;    
 ;    See `TS_AGG` for more info on the aggregation.
@@ -902,9 +898,10 @@ end
 function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
+  COMPILE_OPT IDL2  
+  on_error, 2
   
   if N_ELEMENTS(MINUTE) ne 0 then begin
     d = MAKE_ABS_DATE(QMS=self.t0-1LL)
@@ -1003,7 +1000,7 @@ function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, Y
     min_nsig = FLOAT(0 > MIN_SIG < 1) * n
   endif
   
-  if total(self->valid()) eq 0 then begin
+  if total(self->getValid()) eq 0 then begin
     agg_time = new_time[1:*]
     agg = REPLICATE(*self.missing, N_ELEMENTS(agg_time))  
   endif else begin
@@ -1035,7 +1032,12 @@ end
 ;-
 function w_ts_Data::copy
 
-  out= OBJ_NEW('w_ts_Data', *self.data, *self.time, $
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  on_error, 2
+  
+  out = OBJ_NEW('w_ts_Data', *self.data, *self.time, $
     NAME=self.name, $
     DESCRIPTION=self.description, $
     T0=self.t0, $
@@ -1045,6 +1047,8 @@ function w_ts_Data::copy
     AGG_METHOD=self.agg_method, $
     STEP=self.step, $
     MISSING=*self.missing)
+  
+  if self.t0 ne 0 then out->setPeriod, T0=self.t0, T1=self.t1
       
   return, out
 
@@ -1060,9 +1064,9 @@ end
 ;-
 pro w_ts_Data__Define, class
 
-  ; Set Up environnement
-  COMPILE_OPT idl2
+  ; Set up environnement
   @WAVE.inc
+  COMPILE_OPT IDL2  
 
   class = {w_ts_Data              , $
            name:           ''     , $ ; The name of the variable

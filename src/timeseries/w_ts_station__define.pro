@@ -1,34 +1,16 @@
 ; docformat = 'rst'
 ;+
 ;   Object to store and manage timeseries objects all together.
-;   The station object also stores locations and additional informations. 
+;   The station object also stores station name, id, location, 
+;   elevation, etc. 
 ;   
 ;   The Station object can be seen as a container that performs some actions 
 ;   (uniformisation of timesteps, interpolation, aggregation) on all of its variables. 
-;   Additionally, some tools are provided like writing the variable data into an
+;   Additionally, some tools are provided like writing the station data into an
 ;   ASCII or NCDF file.
 ; 
-;   The station accepts only variables having the same timestep, 
-;   but can accept variables that cover different time periods. 
-;   All the station variables are then automatically set to the 
-;   longest period containing all variables.
+;   The station accepts only variables having the same timestep
 ;   
-; 
-; Definition::
-;       
-;       class = {w_ts_Station        , $
-;                  name:            '' , $ ; The name of the station
-;                  id:              '' , $ ; Station ID
-;                  description:     '' , $ ; A short description of the station 
-;                  elevation:       0L , $ ; altitude in m
-;                  loc_x:           0D , $ ; X location in SRC
-;                  loc_y:           0D , $ ; Y location in SRC
-;                  src:      PTR_NEW() , $ ; Location information ({TNT_DATUM} or {TNT_PROJ})
-;                  t0:             0LL , $ ; Start Time
-;                  t1:             0LL , $ ; End Time
-;                  vars:     OBJ_NEW()   $ ; Variables container (w_ts_Container)
-;                  }    
-;
 ; :Categories:
 ;    Timeseries, Objects
 ;
@@ -73,9 +55,9 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
                              SRC=src, $ ; Location information ({TNT_DATUM}, {TNT_PROJ})
                              FILE=file ; ncdf file
    
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
       
   Catch, theError
   IF theError NE 0 THEN BEGIN
@@ -84,9 +66,10 @@ function w_ts_Station::init, NAME=name, $ ; The name of the station
     RETURN, 0
   ENDIF 
   
-  ; Initialize object containers for contents.
+  ; Initialize object container
   self.vars = Obj_New('w_ts_Container')
   
+  ; Do we have to read a NCDF file ? 
   if N_ELEMENTS(FILE) ne 0 then begin
   
     n = OBJ_NEW('NCDF_FILE', file)
@@ -158,9 +141,9 @@ end
 ;-
 pro w_ts_Station::cleanup
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
 
   PTR_FREE, self.src
   Obj_Destroy, self.vars
@@ -186,6 +169,14 @@ end
 ;           The X location of the station
 ;    SRC: out, type=double
 ;         the source of X and Y ({TNT_DATUM}, {TNT_PROJ})
+;    STEP: out, type=string
+;          Either IRREGULAR, TIMESTEP, MONTH or YEAR 
+;    T0: out, type=qms/{ABS_DATE}
+;        The first time of the period
+;    T1: out, type=qms/{ABS_DATE}
+;        The last time of the period
+;    NT: out, type=qms/{ABS_DATE}
+;        The number of times in the period
 ;    TIMESTEP: out, type={TIME_STEP}
 ;              Timeserie timestep
 ;-
@@ -195,12 +186,15 @@ pro w_ts_Station::getProperty, NAME=name, $
                                ELEVATION=elevation, $ 
                                LOC_X=loc_x, $ 
                                LOC_Y=loc_y, $ 
+                               NT=nt, $ 
                                T0=t0, $ 
                                T1=t1, $ 
+                               TIMESTEP=timestep, $ 
+                               STEP=step, $ 
                                SRC=src
                                
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   
@@ -213,6 +207,9 @@ pro w_ts_Station::getProperty, NAME=name, $
   SRC=*self.src
   T0=self.t0
   T1=self.t1
+  NT=self.nt
+  TIMESTEP=self.timestep
+  STEP=self.step
   
 end
 
@@ -241,9 +238,10 @@ end
 ;-
 function w_ts_Station::getProperty, thisProperty
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
+  @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   avail = ['NAME' , $
            'ID' , $
@@ -253,6 +251,9 @@ function w_ts_Station::getProperty, thisProperty
            'LOC_Y' , $
            'T0' , $
            'T1' , $
+           'STEP' , $
+           'TIMESTEP' , $
+           'NT' , $
            'SRC' ]
   
   ; Check if ok
@@ -315,10 +316,10 @@ pro w_ts_Station::setProperty, NAME=name, $
                                LOC_Y=loc_y, $ 
                                SRC=src
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   if N_ELEMENTS(NAME) ne 0 then self.name = name
   if N_ELEMENTS(DESCRIPTION) ne 0 then self.description = description
@@ -354,28 +355,34 @@ end
 ;                the argument. This makes sense in most of the cases
 ;                but sometimes you want to keep the original object.
 ;                Set this keyword to avoid destroying it.
-;   NO_SET_PERIOD: in, optional, type=boolean
-;                  default behavior is to check all variable periods
-;                  before return for consistency. For a station 
-;                  in creation this can lead to a large number of useless
-;                  operations. Set this keyword to avoid this check. 
-;                  However, it is recommended to do a ->set_period
-;                  by yourself after the station has been defined
 ;
 ;-
-pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy, NO_SET_PERIOD=no_set_period
+pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
   if ~OBJ_VALID(var) then message, WAVE_Std_Message('var', /ARG)
   if ~OBJ_ISA(var, 'w_ts_Data') then message, WAVE_Std_Message('var', /ARG)
-   
+  
+  d = self->getVarNames(COUNT=cv)
+  if cv eq 0 then begin
+    ; first call: we set the station characteristics
+    self.step = var->getProperty('step')
+    self.timestep = var->getProperty('timestep')    
+  endif else begin
+    ; already set: we check if the new var fits
+    if self.step ne var->getProperty('step') then message, 'Step type do not match'
+    if self.timestep ne var->getProperty('timestep') then message, 'Timesteps do not match'
+  endelse
+  
   if self->HasVar(var->getProperty('NAME'), OBJECT=object) then begin     
     if KEYWORD_SET(REPLACE) then begin
       self.vars->Remove, object
       self.vars->Add, var
+      undefine, object
     endif else begin
       object->addData, var->getData(), var->getTime()
       if ~ KEYWORD_SET(NO_DESTROY) then OBJ_DESTROY, var
@@ -383,8 +390,6 @@ pro w_ts_Station::addVar, var, REPLACE=replace, NO_DESTROY=no_destroy, NO_SET_PE
   endif else begin
     self.vars->Add, var    
   endelse
-    
-  if ~ KEYWORD_SET(NO_SET_PERIOD) then self->setPeriod
   
 end
 
@@ -403,22 +408,15 @@ end
 ;-
 function w_ts_Station::getVarNames, COUNT=varCount, PRINT=print
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
-  ; Error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    return, ''
-  ENDIF
-  
-  ; Count the number of global attribute objects.
+  ; Count the number of variables.
   varCount = self.vars->Count()
   
-  IF varCount EQ 0 THEN RETURN, ""
+  IF varCount EQ 0 THEN return, ''
   
   varNames = StrArr(varCount)
   FOR j=0,varCount-1 DO BEGIN
@@ -455,9 +453,10 @@ END
 ;-
 function w_ts_Station::hasVar, varName, OBJECT=object
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)
   
@@ -482,9 +481,10 @@ END
 ;-
 function w_ts_Station::getVar, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)
   
@@ -496,19 +496,50 @@ end
 
 ;+
 ; :Description:
-;    Shortcut for the `w_ts_data::getData` function 
+;    Get the time
+;
+; :Keywords:
+;    nt: out
+;        the number of times
+;
+; :Returns:
+;   A time array of nt elements
+;
+;-
+function w_ts_Station::GetTime, NT=nt
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  ; If zero variables, no time
+  varCount = self.vars->Count()
+  if varCount eq 0 then begin
+    nt = 0
+    return, dummy
+  endif
+    
+  ; Its easier to store the code only once
+  return, (self.vars->Get(POSITION=0))->GetTime(NT=nt)
+  
+end
+
+;+
+; :Description:
+;    Shortcut for  (Station->getVar())->GetData()
 ;
 ; :Params:
 ;    varName: in, required
 ;             the name of the variable to get the data from
 ;
-;
 ;-
 function w_ts_Station::GetVarData, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
   
@@ -516,30 +547,25 @@ function w_ts_Station::GetVarData, varName
   
 end
 
+;+
+; :Description:
+;    Shortcut for  (Station->getVar())->GetValid()
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable to get the data from
+;
+;-
 function w_ts_Station::GetVarValid, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
   
-  return, object->Valid()
-
-end
-
-function w_ts_Station::GetTime
-
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  ; Count the number of global attribute objects.
-  varCount = self.vars->Count()
-  if varCount eq 0 then return, dummy
- 
- thisObj = self.vars->Get(POSITION=0)
- return, thisObj->GetTime()
+  return, object->getValid()
 
 end
 
@@ -554,24 +580,27 @@ end
 ;-
 pro w_ts_Station::removeVar, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~arg_okay(varName, TYPE=IDL_STRING) then Message, WAVE_Std_Message('varName', /ARG)
   
-  n = N_ELEMENTS(varName)
-  
-  for i=0, n-1 do if self->HasVar(varName[i], OBJECT=object) then self.vars->Remove, object
-    
-  self->setPeriod
+  n = N_ELEMENTS(varName)  
+  for i=0, n-1 do begin 
+     if self->HasVar(varName[i], OBJECT=object) then begin
+       self.vars->Remove, object
+       undefine, object
+     endif
+  endfor
   
 end
 
 ;+
 ; :Description:
 ;    Select variable(s) to be kept by the station. All other variables
-;    are desrtroyed.
+;    are destroyed.
 ;
 ; :Params:
 ;    varName: in, optional, type=string array
@@ -580,21 +609,20 @@ end
 ;-
 pro w_ts_Station::selVar, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   if ~arg_okay(varName, TYPE=IDL_STRING) then Message, WAVE_Std_Message('varName', /ARG)
   
   names = self->GetVarNames(count=n)
   
   for i=0, n-1 do begin
-    pos=where(str_equiv(varName) eq str_equiv(names[i]), cnt)
+    pos = where(str_equiv(varName) eq str_equiv(names[i]), cnt)
     if cnt ne 0 then continue
     self->removeVar, names[i]
   endfor
-  
-  self->setPeriod
   
 end
 
@@ -603,79 +631,66 @@ end
 ; 
 ;    Sets the focus period to the shortest period 
 ;    enclosing all variables or to a user defined period.
-;    Once the user set t0 and/or t1, this parameter are 
-;    remembered for later calls. Set the `DEFAULT` keyword
-;    to reset to the default period.
 ;
 ; :Keywords:
 ;    T0: in, optional, type=qms/{ABS_DATE}
 ;        the first time of the desired period
 ;    T1: in, optional, type=qms/{ABS_DATE}
 ;        the last time of the desired period
-;    DEFAULT: in, optional, type=boolean
-;             Reset to the default period         
 ;
 ;-
-pro w_ts_Station::setPeriod, T0=t0, T1=t1, DEFAULT=default
+pro w_ts_Station::setPeriod, T0=t0, T1=t1
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
-  if KEYWORD_SET(DEFAULT) then begin
-    self.t0 = 0LL
-    self.t1 = 0LL
-  endif
-  
-  vNames = self->GetVarNames(COUNT=varCount)
-  
-  if N_ELEMENTS(T0) ne 0 then begin 
-    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)
-    self.t0 = _t0
-  endif
-  
-  if N_ELEMENTS(T1) ne 0 then begin 
-    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)
-    self.t1 = _t1
-  endif
-  
+  ; Count the number of variables.
+  varCount = self.vars->Count()
+          
   for i=0, varCount-1 do begin
-    _var = self->getVar(vNames[i])
-    if KEYWORD_SET(DEFAULT) then _var->setPeriod, /DEFAULT
+    _var = self.vars->get(POSITION=i)
+    _var->setPeriod, T0=t0, T1=t1
     if i eq 0 then begin
       _t0 = _var->getProperty('t0')
       _t1 = _var->getProperty('t1')
-      _step = _var->getProperty('step')
-      _timestep = _var->getProperty('timestep')
     endif else begin
       _t0 = _var->getProperty('t0')  < _t0
       _t1 = _var->getProperty('t1')  > _t1
-      if _step ne _var->getProperty('step') then message, 'Step type do not match'
-      if _timestep ne _var->getProperty('timestep') then message, 'Timesteps do not match'
     endelse
   endfor
   
-  if self.t0 ne 0 then _t0 = self.t0
-  if self.t1 ne 0 then _t1 = self.t1
+  for i=0, varCount-1 do (self.vars->get(POSITION=i))->setPeriod, T0=_t0, T1=_t1
   
-  for i=0, varCount-1 do (self->getVar(vNames[i]))->setPeriod, T0=_t0, T1=_t1
-  
+  if varCount eq 0 then begin
+    self.t0 = 0
+    self.t1 = 0
+    self.nt = 0
+  endif else begin
+    _var = (self.vars->get(POSITION=0))
+    self.t0 = _var->getProperty('t0')
+    self.t1 = _var->getProperty('t1')
+    self.nt = _var->getProperty('nt')
+  endelse
+   
 end
 
 ;+
 ; :Description:
-;    Just prints the missing periods of all variables in the console
+;    Makes a console print of the missing periods of all variables
 ;
 ;-
 pro w_ts_Station::printMissingPeriods
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
     
-  vNames = self->GetVarNames(COUNT=varCount)  
+  varCount = self.vars->Count()
   for i=0, varCount-1 do begin
-    _var = self->getVar(vNames[i])
+    _var = self.vars->get(POSITION=i)
     print, ' ' + _var->getProperty('NAME')
     _var->printMissingPeriods
   endfor        
@@ -684,6 +699,27 @@ end
 
 ;+
 ; :Description:
+;   Plot all the variables in separate windows
+;
+;-
+pro w_ts_Station::plot
+  
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  varCount = self.vars->Count()
+  for i=0, varCount-1 do begin
+    _var = self.vars->get(POSITION=i)
+    _var->plot, TITLE_INFO=self.name + ': '
+  endfor        
+      
+end
+
+;+
+; :Description:
+; 
 ;   Replaces all invalid data values by linear interpolation.
 ;   In case extrapolation is needed, a warning is sent and the closest
 ;   data value is chosen instead.
@@ -702,24 +738,26 @@ end
 ;-
 pro w_ts_Station::interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
-  vNames = self->GetVarNames(COUNT=varCount)  
+  varCount = self.vars->Count()
   for i=0, varCount-1 do begin
-    _var = self->getVar(vNames[i])
+    _var = self.vars->get(POSITION=i)
     _var->interpol, T0=t0, T1=t1, MAXSTEPS=maxsteps
   endfor        
       
 end
 
 ;+
-; :Description: 
-;   Replaces data within a period with a value (if omitted, MISSING)
+; :Description:
+;   Replaces data within a period with a given value (if omitted, MISSING)
 ; 
 ; :Params:
 ;    value: in, optional
+;           scalar to put in place of the data
 ;           
 ; :Keywords:
 ;    T0: in, optional
@@ -730,13 +768,14 @@ end
 ;-
 pro w_ts_Station::insertValue, value, T0=t0, T1=t1
 
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
-  vNames = self->GetVarNames(COUNT=varCount)  
+  varCount = self.vars->Count()
   for i=0, varCount-1 do begin
-    _var = self->getVar(vNames[i])
+    _var = self.vars->get(POSITION=i)
     _var->insertValue, value, T0=t0, T1=t1
   endfor   
 
@@ -786,6 +825,11 @@ end
 function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
   
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
   ; Make a new identical station
   out = OBJ_NEW('w_ts_Station', NAME=self.name, ID=self.id, DESCRIPTION=self.description, $ ; A short description of the station 
             ELEVATION=self.elevation, LOC_X=self.loc_x, LOC_Y=self.loc_y, SRC=*self.src)                             
@@ -802,26 +846,6 @@ function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month
   return, out
 
 end
-
-;+
-; :Description:
-;   Plot all the vars in separate windows
-;
-;-
-pro w_ts_Station::plotVars
-  
-   ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  vNames = self->GetVarNames(COUNT=varCount)  
-  for i=0, varCount-1 do begin
-    _var = self->getVar(vNames[i])
-    _var->plotTS, TITLE_INFO = self.name + ': '
-  endfor        
-      
-end
-
 
 ;+
 ; :Description:
@@ -845,9 +869,10 @@ end
 ;-
 pro w_ts_Station::ClimateDiagram, MIN_SIG=min_sig, PNG=png, EPS=eps, STD_PNG=std_png, VALID=valid
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   SetDefaultValue, min_sig, 0.75
   
@@ -861,21 +886,25 @@ pro w_ts_Station::ClimateDiagram, MIN_SIG=min_sig, PNG=png, EPS=eps, STD_PNG=std
   if _v->getProperty('step') eq 'TIMESTEP' then begin 
    do_agg = 1
    a = self->aggregate(MONTH=1, MIN_SIG=min_sig) 
+   a->setPeriod
   endif else a = self
   
-  tt = MAKE_ABS_DATE(QMS=w_month_to_time(w_time_to_month(a->getTime())-1))
+  time = a->getTime(NT=nt)
+  if nt eq 0 then Message, 'Time empty. Set period?'
+  
+  absdate = make_abs_date(qms=w_month_to_time(w_time_to_month(time)-1))
   
   to = a->getVarData('TEMP') 
-  po = a->getVarData('PRCP')  * GEN_month_days(tt.month, tt.year)
+  po = a->getVarData('PRCP')  * GEN_month_days(absdate.month, absdate.year)
   
   if do_agg then undefine, a 
      
   t = FLTARR(12)
   p = FLTARR(12)  
-  nvalt = lonARR(12)  
-  nvalp = lonARR(12)  
+  nvalt = LONARR(12)  
+  nvalp = LONARR(12)  
   for i=0, 12-1 do begin
-    pm = WHERE(tt.month eq i+1, cntok)
+    pm = WHERE(absdate.month eq i+1, cntok)
     if cntok eq 0 then continue
     tmp = to[pm]
     nvalt[i] = TOTAL(FINITE(tmp)) 
@@ -896,7 +925,7 @@ pro w_ts_Station::ClimateDiagram, MIN_SIG=min_sig, PNG=png, EPS=eps, STD_PNG=std
    return
   endif
   
-  if ~ KEYWORD_SET(VALID) then undefine,  nvalp, nvalt
+  if ~KEYWORD_SET(VALID) then undefine, nvalp, nvalt
           
   timeperiod = str_equiv((tt.year)[0]) + '-' + str_equiv((tt.year)[N_ELEMENTS(tt)-1])  
   
@@ -926,13 +955,12 @@ end
 ;-
 pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
 
-  ; Set Up environnement
-  COMPILE_OPT idl2
+  ; Set up environnement
   @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
 
-  if N_ELEMENTS(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)
-  
-   
+  if N_ELEMENTS(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)   
   
   if N_ELEMENTS(format) eq 0 then format = '(F9.3)'
   
@@ -947,16 +975,17 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
   printf, id, meta
   meta = '% STATION_LOCATION: Longitude ' + str_equiv(STRING(self.loc_x)) + ' ; Latitude ' + str_equiv(STRING(self.loc_y)) + ' ; Altitude ' + STRING(self.elevation, FORMAT='(I4)') 
   printf, id, meta
+  
+  
+  varCount = self.vars->Count()
+ 
+  units = STRARR(varCount)
+  types = STRARR(varCount)
+  descriptions = STRARR(varCount)
+  valids = STRARR(varCount)
     
-  vNames = self->GetVarNames(COUNT=nvar) 
-  
-  units = STRARR(nvar)
-  types = STRARR(nvar)
-  descriptions = STRARR(nvar)
-  valids = STRARR(nvar)
-  
-  for i = 0, nvar - 1 do begin
-   _var = (self->GetVar(vNames[i]))
+  for i = 0, varCount - 1 do begin
+   _var = self.vars->Get(POSITION=i)
    _var->getProperty, DESCRIPTION=description, $
                       UNIT=unit, $
                       VALIDITY=Validity, $
@@ -966,9 +995,9 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
    units[i] = unit
    types[i] = type_name(type)
    descriptions[i] = description
-   valids[i] = Validity
-      
+   valids[i] = Validity      
   endfor 
+  
   meta = '% DATA_VALIDITY: ' + valids[0]
   printf, id, meta
   meta = '% FILE_FORMAT: NAME, DESCRIPTION, UNIT, TYPE'
@@ -1000,9 +1029,9 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
   sep = ','
   
   ; Bad optim
-  datas = PTRARR(nvar)
-  for i = 0, nvar - 1 do begin
-    _var = (self->GetVar(vNames[i]))
+  datas = PTRARR(varCount)
+  for i = 0, varCount - 1 do begin
+    _var = self.vars->Get(POSITION=i)
     datas[i] = PTR_NEW(_var->getData())
   endfor
   
@@ -1013,12 +1042,12 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
     GEN_str_subst, ret,t,'.','-',t
     
     text = '"' + t + '",'
-    for i = 0, nvar - 1 do begin
+    for i = 0, varCount - 1 do begin
       data = (*(datas[i]))[l]
       if str_equiv(types[i]) eq str_equiv('float') then v = strcompress(STRING(data, FORMAT=format),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('long') then v = strcompress(STRING(data,FORMAT = '(I8)'),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('string') then v = strcompress(STRING(data),/REMOVE_ALL)
-      if i lt nvar - 1 then text += v + sep else text += v
+      if i lt varCount - 1 then text += v + sep else text += v
       undefine, v
     endfor
     
@@ -1050,20 +1079,21 @@ end
 ;-
 pro w_ts_Station::NCDFwrite, FILE=file, OVERWRITE=overwrite
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
   ; Count the number of global attribute objects.
   varCount = self.vars->Count()  
   IF varCount EQ 0 THEN Message, 'No variables stored in the station!'
-  
-  self->setPeriod
-  
+  time = self->getTime(NT=nt)
+  IF nt EQ 0 THEN Message, 'No times in the station!'
+      
   if N_ELEMENTS(FILE) eq 0 then Message, WAVE_Std_Message('FILE', /ARG)
   if FILE_TEST(FILE, /DIRECTORY) then begin
     _file = utils_clean_path(file, /MARK_DIRECTORY)
-    _file = _file + 'w_ts_' + self.id + '_' + self.name + '.nc' 
+    _file = _file + 'w_ts_' + self.id + '.nc' 
   endif else _file = file
       
   dObj = OBJ_NEW('NCDF_FILE', _file, /CREATE, CLOBBER=overwrite)
@@ -1089,7 +1119,6 @@ pro w_ts_Station::NCDFwrite, FILE=file, OVERWRITE=overwrite
   dObj->WriteGlobalAttr, 'SRC_INFO', src_str, DATATYPE='CHAR'
   
   v = self.vars->Get(POSITION=0)
-  time = v->getTime(NT=nt)
   time_str = 'seconds since ' + TIME_to_STR(time[0], MASK='YYYY-MM-DD HH:TT:SS')
   time = LONG((time - time[0]) / 1000)
   
@@ -1164,7 +1193,7 @@ function w_ts_Station::copy
     out ->addVar, _var->copy()
   endfor        
     
-  out->setPeriod, T0=self.t0, T1=self.t1
+  if self.t0 ne 0 then out->setPeriod, T0=self.t0, T1=self.t1
   
   return, out
 
@@ -1192,8 +1221,11 @@ pro w_ts_Station__Define, class
            loc_x:           0D , $ ; X location in SRC
            loc_y:           0D , $ ; Y location in SRC
            src:      PTR_NEW() , $ ; Location information ({TNT_DATUM} or {TNT_PROJ})
+           nt:             0L  , $ ; Number of times
            t0:             0LL , $ ; Start Time
            t1:             0LL , $ ; End Time
+           step:           ''  , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
+           timestep:       0LL , $ ; Timestep
            vars:     OBJ_NEW()   $ ; Variables container (w_ts_Container)
            }    
 

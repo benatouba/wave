@@ -30,12 +30,20 @@
 ;                 the data of the NCDC file.
 ;     ascii_tag: in, optional, type=string, default=none
 ;                the  tag(s) of the value(s) to retrieve of the NCDC file.
+; 
+; :Keywords:
+;     prcp_filter: in, type=long, default=0
+;                  level of filtering of the prcp data.
+;                  0 = no filtering (default)
+;                  1 = filtering of A, B, C, E, H
+;                  2 = filtering of A, B, C, E, H, I (max quality)
+;                  (see: http://www1.ncdc.noaa.gov/pub/data/gsod/readme.txt)
 ;       
 ; :Returns:
 ;       The corrected value(s) of the NCDC file.
 ;
 ;-
-function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
+function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag, PRCP_FILTER=prcp_filter
 
   ; Set up environment
   compile_opt idl2
@@ -53,15 +61,19 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean temperature', missing:missing, agg_method:'MEAN'}
     end
     
+    'TEMP_COUNT': begin
+      data = FLOAT(data)
+      val = {data:data, vname:ascii_tag, unit:'-', description:'Number of daily Temp measurements', missing:missing, agg_method:'MEAN'}
+    end
+    
     'DEWP': begin
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
       val = {data:data, vname:ascii_tag, unit:'degC', description:'Mean dew point', missing:missing, agg_method:'MEAN'}
     end
-    
+        
     'MAX': begin
-      data = float(data)
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
@@ -69,7 +81,6 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
     end
     
     'MIN': begin
-      data = float(data)
       data = (data - 32.0) * 5.0/9.0 ; to celcius
       p = where(data gt 50 or data lt -80, cnt)
       if cnt gt 0 then data[p] = missing
@@ -97,6 +108,11 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       val = {data:data, vname:ascii_tag, unit:'m/s', description:'Mean wind speed', missing:missing, agg_method:'MEAN'}
     end
     
+    'WDSP_COUNT': begin
+      data = FLOAT(data)
+      val = {data:data, vname:ascii_tag, unit:'-', description:'Number of daily WDSP measurements', missing:missing, agg_method:'MEAN'}
+    end
+    
     'MXSPD': begin
       data = data * 0.514 ; to m/s
       p = where(data gt 90 or data lt 0, cnt)
@@ -112,10 +128,23 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
     end
     
     'PRCP': begin
+      flag = strmid(data, 0, 1, /REVERSE_OFFSET)
       data = float(data)
       data = data * 25.4 ; to mm
-      p = where(data gt 500 or data lt 0, cnt)
+      p = where(data gt 2500 or data lt 0, cnt)
       if cnt gt 0 then data[p] = missing
+      case (prcp_filter) of
+        0:
+        1: begin
+          pyes = where((flag eq 'D') or (flag eq 'F') or (flag eq 'G') or (flag eq 'I'), cntyes, COMPLEMENT=p, NCOMPLEMENT=cnt)
+          if cnt gt 0 then data[p] = missing
+        end
+        2: begin
+          pyes = where((flag eq 'D') or (flag eq 'F') or (flag eq 'G'), cntyes, COMPLEMENT=p, NCOMPLEMENT=cnt)
+          if cnt gt 0 then data[p] = missing
+        end
+        else: Message, 'Prcp filter not valid'
+      endcase    
       val = {data:data, vname:ascii_tag, unit:'mm/d', description:'Precipitation (rain/melted snow)', missing:missing, agg_method:'MEAN'} 
     end
            
@@ -131,6 +160,7 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
       if cnt gt 0 then data[p] = missing
       val = {data:data, vname:ascii_tag, unit:'hPa', description:'Mean station pressure', missing:missing, agg_method:'MEAN'} 
     end    
+    
 ;    'FRSHTT': begin
 ;      missing = ''
 ;      agg_method = 'NONE'
@@ -156,6 +186,7 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag
 ;      if cnt ne 0 then str[p] += 'Tornado or Funnel Cloud, '
 ;      val = {data:res, vname:ascii_tag, unit:'', description:'Indicator for certain occurences during the day', missing:missing, agg_method:agg_method} 
 ;    end    
+
     ELSE :
   ENDCASE
  
@@ -218,7 +249,13 @@ end
 ;                array of variable names that have to be kept for each station
 ;     REMOVE_VARS: in, optional, type=string
 ;                  array of variable names that have to be removed for each station
-;                 
+;     PRCP_FILTER: in, type=long, default=0
+;                  level of filtering of the prcp data.
+;                  0 = no filtering (default)
+;                  1 = filtering of A, B, C, E, H
+;                  2 = filtering of A, B, C, E, H, I (max quality)
+;                  (see: http://www1.ncdc.noaa.gov/pub/data/gsod/readme.txt)   
+;                   
 ; :Returns:
 ;       
 ; :Examples:
@@ -231,7 +268,8 @@ function w_ncdc_read_gsod_file, FILE=file, $
     DIRECTORY=directory, $
     VERBOSE=verbose, $
     KEEP_VARS=keep_vars, $
-    REMOVE_VARS=remove_vars
+    REMOVE_VARS=remove_vars, $
+    PRCP_FILTER=prcp_filter
     
   ;--------------------------
   ; Set up environment
@@ -254,6 +292,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ncdc_gsod.tpl'
   RESTORE, WAVE_RESOURCE_DIR + '/ncdc/ncdc_history.sav'
   
+  SetDefaultValue, prcp_filter, 0
     
   stat_val=0L
   if N_ELEMENTS(DIRECTORY) ne 0 then file_list=FILE_SEARCH(directory, '*gsod-*.dat', count=filecnt)
@@ -282,7 +321,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
     stat_val=+1
         
     for k = 0, nvals-1 do begin
-      val = w_ncdc_read_gsod_file_parse_val_from_ascii(ascii_data.(k), ascii_tags[k])
+      val = w_ncdc_read_gsod_file_parse_val_from_ascii(ascii_data.(k), ascii_tags[k], PRCP_FILTER=prcp_filter)
       if arg_okay(val,TYPE=IDL_STRING) then continue
       if (N_ELEMENTS(stat_vars) eq 0) then stat_vars = ptr_new(val) else stat_vars = [stat_vars, ptr_new(val)]
     endfor
@@ -336,11 +375,11 @@ function w_ncdc_read_gsod_file, FILE=file, $
         endif
         var = OBJ_NEW('w_ts_Data', _d, _t, NAME=_var.vname, DESCRIPTION=_var.description, UNIT=_var.unit, $
           VALIDITY='INTERVAL', AGG_METHOD=_var.agg_method, MISSING=_var.missing, TIMESTEP=MAKE_TIME_STEP(day=1))
-        if OBJ_VALID(var) then ncdc_station->addVar, var, /NO_SET_PERIOD
+        if OBJ_VALID(var) then ncdc_station->addVar, var
       endfor
       
       if filecnt gt 1 then begin
-        if OBJ_VALID(ncdc_station) then station_list->AddStat, ncdc_station, /NO_SET_PERIOD
+        if OBJ_VALID(ncdc_station) then station_list->AddStat, ncdc_station
       endif else $
         station_list=ncdc_station
         

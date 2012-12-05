@@ -1,20 +1,10 @@
 ; docformat = 'rst'
 ;+
-;   Object to store and manage station instances all together.
+;   Object to store and manage station objects all together.
 ;   
 ;   The Statset object can be seen as a container that performs some actions 
-;   (uniformisation of timesteps, interpolation, aggregation) on all of its stations.
-; 
-; Definition::
-;       
-;         class = {w_ts_StatSet       , $
-;                 name:            '' , $ ; The name of the station set
-;                 description:     '' , $ ; A short description of the station set           
-;                 t0:             0LL , $ ; User def start Time
-;                 t1:             0LL , $ ; User def End Time
-;                 stats:     OBJ_NEW()  $ ; station container (w_ts_Container)
-;                 }    
-;
+;   (uniformisation of timesteps, interpolation, aggregation) on all of its stations. 
+;   
 ; :Categories:
 ;    Timeseries, Objects
 ;
@@ -32,6 +22,8 @@
 ;          The name of the station set
 ;    DESCRIPTION: in, optional, type=string
 ;                 A short description of the station set
+;    DIRECTORY: in, optional, type=string
+;               path to a directory containing station NCDF files
 ;
 ;
 ;-
@@ -39,9 +31,9 @@ function w_ts_StatSet::init, NAME=name, $ ; The name of the station set
     DESCRIPTION=description, $ ; A short description of the station set
     DIRECTORY=directory
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
       
   Catch, theError
   IF theError NE 0 THEN BEGIN
@@ -85,11 +77,14 @@ end
 ;-
 pro w_ts_StatSet::Cleanup
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
 
   Obj_Destroy, self.stats
+  Ptr_free, self.varNames
+  Ptr_free, self.varTypes
   
 end
 
@@ -102,20 +97,39 @@ end
 ;          The name of the station set
 ;    DESCRIPTION: out, type=string
 ;                 A short description of the station set 
-;        
+;    STEP: out, type=string
+;          Either IRREGULAR, TIMESTEP, MONTH or YEAR 
+;    T0: out, type=qms/{ABS_DATE}
+;        The first time of the period
+;    T1: out, type=qms/{ABS_DATE}
+;        The last time of the period
+;    NT: out, type=qms/{ABS_DATE}
+;        The number of times in the period
+;    TIMESTEP: out, type={TIME_STEP}
+;              Timeserie timestep       
 ;-
 pro w_ts_StatSet::getProperty, NAME=name, $
-                               DESCRIPTION=description
-
+                               DESCRIPTION=description, $ 
+                               STEP=step, $ 
+                               NT=nt, $ 
+                               T0=t0, $ 
+                               T1=t1, $ 
+                               TIMESTEP=timestep
                                
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   NAME=self.name
   DESCRIPTION=self.description
-  
+  T0=self.t0
+  T1=self.t1
+  NT=self.nt
+  TIMESTEP=self.timestep
+  STEP=self.step
+
 end
 
 ;+
@@ -143,12 +157,18 @@ end
 ;-
 function w_ts_StatSet::getProperty, thisProperty
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
+  @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   avail = ['NAME' , $
-           'DESCRIPTION']
+           'DESCRIPTION', $
+           'T0' , $
+           'T1' , $
+           'STEP' , $
+           'TIMESTEP' , $
+           'NT']
   
   ; Check if ok
   index = Where(StrPos(avail, str_equiv(thisProperty)) EQ 0, count)
@@ -193,37 +213,22 @@ end
 ;
 ;-
 pro w_ts_StatSet::setProperty, NAME=name, $
-                               DESCRIPTION=description, $
-                               ID=id, $
-                               ELEVATION=elevation, $ 
-                               LOC_X=loc_x, $ 
-                               LOC_Y=loc_y, $ 
-                               SRC=src
+                               DESCRIPTION=description
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  ON_ERROR, 2
+  on_error, 2
   
   if N_ELEMENTS(NAME) ne 0 then self.name = name
   if N_ELEMENTS(DESCRIPTION) ne 0 then self.description = description
-  if N_ELEMENTS(ID) ne 0  then self.id = id
-  if N_ELEMENTS(ELEVATION) ne 0  then self.elevation = elevation
-  if N_ELEMENTS(LOC_X) ne 0 then self.loc_x = loc_x
-  if N_ELEMENTS(LOC_Y) ne 0 then self.loc_y = loc_y
-  if N_ELEMENTS(SRC) ne 0 then begin 
-    PTR_FREE, self.src
-    self.src = PTR_NEW(SRC)
-  endif 
   
 end
 
 ;+
 ; :Description:
 ;    Adds a station to the station set. Default behavior is to
-;    check if the variable allready exists and if not, store it. 
-;    If the station allready exists, the the data is added to the 
-;    existing station (TODO).
+;    check if the station allready exists and if not, store it. 
 ;
 ; :Params:
 ;    var: in, required, type={w_Ts_Data}
@@ -239,87 +244,83 @@ end
 ;                the argument. This makes sense in most of the cases
 ;                but sometimes you don't want this. Set this keyword
 ;                to avoid it.
-;   NO_SET_PERIOD: in, optional, type=boolean
-;                  default behavior is to check all stations periods
-;                  before return for consistency. For a station set 
-;                  in creation this can lead to a large number of useless
-;                  operations. Set this keyword to avoid this check. 
-;                  However, it is recommended to do a ->set_period
-;                  by yourself after the station set has been defined
 ;
 ;-
-pro w_ts_StatSet::addStat, stat, REPLACE=replace, NO_DESTROY=no_destroy, NO_SET_PERIOD=no_set_period
+pro w_ts_StatSet::addStat, stat, REPLACE=replace, NO_DESTROY=no_destroy
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
   if ~OBJ_VALID(stat) then message, WAVE_Std_Message('stat', /ARG)
   if ~OBJ_ISA(stat, 'w_ts_Station') then message, WAVE_Std_Message('stat', /ARG)
    
-  if self->HasStat(STATID=stat->getProperty('ID'), OBJECT=object) then begin     
+  if self->HasStat(stat->getProperty('ID'), OBJECT=object) then begin     
     if KEYWORD_SET(REPLACE) then begin
       self.stats->Remove, object
       self.stats->Add, stat
     endif else begin
-      MESSAGE, 'Station already there. Not implemented yet'
+      Message, 'Station already there. Not implemented yet'
     endelse  
   endif else begin
     self.stats->Add, stat    
   endelse
-    
-  if ~ KEYWORD_SET(NO_SET_PERIOD) then self->setPeriod
+  
+  ; This is to keep track of the variables (not very efficient)
+  vns = str_equiv(stat->getVarNames(COUNT=nv))
+  if nv eq 0 then return
+  types = LONARR(nv)
+  for i=0, nv-1 do types[i] = (stat->getVar(vns[i]))->getProperty('TYPE')
+  if ~ PTR_VALID(self.varNames) then begin
+    self.varNames = PTR_NEW(vns)
+    self.varTypes = PTR_NEW(types)    
+  endif else begin
+    pvns = [*self.varNames, vns]
+    pts = [*self.varTypes, types]
+    PTR_FREE, self.varNames
+    PTR_FREE, self.varTypes
+    u = UNIQ(pvns, SORT(pvns))
+    self.varNames = PTR_NEW(pvns[u])
+    self.varTypes = PTR_NEW(pts[u])    
+  endelse
   
 end
 
 ;+
 ; :Description:
-;    To obtain the station names.
+;    To obtain the same property for all the stations
 ;
 ; :Keywords:
 ;    COUNT: out
 ;           the number of stations
-;    PRINT: in, optional, type=boolean
-;           print the stations in the console
 ;
 ; :Returns:
-;    An string array of COUNT station names
+;    An string array of COUNT station Ids
 ;-
-function w_ts_StatSet::GetStatNames, COUNT=StatCount, PRINT=print
+function w_ts_StatSet::GetStatProperty, thisProperty, COUNT=count
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
-  ; Error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    return, ''
-  ENDIF
+  ; Count the number of station objects.
+  StatCount = self.Stats->Count()  
+  IF StatCount eq 0 then Message, 'No stations yet'
   
-  ; Count the number of global attribute objects.
-  StatCount = self.Stats->Count()
+  out = LIST()
   
-  IF StatCount EQ 0 THEN RETURN, ""
-  
-  StatNames = StrArr(StatCount)
-  FOR j=0,StatCount-1 DO BEGIN
+  for j=0,StatCount-1 do begin
     thisObj = self.Stats->Get(POSITION=j)
-    StatNames[j] = thisObj->GetProperty('NAME')
-  ENDFOR
+    out->add, thisObj->getProperty(thisProperty)
+  endfor
   
-  ; Return a scalar if necessary.
-  IF StatCount EQ 1 THEN StatNames = StatNames[0]
+  count = N_ELEMENTS(out)
   
-  if KEYWORD_SET(PRINT) then begin
-    for i=0, StatCount-1 do print, str_equiv(i) + ': ' + StatNames[i]
-  endif
-  
-  RETURN, StatNames
-  
-END
+  return, out->toArray()
+
+end
 
 ;+
 ; :Description:
@@ -336,22 +337,14 @@ END
 ;-
 function w_ts_StatSet::GetStatIds, COUNT=StatCount, PRINT=print
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
-  ; Error handling.
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /CANCEL
-    ok = WAVE_Error_Message(!Error_State.Msg)
-    return, ''
-  ENDIF
-  
-  ; Count the number of global attribute objects.
-  StatCount = self.Stats->Count()
-  
-  IF StatCount EQ 0 THEN RETURN, ""
+  ; Count the number of station objects.
+  StatCount = self.Stats->Count()  
+  IF StatCount eq 0 then Message, 'No stations yet'
   
   StatIds = StrArr(StatCount)
   FOR j=0,StatCount-1 DO BEGIN
@@ -370,38 +363,33 @@ function w_ts_StatSet::GetStatIds, COUNT=StatCount, PRINT=print
   
 END
 
-
 ;+
 ; :Description:
 ;    Test if a station is available or not
 ;
+; :Params:
+;    statid: in, type=string
+;            the station id to look for
+;
 ; :Keywords:
-;    STATNAME: in
-;              the station name to look for
-;    STATID: in
-;              the station id to look for
 ;    OBJECT: out
 ;            the station object (if found)
-;    
+;
 ; :Returns:
 ;    1 if the station is found, 0 otherwise
 ;    
 ;-
-function w_ts_StatSet::HasStat, STATNAME=statname, STATID=statid, OBJECT=object
+function w_ts_StatSet::HasStat, statid, OBJECT=object
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
   count = 0 
-  
-  if N_ELEMENTS(STATNAME) ne 0 then begin
-    ; Can you find a variable object with this name?
-    object = self.stats->FindByName(statname, COUNT=count)
-  endif else if N_ELEMENTS(STATID) ne 0 then begin
-    ; Can you find a variable object with this id?
-    object = self.stats->FindById(statid, COUNT=count)
-  endif  
+
+  ; Can you find a variable object with this id?
+  object = self.stats->FindById(statid, COUNT=count)
   
   if count gt 0 then return, 1 else return, 0
   
@@ -411,23 +399,22 @@ END
 ; :Description:
 ;    Get a station object.
 ;
-; :Keywords:
-;    STATNAME: in
-;              the station name to look for
-;    STATID: in
-;              the station id to look for
+; :Params:
+;    statid: in, type=string
+;            the station id to look for
 ;             
 ; :Returns:
-;    The variable object
+;    The station object
 ;
 ;-
-function w_ts_StatSet::getStat, STATNAME=statname, STATID=statid
+function w_ts_StatSet::getStat, statid
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
-  if ~ self->HasStat(STATNAME=statname, STATID=statid, OBJECT=object) then Message, 'No station found'
+  if ~ self->HasStat(statid, OBJECT=object) then Message, 'No station found with id: ' + str_equiv(statid)
   
   return, object
   
@@ -435,36 +422,194 @@ end
 
 ;+
 ; :Description:
-;    Delete station from the set.
+;    Get the time
 ;
 ; :Keywords:
-;    STATNAME: in
-;              the station name to look for
-;    STATID: in
-;              the station id to look for
+;    nt: out
+;        the number of times
+;
+; :Returns:
+;   A time array of nt elements
 ;
 ;-
-pro w_ts_StatSet::removeStat, STATNAME=statname, STATID=statid
+function w_ts_StatSet::GetTime, NT=nt
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_error, 2
   
+  ; Count the number of station objects.
+  StatCount = self.Stats->Count()  
+  IF StatCount eq 0 then Message, 'No stations yet'
   
-  n = N_ELEMENTS(statname)  
-  for i=0, n-1 do begin
-   if self->Hasstat(STATNAME=statname, OBJECT=object) then begin
-    self.stats->Remove, object
-   endif
-  endfor  
+  thisObj = self.stats->Get(POSITION=0)
+  return, thisObj->GetTime(NT=nt)
+  
+end
+
+
+;+
+; :Description:
+;    Delete station from the set.
+;
+; :Params:
+;    statid: in, type=string
+;            the station id to look for
+;         
+;-
+pro w_ts_StatSet::removeStat, statid
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+    
   n = N_ELEMENTS(statid)  
   for i=0, n-1 do begin
-   if self->Hasstat(STATID=statid, OBJECT=object) then begin
+   if self->Hasstat(statid, OBJECT=object) then begin
     self.stats->Remove, object
+    undefine, object
    endif
   endfor  
   
-  self->setPeriod
+end
+
+;+
+; :Description:
+;    To obtain the variables names.
+;
+; :Keywords:
+;    COUNT: out
+;           the number of variables
+;    PRINT: in, optional, type=boolean
+;           print the variables in the console
+;
+; :Returns:
+;    An string array of COUNT variable names
+;-
+function w_ts_StatSet::getVarNames, COUNT=varCount, PRINT=print
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ PTR_VALID(self.varNames) then Message, 'No variables yet'
+  
+  varNames = *self.varNames
+  varCount = N_ELEMENTS(varNames)    
+  
+  ; Return a scalar if necessary.
+  IF varCount EQ 1 THEN varNames = varNames[0]
+  
+  if KEYWORD_SET(PRINT) then begin
+    for i=0, varCount-1 do print, str_equiv(i) + ': ' + varNames[i]
+  endif
+  
+  RETURN, varNames
+  
+END
+
+;+
+; :Description:
+;    Test if a variable is available or not
+;
+; :Params:
+;    varName: in, type=string
+;             the variable name to look for
+;             
+; :Keywords:
+;    TYPE: out, type=long
+;          the type of the variable
+;
+; :Returns:
+;    1 if the variable is found, 0 otherwise
+;    
+;-
+function w_ts_StatSet::hasVar, varName, TYPE=type
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)
+  
+  ; Can you find a variable with this name? 
+  varNames = self->getVarNames(COUNT=varCount)
+  if varCount eq 0 then return, 0
+  
+  pok = where(varNames eq str_equiv(varName), cnt)
+  if cnt eq 0 then return, 0
+  
+  type = (*self.varTypes)[pok]
+  
+  return, 1
+  
+END
+
+;+
+; :Description:
+;    Get the variable data for ALL stations in an array 
+;    of dims N*M where N = the number of stations and
+;    M = the number of times
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable
+;
+;-
+function w_ts_StatSet::GetVarData, varName
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ self->HasVar(varName, TYPE=type) then Message, 'No variable found with name: ' + str_equiv(varName)
+  time = self->GetTime(NT=nt)
+  if nt eq 0 then Message, 'No time'
+  statIds = self->GetStatIds(COUNT=ns)
+  if ns eq 0 then Message, 'No Stations'
+  
+  out = MAKE_ARRAY(ns, nt, TYPE=type)
+  
+  for i=0, ns-1 do out[i, *] = (self.stats->Get(POSITION=i))->getVarData(varName)
+  
+  return, out
+  
+end
+
+;+
+; :Description:
+;    Get the variable validity for ALL stations in an array 
+;    of dims N*M where N = the number of stations and
+;    M = the number of times
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable
+;
+;-
+function w_ts_StatSet::GetVarValid, varName
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ self->HasVar(varName) then Message, 'No variable found with name: ' + str_equiv(varName)
+  time = self->GetTime(NT=nt)
+  if nt eq 0 then Message, 'No time'
+  statIds = self->GetStatIds(COUNT=ns)
+  if ns eq 0 then Message, 'No Stations'
+  
+  out = BYTARR(ns, nt)
+  
+  for i=0, ns-1 do out[i, *] = (self.stats->Get(POSITION=i))->getVarValid(varName)
+  
+  return, out
   
 end
 
@@ -479,26 +624,37 @@ end
 ;-
 pro w_ts_StatSet::removeVar, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2 
+  COMPILE_OPT IDL2
+  on_error, 2
   
-  StatCount = self.Stats->Count()  
-  IF StatCount EQ 0 THEN return
+  if ~ PTR_VALID(self.varNames) then Message, 'No variables yet'
   
+  StatCount = self.Stats->Count()
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    _Stat->removeVar, varName
+    _stat->removeVar, varName
+  endfor
+  
+  ; Remove also from my vars
+  varNames = *self.varNames
+  varTypes = *self.varTypes
+  for i=0, N_ELEMENTS(varName) - 1 do begin
+    pok = WHERE(str_equiv(varNames) eq str_equiv(varName[i]), cntok)
+    if cntOk ne 0 then utils_array_remove, pok, varNames, varTypes
   endfor  
-     
-  self->setPeriod
+  PTR_FREE, self.varNames
+  PTR_FREE, self.varTypes
+  self.varNames = PTR_NEW(varNames)
+  self.varTypes = PTR_NEW(varTypes)
   
 end
 
 ;+
 ; :Description:
 ;    Select variable(s) to be kept by the station set. All other variables
-;    are desrtroyed.
+;    are destroyed.
 ;
 ; :Params:
 ;    varName: in, optional, type=string array
@@ -507,65 +663,49 @@ end
 ;-
 pro w_ts_StatSet::selVar, varName
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2 
+  COMPILE_OPT IDL2
+  on_error, 2
   
   StatCount = self.Stats->Count()  
-  IF StatCount EQ 0 THEN return
+  if StatCount eq 0 then return
   
-  FOR j=0, StatCount-1 DO BEGIN
+  for j=0, StatCount-1 do begin
     _stat = self.Stats->Get(POSITION=j)
     _Stat->selVar, varName
   endfor  
-     
-  self->setPeriod
   
 end
 
 ;+
 ; :Description:
+; 
 ;    Sets the focus period to the shortest period 
-;    enclosing all stations or to a user defined period.
+;    enclosing all variables or to a user defined period.
 ;    Once the user set t0 and/or t1, this parameter are 
-;    remembered for later calls. Set the `DEFAULT` keyword
-;    to reset to the default period.
+;    remembered for later calls to getVarData, etc.
 ;
 ; :Keywords:
 ;    T0: in, optional, type=qms/{ABS_DATE}
 ;        the first time of the desired period
 ;    T1: in, optional, type=qms/{ABS_DATE}
 ;        the last time of the desired period
-;    DEFAULT: in, optional, type=boolean
-;             Reset to the default period         
 ;
 ;-
-pro w_ts_StatSet::setPeriod, T0=t0, T1=t1, DEFAULT=default
+pro w_ts_StatSet::setPeriod, T0=t0, T1=t1
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  if KEYWORD_SET(DEFAULT) then begin
-    self.t0 = 0LL
-    self.t1 = 0LL
-  endif
-  
+  COMPILE_OPT IDL2
+  on_error, 2
+    
   StatCount = self.Stats->Count()  
-  iF StatCount EQ 0 THEN return
-  
-  if N_ELEMENTS(T0) ne 0 then begin 
-    if ~ CHECK_WTIME(T0, OUT_QMS=_t0) then Message, WAVE_Std_Message('T0', /ARG)
-    self.t0 = _t0
-  endif
-  
-  if N_ELEMENTS(T1) ne 0 then begin 
-    if ~ CHECK_WTIME(T1, OUT_QMS=_t1) then Message, WAVE_Std_Message('T1', /ARG)
-    self.t1 = _t1
-  endif
-  
-  for i=0, statCount-1 do begin
-    _stat = self.stats->get(POSITION=i)
+  IF StatCount EQ 0 THEN return
+          
+  for i=0, StatCount-1 do begin
+    _stat = self.Stats->Get(POSITION=i)
+    _stat->setPeriod, T0=t0, T1=t1
     if i eq 0 then begin
       _t0 = _stat->getProperty('t0')
       _t1 = _stat->getProperty('t1')
@@ -575,36 +715,41 @@ pro w_ts_StatSet::setPeriod, T0=t0, T1=t1, DEFAULT=default
     endelse
   endfor
   
-  if self.t0 ne 0 then _t0 = self.t0
-  if self.t1 ne 0 then _t1 = self.t1
+  for i=0, StatCount-1 do (self.Stats->Get(POSITION=i))->setPeriod, T0=_t0, T1=_t1
   
-  for i=0, statCount-1 do (self.stats->get(POSITION=i))->setPeriod, T0=_t0, T1=_t1
-  
+  if StatCount eq 0 then begin
+    self.t0 = 0
+    self.t1 = 0
+    self.nt = 0
+  endif else begin
+    _stat = (self.Stats->Get(POSITION=0))
+    self.t0 = _stat->getProperty('t0')
+    self.t1 = _stat->getProperty('t1')
+    self.nt = _stat->getProperty('nt')
+  endelse
+   
 end
 
 ;+
 ; :Description:
-;    Just prints the missing periods of all stations in the console
+;    Makes a console print of the missing periods of all variables
 ;
 ;-
 pro w_ts_StatSet::printMissingPeriods
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  self->setPeriod
+  COMPILE_OPT IDL2
+  on_error, 2
   
   StatCount = self.Stats->Count()  
-  IF StatCount EQ 0 THEN return
-  
+  IF StatCount EQ 0 THEN return  
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
     print, _Stat->getProperty('NAME')
     _Stat->printMissingPeriods
   endfor        
-
-      
+     
 end
 
 ;+
@@ -651,7 +796,12 @@ end
 function w_ts_StatSet::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
   
-  ; Make a new identical station
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  ; Make a new identical set
   out = OBJ_NEW('w_ts_StatSet', NAME=self.name, DESCRIPTION=self.description)                             
                              
   StatCount = self.Stats->Count()  
@@ -686,9 +836,10 @@ end
 ;-
 pro w_ts_StatSet::NCDFwrite, DIRECTORY=directory, OVERWRITE=overwrite
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
+  COMPILE_OPT IDL2
+  on_error, 2
   
   if ~ FILE_TEST(directory, /DIRECTORY) then Message, WAVE_Std_Message('DIRECTORY', /FILE)
   
@@ -706,52 +857,19 @@ end
 ;   Plot all the stations in separate windows
 ;
 ;-
-pro w_ts_StatSet::plotStats
+pro w_ts_StatSet::plot
   
-   ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  self->setPeriod
+  COMPILE_OPT IDL2
+  on_error, 2
   
   StatCount = self.Stats->Count()  
   IF StatCount EQ 0 THEN return
   
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    _stat->plotVars
-  endfor        
-      
-end
-
-;+
-; :Description:
-;   Plot a standard Climate Diagram from the stations data. 
-;   
-;   This routine implies that both variables TEMP and PRCP are available. 
-;   Timesteps must be less or equal a month. Prcp is assumed to be in mm/d.
-;
-; :Keywords:
-;    MIN_SIG: in, optional, Default=0.75
-;             minimal significant values for the aggregation in monthly values
-;    VALID: in, optional
-;           Plot the number of valid months used to compute the climatology
-;
-;-
-pro w_ts_StatSet::ClimateDiagram, MIN_SIG=min_sig, VALID=valid
-  
-   ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  self->setPeriod
-  
-  StatCount = self.Stats->Count()  
-  IF StatCount EQ 0 THEN return
-  
-  FOR j=0,StatCount-1 DO BEGIN
-    _stat = self.Stats->Get(POSITION=j)
-    _stat->ClimateDiagram, MIN_SIG=min_sig, VALID=valid
+    _stat->plot
   endfor        
       
 end
@@ -773,9 +891,14 @@ pro w_ts_StatSet__Define, class
   class = {w_ts_StatSet       , $
            name:            '' , $ ; The name of the station set
            description:     '' , $ ; A short description of the station set           
-           t0:             0LL , $ ; User def start Time
-           t1:             0LL , $ ; User def End Time
-           stats:     OBJ_NEW()  $ ; station container (w_ts_Container)
+           nt:             0L  , $ ; Number of times
+           t0:             0LL , $ ; Start Time
+           t1:             0LL , $ ; End Time
+           step:           ''  , $ ; Either IRREGULAR, TIMESTEP, MONTH or YEAR
+           timestep:       0LL , $ ; Timestep
+           stats:     OBJ_NEW(), $ ; station container (w_ts_Container)
+           varNames:  PTR_NEW(), $ ; array of variable names
+           varTypes:  PTR_NEW()  $ ; array of variable types
            }    
 
 end

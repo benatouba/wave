@@ -1248,6 +1248,7 @@ pro TEST_TS_DATA
   time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS  
   d = OBJ_NEW('w_ts_Data', data, time)
   if ~ OBJ_VALID(d) then error += 1  
+  d->setPeriod
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne H_QMS then error += 1 
   if finite(missing) then error += 1 
@@ -1266,14 +1267,14 @@ pro TEST_TS_DATA
   d->setPeriod
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
-  d->setPeriod, /DEFAULT
+  d->setPeriod
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, T0=time[nt-1]+H_QMS, T1=time[nt-1]+2*H_QMS
   if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time[nt-1]+[H_QMS,2*H_QMS]-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne 2 then error += 1 
-  d->setPeriod, /DEFAULT
+  d->setPeriod
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   undefine, d
@@ -1281,6 +1282,7 @@ pro TEST_TS_DATA
   ; Check missing
   data[1:2] = -9999
   d = OBJ_NEW('w_ts_Data', data, time, MISSING=-9999.)
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne H_QMS then error += 1 
@@ -1292,9 +1294,9 @@ pro TEST_TS_DATA
   if _nt ne nt then error += 1 
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
-  if TOTAL(d->Valid()) ne nt-2 then error += 1 
-  if (d->Valid())[1] ne 0 then error += 1 
-  if (d->Valid())[2] ne 0 then error += 1 
+  if TOTAL(d->getValid()) ne nt-2 then error += 1 
+  if (d->getValid())[1] ne 0 then error += 1 
+  if (d->getValid())[2] ne 0 then error += 1 
   if _nt ne nt then error += 1     
   undefine, d
   
@@ -1302,7 +1304,9 @@ pro TEST_TS_DATA
   data[0:13] = !VALUES.F_NAN
   d = OBJ_NEW('w_ts_Data', data, time)
   if ~ OBJ_VALID(d) then error += 1  
+  d->setPeriod
   a = d->Aggregate(DAY=1)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1  
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne D_QMS then error += 1 
@@ -1313,6 +1317,7 @@ pro TEST_TS_DATA
   undefine, a
   
   a = d->Aggregate(DAY=1, MIN_SIG=0.5)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1
   if finite((a->getdata())[0]) then error += 1 
   if finite((a->getdata())[1]) then error += 1 
@@ -1325,6 +1330,7 @@ pro TEST_TS_DATA
   nt = N_ELEMENTS(data)
   time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * M_QMS * 10LL  
   d = OBJ_NEW('w_ts_Data', data, time)
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne M_QMS * 10LL  then error += 1 
@@ -1343,6 +1349,7 @@ pro TEST_TS_DATA
   nt = N_ELEMENTS(data)
   time = w_month_to_time(w_time_to_month(QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0)) + INDGEN(nt))
   d = OBJ_NEW('w_ts_Data', data, time, STEP='MONTH')
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1  then error += 1 
@@ -1361,7 +1368,7 @@ pro TEST_TS_DATA
   d->setPeriod
   if TOTAL(ABS(data[0:3]-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time[0:3]-d->getTime(NT=_nt))) ne 0 then error += 1 
-  d->setPeriod, /DEFAULT
+  d->setPeriod
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   d->setPeriod, T0=time[nt-1]+31*D_QMS, T1=time[nt-1]+61*D_QMS
@@ -1372,7 +1379,7 @@ pro TEST_TS_DATA
   if TOTAL(FINITE(d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time[0]-[61*D_QMS,31*D_QMS]-d->getTime(NT=_nt))) ne 0 then error += 1 
   if _nt ne 2 then error += 1 
-  d->setPeriod, /DEFAULT
+  d->setPeriod
   if TOTAL(ABS(data-d->getData())) ne 0 then error += 1 
   if TOTAL(ABS(time-d->getTime(NT=_nt))) ne 0 then error += 1 
   undefine, d
@@ -1382,6 +1389,7 @@ pro TEST_TS_DATA
   nt = N_ELEMENTS(data)
   time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * D_QMS  
   d = OBJ_NEW('w_ts_Data', data, time)
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne D_QMS then error += 1 
@@ -1396,6 +1404,7 @@ pro TEST_TS_DATA
    
   a = d->Aggregate(MONTH=1)
   if ~ OBJ_VALID(a) then error += 1  
+  a->setPeriod
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'MONTH' then error += 1 
@@ -1403,6 +1412,7 @@ pro TEST_TS_DATA
   if (a->getTime())[_nt-1] ne QMS_TIME(YEAR=2010, MONTH=5, day=01, HOUR=0) then error += 1  
   undefine, a
   a = d->Aggregate(MONTH=1, MIN_SIG=0.5)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1  
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
@@ -1413,6 +1423,7 @@ pro TEST_TS_DATA
   undefine, a  
   
   a = d->Aggregate(YEAR=1, MIN_SIG=0.5)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1  
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
@@ -1424,6 +1435,7 @@ pro TEST_TS_DATA
   undefine, a  
   a = d->Aggregate(YEAR=1, MIN_SIG=0.25)
   if ~ OBJ_VALID(a) then error += 1  
+  a->setPeriod
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
@@ -1441,6 +1453,7 @@ pro TEST_TS_DATA
   nt = N_ELEMENTS(data)
   time = w_month_to_time(w_time_to_month(QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0)) + INDGEN(nt))
   d = OBJ_NEW('w_ts_Data', data, time, STEP='MONTH')
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   d->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
@@ -1453,6 +1466,7 @@ pro TEST_TS_DATA
   if _nt ne nt then error += 1 
 
   a = d->Aggregate(YEAR=1)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1  
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
@@ -1462,6 +1476,7 @@ pro TEST_TS_DATA
   undefine, a
   a = d->Aggregate(YEAR=1, MIN_SIG=0.5)
   if ~ OBJ_VALID(a) then error += 1  
+  a->setPeriod
   a->getProperty, T0=t0, T1=t1, TIMESTEP=timestep, STEP=step, NT=_nt, MISSING=missing
   if timestep ne 1 then error += 1 
   if step ne 'YEAR' then error += 1 
@@ -1476,12 +1491,13 @@ pro TEST_TS_DATA
   nt = N_ELEMENTS(data)
   time = QMS_TIME(YEAR=2010, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS
   d = OBJ_NEW('w_ts_Data', data, time)
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1
   data2 = cgDemoData(0)
   nt2 = N_ELEMENTS(data)
   time2 = QMS_TIME(YEAR=2011, MONTH=1, day=01, HOUR=0) + INDGEN(nt) * H_QMS
   d->addData, data2, time2
-  d->setPeriod, /DEFAULT  
+  d->setPeriod
   tt = d->getTime()
   if total(utils_minmax(tt) - utils_minmax([time, time2])) ne 0 then error +=1
  
@@ -1522,6 +1538,7 @@ pro TEST_TS_STATION
   f = w_test_file_directory() + 'TS/gsod-389540-99999.dat'
   s = w_ncdc_read_gsod_file(FILE=f, VERBOSE=0)
   if ~ OBJ_VALID(s) then error += 1
+  s->setPeriod
   
   v = s->getvar('TEMP')  
   if v->getProperty('t0') ne QMS_TIME(year=2001,month=1,day=2) then error += 1
@@ -1530,7 +1547,7 @@ pro TEST_TS_STATION
   d = cgDemoData(0)
   t = QMS_TIME(YEAR=2005, MONTH=1, day=01, HOUR=0) + INDGEN(N_ELEMENTS(d)) * D_QMS 
   s->addVar, OBJ_NEW('w_ts_Data', d, t, NAME='DUMMY')  
-  
+  s->setPeriod
   v = s->getvar('DUMMY')  
   if v->getProperty('t0') ne QMS_TIME(year=2001,month=1,day=2) then error += 1
   if v->getProperty('t1') ne QMS_TIME(year=2012,month=1,day=1) then error += 1
@@ -1557,7 +1574,7 @@ pro TEST_TS_STATION
   v = (s->getvar('PRCP'))->getData()
   if v ne 0.12 * 25.4 then error += 1  
      
-  s->setPeriod, /DEFAULT
+  s->setPeriod
   
   d = s->aggregate(month=1)
   if ~ OBJ_VALID(d) then error += 1
@@ -1581,6 +1598,7 @@ pro TEST_TS_STATION
   f1=w_test_file_directory() + 'TS/test_stat.nc'
   s->NCDFwrite, FILE=f1, /OVER
   d = OBJ_NEW('w_ts_Station', FILE=f1)
+  d->setPeriod
   if ~ OBJ_VALID(d) then error += 1  
   f2=w_test_file_directory() + 'TS/test_stat_test.nc'
   d->NCDFwrite, FILE=f2, /OVER
@@ -1594,9 +1612,9 @@ pro TEST_TS_STATION
   undefine, n
   
   v = s->getVar('temp')
-  v->cleanTS, data1, time1, nt1
+  v->getCleanData, data1, time1, nt1
   v = d->getVar('temp')
-  v->cleanTS, data2, time2, nt2  
+  v->getCleanData, data2, time2, nt2  
   if nt1 ne nt2 then error +=1
   if TOTAL(ABS(time1 - time2)) ne 0 then error +=1
   if TOTAL(ABS(data1 - data2)) ne 0 then error +=1  
@@ -1626,19 +1644,23 @@ pro TEST_TS_STATSET
   
   s = w_ncdc_read_gsod_file(DIRECTORY=out_directory, VERBOSE=0)
   if ~ OBJ_VALID(s) then error += 1
+  s->setPeriod
   
   out_directory = w_test_file_directory() + 'TS/set_nc/'
   s->NCDFwrite, DIRECTORY=out_directory, /OVER
   
   d = OBJ_NEW('w_ts_StatSet', DIRECTORY=out_directory)
   if ~ OBJ_VALID(d) then error += 1
+  d->setPeriod
   
   a = d->aggregate(MONTH=1)
+  a->setPeriod
   if ~ OBJ_VALID(a) then error += 1  
   undefine, a
   
   a = d->aggregate(MONTH=1, MIN_SIG=0.9)
   if ~ OBJ_VALID(a) then error += 1  
+  a->setPeriod
   undefine, a  
   
   undefine, s, d, a
@@ -4669,6 +4691,78 @@ pro TEST_WPR, w, wd
   
 end
 
+pro TEST_GEOGRID_SIMULATOR, DOPLOT=doplot
+ 
+ error = 0
+
+  fdir = w_test_file_directory() + '/GEOSIM/'
+  namelist = fdir + 'namelist.wps'
+  w_geogrid_simulator, namelist, GRIDS=grids, DOPLOT=doplot
+  
+  g = OBJ_NEW('w_NCDF', FILE=fdir + 'geo_em.d01.nc')  
+  lon = g->get_Var('XLONG_M')
+  lat = g->get_Var('XLAT_M')  
+  undefine, g  
+  (grids[0])->get_Lonlat, gislon, gislat  
+  if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then error += 1 
+  
+  g = OBJ_NEW('w_NCDF', FILE=fdir + 'geo_em.d02.nc')  
+  lon = g->get_Var('XLONG_M')
+  lat = g->get_Var('XLAT_M')  
+  undefine, g  
+  (grids[1])->get_Lonlat, gislon, gislat  
+  if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then error += 1 
+  
+  g = OBJ_NEW('w_NCDF', FILE=fdir + 'geo_em.d03.nc')  
+  lon = g->get_Var('XLONG_M')
+  lat = g->get_Var('XLAT_M')  
+  undefine, g  
+  (grids[2])->get_Lonlat, gislon, gislat  
+  if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then error += 1 
+  
+  undefine, grids
+    
+  if error ne 0 then message, '% TEST_GEOGRID_SIMULATOR NOT passed', /CONTINUE else print, 'TEST_GEOGRID_SIMULATOR passed'
+   
+end
+
+pro TEST_WPRHOUROFDAY
+ 
+ error = 0
+ 
+ w = OBJ_NEW('w_WPR', DIRECTORY='/home/mowglie/disk/Data/WRF/products/WET/d10km/h')
+ 
+ n = OBJ_NEW('w_GEO_nc', FILE='/home/mowglie/disk/Data/WRF/products/WET/d10km/h/2d/tibet_d10km_h_2d_t2_2003.nc')
+ 
+ r = RANDOMNUMBERGENERATOR()
+ day = LONG(r->GetRandomNumbers()*25) + 1
+ month = LONG(r->GetRandomNumbers()*11) + 1
+ hour = LONG(r->GetRandomNumbers()*23)
+ 
+ totest_all = w->getVarData('t2', tw, HOUROFDAY=hour, YEARS=2003, MONTH=month)
+ 
+ tt = QMS_TIME(year=2003, Day=day, MONTH=month, HOUR=hour)
+ pt = where(tw eq tt) 
+ totest = totest_all[*,*,pt]
+ ref = n->get_Var('t2', T0=tt, T1=tt) 
+ if TOTAL(ABS(ref - totest)) gt 0.0001 then error += 1
+
+ i = LONG(r->GetRandomNumbers()*150)
+ j = LONG(r->GetRandomNumbers()*150)
+  
+ totest = w->getVarTS('t2', i, j, tw, HOUROFDAY=hour, YEARS=2003, MONTH=month)
+ pt = where(tw eq tt)
+ totest = totest[pt] 
+ ref = ref[i, j]
+ if ref - totest gt 0.0001 then error += 1
+ 
+ 
+ undefine, w, n, r
+ 
+ if error ne 0 then message, '% TEST_WPRHOUROFDAY NOT passed', /CONTINUE else print, 'TEST_WPRHOUROFDAY passed'
+ 
+end
+
 pro TEST_TIME
   TEST_MAKE_ABS_DATE
   TEST_QMS_TIME
@@ -4686,10 +4780,10 @@ pro TEST_TIME
 end
 
 pro TEST_DATASETS, NCDF = ncdf
-  TEST_TRMM_3B42
-  TEST_TRMM_3B42_daily
-  TEST_TRMM_3B43  
-  if KEYWORD_SET(NCDF) then  TEST_TRMM_AGG
+;  TEST_TRMM_3B42
+;  TEST_TRMM_3B42_daily
+;  TEST_TRMM_3B43  
+;  if KEYWORD_SET(NCDF) then  TEST_TRMM_AGG
   TEST_WRF_OUT
   TEST_WRF_GEO
   TEST_MODIS  
@@ -4700,13 +4794,14 @@ end
 pro TEST_UTILS
   TEST_GRIDS
   TEST_WRF_AGG_MASSGRID
-  TEST_NEIREST_NEIGHBOR
+;  TEST_NEIREST_NEIGHBOR
   TEST_MOSAIC
   TEST_REGRID
-  TEST_GR_DATALEVELS
+;  TEST_GR_DATALEVELS
   TEST_TS_DATA
   TEST_TS_STATION
   TEST_TS_STATSET
+  TEST_GEOGRID_SIMULATOR
 end
 
 pro TEST_POST, REDO = redo
