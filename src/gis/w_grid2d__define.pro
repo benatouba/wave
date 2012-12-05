@@ -1725,6 +1725,9 @@ end
 ;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
 ;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
 ;                       * 3 = Pixel center point is used to test the appartenance to the ROI. This is the default!
+;    ROI_MASK_RULE: in, type = boolean
+;                   set this keyword if the interior/exterior parts of the shape entities are
+;                   not defined by the entities (requires more computing time)
 ;
 ; :Returns:
 ;   1 if the ROI has been set correctly, 0 if not
@@ -1742,7 +1745,8 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
                             SRC=src, $
                             REMOVE_ENTITITES=remove_entitites, $ 
                             KEEP_ENTITITES=keep_entitites, $
-                            ROI_MASK_RULE=roi_mask_rule
+                            ROI_MASK_RULE=roi_mask_rule, $
+                            CHECK_INTERIOR=check_interior
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1773,6 +1777,8 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   endif  
   if total(check_k) ne 1 then MESSAGE, 'Ambiguous keyword combination. Set one and only one ROI definition method.'
   
+  check_int = KEYWORD_SET(CHECK_INTERIOR)
+  
   if KEYWORD_SET(NO_ERASE) and self.is_roi then _mask = *self.roi
   
   if do_shape then begin
@@ -1792,7 +1798,12 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       index += nbElperConn + 2
       if ~ OBJ_VALID(roi) then roi = OBJ_NEW('w_ROIGroup')
       roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx])
-      roi_->SetProperty, INTERIOR=is_int
+      if is_int and check_int then begin
+        p_in = where(roi->ContainsPoints(x[idx], y[idx]) eq 1, cnt_in)
+        if cnt_in eq 0 then roi_->SetProperty, INTERIOR=0 else roi_->SetProperty, INTERIOR=1
+      endif else begin
+        roi_->SetProperty, INTERIOR=is_int
+      endelse
       roi->Add,roi_
       if next_is eq 0 then begin
         if _roi_mask_rule eq 3 then begin
