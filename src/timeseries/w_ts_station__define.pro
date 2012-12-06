@@ -513,7 +513,7 @@ function w_ts_Station::getVar, varName, POSITION=position
   endif else begin
     if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)    
     if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
-  endif
+  endelse
     
   return, object
   

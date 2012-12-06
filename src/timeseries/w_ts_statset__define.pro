@@ -440,7 +440,7 @@ function w_ts_StatSet::getStat, statid, POSITION=position
     object = self.stats->get(POSITION=position)
   endif else begin  
     if ~ self->HasStat(statid, OBJECT=object) then Message, 'No station found with id: ' + str_equiv(statid)
-  endif
+  endelse
   
   return, object
   
