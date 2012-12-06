@@ -395,6 +395,24 @@ end
 
 ;+
 ; :Description:
+;    To obtain the number of variables in the station.
+;
+; :Returns:
+;    the number of variabled
+;-
+function w_ts_Station::GetVarCount
+  
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  return, self.vars->count()
+
+end
+
+;+
+; :Description:
 ;    To obtain the variables names.
 ;
 ; :Keywords:
@@ -474,22 +492,29 @@ END
 ; :Params:
 ;    varName: in, type=string
 ;             the variable name to look for
-;             
+;            
+; :Keywords:
+;    POSITION: in, optional
+;              the position in the list where to get the station
+;                     
 ; :Returns:
 ;    The variable object
 ;
 ;-
-function w_ts_Station::getVar, varName
+function w_ts_Station::getVar, varName, POSITION=position
 
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   on_error, 2
   
-  if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)
-  
-  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
-  
+  if N_ELEMENTS(POSITION) ne 0 then begin
+    object = self.vars->get(POSITION=position)
+  endif else begin
+    if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then Message, WAVE_Std_Message('varName', /ARG)    
+    if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
+  endif
+    
   return, object
   
 end

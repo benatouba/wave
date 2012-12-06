@@ -324,6 +324,24 @@ end
 
 ;+
 ; :Description:
+;    To obtain the number of stations in the set.
+;
+; :Returns:
+;    the number of stations in the set
+;-
+function w_ts_StatSet::GetStatCount
+  
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  return, self.stats->Count()
+
+end
+
+;+
+; :Description:
 ;    To obtain the station Ids.
 ;
 ; :Keywords:
@@ -400,21 +418,29 @@ END
 ;    Get a station object.
 ;
 ; :Params:
-;    statid: in, type=string
+;    statid: in, optional, type=string
 ;            the station id to look for
+;            
+; :Keywords:
+;    POSITION: in, optional
+;              the position in the list where to get the station
 ;             
 ; :Returns:
 ;    The station object
 ;
 ;-
-function w_ts_StatSet::getStat, statid
+function w_ts_StatSet::getStat, statid, POSITION=position
 
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   on_error, 2
   
-  if ~ self->HasStat(statid, OBJECT=object) then Message, 'No station found with id: ' + str_equiv(statid)
+  if N_ELEMENTS(POSITION) ne 0 then begin
+    object = self.stats->get(POSITION=position)
+  endif else begin  
+    if ~ self->HasStat(statid, OBJECT=object) then Message, 'No station found with id: ' + str_equiv(statid)
+  endif
   
   return, object
   
