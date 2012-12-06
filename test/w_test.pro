@@ -951,7 +951,7 @@ pro TEST_GR_DATALEVELS
   SHOW=0
   
   ; Test default
-  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=1, SHOW=show)  
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=1, SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1)  
   if N_ELEMENTS(info.levels) ne 255 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 1 then error += 1
@@ -981,7 +981,7 @@ pro TEST_GR_DATALEVELS
   if MIN(info.LEVELS) ne 0 then error += 1
   if info.LEVELS[1] ne 10./256 then error += 1
   
-  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10, SHOW=show) 
+  info = w_gr_DataLevels(MIN_VALUE=0, MAX_VALUE=10, SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 255 then error += 1
   if N_ELEMENTS(info.colors) ne 256 then error += 1
   if MAX(info.LEVELS) ne 10 then error += 1
@@ -1010,7 +1010,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 0 then error += 1
   if info.is_ooBotColor ne 0 then error += 1
   
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
@@ -1040,7 +1040,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 0 then error += 1
   if info.is_ooBotColor ne 0 then error += 1
     
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, NEUTRAL_COLOR='brown', SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
@@ -1061,7 +1061,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 0 then error += 1
   
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, OOB_TOP_COLOR='pink', SHOW=show, OOB_BOT_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if info.colors[ N_ELEMENTS(info.colors)-1] ne cgColor('pink') then error += 1
@@ -1072,7 +1072,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 1 then error += 1
   
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, /OOB_BOT_COLOR, SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, CMIN=25, /OOB_BOT_COLOR, SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
@@ -1094,7 +1094,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 1 then error += 1
   
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_BOT_COLOR='grey', NEUTRAL_COLOR='brown', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, OOB_BOT_COLOR='grey', NEUTRAL_COLOR='brown', SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if info.colors[0] ne cgColor('grey') then error += 1
@@ -1105,7 +1105,7 @@ pro TEST_GR_DATALEVELS
   if info.is_ooTopColor ne 1 then error += 1
   if info.is_ooBotColor ne 1 then error += 1
       
-  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /OOB_TOP_COLOR, NEUTRAL_COLOR='brown', SHOW=show) 
+  info = w_gr_DataLevels(N_LEVELS=12, MAX_VALUE=12, MIN_VALUE=1, /OOB_TOP_COLOR, NEUTRAL_COLOR='brown', SHOW=show, OOB_BOT_ARROW=1, OOB_TOP_ARROW=1) 
   if N_ELEMENTS(info.levels) ne 12 then error += 1
   if  N_ELEMENTS(info.colors) ne 13 then error += 1
   if MAX(info.LEVELS) ne 12 then error += 1
@@ -4797,7 +4797,7 @@ pro TEST_UTILS
 ;  TEST_NEIREST_NEIGHBOR
   TEST_MOSAIC
   TEST_REGRID
-;  TEST_GR_DATALEVELS
+  TEST_GR_DATALEVELS
   TEST_TS_DATA
   TEST_TS_STATION
   TEST_TS_STATSET

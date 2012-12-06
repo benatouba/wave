@@ -307,8 +307,8 @@ function w_gr_DataLevels, data, $
   
   
   
-  if oob_top_str and ~ oob_top_arrow then Message, 'Conflicting keywords OOB_TOP_ARROW and OOB_TOP_STR'
-  if oob_bot_str and ~ oob_bot_arrow then Message, 'Conflicting keywords OOB_BOT_ARROW and OOB_BOT_STR'
+  if oob_top_str and ~ oob_top_arrow then oob_top_arrow = 1
+  if oob_bot_str and ~ oob_bot_arrow then oob_bot_arrow = 1
     
   if (user_Levels and user_Max) or (user_Levels and user_Min) then $
    Message, 'Ambiguous keyword combination of MIN/MAX with LEVELS.'

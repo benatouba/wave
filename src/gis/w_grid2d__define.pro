@@ -1799,7 +1799,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       if ~ OBJ_VALID(roi) then roi = OBJ_NEW('w_ROIGroup')
       roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx])
       if is_int and check_int then begin
-        p_in = where(roi->ContainsPoints(x[idx], y[idx]) eq 1, cnt_in)
+        p_in = where(roi->ContainsPoints(x[idx[0]], y[idx[0]]) eq 1, cnt_in)
         if cnt_in eq 0 then roi_->SetProperty, INTERIOR=0 else roi_->SetProperty, INTERIOR=1
       endif else begin
         roi_->SetProperty, INTERIOR=is_int
