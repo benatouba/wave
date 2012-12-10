@@ -820,7 +820,8 @@ end
 ;
 ;-
 function w_ts_StatSet::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
-                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
+                                 STEP=_step, TIMESTEP=_timestep
   
   ; Set up environnement
   @WAVE.inc
@@ -836,7 +837,8 @@ function w_ts_StatSet::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
     out->addStat, _stat->Aggregate(MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
-                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig)   
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
+                                 STEP=_step, TIMESTEP=_timestep)   
   endfor
   
   return, out
@@ -880,10 +882,15 @@ end
 
 ;+
 ; :Description:
-;   Plot all the stations in separate windows
-;
+;   Plot the stat in sionseparate windows
+;   
+;   :Params:
+;     varName: in, otpional
+;              the name of the variable to plot
+;              (if you don't want to plot all of them)
+;              
 ;-
-pro w_ts_StatSet::plot
+pro w_ts_StatSet::plot, varName
   
   ; Set up environnement
   @WAVE.inc
@@ -895,7 +902,7 @@ pro w_ts_StatSet::plot
   
   FOR j=0,StatCount-1 DO BEGIN
     _stat = self.Stats->Get(POSITION=j)
-    _stat->plot
+    _stat->plot, varName
   endfor        
       
 end

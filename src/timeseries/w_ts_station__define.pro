@@ -724,22 +724,32 @@ end
 
 ;+
 ; :Description:
-;   Plot all the variables in separate windows
-;
+;   Plot the variables in separate windows
+;   
+;   :Params:
+;     varName: in, otpional
+;              the name of the variable to plot
+;              (if you don't want to plot all of them)
+;              
 ;-
-pro w_ts_Station::plot
-  
+pro w_ts_Station::plot, varName
+
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   on_error, 2
   
-  varCount = self.vars->Count()
-  for i=0, varCount-1 do begin
-    _var = self.vars->get(POSITION=i)
-    _var->plot, TITLE_INFO=self.name + ': '
-  endfor        
-      
+  if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then begin
+    if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
+    object->plot, TITLE_INFO=self.name + ': '
+  endif else begin
+    varCount = self.vars->Count()
+    for i=0, varCount-1 do begin
+      _var = self.vars->get(POSITION=i)
+      _var->plot, TITLE_INFO=self.name + ': '
+    endfor
+  endelse
+  
 end
 
 ;+
@@ -848,7 +858,8 @@ end
 ;
 ;-
 function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
-                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
+                                 STEP=_step, TIMESTEP=_timestep
   
   ; Set up environnement
   @WAVE.inc
@@ -865,7 +876,8 @@ function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month
   FOR j=0,varCount-1 DO BEGIN
     _var = self.vars->Get(POSITION=j)
     out->addVar, _var->aggregate(MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
-                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig)   
+                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
+                                 STEP=_step, TIMESTEP=_timestep)   
   endfor
   
   return, out

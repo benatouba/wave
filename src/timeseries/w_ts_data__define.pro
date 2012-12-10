@@ -896,7 +896,8 @@ end
 ;
 ;-
 function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
-                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig
+                                NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
+                                 STEP=_step, TIMESTEP=_timestep
 
   ; Set up environnement
   @WAVE.inc
@@ -1000,6 +1001,8 @@ function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, Y
     min_nsig = FLOAT(0 > MIN_SIG < 1) * n
   endif
   
+  
+  
   if total(self->getValid()) eq 0 then begin
     agg_time = new_time[1:*]
     agg = REPLICATE(*self.missing, N_ELEMENTS(agg_time))  
@@ -1008,7 +1011,10 @@ function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, Y
     NEW_TIME=new_time, MIN_NSIG=min_nsig, $
     AGG_METHOD=self.agg_method, MISSING=*self.missing
   endelse
-      
+  
+  if N_ELEMENTS(_step) ne 0 then step = _step
+  if N_ELEMENTS(_timestep) ne 0 then timestep = _timestep
+  
   out= OBJ_NEW('w_ts_Data', agg, agg_time, $
     NAME=self.name, $
     DESCRIPTION=self.description, $
@@ -1040,8 +1046,6 @@ function w_ts_Data::copy
   out = OBJ_NEW('w_ts_Data', *self.data, *self.time, $
     NAME=self.name, $
     DESCRIPTION=self.description, $
-    T0=self.t0, $
-    T1=self.t1, $
     UNIT=self.unit, $
     VALIDITY=self.validity, $
     AGG_METHOD=self.agg_method, $
