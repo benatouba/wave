@@ -1367,7 +1367,6 @@ end
 ;             qsolid: Solid water mixing ratio [kg.kg-1]
 ;             et: Evapotranspiration (step-wize) [mm.h-1]
 ;             
-;             TODO:  umet, vmet, components of wind rotated to earth coordinates
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -1588,33 +1587,48 @@ function w_WRF::get_Var, Varid, $
         tmp = self->get_Var('QRAIN', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
           dims = dims, $
           dimnames = dimnames)
+        ; Set some tolerance level to avoid underflows
+        pu = where(tmp lt (machar()).eps, cntu)
+        if cntu ne 0 then tmp[pu] = 0.
         if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
       endif
       if self->get_Var_Info('QCLOUD') then begin
         tmp = self->get_Var('QCLOUD', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
           dims = dims, $
           dimnames = dimnames)
+        ; Set some tolerance level to avoid underflows
+        pu = where(tmp lt (machar()).eps, cntu)
+        if cntu ne 0 then tmp[pu] = 0.
         if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
       endif
-    end  
+    end
     
     'QSOLID': begin
       if self->get_Var_Info('QSNOW') then begin
         tmp = self->get_Var('QSNOW', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
           dims = dims, $
           dimnames = dimnames)
+        ; Set some tolerance level to avoid underflows
+        pu = where(tmp lt (machar()).eps, cntu)
+        if cntu ne 0 then tmp[pu] = 0.
         if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
       endif
       if self->get_Var_Info('QGRAUP') then begin
         tmp = self->get_Var('QGRAUP', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
           dims = dims, $
           dimnames = dimnames)
+        ; Set some tolerance level to avoid underflows
+        pu = where(tmp lt (machar()).eps, cntu)
+        if cntu ne 0 then tmp[pu] = 0.
         if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
       endif
       if self->get_Var_Info('QICE') then begin
         tmp = self->get_Var('QICE', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
           dims = dims, $
           dimnames = dimnames)
+        ; Set some tolerance level to avoid underflows
+        pu = where(tmp lt (machar()).eps, cntu)
+        if cntu ne 0 then tmp[pu] = 0.
         if N_ELEMENTS(value) eq 0 then value = tmp else value += tmp
       endif      
     end  

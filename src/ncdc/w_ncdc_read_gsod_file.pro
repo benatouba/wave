@@ -35,8 +35,8 @@
 ;     prcp_filter: in, type=long, default=0
 ;                  level of filtering of the prcp data.
 ;                  0 = no filtering (default)
-;                  1 = filtering of A, B, C, E, H
-;                  2 = filtering of A, B, C, E, H, I (max quality)
+;                  1 = accepting only D, F, G, I flags (ok quality)
+;                  2 = accepting only D, F, G flags (max quality)
 ;                  (see: http://www1.ncdc.noaa.gov/pub/data/gsod/readme.txt)
 ;       
 ; :Returns:

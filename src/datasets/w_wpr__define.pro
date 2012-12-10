@@ -265,7 +265,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'hPa'
     v.description = 'Full model pressure'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
   d1 = self->hasVar('geopotential_eta')
@@ -276,7 +276,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'm'
     v.description = 'Full model height'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     d1 = self->hasVar('hgt')
     if d1 then begin
       v = self->_varStruct(/DERIVED)
@@ -285,7 +285,7 @@ pro w_WPR::_addDerivedVars
       v.unit = 'm'
       v.description = 'Full model height above ground'
       v.type = '3d_eta'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
     endif
   endif
   d1 = self->hasVar('geopotential_press')
@@ -296,7 +296,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'm'
     v.description = 'Full model height'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     d1 = self->hasVar('hgt')
     if d1 then begin
       v = self->_varStruct(/DERIVED)
@@ -305,7 +305,7 @@ pro w_WPR::_addDerivedVars
       v.unit = 'm'
       v.description = 'Full model height above ground'
       v.type = '3d_press'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
     endif
   endif
   
@@ -318,14 +318,14 @@ pro w_WPR::_addDerivedVars
     v.unit = 'K'
     v.description = 'Temperature'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     v = self->_varStruct(/DERIVED)
     v.id = 'tc_eta'
     v.name = 'tc'
     v.unit = 'C'
     v.description = 'Temperature'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     if self->hasVar('hgt') then begin
       v = self->_varStruct(/DERIVED)
       v.id = 't2pbl'
@@ -333,14 +333,14 @@ pro w_WPR::_addDerivedVars
       v.unit = 'K'
       v.description = '2 m temperature (extrapolated from eta-levels)'
       v.type = '2d'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
       v = self->_varStruct(/DERIVED)
       v.id = 't2pblc'
       v.name = 't2pblc'
       v.unit = 'C'
       v.description = '2 m temperature (extrapolated from eta-levels)'
       v.type = '2d'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
     endif
   endif  
       
@@ -352,14 +352,14 @@ pro w_WPR::_addDerivedVars
     v.unit = 'K'
     v.description = 'Temperature'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     v = self->_varStruct(/DERIVED)
     v.id = 'tc_press'
     v.name = 'tc'
     v.unit = 'C'
     v.description = 'Temperature'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif      
   
   d1 = self->hasVar('qvapor_eta')
@@ -371,7 +371,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'C'
     v.description = 'Dewpoint Temperature'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif      
   
   d1 = self->hasVar('qvapor_press')
@@ -382,7 +382,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'C'
     v.description = 'Dewpoint Temperature'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
   
   d1 = self->hasVar('psfc')
@@ -394,7 +394,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'C'
     v.description = '2m Dewpoint Temperature'
     v.type = '2d'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif      
 
   d1 = self->hasVar('t2')
@@ -405,7 +405,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'C'
     v.description = '2m Temperature'
     v.type = '2d'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif  
       
   d1 = self->hasVar('theta_eta')
@@ -418,7 +418,7 @@ pro w_WPR::_addDerivedVars
     v.unit = '%'
     v.description = 'Relative Humidity'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
   
   d1 = self->hasVar('u_eta')
@@ -431,7 +431,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'm.s-1'
     v.description = 'Horizontal wind speed'
     v.type = '3d_eta'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
   
   d1 = self->hasVar('u_press')
@@ -444,7 +444,7 @@ pro w_WPR::_addDerivedVars
     v.unit = 'm.s-1'
     v.description = 'Horizontal wind speed'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
   
   d1 = self->hasVar('theta_press')
@@ -456,7 +456,7 @@ pro w_WPR::_addDerivedVars
     v.unit = '%'
     v.description = 'Relative Humidity'
     v.type = '3d_press'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
 
   d1 = self->hasVar('t2')
@@ -469,28 +469,114 @@ pro w_WPR::_addDerivedVars
     v.unit = '%'
     v.description = '2 m Relative Humidity'
     v.type = '2d'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('prcp')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'prcp_sum'
+    v.name = 'prcp_sum'
+    v.unit = 'mm'
+    v.description = 'Total precipitation in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('prcp_nc')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'prcp_nc_sum'
+    v.name = 'prcp_nc_sum'
+    v.unit = 'mm'
+    v.description = 'Total grid-scale precipitation in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('prcp_c')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'prcp_c_sum'
+    v.name = 'prcp_c_sum'
+    v.unit = 'mm'
+    v.description = 'Total convective precipitation in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('prcp_fr')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'prcp_fr_sum'
+    v.name = 'prcp_fr_sum'
+    v.unit = 'mm'
+    v.description = 'Total frozen precipitation in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('snowfall')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'snowfall_sum'
+    v.name = 'snowfall_sum'
+    v.unit = 'mm'
+    v.description = 'Total snowfall precipitation in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('graupel')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'graupel_sum'
+    v.name = 'graupel_sum'
+    v.unit = 'mm'
+    v.description = 'Total graupel in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('hail')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'hail_sum'
+    v.name = 'hail_sum'
+    v.unit = 'mm'
+    v.description = 'Total hail in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+  d1 = self->hasVar('et')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'et_sum'
+    v.name = 'et_sum'
+    v.unit = 'mm'
+    v.description = 'Total evapotranspiration in time interval'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
   d1 = self->hasVar('u10')
   d2 = self->hasVar('v10')
   if (d1 and d2) then begin
-    if ~ self->hasVar('ws10') then begin ; This is because sometimes it is already here as product
-      v = self->_varStruct(/DERIVED)
-      v.id = 'ws10'
-      v.name = 'ws10'
-      v.unit = 'm s-1'
-      v.description = '10 m wind speed'
-      v.type = '2d'
-      vars = [vars,v]
-    endif
+    v = self->_varStruct(/DERIVED)
+    v.id = 'ws10'
+    v.name = 'ws10'
+    v.unit = 'm s-1'
+    v.description = '10 m wind speed'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     v = self->_varStruct(/DERIVED)
     v.id = 'wd10'
     v.name = 'wd10'
     v.unit = 'degrees'
     v.description = '10 m wind direction'
     v.type = '2d'
-    vars = [vars,v]
+    if ~ self->hasVar(v.id) then vars = [vars,v]
     d1 = self->hasVar('cosalpha')
     d2 = self->hasVar('sinalpha')
     if d1 and d2 then begin
@@ -500,14 +586,14 @@ pro w_WPR::_addDerivedVars
       v.unit = 'm s-1'
       v.description = 'U component of 10m wind rotated to earth coordinates'
       v.type = '2d'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
       v = self->_varStruct(/DERIVED)
       v.id = 'vmet10'
       v.name = 'vmet10'
       v.unit = 'm s-1'
       v.description = 'V component of 10m wind rotated to earth coordinates'
       v.type = '2d'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
       v = self->_varStruct(/DERIVED)
       v = self->_varStruct(/DERIVED)
       v.id = 'wdmet10'
@@ -515,7 +601,7 @@ pro w_WPR::_addDerivedVars
       v.unit = 'degrees'
       v.description = '10m wind direction rotated to earth coordinates'
       v.type = '2d'
-      vars = [vars,v]
+      if ~ self->hasVar(v.id) then vars = [vars,v]
     endif    
   endif
   
@@ -819,6 +905,26 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
     
   if info.derived then begin
+    if STRMID(str_equiv(id), N_ELEMENTS(byte(id))-4, 4) eq '_SUM' then begin      
+      _id = utils_replace_string(str_equiv(id), '_SUM', '')
+      value = self->GetVarData(_id, time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)
+      case self.tres of
+        'h': 
+        'd': value = value * 24.
+        'm': begin
+          ad = MAKE_ABS_DATE(QMS=time)
+          nh = GEN_month_days(ad.month, ad.year) * 24.
+          for i=0, nt-1 do value[*,*,i] = value[*,*,i] * nh[i]
+        end
+        'y': begin
+          ad = MAKE_ABS_DATE(QMS=time)
+          nh = (365. + GEN_switch_year(ad.year)) * 24.
+          for i=0, nt-1 do value[*,*,i] = value[*,*,i] * nh[i]
+        end
+      endcase
+      return, temporary(value)    
+    endif
+    
     ; Its a derived variable that we have to compute
     case str_equiv(id) of
       'Z_ETA': begin
