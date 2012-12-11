@@ -695,7 +695,7 @@ pro w_WPP::_add_var_to_h_file
   if self.active_var.type eq '3d_press' then pressure_levels = *self.pressure_levels
   data = self.active_wrf->get_var(self.active_var.name, dummy, varnt, UNSTAGGER=self.active_var.unstagger, PRESSURE_LEVELS=pressure_levels)
   ; Set some tolerance level to avoid underflows
-  pu = where(data lt (machar()).eps, cntu)
+  pu = where(abs(data) lt (machar()).eps, cntu)
   if cntu ne 0 then data[pu] = 0.  
   
   dObj = self.active_dObj
@@ -772,11 +772,11 @@ pro w_WPP::_add_var_to_mean_file, ts
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))   
     if str_equiv(agg_method) eq 'WIND' then agg_method = 'MEAN'
-    ; Set some tolerance level to avoid underflows
-    pu = where(data lt (machar()).eps, cntu)
-    if cntu ne 0 then data[pu] = 0.    
     if self.active_agg eq 'm' or self.active_agg eq 'y' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
+    ; Set some tolerance level to avoid underflows
+    pu = where(abs(agg) lt (machar()).eps, cntu)
+    if cntu ne 0 then agg[pu] = 0.    
     TS_AGG_GRID, TEMPORARY(data), vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
     sig = TEMPORARY(sig) / float(varnt)
     pno = where(sig lt 0.5, cntno)

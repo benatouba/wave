@@ -899,6 +899,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
+  on_Error, 2
   
   undefine, info, time, nt
   
