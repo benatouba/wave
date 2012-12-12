@@ -1464,9 +1464,7 @@ function w_WRF::get_Var, Varid, $
   _do_h = N_ELEMENTS(HEIGHT_LEVELS) ne 0
   _do_ag = N_ELEMENTS(ABOVE_GROUND_LEVELS) ne 0
   if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 1 then Message, 'Some keywords are incompatible (Z-dimension).'
-  if total([_do_eta,_do_pres,_do_h,_do_ag]) gt 0 and _unstagger then Message, 'You are playing with UNSTAGGER and some Z-dimension tools. That could be dangerous.', /INFO
-  
-  
+    
   ;Check if the variable is available
   if ~self->get_Var_Info(Varid, out_id = vid, $
     units = units, $
