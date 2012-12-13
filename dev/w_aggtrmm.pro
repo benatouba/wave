@@ -1,4 +1,4 @@
-pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, _EXTRA=extra
+pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, ADD_ERROR=add_error, _EXTRA=extra
 
    ; Set up environnement
   @WAVE.inc
@@ -7,6 +7,7 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, _EXTRA=ex
   ; Check arguments
   if ~ arg_okay(directory, TYPE=IDL_STRING) then message, 'Argument not ok'
   if ~ FILE_TEST(directory, /DIRECTORY) then message, directory + ' is not a directory'
+  add_error = KEYWORD_SET(ADD_ERROR)
     
   ; Check ncdf files
   fileList = FILE_SEARCH(directory, '*.7.nc', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, count=cfiles)
@@ -62,11 +63,20 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, _EXTRA=ex
   dObj->WriteVarDef, vn, ydimName, DATATYPE='FLOAT'
   dObj->WriteVarAttr, vn, 'long_name', 'Latitude'
   dObj->WriteVarAttr, vn, 'units', 'degree'
+    
   vn = 'pcp'
   dObj->WriteVarDef, vn, [xdimName, ydimName, tdimName], DATATYPE='FLOAT', $
                         CHUNK_DIMENSIONS=chunk_dimensions, GZIP=gzip, SHUFFLE=shuffle
   dObj->WriteVarAttr, vn, 'long_name', 'Precipitation'
   dObj->WriteVarAttr, vn, 'units', 'mm.h-1'
+ 
+  if add_error then begin
+    vn = 'err'
+    dObj->WriteVarDef, vn, [xdimName, ydimName, tdimName], DATATYPE='FLOAT', $
+      CHUNK_DIMENSIONS=chunk_dimensions, GZIP=gzip, SHUFFLE=shuffle
+    dObj->WriteVarAttr, vn, 'long_name', 'Random error estimate'
+    dObj->WriteVarAttr, vn, 'units', 'mm.h-1'
+  endif
   
   dObj->WriteVarData, 'longitude', REFORM(lon[*,0])
   dObj->WriteVarData, 'latitude', REFORM(lat[0,*])
@@ -77,9 +87,14 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, _EXTRA=ex
     tpl->getTime, time
     time = long((time - t0) / H_QMS)
     p = tpl->getVarData()
-    if type eq '3B42d' then p = p / 24. 
-    dObj->WriteVarData, 'time', time, OFFSET=i 
+    if type eq '3B42d' then p = p / 24.
+    dObj->WriteVarData, 'time', time, OFFSET=i
     dObj->WriteVarData, 'pcp', p, OFFSET=[0, 0, i]
+    if add_error then begin
+       p = tpl->getVarData('err')
+       dObj->WriteVarData, 'err', p, OFFSET=[0, 0, i]
+    endif
+    
     undefine, tpl
   endfor  
   

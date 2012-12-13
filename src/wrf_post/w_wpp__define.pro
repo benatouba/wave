@@ -774,9 +774,6 @@ pro w_WPP::_add_var_to_mean_file, ts
     if str_equiv(agg_method) eq 'WIND' then agg_method = 'MEAN'
     if self.active_agg eq 'm' or self.active_agg eq 'y' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
-    ; Set some tolerance level to avoid underflows
-    pu = where(abs(agg) lt (machar()).eps, cntu)
-    if cntu ne 0 then agg[pu] = 0.    
     TS_AGG_GRID, TEMPORARY(data), vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
     sig = TEMPORARY(sig) / float(varnt)
     pno = where(sig lt 0.5, cntno)
