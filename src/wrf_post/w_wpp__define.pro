@@ -741,7 +741,7 @@ end
 ;   Adds the active variable data at the right place into the right file
 ;
 ;-
-pro w_WPP::_add_var_to_mean_file, ts
+pro w_WPP::_add_var_to_mean_file, ts, PRINT=print
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -769,27 +769,33 @@ pro w_WPP::_add_var_to_mean_file, ts
         T1 = wtime[max(where(wtime lt ts[i+1]))]
       end
     endcase 
+    ; Some logging
+    self.active_wrf->getProperty, PATH=path
+    self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + '   Now reading var ' + self.active_var.name + ' from file: ' + path + ' ...', PRINT=print
     data = self.active_wrf->get_var(self.active_var.name, vartime, varnt, T0=t0, T1=t1)
+    self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + '   Ok. Dimensions: [' + STRJOIN(str_equiv(SIZE(data, /DIMENSIONS)), ',') + ']   Starting aggregation: ' + TIME_to_STR(ts[i], /NOTI) + ' to ' + TIME_to_STR(ts[i+1], /NOTI), PRINT=print
     agg_method = str_equiv(self.active_wrf->get_VAtt(self.active_var.name, 'agg_method'))   
     if str_equiv(agg_method) eq 'WIND' then agg_method = 'MEAN'
     if self.active_agg eq 'm' or self.active_agg eq 'y' then vartime += (MAKE_TIME_STEP(DAY=1)).dms
     TS_AGG_GRID, data, vartime, agg, agg_time, AGG_METHOD=agg_method, NEW_TIME=[ts[i],ts[i+1]]
+    self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + '   Ok. Dimensions: [' + STRJOIN(str_equiv(SIZE(agg, /DIMENSIONS)), ',') + ']. Now compute the number of valid values.', PRINT=print
+    ; Set some tolerance level to avoid underflows
+    pu = where(abs(agg) lt (machar()).eps, cntu)
+    if cntu ne 0 then agg[pu] = 0.    
     TS_AGG_GRID, TEMPORARY(data), vartime, sig, agg_time, AGG_METHOD='N_SIG', NEW_TIME=[ts[i],ts[i+1]]
     sig = TEMPORARY(sig) / float(varnt)
     pno = where(sig lt 0.5, cntno)
     if cntno ne 0 then agg[pno] = !VALUES.F_NAN
-
     case (self.active_agg) of
       'd': t = LONG((ts[i]-QMS_TIME(year=self.active_year,month=1,day=1)) / (MAKE_TIME_STEP(day=1)).dms)
       'm': t = (MAKE_ABS_DATE(QMS=ts[i])).month - 1
       'y': t = 0
       else: MESSAGE, 'type not OK'
     endcase
-        
+    self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + '   Ok. writing to file for index: ' + str_equiv(i) +'...', PRINT=print
     dObj->WriteVarData, 'time', t, OFFSET=i
     offset = (self.active_var.type EQ '2d') ? [0,0,i] : [0,0,0,i]
     dObj->WriteVarData, self.active_var.name, agg, OFFSET=offset
-
   endfor
   
   flag = 'DONE'
@@ -1028,7 +1034,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   ptr_free, self.active_index
 
   
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print  
   logt0 = SYSTIME(/SECONDS)
  
@@ -1056,7 +1062,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
   self.active_valid = valid[0]
   
-  self.logger->addText, 'Generating product files ...', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Generating product files ...', PRINT=print
   self.logger->flush
   
   vars = (*self.vars)
@@ -1067,10 +1073,10 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     objs[i] = self->_define_file(FORCE=force, PRINT=print)
   endfor
   
-  self.logger->addText, 'Done generating product files', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Done generating product files', PRINT=print
   self.logger->addText, '', PRINT=print
 
-  self.logger->addText, 'Now start to fill with data ...', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Now start to fill with data ...', PRINT=print
   self.logger->flush
   
   if self.domain eq 1 then ntperday = 8 else ntperday = 24
@@ -1104,12 +1110,12 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     endif
     
     if self.active_valid then begin
-      self.logger->addText, 'Process ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
+      self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Process ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
              ' . Indexes in file : [' + str_equiv(min(*self.active_index)) + ',' + $
                 str_equiv(max(*self.active_index)) + '] from ' + str_equiv(self.active_n_time-1) + $
                    ' ...', PRINT=print     
     endif else begin
-       self.logger->addText, 'File is missing: ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
+       self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' File is missing: ' +TIME_to_STR((*self.active_time)[(*self.active_index)[0]], /NOTIME)+ $
              ' . Filling with NaNs ...', PRINT=print     
     endelse              
     self.logger->flush
@@ -1133,7 +1139,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     delta =  LONG(SYSTIME(/SECONDS) - logti)
     deltam =  delta / 60L 
     deltas =  delta-(deltaM*60L)   
-    self.logger->addText, ' Done. Needed: ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
+    self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Done. Needed: ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
     self.logger->flush
   endfor
     
@@ -1163,9 +1169,9 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   
   self.logger->addText, '', PRINT=print
   self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
-  self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
   self.Logger->AddText, '', PRINT=print
-  self.Logger->AddText, '+ Hourly files for year '+STRING(year,FORMAT='(I4)')+' processed successfully +', PRINT=print
+  self.Logger->AddText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' + Hourly files for year '+STRING(year,FORMAT='(I4)')+' processed successfully +', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->Flush
   
@@ -1241,7 +1247,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   
   logt0 = SYSTIME(/SECONDS)
      
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Start to process mean files (' + agg + ') for year ' + str_equiv(year) + ' ...', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Start to process mean files (' + agg + ') for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print
   
   vars = (*self.vars)
@@ -1259,7 +1265,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
     self.active_wrf = OBJ_NEW('w_WRF', FILE=hfile)
     dobj = self->_define_file(FORCE=force, PRINT=print)
     self.active_dObj = dobj
-    self->_add_var_to_mean_file, ts
+    self->_add_var_to_mean_file, ts, PRINT=print
     undefine, dObj, self.active_wrf
   endfor
     
@@ -1280,8 +1286,8 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   deltas =  delta-(deltaH*60L*60L)-(deltaM*60L)
   
   self.logger->addText, '', PRINT=print
-  self.logger->addText, TIME_to_STR(QMS_TIME()) + '. Done.', PRINT=print
-  self.logger->addText, 'Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Done.', PRINT=print
+  self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Time needed: ' + str_equiv(deltaH) + ' hours, ' + str_equiv(deltaM) + ' minutes, ' + str_equiv(deltaS) + ' seconds.', PRINT=print
   self.Logger->AddText, '', PRINT=print
   self.Logger->AddText, '+ Mean (' + self.active_agg + ') files for year '+STRING(year,FORMAT='(I4)')+' processed successfully +', PRINT=print
   self.Logger->AddText, '', PRINT=print

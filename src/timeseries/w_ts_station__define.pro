@@ -739,7 +739,7 @@ pro w_ts_Station::plot, varName
   COMPILE_OPT IDL2
   on_error, 2
   
-  if ~arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then begin
+  if arg_okay(varName, TYPE=IDL_STRING, /SCALAR) then begin
     if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
     object->plot, TITLE_INFO=self.name + ': '
   endif else begin

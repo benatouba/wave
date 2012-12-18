@@ -1626,7 +1626,7 @@ function w_Map::set_data, data, grid, $
   ENDIF 
 
   if N_PARAMS() eq 0 then begin
-   data = BYTARR(self.Xsize, self.Ysize) 
+   data = FLTARR(self.Xsize, self.Ysize) * !VALUES.F_NAN
    PTR_FREE, self.data
    self.data = PTR_NEW(data, /NO_COPY)  
    PTR_FREE, self.missing

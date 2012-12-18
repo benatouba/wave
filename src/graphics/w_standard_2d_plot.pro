@@ -193,9 +193,9 @@ pro w_standard_2d_plot, map, $
   endif else begin
     if total([keyword_set(eps),keyword_set(pdf),keyword_set(png),keyword_set(jpeg)]) gt 1 then message, 'In /PIXMAP mode, only one image can be written at the same time.'
       if keyword_set(eps) then PS_Start, FILENAME=eps, /DECOMPOSED, /LAND $
-        else if keyword_set(pdf) then PS_Start, FILENAME=pdf, /DECOMPOSED   $
-          else if keyword_set(png) then PS_Start, FILENAME=png, /DECOMPOSED   $
-            else if keyword_set(jpeg) then PS_Start, FILENAME=jpeg, /DECOMPOSED
+        else if keyword_set(pdf) then PS_Start, FILENAME=pdf, /DECOMPOSED, /LAND   $
+          else if keyword_set(png) then PS_Start, FILENAME=png, /DECOMPOSED, /LAND   $
+            else if keyword_set(jpeg) then PS_Start, FILENAME=jpeg, /DECOMPOSED, /LAND
   endelse
 
    ; Begin the plot

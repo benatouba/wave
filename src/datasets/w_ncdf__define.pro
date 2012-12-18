@@ -505,8 +505,10 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                             dims = dims, $ 
                             dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
 
-  
-  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=stride
+  if N_ELEMENTS(STRIDE) ne 0 then begin
+   if max(stride) ne 1 then _stride = stride ; this is because stride is much slowier
+  endif
+  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=_stride
   
   ; Is the variable scaled ?
   is_scale = self->w_NCDF::get_VAtt_Info(varid, 'scale_factor')
