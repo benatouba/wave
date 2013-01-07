@@ -1498,6 +1498,13 @@ end
 ;             the shapefile coordinate system (datum or proj) default is WGS-84
 ;    
 ;    
+;    ENTRULE:in, optional, type=string
+;            the name of a compiled FUNCTION to call at each
+;            iteration over the shapefile entities. It can be used
+;            to e.g filter entities after shapefile specific criterias.
+;            the function has to return 1 if the entity must be kept, 0 if not
+;            the function must accept two arguments, entity and i (index of the entity)
+;                     
 ;    REMOVE_ENTITITES:in, optional, type = long
 ;                     an array containing the id of the shape entities to remove from the shape
 ;                     All other entities are plotted normally.
@@ -1544,6 +1551,7 @@ end
 ;- 
 pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   SHP_SRC=shp_src, $
+  ENTRULE=entrule, $
   REMOVE_ENTITITES=remove_entitites, $
   KEEP_ENTITITES=keep_entitites, $
   NO_COORD_SHIFT=no_coord_shift, $
@@ -1584,6 +1592,8 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
    range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
   end
   
+  SetDefaultValue, _entrule, N_ELEMENTS(ENTRULE) ne 0
+  
   ; read shp file and create polygon object from entities
   shpmodel = OBJ_NEW('IDLffShape',shpfile)
   if ~OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
@@ -1596,7 +1606,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   
   N_ent = N_ELEMENTS(entities)
   n_coord = 0L
-  
+
   mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE)
   mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE)
   mg_conn = obj_new('MGcoArrayList', type=IDL_LONG)
@@ -1615,6 +1625,13 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
       or max(_x) lt range[0] then begin
       shpmodel->IDLffShape::DestroyEntity, ent
       continue
+    endif
+    
+    if _entrule then begin
+      if ~ CALL_FUNCTION(ENTRULE, ent, i) then begin
+        shpmodel->IDLffShape::DestroyEntity, ent
+        continue
+      endif
     endif
     
     mg_x->add, _x
@@ -1664,7 +1681,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
     x = x + 0.5
     y = y + 0.5
   endif
-  
+
 end
 
 
@@ -1712,6 +1729,12 @@ end
 ;              set this keyword to update the ROI in place of replacing it
 ;    SRC: in, optional
 ;         the polygon or shape coordinate system (datum or proj) default is WGS-84
+;    ENTRULE:in, optional, type=string
+;            the name of a compiled FUNCTION to call at each
+;            iteration over the shapefile entities. It can be used
+;            to e.g filter entities after shapefile specific criterias.
+;            the function has to return 1 if the entity must be kept, 0 if not
+;            the function must accept two arguments, entity and i (index of the entity)
 ;    REMOVE_ENTITITES:in, optional, type = long
 ;                     an array containing the id of the shape entities to remove from the shape
 ;                     All other entities are plotted normally.
@@ -1743,6 +1766,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
                             CORNERS=corners, $
                             NO_ERASE=no_erase, $ 
                             SRC=src, $
+                            ENTRULE=entrule, $
                             REMOVE_ENTITITES=remove_entitites, $ 
                             KEEP_ENTITITES=keep_entitites, $
                             ROI_MASK_RULE=roi_mask_rule, $
@@ -1783,7 +1807,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   
   if do_shape then begin
     self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
-      /NO_COORD_SHIFT, /MARK_INTERIOR
+      /NO_COORD_SHIFT, /MARK_INTERIOR, ENTRULE=entrule
     if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile: ' + shape
     if _roi_mask_rule eq 3 then begin
       utils_1d_to_2d, INDGEN(self.tnt_c.nx), INDGEN(self.tnt_c.ny), i, j

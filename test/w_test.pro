@@ -4763,6 +4763,33 @@ pro TEST_WPRHOUROFDAY
  
 end
 
+pro TEST_DEM
+
+ error = 0
+ 
+ f = w_test_file_directory() + 'MAPPING/Namco.grd'
+ sh = w_test_file_directory() + 'MAPPING/namco_shore.shp'
+ 
+ dem = w_DEM(f)
+ 
+ z = dem->getVarData()
+
+ GIS_make_proj, ret, utm, PARAM='2, 46, WGS-84'
+    
+ ok = dem->defineSubset(SHAPE=sh, SRC=utm, ROI_MASK_RULE=2, REMOVE_ENTITITES=53, MARGIN=100)
+ 
+ zs = dem->getVarData()
+ 
+ subs = dem->getProperty('SUBSET')
+ 
+ ref = z[subs[0]:(subs[0]+subs[1]-1),subs[2]:(subs[2]+subs[3]-1)]
+ 
+ if total(ABS(zs-ref)) ne 0 then error+=1
+ 
+ if error ne 0 then message, '% TEST_DEM NOT passed', /CONTINUE else print, 'TEST_DEM passed'
+
+end
+
 pro TEST_TIME
   TEST_MAKE_ABS_DATE
   TEST_QMS_TIME
@@ -4789,6 +4816,7 @@ pro TEST_DATASETS, NCDF = ncdf
   TEST_MODIS  
   TEST_W_MAP
   TEST_FNL
+  TEST_DEM
 end
 
 pro TEST_UTILS

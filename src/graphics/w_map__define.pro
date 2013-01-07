@@ -1022,7 +1022,7 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
     GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
         
     if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
-      dem = OBJ_NEW('w_DEM', FILE=grdfile)
+      dem = OBJ_NEW('w_DEM', grdfile)
       dem->GetProperty, TNT_C=dem_c
       if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
       OBJ_DESTROY, dem
@@ -1057,7 +1057,7 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
       
     endif else begin
     
-      dem = OBJ_NEW('w_DEM', FILE=grdfile)
+      dem = OBJ_NEW('w_DEM', grdfile)
       z = FLOAT(dem->get_Z())
       p = where(z le -9999, cnt)
       if cnt gt 0 then z[p] = 0
@@ -1112,7 +1112,14 @@ end
 ;    
 ;    STYLE:in, optional, type = float
 ;          the style of the shape lines
-;    
+;          
+;    ENTRULE:in, optional, type=string
+;            the name of a compiled FUNCTION to call at each
+;            iteration over the shapefile entities. It can be used
+;            to e.g filter entities after shapefile specific criterias.
+;            the function has to return 1 if the entity must be kept, 0 if not
+;            the function must accept two arguments, entity and i (index of the entity)
+  
 ;    REMOVE_ENTITITES:in, optional, type = long
 ;                     an array containing the id of the shape entities to remove from the plot
 ;                     All other entities are plotted normally.
@@ -1138,7 +1145,8 @@ end
 ;-    
 function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=countries, $
                                 COLOR=color, THICK=thick, STYLE=style, OCEANS=oceans, LAKES=lakes, RIVERS=rivers,  $
-                                REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill
+                                REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill,  $
+                                ENTRULE=entrule
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1195,7 +1203,8 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    return, 1
   endif
   
-  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, MARK_INTERIOR=fill
+  self.grid->transform_shape, shpfile, x, y, conn, SHP_SRC=shp_src, ENTRULE=entrule, $
+    REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, MARK_INTERIOR=fill
   n_coord = N_ELEMENTS(x) 
   if n_coord eq 0 then return, 0
   coord = [1#x,1#y]
