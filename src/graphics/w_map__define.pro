@@ -1058,7 +1058,7 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
     endif else begin
     
       dem = OBJ_NEW('w_DEM', grdfile)
-      z = FLOAT(dem->get_Z())
+      z = FLOAT(dem->getVarData())
       p = where(z le -9999, cnt)
       if cnt gt 0 then z[p] = 0
       z = self.grid->map_gridded_data(z, dem, MISSING = 0., /CUBIC)

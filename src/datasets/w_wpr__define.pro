@@ -816,7 +816,8 @@ function w_WPR::getVarObj, id, year, INFO=info
   endif    
   
   obj = self.objs->FindByVar(id, year, COUNT=count)
-  if count ne 1 then Message, 'Problem to find the object. Is $year set correctly?'
+  if count eq 0 then Message, 'Found no file with id: ' + str_equiv(id) + 'and year: ' + str_equiv(year)
+  if count gt 1 then Message, 'Found more than one file with id: ' + str_equiv(id) + 'and year: ' + str_equiv(year)
 
   return, obj
 
