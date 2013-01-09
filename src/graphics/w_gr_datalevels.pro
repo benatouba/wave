@@ -305,8 +305,6 @@ function w_gr_DataLevels, data, $
     maxncolors = !D.TABLE_SIZE
   endelse
   
-  
-  
   if oob_top_str and ~ oob_top_arrow then oob_top_arrow = 1
   if oob_bot_str and ~ oob_bot_arrow then oob_bot_arrow = 1
     
@@ -425,8 +423,13 @@ function w_gr_DataLevels, data, $
   endelse
       
   ; Now check for out of bounds data
-  p_ooTop = where(valid and (_data gt _max_level), cnt_ooTop)
-  p_ooBot = where(valid and (_data lt _min_level), cnt_ooBot)
+  if cntFin ne 0 then begin
+    p_ooTop = where(valid and (_data gt _max_level), cnt_ooTop)
+    p_ooBot = where(valid and (_data lt _min_level), cnt_ooBot)
+  endif else begin
+    p_ooTop = -1 & cnt_ooTop = 0
+    p_ooBot = -1 & cnt_ooBot = 0
+  endelse
   is_ooTop = is_data and (cnt_ooTop ne 0)
   is_ooBot = is_data and (cnt_ooBot ne 0) 
   
