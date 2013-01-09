@@ -1526,13 +1526,18 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
   
   TVLCT, rr, gg, bb, /GET
   TVLCT, *self.plot_params.colors
-
+  
   t = self.plot_params.type
   if t eq 3 or t eq 6 then min_value = self.plot_params.min_val
   if t eq 4 or t eq 6 then max_value = self.plot_params.max_val
   if t eq 0 then levels = *self.plot_params.levels
   if PTR_VALID(self.missing) then missing = *self.missing
   if PTR_VALID(self.plot_params.dcbar_colors) then DC_COLORS = *self.plot_params.dcbar_colors
+    
+  oob_top_color = *self.plot_params.oob_top_color
+  oob_bot_color = *self.plot_params.oob_bot_color
+  oob_top_arrow = *self.plot_params.oob_top_arrow
+  oob_bot_arrow = *self.plot_params.oob_bot_arrow
   
   info = w_gr_DataLevels(*self.data, $
     LEVELS=levels, $
@@ -1542,14 +1547,14 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
     COLORS=dc_colors, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
-    CMIN=self.plot_params.cmin, $ 
+    CMIN=self.plot_params.cmin, $
     CMAX=self.plot_params.cmax, $
-    OOB_TOP_COLOR=*self.plot_params.oob_top_color, $ 
-    OOB_BOT_COLOR=*self.plot_params.oob_bot_color, $
-    OOB_TOP_ARROW=*self.plot_params.oob_top_arrow, $ 
-    OOB_BOT_ARROW=*self.plot_params.oob_bot_arrow, $
-    DCBAR=self.plot_params.dcbar) 
-  
+    OOB_TOP_COLOR=oob_top_color, $
+    OOB_BOT_COLOR=oob_bot_color, $
+    OOB_TOP_ARROW=oob_top_arrow, $
+    OOB_BOT_ARROW=oob_bot_arrow, $
+    DCBAR=self.plot_params.dcbar)
+    
   if self.plot_params.contour_img then begin
     message, 'contour image, no'
 ;    cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
@@ -2421,7 +2426,7 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   self.Ysize = c.ny
   
   ; Defaults
-  self.data = PTR_NEW(BYTARR(self.Xsize, self.Ysize), /NO_COPY)  
+  self.data = PTR_NEW(FLTARR(self.Xsize, self.Ysize) * !VALUES.F_NAN, /NO_COPY)  
   TVLCT, rr, gg, bb, /GET
   cgLoadCT, 0, /REVERSE
   dummy = self->set_plot_params(N_LEVELS=10)    
