@@ -439,7 +439,7 @@ function w_gr_DataLevels, data, $
   if is_ooBot then oob_bot_arrow = 1 ; Force it
   if is_ooTop then oob_top_arrow = 1 ; Force it   
     
-  same_minmax = _min_level eq _max_level
+  if FINITE(_min_level+_max_level) then same_minmax = _min_level eq _max_level else same_minmax = 1
      
   ; Give a value to _n_levels   
   if n_elements(n_levels) eq 0 then begin
