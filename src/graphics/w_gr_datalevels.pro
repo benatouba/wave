@@ -169,9 +169,13 @@ function w_gr_DataLevels_dataloc, info, data
   @WAVE.inc
   compile_opt idl2
   
-  if N_ELEMENTS(INFO.levels) lt 2 then loc = LONG(data*0) $ 
-   else loc = VALUE_LOCATE(info.levels, data)  
-
+  if N_ELEMENTS(INFO.levels) lt 2 or info.nValid eq 0 then begin
+    loc = LONARR(SIZE(data, /DIMENSIONS)) - 1
+  endif else begin 
+    loc = LONARR(SIZE(data, /DIMENSIONS)) - 1
+    loc[info.pValid] = VALUE_LOCATE(info.levels, data[info.pValid])  
+  endelse
+  
   ; Some temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
   if cnt_ooBot ne 0 and ~ info.is_ooBot then begin
@@ -411,19 +415,19 @@ function w_gr_DataLevels, data, $
       if ~ arg_okay(min_value, /NUMERIC, /SCALAR) then Message, WAVE_Std_Message('MIN_VALUE', /ARG)
       _min_level = min_value
     endif else begin
-      _min_level = dataMin
+      if FINITE(datamin) then _min_level = dataMin else _min_level = 0.
     endelse
     if user_Max then begin
       if ~ arg_okay(max_value, /NUMERIC, /SCALAR) then Message, WAVE_Std_Message('MAX_VALUE', /ARG)
       _max_level = max_value
     endif else begin
-      _max_level = dataMax
+      if FINITE(dataMax) then _max_level = dataMax else  _max_level = 0.
     endelse    
     if user_MinMax and (_min_level eq _max_level) then Message, '$MIN_VALUE and $MAX_VALUE are not valid: min and max are the same'
   endelse
       
   ; Now check for out of bounds data
-  if cntFin ne 0 then begin
+  if cntValid ne 0 then begin
     p_ooTop = where(valid and (_data gt _max_level), cnt_ooTop)
     p_ooBot = where(valid and (_data lt _min_level), cnt_ooBot)
   endif else begin
@@ -439,7 +443,7 @@ function w_gr_DataLevels, data, $
   if is_ooBot then oob_bot_arrow = 1 ; Force it
   if is_ooTop then oob_top_arrow = 1 ; Force it   
     
-  if FINITE(_min_level+_max_level) then same_minmax = _min_level eq _max_level else same_minmax = 1
+  same_minmax = _min_level eq _max_level
      
   ; Give a value to _n_levels   
   if n_elements(n_levels) eq 0 then begin
@@ -595,7 +599,9 @@ function w_gr_DataLevels, data, $
     data_max : dataMax , $
     pmissing : pNoValid, $
     nmissing : cntNoValid, $
-    valid : valid $
+    valid : valid, $
+    pValid : pValid, $
+    nValid : cntValid $
     }
     
    out = w_gr_DataLevels_dataloc(out, _data)
