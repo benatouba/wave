@@ -44,3 +44,6 @@
 "T2PBL", "mean"
 "T2ETA", "mean"
 "ET", "mean"
+"COL_QVAPOR", "mean"
+"COL_QLIQUID", "mean"
+"COL_QSOLID", "mean"
