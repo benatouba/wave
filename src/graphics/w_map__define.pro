@@ -743,6 +743,8 @@ end
 ;          TODO: soon, 'UTM' will be implemented.
 ;    INTERVAL: in, optional, type = float, default = 10
 ;              interval between contours
+;    YINTERVAL: in, optional, type = float, default = INTERVAL
+;               interval between Y contours
 ;    TICK_INTERVAL: in, optional, type=long, default=1
 ;                   Tick annotations every TICK_INTERVAL contours
 ;    TICK_FORMAT: in, optional, type=string
@@ -780,6 +782,7 @@ end
 function w_Map::set_map_params,  $
     TYPE=type, $
     INTERVAL=interval, $
+    YINTERVAL=yinterval, $
     TICK_INTERVAL=tick_interval, $
     TICK_FORMAT=tick_format, $
     THICK=thick, $
@@ -825,9 +828,11 @@ function w_Map::set_map_params,  $
   _ytick_start = 0
   _ytick_dx = 0.
   _ytick_dy = 0.
-  
+
   if N_ELEMENTS(TYPE) eq 1 then _type = str_equiv(TYPE)
   if N_ELEMENTS(INTERVAL) eq 1 then _interval = INTERVAL
+  _yinterval = _interval
+  if N_ELEMENTS(YINTERVAL) eq 1 then _yinterval = YINTERVAL
   if N_ELEMENTS(TICK_INTERVAL) eq 1 then _tick_interval = TICK_INTERVAL
   if N_ELEMENTS(TICK_FORMAT) eq 1 then _tick_format = TICK_FORMAT
   if N_ELEMENTS(THICK) eq 1 then _thick = THICK
@@ -872,13 +877,18 @@ function w_Map::set_map_params,  $
     if _interval lt 0.1 then dec_factor = 100. $
      else if _interval lt 1. then dec_factor = 10. $
       else dec_factor = 1.
-  
+    if _yinterval lt 0.1 then ydec_factor = 100. $
+     else if _yinterval lt 1. then ydec_factor = 10. $
+      else ydec_factor = 1.
+    
     Nlevels = (180 + 360) / _interval
     levels = INDGEN(Nlevels) * (_interval*dec_factor) - 170 * dec_factor
     p = where(levels le floor(max(Lon * dec_factor)) and levels ge ceil(min(Lon * dec_factor)), cnt)
     if cnt gt 0 then lonlevels = levels[p] / dec_factor
-    p = where(levels le floor(max(Lat * dec_factor)) and levels ge ceil(min(Lat * dec_factor)), cnt)
-    if cnt gt 0 then latlevels = levels[p] / dec_factor
+    Nlevels = (180 + 360) / _yinterval
+    levels = INDGEN(Nlevels) * (_yinterval*ydec_factor) - 170 * ydec_factor
+    p = where(levels le floor(max(Lat * ydec_factor)) and levels ge ceil(min(Lat * ydec_factor)), cnt)
+    if cnt gt 0 then latlevels = levels[p] / ydec_factor
     
     if _tick_labels then begin
       for i=0,N_ELEMENTS(lonlevels)-1 do begin
