@@ -1275,7 +1275,7 @@ function utils_nc_LonLat, cdfid, lon_id, lat_id
     RETURN, FALSE
   ENDIF  
   
-  lon_list = ['lon','longitude','longitudes','lons','xlong','xlong_m', 'dimlon','x', 'lon_3']
+  lon_list = ['lon','longitude','longitudes','lons','xlong','xlong_m', 'dimlon','x', 'lon_3', 'long']
   lat_list = ['lat','latitude','latitudes' ,'lats','xlat' ,'xlat_m', 'dimlat','y', 'lat_3']
   
   inq = NCDF_INQUIRE(Cdfid)

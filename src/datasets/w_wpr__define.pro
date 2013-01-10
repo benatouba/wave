@@ -459,6 +459,18 @@ pro w_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif    
 
+  d1 = self->hasVar('col_qliquid')
+  d2 = self->hasVar('col_qsolid')
+  if (d1 and d2) then begin 
+    v = self->_varStruct(/DERIVED)
+    v.id = 'col_qcloud'
+    v.name = 'col_qcloud'
+    v.unit = 'kg kg-1'
+    v.description = 'Total column cloud water mixing ratio (qliquid + qsolid)'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif    
+
   d1 = self->hasVar('t2')
   d2 = self->hasVar('q2')
   d3 = self->hasVar('psfc')
@@ -1027,6 +1039,11 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         u = self->GetVarData('u_press', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         v = self->GetVarData('v_press', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
         return, sqrt(TEMPORARY(u)^2+TEMPORARY(v)^2)
+      end
+      'COL_QCLOUD': begin
+        q1 = self->GetVarData('col_qliquid', time, nt, YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        q2 = self->GetVarData('col_qsolid', YEARS=years, ZLEVELS=zlevels, T0=t0, T1=t1, MONTH=month)
+        return, q1+q2
       end
       'RH2': begin
         TK = self->GetVarData('t2', time, nt, YEARS=years, T0=t0, T1=t1, MONTH=month)

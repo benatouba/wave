@@ -338,7 +338,7 @@ function w_GISdata::getVarTS, id, x, y, time, nt, SRC=src, INFO=info, BILINEAR=b
   if N_PARAMS() lt 3 then Message, WAVE_Std_Message(/NARG)  
   if ~arg_okay(Id, /SCALAR) then MEssage, WAVE_Std_Message('id', /SCALAR)
   
-  if ~ self->hasVar(id, INFO=info) then Massage, 'Variable not found: ' + str_equiv(id)
+  if ~ self->hasVar(id, INFO=info) then Message, 'Variable not found: ' + str_equiv(id)
       
   ; Gis
   if N_ELEMENTS(src) EQ 0 then _src = self else _src = src  
@@ -501,7 +501,7 @@ function w_gisdata::defineSubset, $
       end
       1: begin
        self.ogrid->getProperty, TNT_C=c
-       subset[2] = c.ny - subset[2]  - 1 ; up an down TODO: test this!
+       subset[2] = c.ny - subset[2] - subset[3] ; up an down TODO: test this!
        self.subset = subset
       end
       else: Message, 'Order not ok'
@@ -554,7 +554,7 @@ pro w_GISdata::QuickPlotVar, id, WID=wid, _EXTRA=extra
   
   self->Get_LonLat, lon, lat, nx, ny  
   
-  if N_ELEMENTS(time ne 0) then begin ; We found the time dimension in the file  
+  if N_ELEMENTS(time) ne 0 then begin ; We found the time dimension in the file  
     tsrt = TIME_to_STR(time)
   endif   
   

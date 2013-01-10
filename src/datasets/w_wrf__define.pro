@@ -654,19 +654,31 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       endif
       
       ;Mixing ratios
+      ; qvapor: Liquid water mixing ratio [kg.kg-1]
+      d1 = self->get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'COL_QVAPOR',unit:'kg kg-1',ndims:N_elements(dims),description:'Total column water vapor mixing ratio',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]        
+      endif
+      
       ; qliquid: Liquid water mixing ratio [kg.kg-1]
       d1 = self->get_Var_Info('QRAIN', DIMNAMES=dnames,DIMS=dims)
       d2 = self->get_Var_Info('QCLOUD', DIMNAMES=dnames,DIMS=dims)
       if (d1 or d2) then begin
         var = {name:'QLIQUID',unit:'kg kg-1',ndims:N_elements(dims),description:'Liquid water mixing ratio',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
+        var = {name:'COL_QLIQUID',unit:'kg kg-1',ndims:N_elements(dims),description:'Total column liquid water mixing ratio',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+        dvars = [dvars,var]        
       endif
+      
       ; qsolid: Solid water mixing ratio [kg.kg-1]
       d1 = self->get_Var_Info('QSNOW', DIMNAMES=dnames,DIMS=dims)
       d2 = self->get_Var_Info('QGRAUP', DIMNAMES=dnames,DIMS=dims)
       d3 = self->get_Var_Info('QICE', DIMNAMES=dnames,DIMS=dims)
       if (d1 or d2 or d3) then begin
         var = {name:'QSOLID',unit:'kg kg-1',ndims:N_elements(dims),description:'Solid water mixing ratio',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+        var = {name:'COL_QSOLID',unit:'kg kg-1',ndims:N_elements(dims),description:'Total column solid water mixing ratio',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
       endif
       
@@ -1827,6 +1839,48 @@ function w_WRF::get_Var, Varid, $
       mdims = SIZE(cld, /DIMENSIONS)
       value = FLTARR(mdims[0],mdims[1],nt)
       for t=0, nt-1 do value[*,*,t] = TOTAL(cld[*,*,*,t], 3)   ; Total
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+    
+    'COL_QVAPOR': begin
+      q = self->get_Var('QVAPOR', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      ; Set some tolerance level to avoid underflows
+      pu = where(q lt (machar()).eps, cntu)
+      if cntu ne 0 then q[pu] = 0.
+      mdims = SIZE(q, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for t=0, nt-1 do value[*,*,t] = TOTAL(q[*,*,*,t], 3)   ; Total
+      ; Set some tolerance level to avoid underflows
+      pu = where(value lt (machar()).eps, cntu)
+      if cntu ne 0 then value[pu] = 0.
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+    
+    'COL_QLIQUID': begin
+      q = self->get_Var('QLIQUID', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      mdims = SIZE(q, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for t=0, nt-1 do value[*,*,t] = TOTAL(q[*,*,*,t], 3)   ; Total
+      ; Set some tolerance level to avoid underflows
+      pu = where(value lt (machar()).eps, cntu)
+      if cntu ne 0 then value[pu] = 0.
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+    
+    'COL_QSOLID': begin
+      q = self->get_Var('QSOLID', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      mdims = SIZE(q, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for t=0, nt-1 do value[*,*,t] = TOTAL(q[*,*,*,t], 3)   ; Total
+      ; Set some tolerance level to avoid underflows
+      pu = where(value lt (machar()).eps, cntu)
+      if cntu ne 0 then value[pu] = 0.
       if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
     end
     
