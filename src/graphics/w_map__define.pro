@@ -1534,10 +1534,10 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
   if PTR_VALID(self.missing) then missing = *self.missing
   if PTR_VALID(self.plot_params.dcbar_colors) then DC_COLORS = *self.plot_params.dcbar_colors
     
-  oob_top_color = *self.plot_params.oob_top_color
-  oob_bot_color = *self.plot_params.oob_bot_color
-  oob_top_arrow = *self.plot_params.oob_top_arrow
-  oob_bot_arrow = *self.plot_params.oob_bot_arrow
+  if PTR_VALID(*self.plot_params.oob_top_color) then oob_top_color = *self.plot_params.oob_top_color
+  if PTR_VALID(*self.plot_params.oob_bot_color) then oob_bot_color = *self.plot_params.oob_bot_color
+  if PTR_VALID(*self.plot_params.oob_top_arrow) then oob_top_arrow = *self.plot_params.oob_top_arrow
+  if PTR_VALID(*self.plot_params.oob_bot_arrow) then oob_bot_arrow = *self.plot_params.oob_bot_arrow
   
   info = w_gr_DataLevels(*self.data, $
     LEVELS=levels, $
