@@ -1246,7 +1246,7 @@ function w_Grid2D::fwd_transform_grid, src_grid
   utils_1d_to_2d, INDGEN(src_c.nx, /LONG), INDGEN(src_c.ny, /LONG), xi, yi  
   self->transform_IJ, xi, yi, src_grid, i_dst, j_dst, /NEAREST
   
-  pok = where(i_dst gt 0 and j_dst gt 0 and i_dst lt self.tnt_c.nx and j_dst lt self.tnt_c.ny, cnt)
+  pok = where(i_dst ge 0 and j_dst ge 0 and i_dst lt self.tnt_c.nx and j_dst lt self.tnt_c.ny, cnt)
   
   out = ptrarr(self.tnt_c.nx, self.tnt_c.ny)
   if cnt ne 0 then begin
@@ -1330,7 +1330,7 @@ end
 
 ;+
 ; :Description:
-;   This function realizes athe forward transformation of a gridded dataset 
+;   This function realizes the forward transformation of a gridded dataset 
 ;   into the object grid. The input dataset must be of higher resolution as 
 ;   the object grid otherwize this method makes no sense. See the object 
 ;   desciption for more information about the different approach
