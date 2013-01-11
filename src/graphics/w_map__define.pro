@@ -723,10 +723,10 @@ function w_Map::set_plot_params, $
   
   self.plot_params.contour_img  = KEYWORD_SET(CONTOUR)
   self.plot_params.dcbar  = KEYWORD_SET(DCBAR)
-  self.plot_params.oob_bot_color  = PTR_NEW(OOB_BOT_COLOR)
-  self.plot_params.oob_top_color  = PTR_NEW(OOB_TOP_COLOR)
-  self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW)
-  self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW)
+  if N_ELEMENTS(OOB_BOT_COLOR) ne 0 then self.plot_params.oob_bot_color = PTR_NEW(OOB_BOT_COLOR) else ptr_free, self.plot_params.oob_bot_color 
+  if N_ELEMENTS(OOB_TOP_COLOR) ne 0 then self.plot_params.oob_top_color = PTR_NEW(OOB_TOP_COLOR) else ptr_free, self.plot_params.oob_top_color 
+  if N_ELEMENTS(OOB_BOT_ARROW) ne 0 then self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW) else ptr_free, self.plot_params.oob_bot_arrow 
+  if N_ELEMENTS(OOB_TOP_ARROW) ne 0 then self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW) else ptr_free, self.plot_params.oob_top_arrow 
   
   return, self->set_img()
 
