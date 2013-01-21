@@ -10,7 +10,7 @@
 ;    DRES: in, required, type=string
 ;          the resolution, e.g. DRES=['d30km','d10km']
 ;    VTYPE: in, required, type=string
-;           the variable type, e.g. VTYPE=['2d]
+;           the variable type, e.g. VTYPE=['2d']
 ;    VARIABLES: in, required, type=string
 ;               the variable, e.g. VARIABLES=['hgt', 'landmask', 'prcp', 'prcp_fr', 'psfc', 'q2', 'swdown', 't2', 'u10', 'v10']
 ;    AGG_STEPS: in, required, type=string

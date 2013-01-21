@@ -83,7 +83,8 @@ function w_WPR::init, DIRECTORY=directory, IGNORE_ALTERNATE=ignore_alternate, _E
   years = years[UNIQ(years, sort(years))]
   years = years[where(years gt 0)]
   nyears = N_ELEMENTS(years)
-  self.years = PTR_NEW(years)
+  self.oyears = PTR_NEW(years)
+  self->setYears
   
   so = sort(fnames)
   fnames = fnames[so]
@@ -130,9 +131,6 @@ function w_WPR::init, DIRECTORY=directory, IGNORE_ALTERNATE=ignore_alternate, _E
   undefine, w
   if ~ ok then return, 0
   
-  ; Time
-  self.time = PTR_NEW(self->_makeTime(years))
-  
   return, 1
   
 end
@@ -153,6 +151,7 @@ pro w_WPR::cleanup
   PTR_FREE, self.files
   PTR_FREE, self.time
   PTR_FREE, self.years
+  PTR_FREE, self.oyears
   PTR_FREE, self.pressure_levels
   OBJ_DESTROY, self.objs 
 
@@ -652,6 +651,35 @@ pro w_WPR::GetProperty,  $
   IF Arg_Present(DIRECTORY) THEN directory = self.directory
   
   self->w_GISdata::GetProperty, _Extra=extra
+  
+end
+
+;+
+; :Description:
+;    This set the period of interest to a set of years
+;    and prevents to use getVarData(YEARS=years) all
+;    the time. Since the object remmbers this choice, 
+;    use setYears without argument to reset to the original
+;    period.
+;
+; :Params:
+;    years: in, array
+;           the years of the period of interest
+;           if no argument, set to original period
+;           
+;-
+pro w_WPR::setYears, years
+
+  PTR_FREE, self.years
+  if N_ELEMENTS(years) eq 0 then begin
+    self.years = PTR_NEW(*self.oyears)
+  endif else begin
+    self.years = PTR_NEW(years)
+  endelse
+  
+  ; Time
+  PTR_FREE, self.time
+  self.time = PTR_NEW(self->_makeTime(*self.years))
   
 end
 
@@ -1227,7 +1255,8 @@ pro w_WPR__Define, class
             vars:               PTR_NEW()       ,  $ ; array of var structures (see w_WPR::_varStruct)
             files:              PTR_NEW()       ,  $ ; Path to the files
             time:               PTR_NEW()       ,  $ ; Time array in QMS
-            years:              PTR_NEW()       ,  $ ; The available product years
+            oyears:             PTR_NEW()       ,  $ ; The available product years
+            years:              PTR_NEW()       ,  $ ; The product years set by user
             objs:               OBJ_NEW()          $ ; the ncdf objects 
             }
     

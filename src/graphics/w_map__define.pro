@@ -719,14 +719,18 @@ function w_Map::set_plot_params, $
    self.plot_params.levels = PTR_NEW(levels)
   endif
   
-  self.plot_params.nlevels = 3 > self.plot_params.nlevels < 256
+  self.plot_params.nlevels = self.plot_params.nlevels
   
   self.plot_params.contour_img  = KEYWORD_SET(CONTOUR)
   self.plot_params.dcbar  = KEYWORD_SET(DCBAR)
-  if N_ELEMENTS(OOB_BOT_COLOR) ne 0 then self.plot_params.oob_bot_color = PTR_NEW(OOB_BOT_COLOR) else ptr_free, self.plot_params.oob_bot_color 
-  if N_ELEMENTS(OOB_TOP_COLOR) ne 0 then self.plot_params.oob_top_color = PTR_NEW(OOB_TOP_COLOR) else ptr_free, self.plot_params.oob_top_color 
-  if N_ELEMENTS(OOB_BOT_ARROW) ne 0 then self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW) else ptr_free, self.plot_params.oob_bot_arrow 
-  if N_ELEMENTS(OOB_TOP_ARROW) ne 0 then self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW) else ptr_free, self.plot_params.oob_top_arrow 
+  ptr_free, self.plot_params.oob_bot_color 
+  ptr_free, self.plot_params.oob_top_color 
+  ptr_free, self.plot_params.oob_bot_arrow 
+  ptr_free, self.plot_params.oob_top_arrow 
+  if N_ELEMENTS(OOB_BOT_COLOR) ne 0 then self.plot_params.oob_bot_color = PTR_NEW(OOB_BOT_COLOR) 
+  if N_ELEMENTS(OOB_TOP_COLOR) ne 0 then self.plot_params.oob_top_color = PTR_NEW(OOB_TOP_COLOR)
+  if N_ELEMENTS(OOB_BOT_ARROW) ne 0 then self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW) 
+  if N_ELEMENTS(OOB_TOP_ARROW) ne 0 then self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW)
   
   return, self->set_img()
 

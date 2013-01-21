@@ -133,9 +133,12 @@ end
 ;             set this keyword to define the size of the circle in your cgwindow
 ;    LEGEND : in, optional, default is ['winter', 'summer', 'autumn']
 ;             set this keyword to vary the legend of the color circle
-;    
+;    CHARSIZE: in, optional
+;              the charsize
+;    THICK: in, optional
+;           the charthick         
 ;-
-pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad, LEGEND=legend
+pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position, RAD=rad, PIXRAD=pixrad, LEGEND=legend, CHARSIZE=charsize, THICK=thick
 
   ;--------------------
   ; Set up environment
@@ -154,14 +157,14 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   colorcircle = w_add_RGB_legend_make_color_circle(pixrad)
    
    ; prepare image
-  cgImage, colorcircle, /KEEP_ASPECT_RATIO, /SAVE, POSITION=mypos, ADDCMD=addcmd, DATA=data, NORMAL=normal
+  cgImage, colorcircle, /KEEP_ASPECT_RATIO, /SAVE, POSITION=mypos, ADDCMD=addcmd, DATA=data, NORMAL=normal, /NOERASE
   
   center = pixrad+1
   npoints = 1000
   alpha = indgen(npoints) * 2. *!PI / (npoints-1)
   xcircle = center + cos(alpha) * pixrad
   ycircle = center + sin(alpha) * pixrad
-  cgPlots, xcircle,ycircle, ADDCMD=addcmd , /DATA, THICK=2
+  cgPlots, xcircle,ycircle, ADDCMD=addcmd , /DATA, THICK=thick
   
   ; legend marks
   xmonsoonmark = [(center + cos(!PI*1/2) * pixrad), (center + cos(!PI*1/2) * (pixrad+pixrad/10))]
@@ -170,9 +173,9 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   ywintermark  = [(center + sin(!PI*7/6) * pixrad), (center + sin(!PI*7/6) * (pixrad+pixrad/10))]
   xautumnmark  = [(center + cos(!PI*11/6) * pixrad), (center + cos(!PI*11/6) * (pixrad+pixrad/10))]
   yautumnmark  = [(center + sin(!PI*11/6) * pixrad), (center + sin(!PI*11/6) * (pixrad+pixrad/10))]
-  cgplots, xwintermark, ywintermark, ADDCMD=addcmd , /Data, Thick=2
-  cgplots, xmonsoonmark, ymonsoonmark, ADDCMD=addcmd , /Data, Thick=2
-  cgplots, xautumnmark, yautumnmark, ADDCMD=addcmd , /Data, Thick=2
+  cgplots, xwintermark, ywintermark, ADDCMD=addcmd , /Data, THICK=thick
+  cgplots, xmonsoonmark, ymonsoonmark, ADDCMD=addcmd , /Data, THICK=thick
+  cgplots, xautumnmark, yautumnmark, ADDCMD=addcmd , /Data, THICK=thick
   
   ; mark names
   xmonsoon = [center -(pixrad/5) + cos(!PI*1/2) *pixrad]
@@ -184,8 +187,8 @@ pro w_add_RGB_legend, ADDCMD=addcmd, DATA=data, NORMAL=normal, POSITION=position
   chars = rad * 4.
   
   if N_ELEMENTS(LEGEND) eq 0 then legend=['winter', 'summer', 'autumn']
-    cgtext, xmonsoon, ymonsoon, legend[1], CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
-    cgtext, xwinter, ywinter, legend[0], CHARSIZE =chars, /Data, ADDCMD=addcmd, ALIGN=0.7, CHARTHICK=chars
-    cgtext, xautumn, yautumn, legend[2], CHARSIZE =chars, /Data, ADDCMD=addcmd, CHARTHICK=chars
+    cgtext, xmonsoon, ymonsoon, legend[1], /Data, ADDCMD=addcmd, CHARSIZE=charsize
+    cgtext, xwinter, ywinter, legend[0], /Data, ADDCMD=addcmd, ALIGN=0.7, CHARSIZE=charsize
+    cgtext, xautumn, yautumn, legend[2], /Data, ADDCMD=addcmd, CHARSIZE=charsize
 
 end

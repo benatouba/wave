@@ -26,6 +26,8 @@
 ;                  
 ;    SHUFFLE:    Set this keyword to apply the shuffle filter to the variable. (NETCDF4 only) 
 ;    
+;    YEARS: See W_WPR->setYear
+;    
 ;    SHAPE: in, type = string
 ;           the shapefile to read (.shp), coordinate system defined by `SRC`
 ;    POLYGON: in, type = array
@@ -61,9 +63,10 @@
 ;     Written by FaM & JuC, 2012.
 
 
-pro w_pr_select_region, input_dir, destFile, varlist,   $
+pro w_pr_selectregion, input_dir, destFile, varlist,   $
     GZIP=gzip, SHUFFLE=shuffle,   $
     NETCDF4_FORMAT=NETCDF4_FORMAT, CLOBBER=clobber,   $
+    YEARS=years,   $
     SHAPE=shape,  $
     POLYGON=polygon, MASK=mask,  $
     GRID=grid,    $
@@ -88,7 +91,7 @@ pro w_pr_select_region, input_dir, destFile, varlist,   $
   wpr->Get_XY, xx, yy, nx, ny
   wpr->getProperty, TNT_C=c
   wrf_proj = c.proj
-  
+  wpr->setYears, years
   wpr->getTime, time, nt, t0, t1
   
   ;find a template file

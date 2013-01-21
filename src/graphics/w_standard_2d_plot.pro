@@ -246,9 +246,9 @@ pro w_standard_2d_plot, map, $
   
     ; Projection
     proj_name = 'Projection: ' + tnt_c.proj.name
-    cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+    cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
     proj_name = 'Datum: ' + tnt_c.proj.datum.name
-    cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+    cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
     
   endif
   
@@ -258,7 +258,7 @@ pro w_standard_2d_plot, map, $
     if N_ELEMENTS(SOURCE_INFO) eq 0 then source_info = cgSymbol('copyright') + ' '+ $
       TIME_to_STR(QMS_TIME(), MASK='YYYY') +' TU Berlin!C!CChair of Climatology'
     if arg_okay(source_info, TYPE=IDL_STRING) then begin
-      cgText, 0.80,  yLegend + 0.02, source_info, ALIGNMENT=0., CHARSIZE=0.8* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
+      cgText, 0.80,  yLegend + 0.026, source_info, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
     endif
     
   endif
