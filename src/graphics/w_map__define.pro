@@ -1179,7 +1179,7 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
    if N_ELEMENTS(fill) eq 0 then fill = 1
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/oceans/10m_ocean.shp', SHP_SRC=shp_src, $
-             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites)
   endif  
   
   if KEYWORD_SET(LAKES) then begin
@@ -1187,20 +1187,20 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
    if N_ELEMENTS(fill) eq 0 then fill = 1   
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/lakes/ne_10m_lakes.shp', SHP_SRC=shp_src, $
-             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites)
   endif  
   
   if KEYWORD_SET(RIVERS) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    if N_ELEMENTS(color) eq 0 then color = 'PBG4'
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/rivers/ne_10m_rivers_lake_centerlines.shp', SHP_SRC=shp_src, $
-             THICK=thick, STYLE=style, COLOR=color, FILL=fill)
+             THICK=thick, STYLE=style, COLOR=color, FILL=fill, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites)
   endif  
   
   if KEYWORD_SET(COUNTRIES) then begin
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
-            COLOR=color, THICK=thick, STYLE=style, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites)
+            COLOR=color, THICK=thick, STYLE=style, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, FILL=fill)
   endif  
   
   ;******************
