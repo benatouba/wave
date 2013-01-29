@@ -32,7 +32,8 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
     VARIABLES=variables, $
     YEARS=years, $
     AGG_STEPS=agg_steps, $
-    FORCE=force
+    FORCE=force, $
+    COMPRESS=compress
     
   if N_ELEMENTS(INPUT_DIR) eq 0 then input_dir = Dialog_Pickfile(TITLE='Please select the input product directory', /DIRECTORY, /MUST_EXIST)
   if input_dir eq '' then return
@@ -45,42 +46,55 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
   
   ; Parse dir
   dir = utils_clean_path(input_dir, /MARK_DIRECTORY)
-  file_list = FILE_SEARCH(dir, '*.nc', count=filecnt)
+  file_list_l0 = FILE_SEARCH(dir, '*.nc', count=filecnt)
   if filecnt eq 0 then message, 'No files in the directory?'
   
-  if N_ELEMENTS(YEARS) ne 0 then message, '$YEARS keyword not implemented yet, sorry'
-    
+  if N_ELEMENTS(YEARS) eq 0 then years = LINDGEN(14) + 2000L
+  
   si = 0LL
   nf = 0LL
   for i=0, N_ELEMENTS(dres)-1 do begin
-    pok = where(StrMatch(file_list, '*/'+dres[i]+'/*'), cnt)
+    pok = where(StrMatch(file_list_l0, '*/'+dres[i]+'/*'), cnt)
     if cnt eq 0 then continue
-    _file_list = file_list[pok]
+    file_list_l1 = file_list_l0[pok]
     for j=0, N_ELEMENTS(agg_steps)-1 do begin
-      pok = where(StrMatch(_file_list, '*/'+agg_steps[j]+'/*'), cnt)
+      pok = where(StrMatch(file_list_l1, '*/'+agg_steps[j]+'/*'), cnt)
       if cnt eq 0 then continue
-      __file_list = _file_list[pok]
-      for q=0, N_ELEMENTS(vtype)-1 do begin
-        pok = where(StrMatch(__file_list, '*/'+vtype[q]+'/*'), cnt)
+      file_list_l2 = file_list_l1[pok]
+      for k=0, N_ELEMENTS(vtype)-1 do begin
+        pok = where(StrMatch(file_list_l2, '*/'+vtype[k]+'/*'), cnt)
         if cnt eq 0 then continue
-        ___file_list = __file_list[pok]
-        for k=0, N_ELEMENTS(variables)-1 do begin
-          pok = where(StrMatch(___file_list, '*_'+variables[k]+'_2*'), cnt)
+        file_list_l3 = file_list_l2[pok]
+        for l=0, N_ELEMENTS(variables)-1 do begin
+          pok = where(StrMatch(file_list_l3, '*_'+variables[l]+'_2*'), cnt)
           if cnt eq 0 then begin ; try static case
-            pok = where(StrMatch(___file_list, '*static_'+variables[k]+'.*'), cnt)
+            pok = where(StrMatch(file_list_l3, '*static_'+variables[l]+'.*'), cnt)
           endif
           if cnt eq 0 then continue
-          ____file_list = ___file_list[pok]
-          for l=0, N_ELEMENTS(____file_list)-1 do begin
-            f = ____file_list[l]
-            arr_file = output_dir + PATH_SEP() + utils_replace_string(f, dir, '')
-            if FILE_TEST(arr_file) and ~ force then continue
-            FILE_MKDIR, FILE_DIRNAME(arr_file)
-            print, 'Copying file : ' + f
-            print, ' to : ' + arr_file + ' ...'
-            FILE_COPY, f, arr_file, FORCE=force
-            si += (FILE_INFO(arr_file)).size
-            nf += 1
+          file_list_l4 = file_list_l3[pok]
+          for m=0, N_ELEMENTS(years)-1 do begin
+            pok = where(StrMatch(file_list_l4, '*_'+STRING(years[m], FORMAT='(I4)')+'.nc'), cnt)
+            if cnt eq 0 then begin ; try static case
+              pok = where(StrMatch(file_list_l4, '*static*'), cnt)
+            endif
+            if cnt eq 0 then continue
+            file_list_l5 = file_list_l4[pok]
+            for n=0, N_ELEMENTS(file_list_l5)-1 do begin
+              f = file_list_l5[n]
+              arr_file = output_dir + PATH_SEP() + utils_replace_string(f, dir, '')
+              if FILE_TEST(arr_file) and ~ force then continue
+              FILE_MKDIR, FILE_DIRNAME(arr_file)
+              print, 'Copying file : ' + f
+              print, ' to : ' + arr_file + ' ...'
+              FILE_COPY, f, arr_file, FORCE=force
+              if KEYWORD_SET(COMPRESS) then begin
+                c_file = utils_replace_string(arr_file, '.nc', '.zip')
+                SPAWN, 'zip -j ' + c_file + ' ' + arr_file
+                FILE_DELETE, arr_file
+              endif
+              si += (FILE_INFO(arr_file)).size
+              nf += 1
+            endfor
           endfor
         endfor
       endfor
@@ -88,5 +102,5 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
   endfor
   si = cgNumber_Formatter(si/1000000000d) + ' Gb'
   print, 'Done. Number of files copied: ' + str_equiv(nf) + '. Total size copied: ' + si
-    
+  
 end
