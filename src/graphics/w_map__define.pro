@@ -369,14 +369,7 @@ function w_Map::_draw_Map, WINDOW = window
         LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
     endif
   endif
-  
-  ; Draw a frame
-  if ~(self.plot_params.contour_img and ~self.is_Shaded) then begin
-    xf = [0, self.xsize, self.xsize, 0, 0]
-    yf = [0, 0, self.ysize, self.ysize, 0]
-    cgPlotS, xf, yf, WINDOW = window, /DATA
-  endif
-  
+    
   TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
   if TICK_LABEL then begin    
     x_ddy = - 0.023 * self.ysize + self.map_params.xtick_dy * self.ysize
@@ -2213,6 +2206,12 @@ pro w_Map::add_img, $
   if self.is_Contoured then ok = self->_draw_contours(WINDOW = window)
   if self.is_Shaped then ok = self->_draw_shapes(WINDOW = window)
   if self.is_Mapped then ok = self->_draw_Map(WINDOW = window)
+  
+  ; Draw a frame
+  xf = [0, self.xsize, self.xsize, 0, 0]
+  yf = [0, 0, self.ysize, self.ysize, 0]
+  cgPlotS, xf, yf, WINDOW = window, /DATA
+  
   if self.is_Winded then ok = self->_draw_wind(WINDOW = window)
   if self.is_Polygoned then ok = self->_draw_polygons(WINDOW = window)
   if self.is_Pointed then ok = self->_draw_points(WINDOW = window)
