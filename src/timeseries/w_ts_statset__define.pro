@@ -577,6 +577,37 @@ END
 
 ;+
 ; :Description:
+;    Get the variable property for ALL stations in an array 
+;    of dims N where N = the number of stations
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable
+;    varProperty: in, required
+;                 the name of the property
+;-
+function w_ts_StatSet::GetVarProperty, varName, varProperty
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ self->HasVar(varName, TYPE=type) then Message, 'No variable found with name: ' + str_equiv(varName)
+  
+  statIds = self->GetStatIds(COUNT=ns)
+  if ns eq 0 then Message, 'No Stations'
+  
+  out = list()
+  
+  for i=0, ns-1 do out->add, (self.stats->Get(POSITION=i))->getVarProperty(varName, varProperty)
+  
+  return, out->toArray()
+  
+end
+
+;+
+; :Description:
 ;    Get the variable data for ALL stations in an array 
 ;    of dims N*M where N = the number of stations and
 ;    M = the number of times

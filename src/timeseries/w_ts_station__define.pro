@@ -552,6 +552,30 @@ end
 
 ;+
 ; :Description:
+;    Shortcut for  (Station->getVar())->GetProperty()
+;
+; :Params:
+;    varName: in, required
+;             the name of the variable to get the property from
+;    varProperty: in, required
+;                 the name of the property
+;
+;-
+function w_ts_Station::GetVarProperty, varName, varProperty
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ self->HasVar(varName, OBJECT=object) then Message, 'No variable found with name: ' + str_equiv(varName)
+  
+  return, object->getProperty(varProperty)
+  
+end
+
+;+
+; :Description:
 ;    Shortcut for  (Station->getVar())->GetData()
 ;
 ; :Params:

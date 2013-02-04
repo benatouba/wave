@@ -543,7 +543,7 @@ function w_Map::_draw_points, WINDOW = window
     p = (*self.points)[i]
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
-    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, THICK=p.thick, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
+    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
     cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=p.color, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
   endfor
   
@@ -1362,47 +1362,34 @@ end
 ;    Set a point or an array of points to draw on the map.
 ;    
 ;  :Params:
-;    
 ;    x: in, required
 ;       the x coordinates of the point(s) to draw
-;    
 ;    y: in, required
 ;       the y coordinates of the point(s) to draw 
 ;       
 ; :Keywords:
-;    
 ;    SRC: in, optional
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
-;    
 ;    COLOR: in, optional, type = string
 ;           the color of the points
-;    
-;    THICK:in, optional, type = float
-;           the thickness of the points
-;          
-;    PSYM:in, optional, type = int, default = 5
+;    PSYM:in, optional, type = int, default=16
 ;          the style of the the points (see symcat for plenty of possibilities)
-;          
 ;    SYMSIZE:in, optional, type = float
 ;            the size of the the points
-;           
 ;    TEXT:in, optional, type = float
 ;          points annotation
-;          
 ;    DELTA_TEXT:in, optional, type = float
 ;               a delta in relative img coordinates where to put the annotation (2 elements vector)
-;               
 ;    ALIGN:in, optional, type = float
 ;          the allignment of the annotation
 ;    
-;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM = psym, SYMSIZE = symsize, $
-                                  TEXT = text, DELTA_TEXT =  Delta_Text, ALIGN = align, CHARSIZE = charsize
+function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsize, $
+                                  TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize
 
-  ; SET UP ENVIRONNEMENT
+  ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
   
@@ -1439,21 +1426,18 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   _color = 'black'
   _psym = 16
   _symsize = 1.
-  _thick = 1.  
   _align = 0.
   _dpText = [0.005,0.005]
   _CHARSIZE = 1.
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
   if N_ELEMENTS(PSYM) eq 1 then _psym = PSYM
   if N_ELEMENTS(SYMSIZE) eq 1 then _symsize = SYMSIZE
-  if N_ELEMENTS(THICK) eq 1 then _thick = THICK
   if N_ELEMENTS(DELTA_TEXT) eq 2 then _dpText = DELTA_TEXT
   if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
   if KEYWORD_SET(CHARSIZE) then _charsize = CHARSIZE
   
   point = REPLICATE({w_Map_POINT}, n_coord)  
   for i = 0, n_coord -1 do begin
-    point[i].thick = _thick
     point[i].psym = _psym
     point[i].symsize = _symsize
     point[i].color = cgColor(_color, /DECOMPOSED)
@@ -1462,7 +1446,6 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
     point[i].dpText = _dpText
     point[i].coord = [_x[i],_y[i]]
     point[i].charsize = _charsize
-    point[i].thick = _thick    
   endfor
 
   if self.npoints eq 0 then begin
@@ -1480,6 +1463,59 @@ function w_Map::set_point, x, y, SRC = src, COLOR = color, THICK = thick, PSYM =
   self.is_Pointed = TRUE
   return, 1
   
+end
+
+;+
+; :Description:
+;    Wrapper to the set_point() method, it draws a filled circle with a 
+;    surrounding ring
+;
+;  :Params:
+;    x: in, required
+;       the x coordinates of the point(s) to draw
+;    y: in, required
+;       the y coordinates of the point(s) to draw 
+;       
+; :Keywords:
+;    
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;    COLOR: in, optional, type = string
+;           the color of the points
+;    CIRCLE_COLOR: in, optional, type=string, DEFAULT='black'
+;           the color of the surrounding circle
+;    CIRCLE_THICK:in, optional, type = float
+;           the thickness of the surrounding circle
+;    PSYM:in, optional, type = int, default=16
+;          the style of the the points (see symcat for plenty of possibilities)
+;    SYMSIZE:in, optional, type = float
+;            the size of the the points
+;    TEXT:in, optional, type = float
+;          points annotation
+;    DELTA_TEXT:in, optional, type = float
+;               a delta in relative img coordinates where to put the annotation (2 elements vector)  
+;    ALIGN:in, optional, type = float
+;          the allignment of the annotation
+;
+;-
+function w_Map::set_circle_point, x, y, SRC=src, COLOR=color, SYMSIZE=symsize, CIRCLE_COLOR=circle_color, CIRCLE_THICK=circle_thick, $
+                                  TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize, THICK=thick
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+
+
+  if N_ELEMENTS(symsize) eq 1 then _symsize = symsize else _symsize = 1.
+  if N_ELEMENTS(circle_color) eq 1 then _circle_color = circle_color else _circle_color = 'black'
+  if N_ELEMENTS(circle_thick) eq 1 then _circle_thick = circle_thick else _circle_thick = 0.15
+  
+  ok1 = self->set_point(x, y, SRC=src, COLOR=_circle_color, PSYM=16, SYMSIZE=_symsize+_circle_thick)
+  ok2 = self->set_point(x, y, SRC=src, COLOR=color, PSYM=16, SYMSIZE=_symsize, $
+                                  TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize)
+  
+  return, ok1 and ok2                               
+                                                           
 end
 
 ;+
@@ -2001,8 +2037,10 @@ end
 ;          the grid associated to the wind field (same X and Y dimensions as ud and vd)
 ;
 ; :Keywords:
-;    DENSITY: in, optional, type = long, default = 3
-;             the vectors density, in grid points. Supported are (1,3,5,7)
+;    DENSITY: in, optional, type=long, default=3
+;             the vectors density, in grid points
+;    START_IND: in, optional, type=long, default=0
+;               the first grid point to draw in the corner
 ;    LENGTH: in, optional, type = float, default = 0.08
 ;            The maximum vectorlength relative to the plot data 
 ;    THICK: in, optional, type = float, default = 1
@@ -2014,7 +2052,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-
-function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=thick, COLOR=color
+function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=thick, COLOR=color, START_IND=start_ind
                              
   
   ; SET UP ENVIRONNEMENT
@@ -2034,6 +2072,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   if N_ELEMENTS(thick) eq 0 then _thick = 1 else _thick = thick
   if N_ELEMENTS(density) eq 0 then _density = 3 else _density = density
   if N_ELEMENTS(color) eq 0 then _color = 'black' else _color = color
+  if N_ELEMENTS(start_ind) eq 0 then _start_ind = 0 else _start_ind = FIX(start_ind)
   type = 'VECTORS'
   
   if N_PARAMS() eq 0 then begin
@@ -2049,19 +2088,11 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   
   if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   if not array_processing(ud, vd) then Message, WAVE_Std_Message(/ARG)  
-  if _density ne 1 and _density ne 3 and _density ne 5 and _density ne 7 then Message, 'Density must be odd-numbered (1,3,5,7).'
-           
+            
   grid->getProperty, tnt_c = c   
-  nxg = C.nx
-  nyg = C.ny
-    
-  fx = FLOOR(double(nxg)/_density) ; possible points
-  fy = FLOOR(double(nyg)/_density) ; possible points
-  s = floor(_density/2.) ; where to start (1 for 3, 2 for 5, etc.)
-    
-  xi = INDGEN(fx, /DOUBLE) * _density + s
-  yi = INDGEN(fy, /DOUBLE) * _density + s
   
+  xi = findgen(floor(float(C.nx-_start_ind)/_density)) * _density + _start_ind
+  yi = findgen(floor(float(C.ny-_start_ind)/_density)) * _density + _start_ind
   x = xi * c.dx + c.x0
   y = yi * c.dy + c.y1
   utils_1d_to_2d, x, y, x, y  
@@ -2333,7 +2364,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, TNT_C = tnt_c
+PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2348,7 +2379,8 @@ PRO w_Map::GetProperty, XSIZE = xsize, YSIZE = ysize, TNT_C = tnt_c
   
   if ARG_PRESENT(XSIZE) then xsize = self.Xsize
   if ARG_PRESENT(YSIZE) then ysize = self.Ysize
-  if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C = tnt_c
+  if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C=tnt_c
+  if ARG_PRESENT(GRID) then grid = self.grid
      
 end
 
@@ -2527,7 +2559,6 @@ PRO w_Map__Define
   
   ; This is the information for one point to draw
   struct = {w_Map_POINT                    , $ 
-            thick          : 0D            , $ ; thickness of the point
             psym           : 0L            , $ ; style of the point
             symsize        : 0D            , $ ; symsize of the point
             color          : 0L            , $ ; color of the point
