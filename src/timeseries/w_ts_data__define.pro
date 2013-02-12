@@ -514,14 +514,19 @@ end
 ;    Get the time
 ;
 ; :Keywords:
-;    nt: out
+;    NT: out
 ;        the number of times
+;    INTBEGIN: in
+;           default in the WAVE is to give the time at the 
+;           end of the interval for interval valid timeseries
+;           set this keyword to obtain time at the begining
+;           pf the interval instead
 ;
 ; :Returns:
 ;   A time array of nt elements
 ;
 ;-
-function w_ts_Data::getTime, NT=nt
+function w_ts_Data::getTime, NT=nt, INTBEGIN=intbegin
 
   ; Set up environnement
   @WAVE.inc
@@ -530,12 +535,14 @@ function w_ts_Data::getTime, NT=nt
 
   nt = self.nt    
   if nt eq 0 then Message, 'No times yet in the timeserie. Set Period?'
+  
+  if KEYWORD_SET(INTBEGIN) then delta = - self.timestep else delta = 0
    
   ; Check the time
   case self.step of
-    'TIMESTEP': time = L64INDGEN(nt) * self.timestep + self.t0
-    'MONTH': time = w_month_to_time(LINDGEN(nt) * self.timestep + w_time_to_month(self.t0))
-    'YEAR': time = w_year_to_time(LINDGEN(nt) * self.timestep + w_time_to_year(self.t0))
+    'TIMESTEP': time = L64INDGEN(nt) * self.timestep + self.t0 + delta
+    'MONTH': time = w_month_to_time(LINDGEN(nt) * self.timestep + w_time_to_month(self.t0) + delta)
+    'YEAR': time = w_year_to_time(LINDGEN(nt) * self.timestep + w_time_to_year(self.t0) + delta)
   endcase   
   
   return, time

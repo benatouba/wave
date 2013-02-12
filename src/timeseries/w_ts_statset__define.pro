@@ -453,12 +453,17 @@ end
 ; :Keywords:
 ;    nt: out
 ;        the number of times
+;    INTBEGIN: in
+;           default in the WAVE is to give the time at the 
+;           end of the interval for interval valid timeseries
+;           set this keyword to obtain time at the begining
+;           pf the interval instead
 ;
 ; :Returns:
 ;   A time array of nt elements
 ;
 ;-
-function w_ts_StatSet::GetTime, NT=nt
+function w_ts_StatSet::GetTime, NT=nt, INTBEGIN=intbegin
 
   ; Set up environnement
   @WAVE.inc
@@ -470,7 +475,7 @@ function w_ts_StatSet::GetTime, NT=nt
   IF StatCount eq 0 then Message, 'No stations yet'
   
   thisObj = self.stats->Get(POSITION=0)
-  return, thisObj->GetTime(NT=nt)
+  return, thisObj->GetTime(NT=nt, INTBEGIN=intbegin)
   
 end
 
@@ -493,7 +498,7 @@ pro w_ts_StatSet::removeStat, statid
     
   n = N_ELEMENTS(statid)  
   for i=0, n-1 do begin
-   if self->Hasstat(statid, OBJECT=object) then begin
+   if self->Hasstat(statid[i], OBJECT=object) then begin
     self.stats->Remove, object
     undefine, object
    endif
@@ -733,6 +738,37 @@ pro w_ts_StatSet::selVar, varName
     _Stat->selVar, varName
   endfor  
   
+end
+
+;+
+; :Description:
+;    Select station(s) from the set. All other stations
+;    are destroyed.
+;
+; :Params:
+;    statid: in, optional, type=string array
+;             the station id(s) to keep
+;
+;-
+pro w_ts_StatSet::selStat, statid
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+    
+  StatCount = self.Stats->Count()  
+  if StatCount eq 0 then return
+  n = N_ELEMENTS(statid)
+  if n eq 0 then return
+  
+  ids = self->GetStatIds()  
+  for j=0, StatCount-1 do begin
+    dummy = where(str_equiv(statid) eq str_equiv(ids[j]), cnt)
+    if cnt eq 0 then self->removeStat, ids[j]
+  endfor  
+ 
 end
 
 ;+

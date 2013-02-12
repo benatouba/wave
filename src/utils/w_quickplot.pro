@@ -598,7 +598,7 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr), Dimensions=[xsize,ysize], Palette=thisPalette, INTERPOLATE = interpolate)
   
   ; Create scaling parameters for the image. I get position coordinates for a normalized window from
-  ; my w_QuickPlot_Aspect function. Then use my FSC_Normalize function to create scaling factors for the image.
+  ; my w_QuickPlot_Aspect function. Then use my cgNormalize function to create scaling factors for the image.
   ; Compute optimal x and y margins
   
   relBar = 15D / wxsize
@@ -618,8 +618,8 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   
   titlecenter = (posim[2]-posim[0]) / 2. + posim[0]
   
-  xs = FSC_Normalize([0,xsize], Position=[posim[0], posim[2]])
-  ys = FSC_Normalize([0,ysize], Position=[posim[1], posim[3]])
+  xs = cgNormalize([0,xsize], Position=[posim[0], posim[2]])
+  ys = cgNormalize([0,ysize], Position=[posim[1], posim[3]])
   thisImage->SetProperty, XCoord_Conv=xs, YCoord_Conv=ys
   
   ; Set up font objects for the axes titles.
@@ -658,8 +658,8 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
     
   ; Set up scaling for the axes. Notice that we use the axis
   ; range here, not the size of the image, as before.
-  xs = FSC_Normalize(xrange, Position=[posim[0], posim[2]])
-  ys = FSC_Normalize(yrange, Position=[posim[1], posim[3]])
+  xs = cgNormalize(xrange, Position=[posim[0], posim[2]])
+  ys = cgNormalize(yrange, Position=[posim[1], posim[3]])
   
   ; Create the four axis objects (box axes). Make the titles
   ; with helvetica 10 point fonts.

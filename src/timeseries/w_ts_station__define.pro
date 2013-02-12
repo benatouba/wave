@@ -526,12 +526,17 @@ end
 ; :Keywords:
 ;    nt: out
 ;        the number of times
+;    INTBEGIN: in
+;           default in the WAVE is to give the time at the 
+;           end of the interval for interval valid timeseries
+;           set this keyword to obtain time at the begining
+;           pf the interval instead
 ;
 ; :Returns:
 ;   A time array of nt elements
 ;
 ;-
-function w_ts_Station::GetTime, NT=nt
+function w_ts_Station::GetTime, NT=nt, INTBEGIN=intbegin
 
   ; Set up environnement
   @WAVE.inc
@@ -546,7 +551,7 @@ function w_ts_Station::GetTime, NT=nt
   endif
     
   ; Its easier to store the code only once
-  return, (self.vars->Get(POSITION=0))->GetTime(NT=nt)
+  return, (self.vars->Get(POSITION=0))->GetTime(NT=nt, INTBEGIN=intbegin)
   
 end
 

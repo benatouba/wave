@@ -742,6 +742,8 @@ end
 ;              interval between contours
 ;    YINTERVAL: in, optional, type = float, default = INTERVAL
 ;               interval between Y contours
+;    NO_TICK_LABELS: in, optional
+;                    do not label the ticks
 ;    TICK_INTERVAL: in, optional, type=long, default=1
 ;                   Tick annotations every TICK_INTERVAL contours
 ;    TICK_FORMAT: in, optional, type=string

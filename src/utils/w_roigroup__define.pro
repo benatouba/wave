@@ -73,7 +73,7 @@ function w_ROIGroup::ComputeMask, INITIALIZE=initialize, $
     PLANE_XAXIS=plane_xaxis, $
     RUN_LENGTH=run_length
     
-  self->_filter_rois
+  if !VERSION.RELEASE ne '8.2.2' then self->_filter_rois
     
   return, self->IDLanROIGroup::ComputeMask(INITIALIZE=initialize, $
     DIMENSIONS=dimensions, $
@@ -98,7 +98,7 @@ end
 ;-
 function w_ROIGroup::ContainsPoints, X, Y, Z
     
-  self->_filter_rois
+  if !VERSION.RELEASE ne '8.2.2' then self->_filter_rois
   
   if N_ELEMENTS(Z) ne 0 then return, self->IDLanROIGroup::ContainsPoints(X, Y, Z)
   if N_ELEMENTS(Y) ne 0 then return, self->IDLanROIGroup::ContainsPoints(X, Y)
