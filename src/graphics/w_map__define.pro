@@ -1354,6 +1354,90 @@ end
 
 ;+
 ; :Description:
+;    Set a prediefined form to draw on the map.
+;    Currently, only ellipses and squares are implemented.
+;
+; :Params:
+;    x: in, required
+;       the x coordinate of the center of the form
+;    y: in, required
+;       the y coordinate of the center of the form
+;       
+; :Keywords: 
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;    COLOR: in, optional, type = color
+;           the color of the polygon lines
+;    THICK:in, optional, type = float
+;           the thickness of the polygon lines
+;    STYLE:in, optional, type = float
+;          the style of the the polygon lines
+;
+;-    
+function w_Map::set_form, x, y, $
+  SRC=src, $
+  COLOR=color, $
+  THICK=thick, $
+  STYLE=style, $
+  FORM=form, $
+  PARAM_1=param_1, $
+  PARAM_2=param_2, $
+  PARAM_3=param_3
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  ;******************
+  ; Check arguments *
+  ;******************
+  if N_PARAMS() ne 2 then begin
+   self->_DestroyPolygons
+   return, 1
+  endif
+    
+  if N_ELEMENTS(src) eq 0 then GIS_make_datum, ret, src, NAME = 'WGS-84'
+
+  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  is_grid = FALSE 
+  if OBJ_VALID(src) then if OBJ_ISA(src, 'w_Grid2D') then is_grid = TRUE
+  if ~is_proj and ~is_dat and ~is_grid then Message, WAVE_Std_Message('src', /ARG)
+  if N_ELEMENTS(x) ne 1 then Message, WAVE_Std_Message('x', /ARG)
+  if N_ELEMENTS(y) ne 1 then Message, WAVE_Std_Message('y', /ARG)
+  
+  self.grid->transform, x, y, _x, _y, SRC=src
+  
+  case str_equiv(FORM) of
+    'ELLIPSE': begin
+       if N_ELEMENTS(PARAM_1) eq 0 then Message, 'PARAM_1 (major semi-axis) required'
+       if N_ELEMENTS(PARAM_2) eq 0 then Message, 'PARAM_2 (minor semi-axis) required'
+       if N_ELEMENTS(PARAM_3) eq 0 then param_3 = 0.       
+       npts = 36 * 3
+       points = (2 * !PI / (npts-1)) * findgen(npts)
+       xx = _x + cos(points) * cos(param_3 * !DTOR) * param_1 - sin(points) * sin(param_3 * !DTOR) * param_2
+       yy = _y + cos(points) * sin(param_3 * !DTOR) * param_1 + sin(points) * cos(param_3 * !DTOR) * param_2
+    end
+    'RECTANGLE': begin
+       Message, 'RECTANGLE currently not available'
+    end
+    else: Message, 'FORM: ' + str_equiv(FORM) + ' not recognized.'
+  endcase
+   
+  return, self->set_polygon(xx, yy, SRC=self.grid, COLOR=color, THICK=thick, STYLE=style)
+  
+end
+
+
+;+
+; :Description:
 ;    Set a point or an array of points to draw on the map.
 ;    
 ;  :Params:
@@ -1462,8 +1546,8 @@ end
 
 ;+
 ; :Description:
-;    Wrapper to the set_point() method, it draws a filled circle with a 
-;    surrounding ring
+;    Wrapper to the set_point() method, it draws a filled symbol with a 
+;    surrounding one
 ;
 ;  :Params:
 ;    x: in, required
@@ -1477,6 +1561,8 @@ end
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
 ;    COLOR: in, optional, type = string
 ;           the color of the points
+;    PSYM:in, optional, type = int, default=16
+;          the style of the the points (see symcat for plenty of possibilities)
 ;    CIRCLE_COLOR: in, optional, type=string, DEFAULT='black'
 ;           the color of the surrounding circle
 ;    CIRCLE_THICK:in, optional, type = float
@@ -1493,7 +1579,7 @@ end
 ;          the allignment of the annotation
 ;
 ;-
-function w_Map::set_circle_point, x, y, SRC=src, COLOR=color, SYMSIZE=symsize, CIRCLE_COLOR=circle_color, CIRCLE_THICK=circle_thick, $
+function w_Map::set_filled_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsize, CIRCLE_COLOR=circle_color, CIRCLE_THICK=circle_thick, $
                                   TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize, THICK=thick
 
   ; Set up environnement
@@ -1505,8 +1591,8 @@ function w_Map::set_circle_point, x, y, SRC=src, COLOR=color, SYMSIZE=symsize, C
   if N_ELEMENTS(circle_color) eq 1 then _circle_color = circle_color else _circle_color = 'black'
   if N_ELEMENTS(circle_thick) eq 1 then _circle_thick = circle_thick else _circle_thick = 0.15
   
-  ok1 = self->set_point(x, y, SRC=src, COLOR=_circle_color, PSYM=16, SYMSIZE=_symsize+_circle_thick)
-  ok2 = self->set_point(x, y, SRC=src, COLOR=color, PSYM=16, SYMSIZE=_symsize, $
+  ok1 = self->set_point(x, y, SRC=src, COLOR=_circle_color, PSYM=psym, SYMSIZE=_symsize+_circle_thick)
+  ok2 = self->set_point(x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=_symsize, $
                                   TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize)
   
   return, ok1 and ok2                               

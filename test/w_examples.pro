@@ -104,7 +104,7 @@ end
 ;
 ;
 ;-
-pro w_examples_working_with_w_map, RESIZABLE = resizable 
+pro w_examples_working_with_w_map
 
    ; 1. define a grid for the map from the scratch 
    ; (you will probably not have to do this, unless you have specific mapping needs)
@@ -122,7 +122,7 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    OBJ_DESTROY, grid ;no need for this anymore
    
    ; 3. Get some info about the map 
-   map->show_img, RESIZABLE = resizable
+   map->show_img
    map->GetProperty, tnt_c = map_coord, XSIZE=xs, YSIZE=ys
       
    print, 'Image size in pixels: [' + STRING(xs, FORMAT='(I3)') + ',' +STRING(ys, FORMAT='(I3)') +']'
@@ -135,14 +135,14 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    shp = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MAPPING/DEU_adm3.shp'
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84' ; the source coordinate system of the shape file. In this case, i know this is lat-lon in WGS-84 but for other shapes you currently have to check it by yourself.
    dummy = map->set_shape_file(SHPFILE=shp, shp_src = shp_src, COLOR = 'dark red')
-   map->show_img, RESIZABLE = resizable
+   map->show_img
    
    ; This is too much, I am just interested in Berlin
    dummy = map->set_shape_file() ; remove all shapes
    dummy = map->set_shape_file(/COUNTRIES) ; add countries outlines
    dummy = map->set_shape_file(SHPFILE=shp, shp_src = shp_src, COLOR = 'black', KEEP_ENTITITES=189, THICK=2) 
    ; I looked at my shape file with envi and found out that berlin was the 189th entity
-   map->show_img, RESIZABLE = resizable
+   map->show_img
    
    ;4. get some data to plot
    modisFile = '/home/fab/disk/IDLWorkspace/WAVE_TEST_PACK/MODIS/MODIS_b.hdf'
@@ -157,8 +157,8 @@ pro w_examples_working_with_w_map, RESIZABLE = resizable
    CTLOAD, 13 ; I want to have it colorfull
    dummy = map->set_plot_params(N_LEVELS=256) ; I want a lot of colors 
    dummy = map->set_data(lst, modis_)  
-   map->show_img, RESIZABLE = resizable
-   map->show_color_bar, RESIZABLE = resizable
+   map->show_img
+   map->show_color_bar
    
    ; So I prepare my data so it looks better:   
    pmissing = where(lst lt 1, cnt)  
