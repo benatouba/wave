@@ -28,6 +28,9 @@
 ;    
 ;    YEARS: See W_WPR->setYear
 ;    
+;    REMOVE_MASK: in, type = array
+;                 a mask of the same size as the product where to 
+;                 replace data with nans
 ;    SHAPE: in, type = string
 ;           the shapefile to read (.shp), coordinate system defined by `SRC`
 ;    POLYGON: in, type = array
@@ -64,7 +67,7 @@
 
 
 pro w_pr_selectregion, input_dir, destFile, varlist,   $
-    GZIP=gzip, SHUFFLE=shuffle,   $
+    GZIP=gzip, SHUFFLE=shuffle, REMOVE_MASK=remove_mask, $
     NETCDF4_FORMAT=NETCDF4_FORMAT, CLOBBER=clobber,   $
     YEARS=years,   $
     SHAPE=shape,  $
@@ -93,6 +96,22 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   wrf_proj = c.proj
   wpr->setYears, years
   wpr->getTime, time, nt, t0, t1
+  
+  ; Check for variables
+  for i=0, N_ELEMENTS(varlist)-1 do if ~ wpr->hasVar(varlist[i]) then message, 'Variable: ' + varlist[i] + ' not found.'
+  
+  ;Check if pixels have to be masked
+  _do_mask = 0
+  if N_ELEMENTS(REMOVE_MASK) ne 0 then begin
+     s = SIZE(remove_mask, /DIMENSIONS)
+     if N_ELEMENTS(s) ne 2 then Message, WAVE_Std_Message('remove_mask', /NDIMS)
+     if s[0] ne nx then Message, WAVE_Std_Message('remove_mask', /NELEMENTS)
+     if s[1] ne ny then Message, WAVE_Std_Message('remove_mask', /NELEMENTS)
+     pmask = where(remove_mask, cntmask)
+     if cntmask eq 0 then Message, 'Nothing in mask?'
+     pmask = ARRAY_INDICES(remove_mask, pmask)
+     _do_mask = 1
+  endif
   
   ;find a template file
   wpr->GetProperty, DIRECTORY=dir, HRES=res
@@ -175,6 +194,7 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   for i=0, N_ELEMENTS(varlist)-1 do begin
     data = wpr->getVarData(varlist[i], INFO=inf)
     vn = inf.id
+    if _do_mask then data[pmask[0,*], pmask[1,*], *, *] = !VALUES.F_NAN
     dObj->WriteVarDef, vn, [x_dim_name,y_dim_name,t_dim_name], DATATYPE='FLOAT', GZIP=gzip, SHUFFLE=shuffle
     dObj->WriteVarAttr, vn, 'long_name', inf.description
     dObj->WriteVarAttr, vn, 'units', inf.unit
