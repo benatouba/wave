@@ -38,7 +38,7 @@ function w_gis_compareGrid, grid1, grid2, epsilon = epsilon
   grid1->GetProperty, TNT_C=c1
   grid2->GetProperty, TNT_C=c2
   
-  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR(DOUBLE=1)).eps
+  if N_ELEMENTS(epsilon) eq 0 then epsilon = (MACHAR()).eps
   
   if ABS(c1.nx - c2.nx) gt 0 then return, 0
   if ABS(c1.ny - c2.ny) gt 0 then return, 0

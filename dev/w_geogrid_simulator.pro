@@ -78,7 +78,7 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
   x0 =  - (nx-1) / 2. * dx + e ; UL corner
   y0 =    (ny-1) / 2. * dy + n ; UL corner
   
-  grid1 = w_Grid2D(nx = nx , $
+  grid1 = OBJ_NEW('w_Grid2D', nx = nx , $
     ny = ny                , $
     dx = dx                , $
     dy = dy                , $
@@ -121,7 +121,7 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
   
   m = OBJARR(ndoms)
   for i = 0, ndoms-1 do begin
-    map = w_Map(g[i], YSIZE=500)
+    map = OBJ_NEW('w_Map', g[i], YSIZE=500)
     for j=i+1, ndoms-1 do begin
       (g[j])->Get_XY, x, y, nx, ny
       x = [0,nx-1,nx-1,0,0]

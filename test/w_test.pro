@@ -4734,7 +4734,7 @@ pro TEST_WPRHOUROFDAY
  
  n = OBJ_NEW('w_GEO_nc', FILE='/home/mowglie/disk/Data/WRF/products/WET/d10km/h/2d/tibet_d10km_h_2d_t2_2003.nc')
  
- r = RANDOMNUMBERGENERATOR()
+ r = OBJ_NEW('RANDOMNUMBERGENERATOR')
  day = LONG(r->GetRandomNumbers()*25) + 1
  month = LONG(r->GetRandomNumbers()*11) + 1
  hour = LONG(r->GetRandomNumbers()*23)
@@ -4770,7 +4770,7 @@ pro TEST_DEM
  f = w_test_file_directory() + 'MAPPING/Namco.grd'
  sh = w_test_file_directory() + 'MAPPING/namco_shore.shp'
  
- dem = w_DEM(f)
+ dem = OBJ_NEW('w_DEM', f)
  
  z = dem->getVarData()
 
@@ -4788,6 +4788,28 @@ pro TEST_DEM
  
  if error ne 0 then message, '% TEST_DEM NOT passed', /CONTINUE else print, 'TEST_DEM passed'
 
+end
+
+pro TEST_GEOTIF
+
+  error = 0
+  
+  fgrd = w_test_file_directory() + 'MAPPING/gergun/g.grd'
+  fgeo = w_test_file_directory() + 'MAPPING/gergun/g_demrecreal1.tif'
+  
+  geotif = OBJ_NEW('w_GEOTIFF', fgeo)
+  dgm = OBJ_NEW('w_DEM', fgrd)
+  
+  if ~ w_gis_compareGrid(geotif, dgm) then error+=1
+  
+  zdgm = dgm->getVarData()
+  zgeo = dgm->getVarData()
+  
+  if total(ABS(zdgm-zgeo)) ne 0 then error+=1
+  
+  if error ne 0 then message, '% TEST_GEOTIF NOT passed', /CONTINUE else print, 'TEST_GEOTIF passed'
+ 
+  
 end
 
 pro TEST_TIME
@@ -4817,6 +4839,7 @@ pro TEST_DATASETS, NCDF = ncdf
   TEST_W_MAP
   TEST_FNL
   TEST_DEM
+  TEST_GEOTIF
 end
 
 pro TEST_UTILS
