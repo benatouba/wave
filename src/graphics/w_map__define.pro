@@ -1027,15 +1027,27 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
   endif else begin
     
     spli = STRSPLIT(grdfile, '.', /EXTRACT)
-    if str_equiv(spli[N_ELEMENTS(spli)-1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
-    GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
-        
-    if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
-      dem = OBJ_NEW('w_DEM', grdfile)
-      dem->GetProperty, TNT_C=dem_c
-      if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
-      OBJ_DESTROY, dem
-    endif else _ug = KEYWORD_SET(USE_GRID)
+    
+    ending = spli[N_ELEMENTS(spli)-1]
+    if str_equiv(ending) eq 'TIFF' then ending = 'tif'
+    isGeo = 0
+    
+    case (str_equiv(ending)) of
+      'GRD': begin
+        GEN_str_subst,ret,grdfile,'grd', 'hdr', hdr
+        if N_ELEMENTS(USE_GRID) eq 0 then begin ; I decide alone
+          dem = OBJ_NEW('w_DEM', grdfile)
+          dem->GetProperty, TNT_C=dem_c
+          if str_equiv(dem_c.proj.NAME) eq str_equiv('Geographic (WGS-84)') then _ug = FALSE else _ug = TRUE
+          OBJ_DESTROY, dem
+        endif else _ug = KEYWORD_SET(USE_GRID)
+      end
+      'TIF': begin
+        _ug = 1
+        isGeo = 1      
+      end
+      else: Message, 'GRDFILE not recognised'
+    endcase
     
     if ~_ug then begin ; Simple NN method
     
@@ -1065,14 +1077,13 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
       z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
       
     endif else begin
-    
-      dem = OBJ_NEW('w_DEM', grdfile)
+      if isGeo then dem = OBJ_NEW('w_GEOTIFF', grdfile) $
+         else dem = OBJ_NEW('w_DEM', grdfile)
       z = FLOAT(dem->getVarData())
       p = where(z le -9999, cnt)
       if cnt gt 0 then z[p] = 0
       z = self.grid->map_gridded_data(z, dem, MISSING = 0., /CUBIC)
-      OBJ_DESTROY, dem
-      
+      OBJ_DESTROY, dem      
     endelse
   endelse
   
@@ -1741,7 +1752,8 @@ end
 ;    BILINEAR: in, optional, type = boolean
 ;              set this if you want the data to be linearily interpolated
 ;              onto the map
-;    
+;    CUBIC: in, optional, type = boolean
+;            set this if you want the data to be cubic interpolated
 ;    MISSING: in, optional, type = numeric
 ;             the value to give to missing points in the map (see 'w_grid2d::map_gridded_data')
 ;             
@@ -1754,6 +1766,7 @@ end
 ;-    
 function w_Map::set_data, data, grid, $
   BILINEAR=bilinear, $
+  CUBIC=cubic, $
   MISSING=missing, $
   OVERPLOT=overplot
                              
@@ -1783,11 +1796,11 @@ function w_Map::set_data, data, grid, $
      
   if N_ELEMENTS(grid) eq 0 then begin
     if arg_okay(data, DIM=[self.Xsize, self.Ysize], /NUMERIC) then _data = data $
-    else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear)
+    else _data = CONGRID(data, self.Xsize, self.Ysize, /CENTER, INTERP=bilinear, CUBIC=cubic)
   endif else begin
     if N_ELEMENTS(missing) ne 0 then _missing = missing
-    if KEYWORD_SET(OVERPLOT) then _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear, DATA_DST=*self.data) $
-     else _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear)
+    if KEYWORD_SET(OVERPLOT) then _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear, CUBIC=cubic, DATA_DST=*self.data) $
+     else _data = self.grid->map_gridded_data(data, grid, MISSING=_missing, BILINEAR=bilinear, CUBIC=cubic)
   endelse
   
   if N_ELEMENTS(missing) ne 0 then begin

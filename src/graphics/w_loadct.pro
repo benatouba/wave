@@ -407,9 +407,9 @@ pro w_LoadCT, table, $
     
   ; Need to reverse the colors?
   IF reverse THEN BEGIN
-     r = Reverse(r)
-     g = Reverse(g)
-     b = Reverse(b)
+     r[0:table_size-1] = Reverse(r[0:table_size-1])
+     g[0:table_size-1] = Reverse(g[0:table_size-1])
+     b[0:table_size-1] = Reverse(b[0:table_size-1])
   ENDIF
 
   ; Load a color_table, if needed. Otherwise, load color vectors.

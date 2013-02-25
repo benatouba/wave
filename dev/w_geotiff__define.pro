@@ -1,13 +1,11 @@
 ; docformat = 'rst'
 ;+
 ;
-;  w_DEM is a basis class to read DEM in ENVI's grd format.
-;  It reads the projection info frm the .hdr file and the 
-;  elevation from the binary .grd files, so both must be put in the 
-;  same directory for reading.
+;  w_GEOTIFF is a class to read geotiff files. 
+;  It is rather a draft than something operational. It 
+;  can only read automaticaly a few proj-types, the rest should
+;  be implemented when needed. 
 ;
-; :History:
-;     Written by FaM, 2011.
 ;
 ;-  
 
@@ -19,6 +17,9 @@
 ;    file: in, optional
 ;          the path to the file to open
 ;    
+;    grid: in, optional
+;          the grid object
+;    
 ; :Keywords:
 ;    _EXTRA: in, optional
 ;            any keyword accepted by `w_GISdata::defineSubset`
@@ -28,63 +29,68 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_DEM::init, file, _EXTRA=extra
-  
+function w_GEOTIFF::init, file, grid, _EXTRA=extra
+
   ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2  
-      
+  COMPILE_OPT IDL2
+  
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /Cancel
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
-  ENDIF 
+  ENDIF
   
   ; Check arguments
-  if N_ELEMENTS(file) ne 1 then file = DIALOG_PICKFILE(TITLE='Please select DEM grd file to read', /MUST_EXIST)  
-  spli = STRSPLIT(file, '.', /EXTRACT)
-  if str_equiv(spli[1]) ne 'GRD' then message, WAVE_Std_Message(/FILE)
-  hdr = spli[0] + '.hdr'
-  
+  if N_ELEMENTS(file) ne 1 then file = DIALOG_PICKFILE(TITLE='Please select tif file to read', /MUST_EXIST)
+  if ~ QUERY_TIFF(file, info, GEOTIFF=geotiff) then Message, 'TIFF file not query-able'
   self.file = file
-  self.hdr = hdr
-   
-  ; Original grid geoloc
-  _quiet = !QUIET
-  !QUIET = 1
-  GIS_open_grid, ret, info, id, FILE=self.file, /RONLY, /NO_STC
-  !QUIET = _quiet
-  if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
+  self.geotiff = PTR_NEW(geotiff)
+  self.info = PTR_NEW(info)
   
-  self.id = id
-
-  ; Check and correct TNT coordinate structure
-  coord = info.coord
-  coord.system_z = 'DEM'
-  if ~ GIS_check_coord(coord, /CORR, ERROR=error) then begin
-    GIS_close_grid, ret, id
-    ret = TNT_return(DTM, TNT_S_ERROR, error)
-    message, WAVE_Std_Message(/FILE)
-  endif
-
-  info.coord = coord
-  map_info = utils_replace_string(utils_replace_string(coord.map_info, '{', ''), '}', '')
-  proj_name = (STRSPLIT(map_info, ',', /EXTRACT))[0]
-  if proj_name eq 'Geographic Lat/Lon' then begin
-    GIS_make_proj, ret, proj, NAME='Geographic (WGS-84)'
+  if N_ELEMENTS(grid) ne 0 then begin
+    ; User defined grid geoloc
+    if ~ OBJ_VALID(grid) then Message, WAVE_Std_Message('grid', /ARG)
+    if ~ OBJ_ISA(grid, 'w_Grid2d') then Message, WAVE_Std_Message('grid', /ARG)
   endif else begin
-    proj = coord.proj
+  
+    ;Try to make geo-info alone (aaarg)
+    nx = info.Dimensions[0]
+    ny = info.Dimensions[1]
+    
+    ; Get the fields of the geotiff structure.
+    fields = Tag_Names(geotiff)
+    
+    ; We can only handle raster images with projected coordinate systems, unless this is
+    ; a GeoTiff file with Geographic model.
+    gtModelIndex = Where(fields EQ 'GTMODELTYPEGEOKEY', gtModelType)
+    IF gtModelType GT 0 THEN BEGIN
+      IF (geotiff.gtModelTypeGeoKey EQ 2) THEN BEGIN
+        dx = (geotiff.ModelPixelScaleTag)[0]
+        dy = (geotiff.ModelPixelScaleTag)[1]
+        ; Get the tie points and calculate the map projection range.
+        x0 = (geotiff.ModelTiePointTag)[3] + dx/2
+        y0 = (geotiff.ModelTiePointTag)[4] - dy/2
+        
+        d = Where(fields EQ 'GEOGCITATIONGEOKEY', cnt)
+        if cnt ne 0 then begin
+          if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Dont know'
+        endif else Message, 'Dont know'
+        ;Projection
+        GIS_make_proj, ret, proj, PARAM='1, WGS-84'
+        grid = OBJ_NEW('w_Grid2D', nx=nx, $
+          ny=ny, $
+          dx=dx, $
+          dy=dy, $
+          x0=x0, $
+          y0=y0, $
+          proj=proj, $
+          meta=meta)          
+      ENDIF ELSE Message, 'Dont know'
+    ENDIF else Message, 'Dont know'
   endelse
   
-  grid = OBJ_NEW('w_Grid2D',    nx = coord.nx               , $
-                                ny = coord.ny               , $
-                                dx = coord.dx               , $
-                                dy = coord.dy               , $
-                                x0 = coord.x0 + coord.dx/2  , $
-                                y0 = coord.y0 - coord.dy/2  , $
-                                proj = proj               )
-
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
   undefine, grid
   if ~ ok then return, 0
@@ -98,16 +104,15 @@ end
 ;    Destroy the object instance
 ;
 ;-
-pro w_DEM::cleanup
+pro w_GEOTIFF::cleanup
 
   ; SEt up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
 
   self->w_gisdata::Cleanup 
-  
-  if self.id ne 0 then GIS_close_grid, ret, self.id
-  
+  ptr_free, self.info
+  ptr_free, self.geotiff
   
 end
 
@@ -126,17 +131,19 @@ end
 ;   An array of variable ids
 ;
 ;-
-function w_DEM::getVarNames, COUNT=count, PRINT=print
+function w_GEOTIFF::getVarNames, COUNT=count, PRINT=print
 
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  varid = 'z' 
-  varnames = 'z' 
+  nv = (*self.info).channels
+  
+  varid = 0 
+  varnames = '0' 
   varndims = 2
-  varunits = 'm' 
-  vardescriptions = 'Altitude'
+  varunits = '' 
+  vardescriptions = ''
   vartypes = ''
   count = N_ELEMENTS(varid)
     
@@ -174,7 +181,7 @@ end
 ;   1 if the variable is available, 0 if not
 ;   
 ;-
-function w_DEM::hasVar, id, INFO=info
+function w_GEOTIFF::hasVar, id, INFO=info
   
   ; Set up environnement
   @WAVE.inc
@@ -186,9 +193,9 @@ function w_DEM::hasVar, id, INFO=info
   p = where(str_equiv(n) eq str_equiv(id), cnt)   
   if cnt eq 0 then return, 0
   
-  name = 'z'
-  unit = 'm' 
-  description = 'Altitude'
+  name = '0'
+  unit = '' 
+  description = ''
 
   info = {id:id, name:name, description:description, unit:unit}
   
@@ -220,7 +227,7 @@ end
 ;   the data array
 ;   
 ;-
-function w_DEM::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
+function w_GEOTIFF::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
 
   ; Set up environnement
   @WAVE.inc
@@ -229,27 +236,17 @@ function w_DEM::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
   undefine, info, time, nt
   
   if N_ELEMENTS(id) eq 0 then begin
-    id = 'z'
+    id = '0'
   endif
   
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
-  if TOTAL(self.subset) ne 0 then begin
-    col = self.subset[0]
-    n_cols = self.subset[1]
-    self.ogrid->getProperty, NY=ny
-    row = ny - self.subset[2] - self.subset[3]
-    n_rows = self.subset[3]
-  endif
+  if TOTAL(self.subset) ne 0 then Message, 'No subset allowed yet'
+;    SUB_RECT=[self.subset[0], self.subset[2], self.subset[1], self.subset[3]]
+;  endif
+  out = READ_TIFF(self.file, SUB_RECT=sub_rect)
   
-  ; Read DEM data *
-  GIS_read_grid, ret, self.id, z, $
-    COL=col,N_COLS=n_cols, $
-    ROW=row,N_ROWS=n_rows
-  if TNT_err_code(ret) ne TNT_E_NONE then message, WAVE_Std_Message(/FILE)
-  z = ROTATE(z,7)
-  
-  return, z
+  return, ROTATE(out, 7)
   
 end
 
@@ -258,17 +255,17 @@ end
 ;    Class structure definition 
 ;
 ;-
-pro w_DEM__Define, class
+pro w_GEOTIFF__Define, class
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
   
-  class = { w_DEM                      ,  $
+  class = { w_GEOTIFF                  ,  $
             INHERITS w_GISdata         ,  $
-            file:                ''    ,  $ ; .grd file
-            hdr:                 ''    ,  $ ; .hdr file
-            id:                  0L       $ ; grid ID
+            file:                ''    ,  $ ; .tif file
+            info:           PTR_NEW()  ,  $ ; info struct
+            geotiff:        PTR_NEW()     $ ; geotiff struct
           }
     
 end
