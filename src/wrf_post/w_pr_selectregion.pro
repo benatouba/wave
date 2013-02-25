@@ -14,9 +14,12 @@
 ; 
 ; :Keywords:
 ; 
-;   CLOBBER: in, type = boolean
+;    CLOBBER: in, type = boolean
 ;            Set this keyword if you are opening a netCDF file that already exists and 
 ;            you want to overwrite the existing file. Input. Default is 0.
+;            
+;    DO_PLOT: in, type = boolean
+;             Set this keyword to a path where you want to save the plot
 ;            
 ;    NETCDF4_FORMAT: in, type = boolean
 ;                    Set this keyowrd to create a new NetCDF 4 file
@@ -69,6 +72,7 @@
 pro w_pr_selectregion, input_dir, destFile, varlist,   $
     GZIP=gzip, SHUFFLE=shuffle, REMOVE_MASK=remove_mask, $
     NETCDF4_FORMAT=NETCDF4_FORMAT, CLOBBER=clobber,   $
+    DO_PLOT=do_plot,   $
     YEARS=years,   $
     SHAPE=shape,  $
     POLYGON=polygon, MASK=mask,  $
@@ -112,6 +116,17 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
      pmask = ARRAY_INDICES(remove_mask, pmask)
      _do_mask = 1
   endif
+  
+   if N_ELEMENTS(do_plot) ne 0 then begin
+     if arg_okay(do_plot, TNAME='string') then pfile = do_plot
+     map = OBJ_NEW('w_Map', wpr, YSIZE=600, /HR_BLUE_MARBLE)
+     if N_ELEMENTS(SHAPE) ne 0 then ok = map->set_shape_file(SHPFILE=shape, SHP_SRC=src)
+     wpr->Get_XY, x, y, nx, ny, proj     
+     colors = REPLICATE('red', nx*ny) 
+     if _do_mask then colors[where(remove_mask)] = 'grey'
+     for i=0, nx*ny-1 do ok = map->set_filled_point(x[i], y[i], SRC=proj, COLOR=colors[i])
+     w_standard_2d_plot, map, PNG=pfile
+   endif
   
   ;find a template file
   wpr->GetProperty, DIRECTORY=dir, HRES=res
