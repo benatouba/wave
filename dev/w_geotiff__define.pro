@@ -44,6 +44,7 @@ function w_GEOTIFF::init, file, grid, _EXTRA=extra
   
   ; Check arguments
   if N_ELEMENTS(file) ne 1 then file = DIALOG_PICKFILE(TITLE='Please select tif file to read', /MUST_EXIST)
+  if ~ FILE_TEST(file) then Message, 'File not found or not valid: ' + file
   if ~ QUERY_TIFF(file, info, GEOTIFF=geotiff) then Message, 'TIFF file not query-able'
   self.file = file
   self.geotiff = PTR_NEW(geotiff)
@@ -64,36 +65,69 @@ function w_GEOTIFF::init, file, grid, _EXTRA=extra
     
     ; We can only handle raster images with projected coordinate systems, unless this is
     ; a GeoTiff file with Geographic model.
-    gtModelIndex = Where(fields EQ 'GTMODELTYPEGEOKEY', gtModelType)
-    IF gtModelType GT 0 THEN BEGIN
-      IF (geotiff.gtModelTypeGeoKey EQ 2) THEN BEGIN
-        dx = (geotiff.ModelPixelScaleTag)[0]
-        dy = (geotiff.ModelPixelScaleTag)[1]
-        ; Get the tie points and calculate the map projection range.
-        x0 = (geotiff.ModelTiePointTag)[3] + dx/2
-        y0 = (geotiff.ModelTiePointTag)[4] - dy/2
-        
-        d = Where(fields EQ 'GEOGCITATIONGEOKEY', cnt)
-        if cnt ne 0 then begin
-          if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Dont know'
-        endif else Message, 'Dont know'
-        ;Projection
-        GIS_make_proj, ret, proj, PARAM='1, WGS-84'
-        grid = OBJ_NEW('w_Grid2D', nx=nx, $
-          ny=ny, $
-          dx=dx, $
-          dy=dy, $
-          x0=x0, $
-          y0=y0, $
-          proj=proj, $
-          meta=meta)          
-      ENDIF ELSE Message, 'Dont know'
-    ENDIF else Message, 'Dont know'
+    gtModelIndex = Where(fields eq 'GTMODELTYPEGEOKEY', gtModelType)
+    if gtModelType gt 0 then begin    
+      ; This is for LatLon projection grids
+      dx = (geotiff.ModelPixelScaleTag)[0]
+      dy = (geotiff.ModelPixelScaleTag)[1]
+      ; Get the tie points (upper left + half pix).
+      x0 = (geotiff.ModelTiePointTag)[3] + dx/2
+      y0 = (geotiff.ModelTiePointTag)[4] - dy/2
+      
+      case (geotiff.gtModelTypeGeoKey) of
+        1: begin
+          d = Where(fields eq 'GEOGCITATIONGEOKEY', cnt)
+          if cnt ne 0 then begin
+            ; I need to know the datum. Currently WGS84 should be enough
+            if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Projection unknown. Contact Fabi.'
+          endif else Message, 'Projection unknown. Contact Fabi.'
+          
+          d = Where(fields eq 'GTCITATIONGEOKEY', cnt)
+          if cnt ne 0 then begin
+            ; I suppose its UTM. Let's parse
+            key = str_equiv(geotiff.GTCITATIONGEOKEY)
+            d = STRPOS(key, 'UTM_ZONE_')
+            if d eq -1 then Message, 'Projection unknown. Contact Fabi.'
+            zone = STRING((BYTE(key))[d+9:d+10])
+          endif else Message, 'Projection unknown. Contact Fabi.'
+          
+          ;Projection
+          GIS_make_proj, ret, proj, PARAM='2, ' + zone
+          grid = OBJ_NEW('w_Grid2D', nx=nx, $
+            ny=ny, $
+            dx=dx, $
+            dy=dy, $
+            x0=x0, $
+            y0=y0, $
+            proj=proj)
+        end
+        2: begin
+          d = Where(fields eq 'GEOGCITATIONGEOKEY', cnt)
+          if cnt ne 0 then begin
+            ; I need to know the datum. Currently WGS84 should be enough
+            if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Projection unknown. Contact Fabi.'
+          endif else Message, 'Projection unknown. Contact Fabi.'
+          
+          ;Projection
+          GIS_make_proj, ret, proj, PARAM='1, WGS-84'
+          grid = OBJ_NEW('w_Grid2D', nx=nx, $
+            ny=ny, $
+            dx=dx, $
+            dy=dy, $
+            x0=x0, $
+            y0=y0, $
+            proj=proj)
+        end
+        else: Message, 'Projection unknown. Contact Fabi.'
+      endcase
+    endif else Message, 'Projection unknown. Contact Fabi.'
   endelse
   
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
-  undefine, grid
   if ~ ok then return, 0
+  undefine, grid
+  
+  self.order = 1 ;TODO: important! Are all geotiff files UL corner???
   
   return, 1
   
@@ -241,9 +275,10 @@ function w_GEOTIFF::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
   
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
-  if TOTAL(self.subset) ne 0 then Message, 'No subset allowed yet'
-;    SUB_RECT=[self.subset[0], self.subset[2], self.subset[1], self.subset[3]]
-;  endif
+  if TOTAL(self.subset) ne 0 then begin
+    sub_rect = [self.subset[0], self.subset[2], self.subset[1], self.subset[3]]
+  endif
+ 
   out = READ_TIFF(self.file, SUB_RECT=sub_rect)
   
   return, ROTATE(out, 7)
