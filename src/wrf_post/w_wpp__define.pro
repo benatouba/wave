@@ -48,7 +48,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   
   ; Let's go
   if self.do_cache then begin
-    self.cachepath = self.log_directory + '/cache'+Timestamp(11, RANDOM_DIGITS=6, /VALID) 
+    self.cachepath = self.log_directory + '/cache'+cgTimestamp(11, RANDOM_DIGITS=6, /VALID) 
     FILE_MKDIR, self.cachepath
   endif
   

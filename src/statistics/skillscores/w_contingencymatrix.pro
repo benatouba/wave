@@ -4,7 +4,13 @@
 ;    
 ;    If the two datasets are vectors, the result is a scalar,
 ;    if the datasets are [N*M] arrays, then the result will
-;    be an N elements vector 
+;    be an N elements vector.
+;    
+;    Countingency matrix basics:: 
+;                    Obs:
+;                 Yes   No
+;       Mod: Yes   a    b
+;            No    c    d
 ;
 ; :Params:
 ;    ref: in, required

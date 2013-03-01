@@ -105,8 +105,8 @@ pro w_ScatterPlot, x, y, $
   endif
   
   if KEYWORD_SET(CORRELATION) then begin
-    tt = CORRELATE(_x, _y)^2
-    text = 'r!U2!N= ' + cgNumber_Formatter(tt, DECIMALS=2)
+    tt = CORRELATE(_x, _y)
+    text = 'r= ' + cgNumber_Formatter(tt, DECIMALS=2)
     if N_ELEMENTS(legtext) eq 0 then legtext = text else legtext = [legtext, text]
   endif
   
