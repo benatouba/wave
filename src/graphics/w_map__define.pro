@@ -1471,7 +1471,9 @@ end
 ;    DELTA_TEXT:in, optional, type = float
 ;               a delta in relative img coordinates where to put the annotation (2 elements vector)
 ;    ALIGN:in, optional, type = float
-;          the allignment of the annotation
+;          the alignment of the annotation
+;    CHARSIZE:in, optional, type = float
+;           the annotation size
 ;    
 ; :History:
 ;     Written by FaM, 2011.
@@ -1596,7 +1598,6 @@ function w_Map::set_filled_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
-
 
   if N_ELEMENTS(symsize) eq 1 then _symsize = symsize else _symsize = 1.
   if N_ELEMENTS(circle_color) eq 1 then _circle_color = circle_color else _circle_color = 'black'

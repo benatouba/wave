@@ -836,16 +836,23 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   lon = self->w_GEO_nc::get_Var(lon_id, dimnames = londims)  
   lat = self->w_GEO_nc::get_Var(lat_id, dimnames = latdims)  
   
+
   nlondims = N_ELEMENTS(londims)
   nlatdims = N_ELEMENTS(latdims)
   
   ok = FALSE
   if nlondims eq 1 and nlatdims eq 1 then begin
+    nx = N_ELEMENTS(lon)
+    ny = N_ELEMENTS(lat)  
     if ~KEYWORD_SET(NO_REFORM) then utils_1d_to_2d, lon, lat, lon, lat
     ok = TRUE
   endif 
   
-  if nlondims eq 2 and nlatdims eq 2 then ok = TRUE
+  if nlondims eq 2 and nlatdims eq 2 then begin
+    nx = N_ELEMENTS(lon[*,0])
+    ny = N_ELEMENTS(lon[0,*])  
+    ok = TRUE
+  endif
   
   if nlondims eq 3 and nlatdims eq 3 then begin
     if self.TID ge 0 then begin ; We found the time dimension in the file  
@@ -890,9 +897,6 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
   lon = REFORM(lon)
   lat = REFORM(lat)
-  
-  nx = N_ELEMENTS(lon[*,0])
-  ny = N_ELEMENTS(lon[0,*])
    
 end
 

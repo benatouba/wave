@@ -105,7 +105,9 @@ function w_GEOTIFF::init, file, grid, _EXTRA=extra
           d = Where(fields eq 'GEOGCITATIONGEOKEY', cnt)
           if cnt ne 0 then begin
             ; I need to know the datum. Currently WGS84 should be enough
-            if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Projection unknown. Contact Fabi.'
+            if ~ (geotiff.GEOGCITATIONGEOKEY eq 'GCS_WGS_1984' $
+              or geotiff.GEOGCITATIONGEOKEY eq 'WGS 84') $
+               then Message, 'Projection unknown. Contact Fabi.'
           endif else Message, 'Projection unknown. Contact Fabi.'
           
           ;Projection
