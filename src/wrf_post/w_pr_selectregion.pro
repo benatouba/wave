@@ -113,13 +113,12 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
      if s[1] ne ny then Message, WAVE_Std_Message('remove_mask', /NELEMENTS)
      pmask = where(remove_mask, cntmask)
      if cntmask eq 0 then Message, 'Nothing in mask?'
-     pmask = ARRAY_INDICES(remove_mask, pmask)
      _do_mask = 1
   endif
   
    if N_ELEMENTS(do_plot) ne 0 then begin
      if arg_okay(do_plot, TNAME='string') then pfile = do_plot
-     map = OBJ_NEW('w_Map', wpr, YSIZE=600, /HR_BLUE_MARBLE)
+     map = OBJ_NEW('w_Map', wpr, YSIZE=600, /BLUE_MARBLE)
      if N_ELEMENTS(SHAPE) ne 0 then ok = map->set_shape_file(SHPFILE=shape, SHP_SRC=src)
      wpr->Get_XY, x, y, nx, ny, proj     
      colors = REPLICATE('red', nx*ny) 
@@ -209,7 +208,12 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   for i=0, N_ELEMENTS(varlist)-1 do begin
     data = wpr->getVarData(varlist[i], INFO=inf)
     vn = inf.id
-    if _do_mask then data[pmask[0,*], pmask[1,*], *, *] = !VALUES.F_NAN
+    if _do_mask then begin
+      nt = N_ELEMENTS(data[0,0,*])
+      data = REFORM(TEMPORARY(data), nx*ny, nt)
+      data[where(remove_mask), *] = !VALUES.F_NAN
+      data = REFORM(TEMPORARY(data), nx, ny, nt)
+    endif
     dObj->WriteVarDef, vn, [x_dim_name,y_dim_name,t_dim_name], DATATYPE='FLOAT', GZIP=gzip, SHUFFLE=shuffle
     dObj->WriteVarAttr, vn, 'long_name', inf.description
     dObj->WriteVarAttr, vn, 'units', inf.unit
