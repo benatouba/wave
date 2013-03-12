@@ -347,7 +347,7 @@ Function w_WRF::Init, FILE=file, _EXTRA=extra
     truelat2 = self->w_NCDF::get_Gatt('TRUELAT2')
     proj_id = self->w_NCDF::get_Gatt('MAP_PROJ')
     GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
-    switch proj_id of
+    case proj_id of
       1: begin
         ; 4 - Lambert Conformal Conic
         ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
@@ -363,7 +363,6 @@ Function w_WRF::Init, FILE=file, _EXTRA=extra
           STRING(truelat2, FORMAT='(F16.8)') + ', ' + $         ;sp2
           'WGS-84' + ', ' + $                                   ;datum
           'WRF Lambert Conformal'                               ;name
-        break
       end
       2: begin
         ; 31- Polar Stereographic
@@ -378,11 +377,24 @@ Function w_WRF::Init, FILE=file, _EXTRA=extra
           '0.0' + ', ' + $                                      ;y0
           'WGS-84' + ', ' + $                                   ;datum
           'WRF Polar Stereographic'                             ;name
-        break
+      end
+      3: begin
+        ; 20- Mercator
+        ;   a, b, lat0, lon0, x0, y0, [datum], name
+        envi_proj = 20
+        proj_param = str_equiv(envi_proj) + ', ' + $            ;proj_id
+          STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
+          STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
+          STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;lat0
+          STRING(ref_lon, FORMAT='(F16.8)') + ', ' + $          ;lon0
+          '0.0' + ', ' + $                                      ;x0
+          '0.0' + ', ' + $                                      ;y0
+          'WGS-84' + ', ' + $                                   ;datum
+          'WRF Mercator'
       end
       else: Message, 'Projection currently not supported.'
       
-    endswitch
+    endcase
     
     ; Make the projection
     GIS_make_proj, ret, proj, PARAM=proj_param

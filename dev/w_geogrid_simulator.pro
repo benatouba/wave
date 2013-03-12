@@ -50,24 +50,41 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
   endwhile
   free_lun, lun
   
-  if map_proj ne 'LAMBERT' then Message, 'Currently only Lambert projection is implemented'
-  
   GIS_make_ellipsoid, ret, ell, NAME='WRF Sphere', RA=6370000.0, RB=6370000.0
-  ; 4 - Lambert Conformal Conic
-  ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
-  envi_proj = 4
-  proj_param = str_equiv(envi_proj) + ', ' + $            ;proj_id
-    STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
-    STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
-    STRING(ref_lat, FORMAT='(F16.8)') + ', ' + $     ;lat0
-    STRING(ref_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
-    '0.0' + ', ' + $                                      ;x0
-    '0.0' + ', ' + $                                      ;y0
-    STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;sp1
-    STRING(truelat2, FORMAT='(F16.8)') + ', ' + $         ;sp2
-    'WGS-84' + ', ' + $                                   ;datum
-    'WRF Lambert Conformal'                               ;name
-    
+  case map_proj of
+    'LAMBERT': begin
+      ; 4 - Lambert Conformal Conic
+      ;   a, b, lat0, lon0, x0, y0, sp1, sp2, [datum], name
+      envi_proj = 4
+      proj_param = str_equiv(envi_proj) + ', ' + $            ;proj_id
+        STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
+        STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
+        STRING(ref_lat, FORMAT='(F16.8)') + ', ' + $     ;lat0
+        STRING(stand_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
+        '0.0' + ', ' + $                                      ;x0
+        '0.0' + ', ' + $                                      ;y0
+        STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;sp1
+        STRING(truelat2, FORMAT='(F16.8)') + ', ' + $         ;sp2
+        'WGS-84' + ', ' + $                                   ;datum
+        'WRF Lambert Conformal'                               ;name
+    end
+    'MERCATOR': begin
+      ; 20- Mercator
+      ;   a, b, lat0, lon0, x0, y0, [datum], name
+      envi_proj = 20
+      proj_param = str_equiv(envi_proj) + ', ' + $            ;proj_id
+        STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
+        STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
+        STRING(truelat1, FORMAT='(F16.8)') + ', ' + $       ;lat0
+        STRING(ref_lon, FORMAT='(F16.8)') + ', ' + $        ;lon0
+        '0.0' + ', ' + $                                      ;x0
+        '0.0' + ', ' + $                                      ;y0
+        'WGS-84' + ', ' + $                                   ;datum
+        'WRF Mercator'                               ;name
+    end
+    else: Message, 'Projection not recognized: ' + map_proj
+  endcase
+
   ; Make the projection
   GIS_make_proj, ret, proj, PARAM=proj_param
   
@@ -101,8 +118,8 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
     nx = we/ratio
     ny = sn/ratio
     
-    if nx ne we/FLOAT(ratio) then Message, 'for dom ' + str_equiv(i+1) + 'e_we and ratios are incompatibles' 
-    if ny ne sn/FLOAT(ratio) then Message, 'for dom ' + str_equiv(i+1) + 'e_sn and ratios are incompatibles' 
+    if nx ne we/FLOAT(ratio) then Message, 'for dom ' + str_equiv(i+1) + 'e_we and ratios are incompatible: (e_we - 1) / ratio must be integer!' 
+    if ny ne sn/FLOAT(ratio) then Message, 'for dom ' + str_equiv(i+1) + 'e_sn and ratios are incompatible: (e_sn - 1) / ratio must be integer!' 
     
     pgrid = g[pid-1]
     pgrid->get_XY, xx, yy, nnx, nny
