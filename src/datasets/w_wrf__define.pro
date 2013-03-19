@@ -386,7 +386,7 @@ Function w_WRF::Init, FILE=file, _EXTRA=extra
           STRING(ell.a, FORMAT='(F16.8)') + ', ' + $            ;a
           STRING(ell.b, FORMAT='(F16.8)') + ', ' + $            ;b
           STRING(truelat1, FORMAT='(F16.8)') + ', ' + $         ;lat0
-          STRING(ref_lon, FORMAT='(F16.8)') + ', ' + $          ;lon0
+          STRING(center_lon, FORMAT='(F16.8)') + ', ' + $          ;lon0
           '0.0' + ', ' + $                                      ;x0
           '0.0' + ', ' + $                                      ;y0
           'WGS-84' + ', ' + $                                   ;datum

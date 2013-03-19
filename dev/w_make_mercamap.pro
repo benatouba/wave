@@ -64,7 +64,8 @@ function w_make_mercamap, $
   map = OBJ_NEW('w_Map', grid, XSIZE=xsize, YSIZE=ysize)
   if ~ OBJ_VALID(map) then Message, 'map not ok'
   
-  if ARG_PRESENT(GRID_OUT) then grid_out = grid else undefine, grid
+  if ARG_PRESENT(GRID_OUT) then map->GetProperty, grid=grid_out
+  undefine, grid
   
   return, map 
   

@@ -34,6 +34,8 @@
 ;                score charsize
 ;    SCORE_POS: in, optional
 ;               [X0, Y0] array for positioning the scores 
+;    BINSIZE=binsize, MIN=min, MAX=max: in, optional
+;             if you want to do binned scatterplots
 ;           
 ; :History:
 ;     Written by FaM, 2013.
@@ -52,6 +54,7 @@ pro w_ScatterPlot, x, y, $
   SCORE_POS=score_pos, $
   ADDCMD=addcmd, $
   S_CHARSIZE=s_charsize, $
+  BINSIZE=binsize, MIN=min, MAX=max, $
   _REF_EXTRA=extra
 
   ; Set Up environnement
@@ -74,6 +77,23 @@ pro w_ScatterPlot, x, y, $
   _x = _x[pok]
   _y = _y[pok]
   
+  do_bins = 0
+  if N_ELEMENTS(BINSIZE) ne 0 or N_ELEMENTS(MIN) ne 0 or N_ELEMENTS(MAX) ne 0 then begin
+    do_bins = 1
+    h = HISTOGRAM(_x, BINSIZE=binsize, MIN=min, MAX=max, LOCATIONS=locs, REVERSE_INDICES=ri)
+    _bx = locs + (locs[1]-locs[0])/2
+    _bmean = float(h*0)
+    _bstddev = float(h*0)
+    for i=0, N_ELEMENTS(h)-1 do begin
+      if ri[i] eq ri[i+1] then continue
+      top = _y[ri[ri[i]:ri[i+1]-1]]
+      _bmean[i] = MEAN(top)
+      _bstddev[i] = STDDEV(top)
+    endfor
+    _by = _bmean
+    color = 'light grey'
+  endif
+
   if N_ELEMENTS(range) eq 0 then range = [min([_x,_y]),max([_x,_y])]
   
   ; Empty plot
@@ -81,13 +101,22 @@ pro w_ScatterPlot, x, y, $
             XRANGE=range, YRANGE=range, $
             /NODATA, ADDCMD=addcmd, _EXTRA=extra
     
+  ; The points
+  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd
+
   ; Grey one to one line
   cgplots, [-1e5,1e5], [-1e5,1e5], color='grey', LINESTYLE=5, NOCLIP=0, ADDCMD=addcmd
   
-  ; The points
-  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd
-    
-
+  ;if histo
+  if do_bins then begin
+   cgPlot, _bx, _by, Color='black', /OVERPLOT, ADDCMD=addcmd
+   cgErrPlot, _bx, _by-_bstddev/2, _by+_bstddev/2., Color='black', ADDCMD=addcmd
+  endif
+  
+      ; Restore plot
+  Axis, XAXIS=0, XRANGE=range;, ADDCMD=addcmd, /SAVE
+  Axis, YAXIS=0, YRANGE=range;, ADDCMD=addcmd, /SAVE
+  
   if KEYWORD_SET(FIT) then begin  
     Message, 'Fit temporarily non-available'
 ;    gain = regress(_x, _y, CONST=const, CORRELATION=correlation, SIGMA=sigma, YFIT=yfit)
@@ -125,5 +154,7 @@ pro w_ScatterPlot, x, y, $
   if N_ELEMENTS(legtext) ne 0 then begin
     al_legend, legtext, BOX=0, POSITION=score_pos, CHARSIZE=s_charsize, WINDOW=addcmd, _EXTRA=extra
   endif
+  
+
     
 end

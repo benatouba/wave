@@ -855,9 +855,9 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   endif
   
   if nlondims eq 3 and nlatdims eq 3 then begin
-    if self.TID ge 0 then begin ; We found the time dimension in the file  
-      p = where(londims eq (*self.dimNames)[self.TID], cnt)  
-      ok = TRUE  
+    if self.TID ge 0 then begin ; We found the time dimension in the file
+      p = where(londims eq (*self.dimNames)[self.TID], cnt)
+      ok = TRUE
       case (p[0]) of
         0: begin
           lon = lon[0,*,*]
@@ -867,13 +867,13 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
         end
         2: begin
           lon = lon[*,*,0]
-        end        
+        end
         else: begin
-           ok = FALSE
+          ok = FALSE
         end
       endcase
       
-      p = where(latdims eq (*self.dimNames)[self.TID], cnt)    
+      p = where(latdims eq (*self.dimNames)[self.TID], cnt)
       case (p[0]) of
         0: begin
           lat = lat[0,*,*]
@@ -883,14 +883,15 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
         end
         2: begin
           lat = lat[*,*,0]
-        end        
-        else: begin
-           ok = FALSE
         end
-      endcase      
-      
-    endif else ok = FALSE ; We did not found the time dimension in the file  
- 
+        else: begin
+          ok = FALSE
+        end
+      endcase
+      nx = N_ELEMENTS(lon[*,0])
+      ny = N_ELEMENTS(lon[0,*])
+    endif else ok = FALSE ; We did not found the time dimension in the file
+    
   endif
   
   if not ok then Message, 'Still do not know how to get the info.'

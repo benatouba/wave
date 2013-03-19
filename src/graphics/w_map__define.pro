@@ -1020,8 +1020,8 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
   
   if KEYWORD_SET(DEFAULT) then begin
   
-    w = OBJ_NEW('w_BlueMarble', /SRTM)
-    z = FLOAT(self.grid->map_gridded_data(w->get_img(), w, /BILINEAR))
+    w = OBJ_NEW('w_geographic', WAVE_RESOURCE_DIR+'/topo/gtopo_1min.nc')
+    z = FLOAT(self.grid->map_gridded_data(w->getVarData('h'), w, /BILINEAR))
     undefine, w
     
   endif else begin
@@ -1627,14 +1627,19 @@ end
 ;        image is generated based on the map data, datalevels and colors.
 ; 
 ; :Keywords:
-;   interpolate: in, optional, type=boolean, default=0
+;    BLUE_MARBLE: in, optional, type = boolean/string
+;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
+;                 if set to a string, it is the path to an alternative jpg file to use as background
+;    HR_BLUE_MARBLE: in, optional, type = boolean/string
+;                    set this keyword to make a map using the NASA Land Cover picture (High res)
+;   INTERPOLATE: in, optional, type=boolean, default=0
 ;         Is set, bilinear interpolation is used to resize the image. Otherwise,
 ;         nearest neighbor sampling is used instead.
 ; 
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_img, img, INTERPOLATE=interpolate
+function w_Map::set_img, img, BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_marble, INTERPOLATE=interpolate, D_RGB=d_rgb
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1647,7 +1652,21 @@ function w_Map::set_img, img, INTERPOLATE=interpolate
     PTR_FREE, self.info
     ok = WAVE_Error_Message(!Error_State.Msg)
     RETURN, 0
-  ENDIF 
+  ENDIF
+  
+  SetDefaultValue, D_RGB, 0
+  
+  if KEYWORD_SET(HR_BLUE_MARBLE) then begin
+    w = OBJ_NEW('w_BlueMarble', /HR)
+    ok = self->set_img(0 > Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]) + D_RGB < 255)
+    undefine, w
+  endif
+  
+  if KEYWORD_SET(BLUE_MARBLE) then begin    
+    if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
+    ok = self->set_img(0 > Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]) + D_RGB < 255)
+    undefine, w
+  endif
   
   if N_ELEMENTS(img) ne 0 then begin
     s = SIZE(img, /DIMENSIONS)
@@ -2536,19 +2555,12 @@ END
 ;                  default behavior is to add country outlines to the map automatically. 
 ;                  This can be a bit long. Set this keyword to prevent drawing countries
 ;                  automatically.
-;    BLUE_MARBLE: in, optional, type = boolean/string
-;                 set this keyword to make a map using the NASA Land Cover picture (low res, default)
-;                 if set to a string, it is the path to an alternative jpg file to use as background
-;    HR_BLUE_MARBLE: in, optional, type = boolean/string
-;                    set this keyword to make a map using the NASA Land Cover picture (High res)
-;    OCEANS: in, optional, type = boolean/string
-;            set this keyword to make a map with blue oceans shapes
 ;
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries, $
-                            BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_marble, OCEANS=oceans
+Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_COUNTRIES=no_countries
+                            
      
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2565,9 +2577,9 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   ; Check arguments *
   ;******************
   if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
-  if ~KEYWORD_SET(Xsize) and ~KEYWORD_SET(Ysize) and ~KEYWORD_SET(FACTOR) then Ysize = 400
+  if N_ELEMENTS(Xsize) eq 0 and N_ELEMENTS(Ysize) eq 0 and N_ELEMENTS(FACTOR) eq 0 then Ysize = 400
   
-  self.grid = grid->reGrid(Xsize = Xsize,  Ysize = Ysize, FACTOR = factor) 
+  self.grid = grid->reGrid(XSIZE=xsize, YSIZE=ysize, FACTOR=factor) 
   self.grid->getProperty, tnt_C = c
   self.Xsize = c.nx
   self.Ysize = c.ny
@@ -2583,21 +2595,7 @@ Function w_Map::Init, grid, Xsize = Xsize,  Ysize = Ysize, FACTOR = factor, NO_C
   dummy = self->set_shading_params()
   dummy = self->set_wind()  
   
-  if KEYWORD_SET(OCEANS) then dummy = self->set_shape_file(/OCEANS)  
-  
   if ~KEYWORD_SET(NO_COUNTRIES) then dummy = self->set_shape_file(/COUNTRIES)  
-  
-  if KEYWORD_SET(HR_BLUE_MARBLE) then begin
-    w = OBJ_NEW('w_BlueMarble', /HR)
-    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]))
-    undefine, w
-  endif
-  
-  if KEYWORD_SET(BLUE_MARBLE) then begin    
-    if arg_okay(BLUE_MARBLE, TYPE=IDL_STRING) then w = OBJ_NEW('w_BlueMarble', FILE=blue_marble) else w = OBJ_NEW('w_BlueMarble')
-    ok = self->set_img(Transpose(self.grid->map_gridded_data(Transpose(w->get_img(), [1,2,0]), w, /BILINEAR), [2,0,1]))
-    undefine, w
-  endif
                  
   RETURN, 1
   

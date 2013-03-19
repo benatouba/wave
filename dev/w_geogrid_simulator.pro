@@ -138,7 +138,7 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
   
   m = OBJARR(ndoms)
   for i = 0, ndoms-1 do begin
-    map = OBJ_NEW('w_Map', g[i], YSIZE=500)
+    map = OBJ_NEW('w_Map', g[i], YSIZE=700)
     for j=i+1, ndoms-1 do begin
       (g[j])->Get_XY, x, y, nx, ny
       x = [0,nx-1,nx-1,0,0]

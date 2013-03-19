@@ -102,6 +102,7 @@ pro w_standard_2d_plot, map, $
     DISP_IMG=disp_img, $
     ANTI_ALIASING=anti_aliasing, $
     XFACTOR=xfactor, $
+    CHARSIZE=charsize, $
     OOB_FACTOR=oob_factor, $
     NO_BAR=no_bar, $
     NO_LEGEND=no_legend, $
@@ -156,6 +157,7 @@ pro w_standard_2d_plot, map, $
   xyFactor = FLOAT(imgX)/imgY
   SetDefaultValue, OOB_FACTOR, xyFactor
   SetDefaultValue, WINDOW, 1
+  SetDefaultValue, CHARSIZE, 1.
   
   ; Anti aliasing
   do_as = FALSE
@@ -209,10 +211,10 @@ pro w_standard_2d_plot, map, $
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   if ~KEYWORD_SET(NO_BAR) then begin
     map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
-      CHARSIZE=1.*sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor
+      CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor
     ; Title bar
     cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
-      WINDOW=cgWIN, /NORMAL, CHARSIZE=1. * sfac, CHARTHICK = 1. *sfac
+      WINDOW=cgWIN, /NORMAL, CHARSIZE=charsize * sfac, CHARTHICK = 1. *sfac
   endif
   
   if ~ KEYWORD_SET(NO_LEGEND) then begin
