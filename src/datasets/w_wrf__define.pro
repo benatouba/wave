@@ -914,9 +914,9 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       
       d1 = self->get_Var_Info('CLDFRA', DIMNAMES=dnames,DIMS=dims)
       if d1 then begin
-        var = {name:'SCLD',unit:'-',ndims:N_elements(dims)-1,description:'Total Column Clouds',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'SCLD',unit:'-',ndims:N_elements(dims)-1,description:'Total Column Clouds',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
-        var = {name:'SCLDFRA',unit:'-',ndims:N_elements(dims)-1,description:'Surface cloud fraction',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'SCLDFRA',unit:'-',ndims:N_elements(dims)-1,description:'Surface cloud fraction',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
         dvars = [dvars,var]
       endif
       
@@ -964,7 +964,33 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         var = {name:'WD',unit:'degrees',ndims:N_elements(dims),description:'Horizontal wind direction on mass grid points',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]        
       endif      
-           
+      
+      ;water vapor flux
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QVAPOR')
+      d3 = self->get_Var_Info('P')
+      d4 = self->get_Var_Info('PB')  
+      if (d1 and d2 and d3 and d4) then begin
+        du = self->get_Var_Info('U') 
+        dv = self->get_Var_Info('V') 
+        if du then begin
+          var = {name:'U_WVFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'zonal water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'U_INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated zonal water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dv then begin
+          var = {name:'V_WVFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'meridional water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'V_INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if du and dv then begin
+          var = {name:'INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated absolute water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif          
+      endif 
+                 
       self.ndiagvar = N_ELEMENTS(dvars) - 1
       if self.ndiagvar ne 0 then begin      
         dvars = dvars[1:*]
@@ -1764,7 +1790,7 @@ function w_WRF::get_Var, Varid, $
     'T2PBLC': begin
       value = self->get_Var('T2PBL', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
-        dimnames = dimnames) - 273.15      
+        dimnames = dimnames) - 273.15
      end
     
     'RH': begin
@@ -2042,6 +2068,56 @@ function w_WRF::get_Var, Varid, $
         value = value - TEMPORARY(ter)
     end
     
+    'U_WVFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      u = self->get_Var('U', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+        dims = dims, $
+        dimnames = dimnames, /UNSTAGG)
+      rh = self->get_Var('RH', T0=t0, T1=t1, ZLEVELS=zlevels)
+      tc = self->get_Var('TC', T0=t0, T1=t1, ZLEVELS=zlevels)
+      value = MET_abs_humidity(tc, MET_vap_pressure(tc, rh)) / 1000. * u
+    end
+      
+    'V_WVFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      u = self->get_Var('V', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+        dims = dims, $
+        dimnames = dimnames, /UNSTAGG)
+      rh = self->get_Var('RH', T0=t0, T1=t1, ZLEVELS=zlevels)
+      tc = self->get_Var('TC', T0=t0, T1=t1, ZLEVELS=zlevels)
+      value = MET_abs_humidity(tc, MET_vap_pressure(tc, rh)) / 1000. * u
+    end
+    
+    'U_INTWVFLUX': begin
+      u = self->get_Var('U_WVFLUX', time, nt, t0=t0, t1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      z = self->get_Var('ZAG', T0=t0, T1=t1)
+      nz = (SIZE(z, /DIMENSIONS))[2]
+      z = (z[*,*,1:nz-1,*] + z[*,*,0:nz-2,*])/2.
+      value= TOTAL(u[*,*,0:nz-2,*] * z, 3)
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+      
+    'V_INTWVFLUX': begin
+      u = self->get_Var('V_WVFLUX', time, nt, t0=t0, t1=t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      z = self->get_Var('ZAG', T0=t0, T1=t1)
+      nz = (SIZE(z, /DIMENSIONS))[2]
+      z = (z[*,*,1:nz-1,*] + z[*,*,0:nz-2,*])/2.
+      value= TOTAL(u[*,*,0:nz-2,*] * z, 3)
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
+    
+    'INTWVFLUX': begin
+      u = self->get_Var('U_INTWVFLUX', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+          dims = dims, $
+          dimnames = dimnames)
+      v = self->get_Var('V_INTWVFLUX', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels)
+      value = SQRT(u^2 + v^2)
+    end
+
     else:
     
   endcase

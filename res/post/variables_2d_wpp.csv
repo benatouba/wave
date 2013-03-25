@@ -47,3 +47,6 @@
 "COL_QVAPOR", "mean"
 "COL_QLIQUID", "mean"
 "COL_QSOLID", "mean"
+"U_INTWVFLUX","mean"
+"V_INTWVFLUX","mean"
+"INTWVFLUX","mean"

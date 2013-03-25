@@ -10,3 +10,5 @@
 "WS","mean","yes"
 "PRESSURE","mean","no"
 "GEOPOTENTIAL","mean","yes"
+"U_WVFLUX","mean","yes"
+"V_WVFLUX","mean","yes"
