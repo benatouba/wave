@@ -28,7 +28,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_DEM::init, file, _EXTRA=extra
+function w_DEM::init, file, NO_DELTA=no_delta, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
@@ -77,12 +77,21 @@ function w_DEM::init, file, _EXTRA=extra
     proj = coord.proj
   endelse
   
+  if KEYWORD_SET(NO_DELTA) then begin
+      deltaX =  0
+      deltaY =  0      
+  endif else begin    
+      deltaX =  coord.dx/2
+      deltaY =  - coord.dy/2
+  endelse
+  
+
   grid = OBJ_NEW('w_Grid2D',    nx = coord.nx               , $
                                 ny = coord.ny               , $
                                 dx = coord.dx               , $
                                 dy = coord.dy               , $
-                                x0 = coord.x0 + coord.dx/2  , $
-                                y0 = coord.y0 - coord.dy/2  , $
+                                x0 = coord.x0 + deltaX      , $
+                                y0 = coord.y0 + deltaY      , $
                                 proj = proj               )
 
   ok = self->w_GISdata::init(grid, _EXTRA=extra)

@@ -29,7 +29,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_GEOTIFF::init, file, grid, _EXTRA=extra
+function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
 
   ; Set up environnement
   @WAVE.inc
@@ -70,9 +70,15 @@ function w_GEOTIFF::init, file, grid, _EXTRA=extra
       ; This is for LatLon projection grids
       dx = (geotiff.ModelPixelScaleTag)[0]
       dy = (geotiff.ModelPixelScaleTag)[1]
+      
       ; Get the tie points (upper left + half pix).
-      x0 = (geotiff.ModelTiePointTag)[3] + dx/2
-      y0 = (geotiff.ModelTiePointTag)[4] - dy/2
+      if KEYWORD_SET(NO_DELTA) then begin
+        x0 = (geotiff.ModelTiePointTag)[3]
+        y0 = (geotiff.ModelTiePointTag)[4]        
+      endif else begin
+        x0 = (geotiff.ModelTiePointTag)[3] + dx/2
+        y0 = (geotiff.ModelTiePointTag)[4] - dy/2
+      endelse
       
       case (geotiff.gtModelTypeGeoKey) of
         1: begin

@@ -488,8 +488,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'prcp_sum'
     v.name = 'prcp_sum'
-    v.unit = 'mm'
-    v.description = 'Total precipitation in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total precipitation'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -499,8 +499,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'prcp_nc_sum'
     v.name = 'prcp_nc_sum'
-    v.unit = 'mm'
-    v.description = 'Total grid-scale precipitation in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total grid-scale precipitation'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -510,8 +510,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'prcp_c_sum'
     v.name = 'prcp_c_sum'
-    v.unit = 'mm'
-    v.description = 'Total convective precipitation in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total convective precipitation'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -521,8 +521,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'prcp_fr_sum'
     v.name = 'prcp_fr_sum'
-    v.unit = 'mm'
-    v.description = 'Total frozen precipitation in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total frozen precipitation'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -532,8 +532,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'snowfall_sum'
     v.name = 'snowfall_sum'
-    v.unit = 'mm'
-    v.description = 'Total snowfall precipitation in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total snowfall precipitation'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -543,8 +543,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'graupel_sum'
     v.name = 'graupel_sum'
-    v.unit = 'mm'
-    v.description = 'Total graupel in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total graupel'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -554,8 +554,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'hail_sum'
     v.name = 'hail_sum'
-    v.unit = 'mm'
-    v.description = 'Total hail in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total hail'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -565,8 +565,8 @@ pro w_WPR::_addDerivedVars
     v = self->_varStruct(/DERIVED)
     v.id = 'et_sum'
     v.name = 'et_sum'
-    v.unit = 'mm'
-    v.description = 'Total evapotranspiration in time interval'
+    v.unit = 'mm ' + self.tres + '-1'
+    v.description = 'Total evapotranspiration'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif

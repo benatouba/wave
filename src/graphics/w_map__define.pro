@@ -1077,8 +1077,8 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
       z = FLOAT(reform(z, n_elements(lat[*,0]), n_elements(lat[0,*])))
       
     endif else begin
-      if isGeo then dem = OBJ_NEW('w_GEOTIFF', grdfile) $
-         else dem = OBJ_NEW('w_DEM', grdfile)
+      if isGeo then dem = OBJ_NEW('w_GEOTIFF', grdfile, /NO_DELTA) $
+         else dem = OBJ_NEW('w_DEM', grdfile, /NO_DELTA)
       z = FLOAT(dem->getVarData())
       p = where(z le -9999, cnt)
       if cnt gt 0 then z[p] = 0

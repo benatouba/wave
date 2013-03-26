@@ -45,6 +45,8 @@ pro w_ScatterPlot, x, y, $
   YTITLE=ytitle, $
   TITLE=title, $
   RANGE=range, $
+  XRANGE=xrange, $
+  YRANGE=yrange, $
   FIT=fit, $
   CORRELATION=correlation, $
   MD=md, $
@@ -94,15 +96,24 @@ pro w_ScatterPlot, x, y, $
     color = 'light grey'
   endif
 
-  if N_ELEMENTS(range) eq 0 then range = [min([_x,_y]),max([_x,_y])]
+  if N_ELEMENTS(range) eq 0 then begin
+    _xrange = [min([_x,_y]),max([_x,_y])]
+    _yrange = [min([_x,_y]),max([_x,_y])]    
+  endif else begin
+    _xrange = range
+    _yrange = range
+  endelse
+  
+  if N_ELEMENTS(Xrange) ne 0 then _xrange = Xrange
+  if N_ELEMENTS(Yrange) ne 0 then _yrange = Yrange
   
   ; Empty plot
   cgPlot, _x, _y, TITLE=title, XTITLE=xtitle, YTITLE=ytitle, $
-            XRANGE=range, YRANGE=range, $
+            XRANGE=_xrange, YRANGE=_yrange, $
             /NODATA, ADDCMD=addcmd, _EXTRA=extra
     
   ; The points
-  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd
+  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd, NOCLIP=0
 
   ; Grey one to one line
   cgplots, [-1e5,1e5], [-1e5,1e5], color='grey', LINESTYLE=5, NOCLIP=0, ADDCMD=addcmd
@@ -110,27 +121,15 @@ pro w_ScatterPlot, x, y, $
   ;if histo
   if do_bins then begin
    cgPlot, _bx, _by, Color='black', /OVERPLOT, ADDCMD=addcmd
-   cgErrPlot, _bx, _by-_bstddev/2, _by+_bstddev/2., Color='black', ADDCMD=addcmd
+   cgErrPlot, _bx, _by-_bstddev, _by+_bstddev, Color='black', ADDCMD=addcmd
   endif
   
-      ; Restore plot
-  Axis, XAXIS=0, XRANGE=range;, ADDCMD=addcmd, /SAVE
-  Axis, YAXIS=0, YRANGE=range;, ADDCMD=addcmd, /SAVE
+  ; Restore plot
+  Axis, XAXIS=0, XRANGE=_xrange;, ADDCMD=addcmd, /SAVE
+  Axis, YAXIS=0, YRANGE=_yrange;, ADDCMD=addcmd, /SAVE
   
   if KEYWORD_SET(FIT) then begin  
-    Message, 'Fit temporarily non-available'
-;    gain = regress(_x, _y, CONST=const, CORRELATION=correlation, SIGMA=sigma, YFIT=yfit)
-;    cgPlots, [-1e7,1e7], const[0] + gain[0] * [-1e7,1e7], color=cgColor('dark grey'), NOCLIP=0, WINDOW=cgWin    
-;    
-;    if const lt 0 then sign = '- ' else sign = '+ ' 
-;    sq_sign = String(108B)
-;       
-;    text = 'y = ' + STRING(gain, FORMAT='(F5.2)') + ' x ' + sign + STRING(abs(const), FORMAT='(F6.2)')        
-;    if KEYWORD_SET(LEGEND_UL) then pos = [0.2, 0.85] $
-;    else  pos = [0.5, 0.22]
-;    
-;    cgText, pos[0], pos[1], text, CHARSIZE= 1.8, COLOR=cgColor('black'), CHARTHICK=1., /NORMAL, WINDOW=cgWin 
-        
+    Message, 'Fit temporarily non-available'        
   endif
   
   if KEYWORD_SET(CORRELATION) then begin
