@@ -1,4 +1,36 @@
-pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, ADD_ERROR=add_error, _EXTRA=extra
+;+
+; :Description:
+;    Aggregates all TRMM V7 files in a directory into a single output file,
+;    possibly for a subset of the region
+;
+; :Params:
+;    directory: in, required
+;               the path to the directory containing all TRMM v7 files
+;    outFile: in, required
+;             the path to the output file to write
+;
+; :Keywords:
+;    CLOBBER: in, optional
+;             set this keyword to force overwriting if the output file 
+;             already exists
+;    COMPRESS: in, optional
+;              set this keyword to make a compressed NetCDF file
+;    ADD_ERROR: in, optional
+;               set this keyword to add the TRMM v7 error variable 
+;               in addition to precipitation
+;    YEAR: in, optional
+;          default is to keep all files in the directory. Set this keyword
+;          to an array of years to *keep* for aggregation.
+;
+;    MONTH: in, optional
+;          default is to keep all files in the directory. Set this keyword
+;          to an array of months to *keep* for aggregation.
+;          
+;    _EXTRA: in, optional
+;            any keyword accepted by w_TRMM::defineSubset()
+;
+;-
+pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, ADD_ERROR=add_error, YEAR=year, MONTH=month, _EXTRA=extra
 
    ; Set up environnement
   @WAVE.inc
@@ -81,20 +113,35 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, ADD_ERROR
   dObj->WriteVarData, 'longitude', REFORM(lon[*,0])
   dObj->WriteVarData, 'latitude', REFORM(lat[0,*])
   
+  do_month = N_ELEMENTS(MONTH) ne 0
+  do_year = N_ELEMENTS(YEAR) ne 0
+  
   ;Let's go
+  off = 0L
   for i=0, cfiles-1 do begin
     tpl = OBJ_NEW('w_TRMM', filelist[i], _EXTRA=extra)
     tpl->getTime, time
+    if do_month or do_year then begin
+      tt = MAKE_ABS_DATE(QMS=time)
+      if do_month then begin
+        pm = where(month eq tt.month, cntm)
+        if cntm eq 0 then continue
+      endif
+      if do_year then begin
+        pm = where(year eq tt.year, cntm)
+        if cntm eq 0 then continue
+      endif
+    endif
     time = long((time - t0) / H_QMS)
     p = tpl->getVarData()
     if type eq '3B42d' then p = p / 24.
-    dObj->WriteVarData, 'time', time, OFFSET=i
-    dObj->WriteVarData, 'pcp', p, OFFSET=[0, 0, i]
+    dObj->WriteVarData, 'time', time, OFFSET=off
+    dObj->WriteVarData, 'pcp', p, OFFSET=[0, 0, off]
     if add_error then begin
        p = tpl->getVarData('err')
-       dObj->WriteVarData, 'err', p, OFFSET=[0, 0, i]
+       dObj->WriteVarData, 'err', p, OFFSET=[0, 0, off]
     endif
-    
+    off += 1
     undefine, tpl
   endfor  
   

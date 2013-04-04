@@ -69,6 +69,8 @@
 ;       too small to be seen. All direct graphics tick marks act in this (strange!) way.
 ;    ticknames: in, optional, type=string                 
 ;       A string array of names or values for the color bar tick marks.
+;    tickinterval: in, optional                 
+;       colorbar tick interval
 ;    title: in, optional, type=string, default=""
 ;       This is title for the color bar. The default is to have no title.
 ;    top: in, optional, type=boolean, default=0
@@ -99,6 +101,7 @@ pro w_gr_Colorbar, info, $
     RIGHT=right, $
     TICKLEN=ticklen, $
     TICKNAMES=ticknames, $
+    TICKINTERVAL=tickinterval, $
     TITLE=title, $
     TOP=top, $
     VERTICAL=vertical, $
@@ -185,6 +188,7 @@ pro w_gr_Colorbar, info, $
     RIGHT=right, $
     TICKLEN=ticklen, $
     TICKNAMES=ticknames, $
+    TICKINTERVAL=tickinterval, $
     TITLE=title, $
     TOP=top, $
     VERTICAL=vertical, $

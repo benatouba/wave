@@ -1,7 +1,7 @@
 ; docformat = 'rst'
 ;+
 ;
-;  w_geographic is the basis class for all files with a
+;  w_geographic is the basis class for all NCDF files with a
 ;  geographic coordinate system
 ;  
 ; :History:
@@ -220,12 +220,23 @@ end
 ;            - id
 ;            - description
 ;            - unit
+;   HOUROFDAY: in, optional, type = long
+;              to get strides of the time serie at specific hours of day
+;   ZLEVELS: in, optional, type = long
+;            set this keyword to an array of one or two elements, containing the range
+;            of the indexes to keep from the original NCDF file in the Z dimension.
+;            It is better to use the `ZDIM_ID` keyword to specify
+;            in which dimension these indexes must be kept, otherwise `get_Var` will try
+;            to do its best from what it knows 
+;            (in most cases -4D arrays-, it should work fine).
 ;            
 ; :Returns:
 ;   the data array
 ;   
 ;-
-function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
+function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
+    HOUROFDAY=hourofday, $
+    ZLEVELS=zlevels
 
   ; Set up environnement
   @WAVE.inc
@@ -236,13 +247,23 @@ function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
   if TOTAL(self.subset) ne 0 then ok = self.obj->define_subset(SUBSET=self.subset) else ok = self.obj->define_subset()
-  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1)
+  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1, ZLEVELS=zlevels)
   
   if self.order eq 1 then for i=0, nt-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
   
   return, out
  
   
+end
+
+;+
+; :Description:
+;    Gives access to the w_geo_nc object (for dumps, etc)
+;-
+function w_geographic::obj
+  
+  return, self.obj
+
 end
 
 ;+

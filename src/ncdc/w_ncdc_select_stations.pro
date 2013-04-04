@@ -121,7 +121,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
     d = map->set_plot_params(N_LEVELS=256, CMAX=ts-1, MIN_VALUE=min(h), MAX_VALUE=max(h))    
     d = map->set_data(FLTARR(2,2)-999.) 
     for i=0, N_ELEMENTS(h)-1 do d = map->set_point(lon[i], lat[i], SRC=wgs, COLOR=info.colors[info.loc[i]])
-    w_standard_2d_plot, map, title='Available NCDC stations', /RESIZABLE, BAR_TITLE='Alt. (m)'
+    w_standard_2d_plot, map, title='Available NCDC stations', BAR_TITLE='Alt. (m)'
     undefine, map
     TVLCT, rr, gg, bb
   endif

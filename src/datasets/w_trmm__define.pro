@@ -51,7 +51,7 @@ function w_TRMM::init, file, _EXTRA=extra
   
   ; type of data granule: '3B42d', '3B42', '3B43', +'_agg'  
   type = ''
-  isHere = STRPOS(fname, '.7.NC')
+  isHere = STRPOS(fname, '.7.')
   if isHere lt 0 then message, 'file does not seem to be a V7 product.'   
   isHere = STRPOS(fname, '3B43')
   if isHere ge 0 then type = '3B43'

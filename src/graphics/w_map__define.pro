@@ -1366,15 +1366,26 @@ end
 ;+
 ; :Description:
 ;    Set a prediefined form to draw on the map.
-;    Currently, only ellipses and squares are implemented.
-;
+;    Currently, we have implemented::
+;       ELLIPSE:
+;         [x,y] = center of the ellipse
+;         PARAM_1= major semi-axis
+;         PARAM_2= minor semi-axis
+;         PARAM_3= rotation of the ellips
+;         
+;       RECTANGLE:
+;         x = [Left,Right] corners of the rectangle
+;         y = [Bottom,Top] corners of the rectangle
+;         
 ; :Params:
 ;    x: in, required
-;       the x coordinate of the center of the form
+;       the x coordinate the form (see form doc for details)
 ;    y: in, required
-;       the y coordinate of the center of the form
+;       the y coordinate the form (see form doc for details)
 ;       
 ; :Keywords: 
+;    FORM: in, required
+;          the form ('ELLIPSE' or 'RECTANGLE')
 ;    SRC: in, optional
 ;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
 ;    COLOR: in, optional, type = color
@@ -1383,7 +1394,13 @@ end
 ;           the thickness of the polygon lines
 ;    STYLE:in, optional, type = float
 ;          the style of the the polygon lines
-;
+;    PARAM_1:in, optional, type = float
+;            the parameter of the form
+;    PARAM_2:in, optional, type = float
+;            the parameter of the form
+;    PARAM_3:in, optional, type = float
+;            the parameter of the form
+;          
 ;-    
 function w_Map::set_form, x, y, $
   SRC=src, $
@@ -1421,13 +1438,12 @@ function w_Map::set_form, x, y, $
   is_grid = FALSE 
   if OBJ_VALID(src) then if OBJ_ISA(src, 'w_Grid2D') then is_grid = TRUE
   if ~is_proj and ~is_dat and ~is_grid then Message, WAVE_Std_Message('src', /ARG)
-  if N_ELEMENTS(x) ne 1 then Message, WAVE_Std_Message('x', /ARG)
-  if N_ELEMENTS(y) ne 1 then Message, WAVE_Std_Message('y', /ARG)
-  
-  self.grid->transform, x, y, _x, _y, SRC=src
-  
+  if N_ELEMENTS(x) eq 0 then Message, WAVE_Std_Message('x', /ARG)
+  if N_ELEMENTS(y) eq 0 then Message, WAVE_Std_Message('y', /ARG)
+    
   case str_equiv(FORM) of
     'ELLIPSE': begin
+       self.grid->transform, x, y, _x, _y, SRC=src
        if N_ELEMENTS(PARAM_1) eq 0 then Message, 'PARAM_1 (major semi-axis) required'
        if N_ELEMENTS(PARAM_2) eq 0 then Message, 'PARAM_2 (minor semi-axis) required'
        if N_ELEMENTS(PARAM_3) eq 0 then param_3 = 0.       
@@ -1435,14 +1451,17 @@ function w_Map::set_form, x, y, $
        points = (2 * !PI / (npts-1)) * findgen(npts)
        xx = _x + cos(points) * cos(param_3 * !DTOR) * param_1 - sin(points) * sin(param_3 * !DTOR) * param_2
        yy = _y + cos(points) * sin(param_3 * !DTOR) * param_1 + sin(points) * cos(param_3 * !DTOR) * param_2
+       _src = self.grid
     end
     'RECTANGLE': begin
-       Message, 'RECTANGLE currently not available'
+       xx = [x[0], x[1], x[1], x[0], x[0]]
+       yy = [y[0], y[0], y[1], y[1], y[0]]
+       IF N_ELEMENTS(src) ne 0 then _src=src
     end
     else: Message, 'FORM: ' + str_equiv(FORM) + ' not recognized.'
   endcase
    
-  return, self->set_polygon(xx, yy, SRC=self.grid, COLOR=color, THICK=thick, STYLE=style)
+  return, self->set_polygon(xx, yy, SRC=_src, COLOR=color, THICK=thick, STYLE=style)
   
 end
 

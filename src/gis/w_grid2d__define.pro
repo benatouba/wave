@@ -1591,7 +1591,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   if is_proj then begin   
    range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
   end
-  
+
   SetDefaultValue, _entrule, N_ELEMENTS(ENTRULE) ne 0
   
   ; read shp file and create polygon object from entities

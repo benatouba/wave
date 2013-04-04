@@ -118,7 +118,9 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   
    if N_ELEMENTS(do_plot) ne 0 then begin
      if arg_okay(do_plot, TNAME='string') then pfile = do_plot
-     map = OBJ_NEW('w_Map', wpr, YSIZE=600, /BLUE_MARBLE)
+     map = OBJ_NEW('w_Map', wpr, YSIZE=600)
+     ok = map->set_img(/HR_BLUE_MARBLE)
+     ok = map->set_topography(/DEFAULT)
      if N_ELEMENTS(SHAPE) ne 0 then ok = map->set_shape_file(SHPFILE=shape, SHP_SRC=src)
      wpr->Get_XY, x, y, nx, ny, proj     
      colors = REPLICATE('red', nx*ny) 
