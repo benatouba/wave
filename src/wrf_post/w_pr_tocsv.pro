@@ -66,13 +66,11 @@
 ;
 ;
 ; :History:
-;     Written by FaM & JuC, 2012.
-;     
+;     Written by FaM, 2012.
+;
 ;-
-pro w_pr_selectregion, input_dir, destFile, varlist,   $
-    GZIP=gzip, SHUFFLE=shuffle, REMOVE_MASK=remove_mask, $
-    NETCDF4_FORMAT=NETCDF4_FORMAT, CLOBBER=clobber,   $
-    DO_PLOT=do_plot,   $
+pro w_pr_tocsv, input_dir, destFile, varlist,  $ 
+    CLOBBER=clobber,   $
     YEARS=years,   $
     SHAPE=shape,  $
     POLYGON=polygon, MASK=mask,  $
