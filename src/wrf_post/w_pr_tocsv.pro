@@ -1,39 +1,26 @@
 ;+
 ; :Description: 
 ;     Creates a subset file of products containing any number of 2D variables.
+;     The output format is CSV. That is, you can have one csv file per variable
+;     and with different grid points (default when the ROI is a subset), or one file
+;     with several variables (default when the ROI is a single grid point)
 ; 
 ; :Params:
 ;    input_dir: in, required
 ;               the path to the path to the WRF files directory. either m, d, h or y 
 ;               
-;    destFile: in, required
-;              path to the output file
-;              
+;    dest: in, required
+;          path to the output directory (case 1) or output file (case 2)
+;             
 ;    varlist: in, required
 ;             list of variables to put in the files
 ; 
 ; :Keywords:
 ; 
 ;    CLOBBER: in, type = boolean
-;            Set this keyword if you are opening a netCDF file that already exists and 
-;            you want to overwrite the existing file. Input. Default is 0.
-;            
-;    DO_PLOT: in, type = boolean
-;             Set this keyword to a path where you want to save the plot
-;            
-;    NETCDF4_FORMAT: in, type = boolean
-;                    Set this keyowrd to create a new NetCDF 4 file
-;                    
-;    GZIP:       Set this keyword to an integer between zero and nine to specify the level 
-;                of GZIP compression applied to the variables. (NETCDF4 only)          
-;                  
-;    SHUFFLE:    Set this keyword to apply the shuffle filter to the variable. (NETCDF4 only) 
-;    
+;            Set this keyword if you are opening a file that already exists and 
+;            you want to overwrite the existing file. Input. Default is 0.  
 ;    YEARS: See W_WPR->setYear
-;    
-;    REMOVE_MASK: in, type = array
-;                 a mask of the same size as the product where to 
-;                 replace data with nans
 ;    SHAPE: in, type = string
 ;           the shapefile to read (.shp), coordinate system defined by `SRC`
 ;    POLYGON: in, type = array
@@ -66,7 +53,7 @@
 ;
 ;
 ; :History:
-;     Written by FaM, 2012.
+;     Written by FaM, 2013.
 ;
 ;-
 pro w_pr_tocsv, input_dir, destFile, varlist,  $ 
@@ -99,127 +86,44 @@ pro w_pr_tocsv, input_dir, destFile, varlist,  $
   wpr->setYears, years
   wpr->getTime, time, nt, t0, t1
   
+  h = wpr->getVarData('hgt')
+  
   ; Check for variables
   for i=0, N_ELEMENTS(varlist)-1 do if ~ wpr->hasVar(varlist[i]) then message, 'Variable: ' + varlist[i] + ' not found.'
   
-  ;Check if pixels have to be masked
-  _do_mask = 0
-  if N_ELEMENTS(REMOVE_MASK) ne 0 then begin
-     s = SIZE(remove_mask, /DIMENSIONS)
-     if N_ELEMENTS(s) ne 2 then Message, WAVE_Std_Message('remove_mask', /NDIMS)
-     if s[0] ne nx then Message, WAVE_Std_Message('remove_mask', /NELEMENTS)
-     if s[1] ne ny then Message, WAVE_Std_Message('remove_mask', /NELEMENTS)
-     pmask = where(remove_mask, cntmask)
-     if cntmask eq 0 then Message, 'Nothing in mask?'
-     _do_mask = 1
-  endif
-  
-   if N_ELEMENTS(do_plot) ne 0 then begin
-     if arg_okay(do_plot, TNAME='string') then pfile = do_plot
-     map = OBJ_NEW('w_Map', wpr, YSIZE=600)
-     ok = map->set_img(/HR_BLUE_MARBLE)
-     ok = map->set_topography(/DEFAULT)
-     if N_ELEMENTS(SHAPE) ne 0 then ok = map->set_shape_file(SHPFILE=shape, SHP_SRC=src)
-     wpr->Get_XY, x, y, nx, ny, proj     
-     colors = REPLICATE('red', nx*ny) 
-     if _do_mask then colors[where(remove_mask)] = 'grey'
-     for i=0, nx*ny-1 do ok = map->set_filled_point(x[i], y[i], SRC=proj, COLOR=colors[i])
-     w_standard_2d_plot, map, PNG=pfile
-   endif
-  
-  ;find a template file
-  wpr->GetProperty, DIRECTORY=dir, HRES=res
-  file_list=FILE_SEARCH(dir, '*_' + res +'_*.nc', count=filecnt)
-  
-  ; Open the source file in read-only mode.
-  sObj = Obj_New('NCDF_FILE', file_list[0], /TIMESTAMP)
-  IF Obj_Valid(sObj) EQ 0 THEN Message, 'Source object cannot be created.'
-  
-  ; Open the destination file for writing.
-  dObj = Obj_New('NCDF_FILE', destFile, /CREATE, /TIMESTAMP, NETCDF4_FORMAT=netcdf4_format, CLOBBER=clobber)
-  IF Obj_Valid(dObj) EQ 0 THEN Message, 'Destination object cannot be created.'
-    
-  ; Copy the Global attributes that we want to keep
-  keep = ['TITLE', $
-          'WRF_VERSION', $
-           'CREATED_BY', $
-           'INSTITUTION', $
-           'CREATION_DATE', $
-           'PROJECTION', $
-           'PROJ_ENVI_STRING', $
-           'DATUM', $
-           'TIME_ZONE', $
-           'GRID_INFO', $
-           'DX', 'DY', $
-           'X0', 'Y0', $
-           'PRODUCT_LEVEL', $
-           'LEVEL_INFO']           
-  for j=0, N_ELEMENTS(keep)-1 do begin
-    sObj->CopyGlobalAttrTo, keep[j], dObj
-  endfor
-  undefine, sObj
-  
-  ; Actualise the wrong ones
-  dObj->WriteGlobalAttr, 'CREATION_DATE', TIME_to_STR(QMS_TIME()), DATATYPE='CHAR'
-  dObj->WriteGlobalAttr, 'X0',  STRING(min(xx), FORMAT='(F12.1)'), DATATYPE='CHAR'
-  dObj->WriteGlobalAttr, 'Y0',  STRING(min(yy), FORMAT='(F12.1)'), DATATYPE='CHAR'
-  
-  
-  ; dimensions  Time, south_north, west_east
-  x_dim_name = 'west_east'
-  y_dim_name = 'south_north'
-  t_dim_name = 'time'
-  dObj->WriteDim, t_dim_name, nt
-  dObj->WriteDim, x_dim_name, nx
-  dObj->WriteDim, y_dim_name, ny
-  
-  ; Variables
-  vn = 'time'
-  dObj->WriteVarDef, vn, t_dim_name, DATATYPE='LONG'
-  dObj->WriteVarAttr, vn, 'long_name', 'Time'
-  dObj->WriteVarAttr, vn, 'units', 'hours since 2000-01-01 00:00:00'
-  ncdftime = LONG((time-QMS_TIME(year=2000,month=1,day=1, HOUR=0)) / (MAKE_TIME_STEP(HOUR=1)).dms)
-  dObj->WriteVarData, vn, ncdftime
-  
-  vn = 'west_east'
-  dObj->WriteVarDef, vn, x_dim_name, DATATYPE='FLOAT'
-  dObj->WriteVarAttr, vn, 'long_name', 'x-coordinate in cartesian system'
-  dObj->WriteVarAttr, vn, 'units', 'm'
-  dObj->WriteVarData, vn, REFORM(xx[*,0])
-  
-  vn = 'south_north'
-  dObj->WriteVarDef, vn, y_dim_name, DATATYPE='FLOAT'
-  dObj->WriteVarAttr, vn, 'long_name', 'y-coordinate in cartesian system'
-  dObj->WriteVarAttr, vn, 'units', 'm'
-  dObj->WriteVarData, vn, REFORM(yy[0,*])
-    
-  vn = 'lon'
-  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
-  dObj->WriteVarAttr, vn, 'long_name', 'Longitude'
-  dObj->WriteVarAttr, vn, 'units', 'degrees_east'
-  dObj->WriteVarData, vn, lon
-  
-  vn = 'lat'
-  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
-  dObj->WriteVarAttr, vn, 'long_name', 'Latitude'
-  dObj->WriteVarAttr, vn, 'units', 'degrees_north'
-  dObj->WriteVarData, vn, lat
-    
-  for i=0, N_ELEMENTS(varlist)-1 do begin
-    data = wpr->getVarData(varlist[i], INFO=inf)
-    vn = inf.id
-    if _do_mask then begin
-      nt = N_ELEMENTS(data[0,0,*])
-      data = REFORM(TEMPORARY(data), nx*ny, nt)
-      data[where(remove_mask), *] = !VALUES.F_NAN
-      data = REFORM(TEMPORARY(data), nx, ny, nt)
+  ; Check the cases
+  if (nx eq ny) and (nx eq 1) then begin
+    ; timeseries case
+    if FILE_TEST(destFile, /DIRECTORY) then begin
+      Message, 'I want an output file path, not a dirctory.', /INFO
+      return
     endif
-    dObj->WriteVarDef, vn, [x_dim_name,y_dim_name,t_dim_name], DATATYPE='FLOAT', GZIP=gzip, SHUFFLE=shuffle
-    dObj->WriteVarAttr, vn, 'long_name', inf.description
-    dObj->WriteVarAttr, vn, 'units', inf.unit
-    dObj->WriteVarData, vn, TEMPORARY(data)
-  endfor
- 
-  undefine, wpr, dObj
+    if FILE_TEST(destFile) and ~ KEYWORD_SET(CLOBBER) then begin
+      Message, 'File already exists. Set /CLOBBER to overwrite.', /INFO
+      return
+    endif
+
+    wpr->GetProperty, TNT_C=c
+    GIS_make_datum, ret, _src
+    GIS_coord_trafo, ret, CORNERS[0], CORNERS[1], x_dst, y_dst, SRC=_src, DST=c.proj
+    dis = SQRT((xx[0]-x_dst)^2+(yy[0]-y_dst)^2) / 1000.
+   
+    print, destFile, dis
+    
+    id = utils_replace_string(FILE_BASENAME(destfile), '.dat', '')
+    s = w_ts_Station(NAME=id, LOC_X=lon, LOC_Y=lat, ELEVATION=h, ID=id, DESCRIPTION='HAR closest pixel. Distance to point: ' + cgNumber_Formatter(dis) + ' km')  
+    for i=0, N_ELEMENTS(varlist) - 1 do begin
+      data = wpr->getVarData(varlist[i], time,  INFO=inf)
+      var = w_ts_Data(data, time, NAME=inf.name,DESCRIPTION=inf.description,UNIT=inf.unit)
+      var->setPeriod
+      s->addVar, var
+    endfor
+    s->setPeriod
+    s->ASCIIwrite, FILE=destfile    
+  endif else begin
+    Message, 'Not Yet', /INFORMATIONAL
+  endelse
+  
+  undefine, wpr, s
   
 end

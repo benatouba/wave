@@ -270,8 +270,11 @@ function w_aws_read_data_file, FILE=file, DELTA_QMS=delta_qms, STATION_OBJ=stati
     ;create new data object and add it to the station
     _var = OBJ_NEW('w_ts_Data', ascii_data.(i), time, NAME=tag, UNIT=template.fieldUnits[i], $
                       DESCRIPTION=template.fieldDes[i], VALIDITY=template.data_val)
+    _var->setPeriod
     _station_obj->addVar, _var    
   endfor  
+  
+  _station_obj->setPeriod
   
   return, _station_obj
   

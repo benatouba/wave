@@ -992,7 +992,8 @@ pro w_ts_Station::ClimateDiagram, MIN_SIG=min_sig, PNG=png, EPS=eps, STD_PNG=std
   endif
   
   if ~KEYWORD_SET(VALID) then undefine, nvalp, nvalt
-          
+  
+  tt = MAKE_ABS_DATE(QMS=t)
   timeperiod = str_equiv((tt.year)[0]) + '-' + str_equiv((tt.year)[N_ELEMENTS(tt)-1])  
   
   w_climateDiagram, p, t, NAME=self.name, LAT=self.loc_y, LON=self.loc_x, $
@@ -1045,6 +1046,7 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
   
   varCount = self.vars->Count()
  
+  vNames = STRARR(varCount)
   units = STRARR(varCount)
   types = STRARR(varCount)
   descriptions = STRARR(varCount)
@@ -1052,12 +1054,14 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
     
   for i = 0, varCount - 1 do begin
    _var = self.vars->Get(POSITION=i)
-   _var->getProperty, DESCRIPTION=description, $
+   _var->getProperty, NAME=name, $
+                      DESCRIPTION=description, $
                       UNIT=unit, $
                       VALIDITY=Validity, $
                       TYPE=type, $
                       AGG_METHOD=agg_method
    
+   vNames[i] = name
    units[i] = unit
    types[i] = type_name(type)
    descriptions[i] = description
@@ -1073,23 +1077,23 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
   
   sep = '","'  
   text = '"TIMESTAMP","'
-  for i = 0, nvar - 2 do text +=vNames[i] + sep
-  text += vNames[nvar- 1]  + '"'
+  for i = 0, varCount - 2 do text +=vNames[i] + sep
+  text += vNames[varCount- 1]  + '"'
   printf, id, text
   
   text = '"-","'
-  for i = 0, nvar - 2 do text +=descriptions[i] + sep
-  text += descriptions[nvar- 1]  + '"'
+  for i = 0, varCount - 2 do text +=descriptions[i] + sep
+  text += descriptions[varCount- 1]  + '"'
   printf, id, text
   
   text = '"-","'
-  for i = 0, nvar - 2 do text +=units[i] + sep
-  text += units[nvar- 1]  + '"'
+  for i = 0, varCount - 2 do text +=units[i] + sep
+  text += units[varCount- 1]  + '"'
   printf, id, text
   
   text = '"STRING","'
-  for i = 0, nvar - 2 do text +=types[i] + sep
-  text += types[nvar- 1]  + '"'
+  for i = 0, varCount - 2 do text +=types[i] + sep
+  text += types[varCount- 1]  + '"'
   printf, id, text
     
   sep = ','
