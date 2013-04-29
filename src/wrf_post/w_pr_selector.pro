@@ -66,7 +66,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
         if cnt eq 0 then continue
         file_list_l3 = file_list_l2[pok]
         for l=0, N_ELEMENTS(variables)-1 do begin
-          pok = where(StrMatch(file_list_l3, '*_'+variables[l]+'_2*'), cnt)
+          pok = where(StrMatch(file_list_l3, '*_'+STRLOWCASE(variables[l])+'_2*'), cnt)
           if cnt eq 0 then begin ; try static case
             pok = where(StrMatch(file_list_l3, '*static_'+variables[l]+'.*'), cnt)
           endif
@@ -86,7 +86,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
               FILE_MKDIR, FILE_DIRNAME(arr_file)
               print, 'Copying file : ' + f
               print, ' to : ' + arr_file + ' ...'
-              FILE_COPY, f, arr_file, FORCE=force
+              FILE_COPY, f, arr_file, OVERWRITE=force
               if KEYWORD_SET(COMPRESS) then begin
                 c_file = utils_replace_string(arr_file, '.nc', '.zip')
                 SPAWN, 'zip -j ' + c_file + ' ' + arr_file

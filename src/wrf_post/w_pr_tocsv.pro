@@ -85,6 +85,7 @@ pro w_pr_tocsv, input_dir, destFile, varlist,  $
   wrf_proj = c.proj
   wpr->setYears, years
   wpr->getTime, time, nt, t0, t1
+  wpr->GetProperty, HRES=hres, TRES=tres
   
   h = wpr->getVarData('hgt')
   
@@ -95,7 +96,7 @@ pro w_pr_tocsv, input_dir, destFile, varlist,  $
   if (nx eq ny) and (nx eq 1) then begin
     ; timeseries case
     if FILE_TEST(destFile, /DIRECTORY) then begin
-      Message, 'I want an output file path, not a dirctory.', /INFO
+      Message, 'I want an output file path, not a directory.', /INFO
       return
     endif
     if FILE_TEST(destFile) and ~ KEYWORD_SET(CLOBBER) then begin
@@ -107,21 +108,70 @@ pro w_pr_tocsv, input_dir, destFile, varlist,  $
     GIS_make_datum, ret, _src
     GIS_coord_trafo, ret, CORNERS[0], CORNERS[1], x_dst, y_dst, SRC=_src, DST=c.proj
     dis = SQRT((xx[0]-x_dst)^2+(yy[0]-y_dst)^2) / 1000.
-   
-    print, destFile, dis
-    
+           
     id = utils_replace_string(FILE_BASENAME(destfile), '.dat', '')
     s = w_ts_Station(NAME=id, LOC_X=lon, LOC_Y=lat, ELEVATION=h, ID=id, DESCRIPTION='HAR closest pixel. Distance to point: ' + cgNumber_Formatter(dis) + ' km')  
     for i=0, N_ELEMENTS(varlist) - 1 do begin
       data = wpr->getVarData(varlist[i], time,  INFO=inf)
-      var = w_ts_Data(data, time, NAME=inf.name,DESCRIPTION=inf.description,UNIT=inf.unit)
-      var->setPeriod
-      s->addVar, var
+      name = inf.name
+      description = inf.description
+      unit = inf.unit
+      if inf.type eq '3d_press' or inf.type eq '3d_eta' then Message, 'Not yet'
+      if inf.type eq '3d_soil' then begin
+        levs = str_equiv(LONG(wpr->getSoilLevels()*100))
+        levs = ['_0-'+levs[0]+'cm', $
+          '_' +levs[0]+'-'+levs[1]+'cm' , $
+          '_' +levs[1]+'-'+levs[2]+'cm' , $
+          '_' +levs[2]+'-'+levs[3]+'cm']
+        for j=0, N_ELEMENTS(levs) - 1 do begin
+          var = w_ts_Data(data[j,*], time, NAME=name+levs[j], DESCRIPTION=description, UNIT=unit)
+          var->setPeriod
+          s->addVar, var
+        endfor
+      endif else begin
+        var = w_ts_Data(data, time, NAME=name, DESCRIPTION=description, UNIT=unit)
+        var->setPeriod
+        s->addVar, var
+      endelse
     endfor
     s->setPeriod
-    s->ASCIIwrite, FILE=destfile    
+    s->ASCIIwrite, FILE=destfile
   endif else begin
-    Message, 'Not Yet', /INFORMATIONAL
+    ;ROI case
+    
+    if ~ FILE_TEST(destFile, /DIRECTORY) then begin
+      Message, 'I want a directory.', /INFO
+      return
+    endif
+    
+    for v=0, N_ELEMENTS(varlist) - 1 do begin      
+      vn = varlist[v]
+      data = wpr->getVarData(vn, time, nt, INFO=inf)
+      if inf.type eq '3d_press' or inf.type eq '3d_eta' or inf.type eq '3d_soil' then Message, 'Not yet'
+      unit = inf.unit
+      if vn eq 'PSFC' then begin
+        data = 0.01 * data
+        unit = 'hPa'
+      endif
+      if vn eq 'Q2' then begin
+        data = 1000. * data
+        unit = 'g.kg-1'
+      endif
+      vn = inf.id
+      stat = OBJ_NEW('w_ts_Station', NAME=vn, DESCRIPTION=inf.description)
+      ascii_file = destFile + '/'+hres+'_'+tres+'_' + vn +'.dat'
+      ascii_title = 'WRF variable: ' + inf.id + '. Description: ' + inf.description + '. Unit: ' + unit + '.'
+      data = reform(data, N_ELEMENTS(lon), nt)
+      text = 'WRF_' + str_equiv(INDGEN(N_ELEMENTS(lon))+1)
+      
+      for i=0, N_ELEMENTS(lon)-1 do begin
+        des = 'Model height: ' + str_equiv(FIX(h[i])) + ' m, Lon: ' + str_equiv(lon[i]) + ', Lat: ' + str_equiv(lat[i])
+        stat->addVar, OBJ_NEW('w_ts_Data', data[i,*], time, NAME=str_equiv(text[i]), DESCRIPTION=des, UNIT=unit, VALIDITY='POINT')
+      endfor  
+      stat->setPeriod   
+      stat->ASCIIwrite, FILE=ascii_file, TITLE=ascii_title, FORMAT=format
+      undefine, stat      
+    endfor
   endelse
   
   undefine, wpr, s

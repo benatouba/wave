@@ -66,6 +66,8 @@ function w_WRF_Container::FindByVar, searchID, year, $
       if okpress then vname = vname + '_press'
       oketa = (children[childNo])->w_NCDF::get_Dim_Info('eta')
       if oketa then vname = vname + '_eta'
+      oketa = (children[childNo])->w_NCDF::get_Dim_Info('soil')
+      if oketa then vname = vname + '_soil'
       names[childNo] = vname
       if do_years then begin
         (children[childNo])->w_geo_nc::get_time, time

@@ -111,6 +111,11 @@ function w_WPR::init, DIRECTORY=directory, IGNORE_ALTERNATE=ignore_alternate, _E
       PTR_FREE, self.pressure_levels
       self.pressure_levels = PTR_NEW(value)
     endif
+    if v.type eq '3d_soil' and ~ PTR_VALID(self.soil_levels) then begin
+      NCDF_VARGET, id, 'soil', value
+      PTR_FREE, self.soil_levels
+      self.soil_levels = PTR_NEW(value)
+    endif
     NCDF_CLOSE, id    
     
     if v.type eq 'static' or v.type eq '2d' then begin
@@ -153,6 +158,7 @@ pro w_WPR::cleanup
   PTR_FREE, self.years
   PTR_FREE, self.oyears
   PTR_FREE, self.pressure_levels
+  PTR_FREE, self.soil_levels
   OBJ_DESTROY, self.objs 
 
 end
@@ -739,6 +745,32 @@ end
 
 ;+
 ; :Description:
+;    If data on soil levels is available, then this function gives you access to the 
+;    product's available levels
+;
+; :Keywords:
+;    COUNT: out, optional
+;           the number of levels
+;           
+; :Returns:
+;   An array of soil levels
+;
+;-
+function w_WPR::getSoilLevels, COUNT=count
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  if PTR_VALID(self.soil_levels) then out = *self.soil_levels
+  count = N_ELEMENTS(out)
+  
+  return, out
+  
+end
+
+;+
+; :Description:
 ;    To obtain the list af available variables in the dataset.
 ;
 ; :Keywords:
@@ -1193,6 +1225,8 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
             1: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [out,TEMPORARY(tmp)]
             else: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
           endcase
+        endif else if self.tnt_C.nx eq 1 and self.tnt_C.ny eq 1 then begin
+          if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[out],[TEMPORARY(tmp)]]
         endif else begin
           case nd of
             2: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
@@ -1252,6 +1286,7 @@ pro w_WPR__Define, class
             hres:               ''              ,  $ ; type of active directory: d30km, d10km, d02km
             directory:          ''              ,  $ ; path to the file directory
             pressure_levels:    PTR_NEW()       ,  $ ; if 3d_press in the directory, the pressure levels
+            soil_levels:        PTR_NEW()       ,  $ ; if 3d_soil in the directory, the soil levels
             vars:               PTR_NEW()       ,  $ ; array of var structures (see w_WPR::_varStruct)
             files:              PTR_NEW()       ,  $ ; Path to the files
             time:               PTR_NEW()       ,  $ ; Time array in QMS
