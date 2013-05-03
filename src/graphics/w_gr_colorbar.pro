@@ -73,6 +73,10 @@
 ;       colorbar tick interval
 ;    title: in, optional, type=string, default=""
 ;       This is title for the color bar. The default is to have no title.
+;    tlocation: in, optional, type=string
+;       The title location, which allows the user to set the title location independently 
+;       of the colorbar labels. May be "TOP" or "BOTTOM" for horizontal color bars, and
+;       "LEFT" or "RIGHT" for vertical color bars.
 ;    top: in, optional, type=boolean, default=0
 ;       This puts the labels on top of the bar rather than under it. The keyword only 
 ;       applies if a horizontal color bar is rendered.
@@ -104,6 +108,7 @@ pro w_gr_Colorbar, info, $
     TICKINTERVAL=tickinterval, $
     TITLE=title, $
     TOP=top, $
+    TLOCATION=tlocation, $
     VERTICAL=vertical, $
     WINDOW=window, $
     _EXTRA=extra
@@ -191,6 +196,7 @@ pro w_gr_Colorbar, info, $
     TICKINTERVAL=tickinterval, $
     TITLE=title, $
     TOP=top, $
+    TLOCATION=tlocation, $
     VERTICAL=vertical, $
     XLOG=xlog, $
     YLOG=ylog, $
