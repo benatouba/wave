@@ -66,7 +66,7 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
     ; We can only handle raster images with projected coordinate systems, unless this is
     ; a GeoTiff file with Geographic model.
     gtModelIndex = Where(fields eq 'GTMODELTYPEGEOKEY', gtModelType)
-    if gtModelType gt 0 then begin    
+    if gtModelType gt 0 then begin
       ; This is for LatLon projection grids
       dx = (geotiff.ModelPixelScaleTag)[0]
       dy = (geotiff.ModelPixelScaleTag)[1]
@@ -74,7 +74,7 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
       ; Get the tie points (upper left + half pix).
       if KEYWORD_SET(NO_DELTA) then begin
         x0 = (geotiff.ModelTiePointTag)[3]
-        y0 = (geotiff.ModelTiePointTag)[4]        
+        y0 = (geotiff.ModelTiePointTag)[4]
       endif else begin
         x0 = (geotiff.ModelTiePointTag)[3] + dx/2
         y0 = (geotiff.ModelTiePointTag)[4] - dy/2
@@ -86,17 +86,23 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
           if cnt ne 0 then begin
             ; I need to know the datum. Currently WGS84 should be enough
             if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Projection unknown. Contact Fabi.'
-          endif else Message, 'Projection unknown. Contact Fabi.'
-          
-          d = Where(fields eq 'GTCITATIONGEOKEY', cnt)
-          if cnt ne 0 then begin
-            ; I suppose its UTM. Let's parse
-            key = str_equiv(geotiff.GTCITATIONGEOKEY)
-            d = STRPOS(key, 'UTM_ZONE_')
-            if d eq -1 then Message, 'Projection unknown. Contact Fabi.'
-            zone = STRING((BYTE(key))[d+9:d+10])
-          endif else Message, 'Projection unknown. Contact Fabi.'
-          
+            d = Where(fields eq 'GTCITATIONGEOKEY', cnt)
+            if cnt ne 0 then begin
+              ; I suppose its UTM. Let's parse
+              key = str_equiv(geotiff.GTCITATIONGEOKEY)
+              d = STRPOS(key, 'UTM_ZONE_')
+              if d eq -1 then Message, 'Projection unknown. Contact Fabi.'
+              zone = STRING((BYTE(key))[d+9:d+10])
+            endif else Message, 'Projection unknown. Contact Fabi.'
+          endif else begin
+            d = Where(fields eq 'PROJECTEDCSTYPEGEOKEY', cnt)
+            if cnt ne 0 then begin
+              ; I need to know the datum. Currently WGS84 should be enough
+              if STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 0, 3) ne '326' then Message, 'Projection unknown. Contact Fabi.'
+              zone = STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 3, 2)
+            endif else  Message, 'Projection unknown. Contact Fabi.'
+          endelse
+                    
           ;Projection
           GIS_make_proj, ret, proj, PARAM='2, ' + zone
           grid = OBJ_NEW('w_Grid2D', nx=nx, $
@@ -113,7 +119,7 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
             ; I need to know the datum. Currently WGS84 should be enough
             if ~ (geotiff.GEOGCITATIONGEOKEY eq 'GCS_WGS_1984' $
               or geotiff.GEOGCITATIONGEOKEY eq 'WGS 84') $
-               then Message, 'Projection unknown. Contact Fabi.'
+              then Message, 'Projection unknown. Contact Fabi.'
           endif else Message, 'Projection unknown. Contact Fabi.'
           
           ;Projection
