@@ -1201,14 +1201,18 @@ end
 ;           the last time in the time serie (if found)
 ;    nt: out, optional, type = long
 ;        the number of elements in the time serie
-;        
+; :Keywords:
+;    READ_SECONDS: in, optional, type=boolean
+;                  Default behavior is to ignore seconds 
+;                  (reason for this is Adaptive timestep)
+;     
 ; :Returns:
 ;   TRUE if time is found, FALSE in all other cases
 ;
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-function utils_wrf_time, cdfid, time, time0, time1, nt
+function utils_wrf_time, cdfid, time, time0, time1, nt, READ_SECONDS=read_seconds
 
   @WAVE.inc
   COMPILE_OPT IDL2
@@ -1219,6 +1223,8 @@ function utils_wrf_time, cdfid, time, time0, time1, nt
     Catch, /CANCEL
     RETURN, FALSE
   ENDIF  
+
+  SetDefaultValue, read_seconds, 0B, /BOOLEAN
   
   NCDF_VARGET, cdfid, 'Times', stimes
   ntimes = N_ELEMENTS(stimes[0,*])
@@ -1227,11 +1233,18 @@ function utils_wrf_time, cdfid, time, time0, time1, nt
   if stimes[0] eq '0000-00-00_00:00:00' then begin ;Check if geogrid
     NCDF_ATTGET, cdfid, 'TITLE', title, /GLOBAL
     isHere = STRPOS(str_equiv(title), 'GEOGRID')
-    if isHere ne -1 then time = QMS_TIME(year = 2000, month = 01, day = 01) else Message, 'Really dont know whate this is'
-  endif else begin  
-  ;String format : '2008-10-26_12:00:00; length 19
-  time = QMS_TIME(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
-      HOUR=STRMID(stimes,11,2),MINUTE=STRMID(stimes,14,2),SECOND=STRMID(stimes,17,2))
+    if isHere ne -1 then time = QMS_TIME(year = 2000, month = 01, day = 01) else Message, 'Really dont know what this is'
+  endif else begin
+    minutes = LONG(STRMID(stimes,14,2))    
+    if read_seconds then begin
+      seconds = STRMID(stimes,17,2)      
+    endif else begin
+      seconds = LONARR(ntimes)
+      if total(minutes) ne 0 then message, 'Problem: READ_SECONDS not set and minutes ne 0. Modify utils_wrf_time() for minutes too.'
+    endelse    
+    ;String format : '2008-10-26_12:00:00; length 19
+    time = QMS_TIME(YEAR=STRMID(stimes,0,4), MONTH=STRMID(stimes,5,2),DAY=STRMID(stimes,8,2), $
+      HOUR=STRMID(stimes,11,2),MINUTE=minutes,SECOND=seconds)
   endelse
   
   nt = N_ELEMENTS(time)

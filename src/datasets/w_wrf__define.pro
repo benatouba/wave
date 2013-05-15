@@ -1130,7 +1130,11 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   if ~arg_okay(VarId, /SCALAR) then MEssage, WAVE_Std_Message('VarId', /SCALAR)
  
   ;Some check
-  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z', 'T2PBL', 'T2PBLC', 'T2ETA', 'T2ETAC']
+  not_implemented = ['TK','TC','THETA','SLP','SLP_B','PRESSURE','GEOPOTENTIAL', 'Z', 'T2PBL', 'T2PBLC', 'T2ETA', 'T2ETAC', $
+                     'QLIQUID', 'QSOLID', 'RH', 'TD', 'TD2', 'SOILTOP', 'SOILBOT', 'SCLD', 'COL_QVAPOR', 'COL_QLIQUID', 'COL_QSOLID', $
+                     'SCLDFRA', 'UMET10', 'VMET10','WDMET10','WS','WD','GEOPOTENTIAL','ZAG','U_WVFLUX','V_WVFLUX', $
+                     'U_INTWVFLUX', 'V_INTWVFLUX','INTWVFLUX']
+                     
   pni = where(not_implemented eq str_equiv(Varid), cntni)
   if cntni gt 0 then Message, '$' + str_equiv(VarId) + ' is currently not available for w_WRF::get_TimeSerie.'
         
@@ -1161,49 +1165,121 @@ function w_WRF::get_TimeSerie,varid, x, y, $
   
     'PRCP': begin
       value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-                          dims = dims, $ ;
-                          dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, K = K, t0 = t0, t1 = t1)
-     end
-    
-    'PRCP_STEP': begin
-      d1 = self->get_Var_Info('RAINNC_step')
-      d2 = self->get_Var_Info('RAINC_step')
-      if d1 and d2 then begin
-        value = self->w_GEO_nc::get_TimeSerie('RAINNC_step', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-          dims = dims, $ ;
-          dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC_step', point_i, point_j, K = K, t0 = t0, t1 = t1)
-        _acc_to_step = FALSE
-      endif else begin
-        d1 = self->get_Var_Info('RAINNC')
-        d2 = self->get_Var_Info('RAINC')
-        if d1 and d2 then begin
-          value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-            dims = dims, $ ;
-            dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, K = K, t0 = t0, t1 = t1)
-          _acc_to_step = TRUE
-        endif else Message, 'Precipitation variables not available'
-      endelse
+        dims = dims, $ ;
+        dimnames = dimnames) + self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+        
+   'SNOWFALL': begin
+      value = self->w_GEO_nc::get_TimeSerie('SNOWNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+        
+    'PRCP_FR': begin
+      value = self->w_GEO_nc::get_TimeSerie('PRCP', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      sr = self->w_GEO_nc::get_TimeSerie('SR', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      ptm = where(sr gt (machar()).eps and value gt (machar()).eps, cntp, COMPLEMENT=pc, NCOMPLEMENT=cntc)
+      if cntp ne 0 then value[ptm] = sr[ptm] * value[ptm]
+      if cntc ne 0 then value[pc] = 0.
+      _acc_to_step = FALSE
     end
     
+    'PRCP_NC': begin
+      value = self->w_GEO_nc::get_TimeSerie('RAINNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'PRCP_C': begin
+      value = self->w_GEO_nc::get_TimeSerie('RAINC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'GRAUPEL': begin
+      value = self->w_GEO_nc::get_TimeSerie('GRAUPELNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'HAIL': begin
+      value = self->w_GEO_nc::get_TimeSerie('HAILNC', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'POTEVAP': begin
+      value = self->w_GEO_nc::get_TimeSerie('POTEVP', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      _acc_to_step = TRUE
+    end
+    
+    'LWDOWN': begin
+      value = self->w_GEO_nc::get_TimeSerie('GLW', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+    end
+    
+    'LWUP': begin
+      value = self->w_GEO_nc::get_TimeSerie('TSK', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      e = self->w_GEO_nc::get_TimeSerie('EMISS', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      value = (5.6704e-8) * e * value^4
+    end
+    
+    'SWUP': begin
+      value = self->w_GEO_nc::get_TimeSerie('SWDOWN', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      value *= self->w_GEO_nc::get_TimeSerie('ALBEDO', point_i, point_j, K = K, t0 = t0, t1 = t1)
+    end
+    
+    'NETRAD': begin
+      value = self->w_GEO_nc::get_TimeSerie('SWDOWN', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      swup = self->w_GEO_nc::get_TimeSerie('SWUP', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      lwup = self->w_GEO_nc::get_TimeSerie('LWUP', point_i, point_j, K = K, t0 = t0, t1 = t1)
+      lwdown = self->w_GEO_nc::get_TimeSerie('LWDOWN', point_i, point_j, K = K, t0 = t0, t1 = t1)      
+      value += lwdown - swup - lwup
+    end
+    
+    'ET': begin
+      value = self->w_GEO_nc::get_TimeSerie('ACLHF', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames) / 2.5e6       ; Heat of vaporization
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE    
+    end
     
     'T2C': begin
       value = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
                           dims = dims, $ ;
                           dimnames = dimnames) - 273.15
      end
-    
-    'RH': begin
-      T = self->w_GEO_nc::get_TimeSerie('T', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
-        dims = dims, $ ;
-        dimnames = dimnames)        
-      P = self->w_GEO_nc::get_TimeSerie('P', point_i, point_j, K = K, t0 = t0, t1 = t1)
-      PB = self->w_GEO_nc::get_TimeSerie('PB', point_i, point_j, K = K, t0 = t0, t1 = t1)
-      QVAPOR = self->w_GEO_nc::get_TimeSerie('QVAPOR', point_i, point_j, K = K, t0 = t0, t1 = t1) > 0.
-      T = T + 300.
-      P  = P + PB
-      tk = utils_wrf_tk(P,T)
-      value = utils_wrf_rh(QVAPOR, P, tk)
-    end
     
     'RH2': begin
       T2 = self->w_GEO_nc::get_TimeSerie('T2', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
