@@ -194,7 +194,7 @@ Function w_GEO_nc::Init, FILE = file, SUBSET = subset
     endif else if utils_wrf_time(self.cdfid, time, time0, time1, nt) then begin
       self.t0 = time0
       self.t1 = time1
-    endif ; else Message, 'Time dimension found but time could not be parsed.', /INFORMATIONAL
+    endif else Message, 'Time dimension found but time could not be parsed.', /INFORMATIONAL
   endif  
   self.time = PTR_NEW(time, /NO_COPY) 
   self.nT = N_ELEMENTS(*self.time)

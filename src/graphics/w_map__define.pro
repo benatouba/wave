@@ -1054,6 +1054,7 @@ function w_Map::set_topography, DEFAULT=default, GRDFILE=grdfile, USE_GRID=use_g
       ; Open DEM grid
       !QUIET = 1
       GIS_open_grid, ret, info, id, FILE=hdr, /RONLY, /NO_STC
+      GIS_close_grid, ret, id
       !QUIET = 0
       if TNT_err_code(ret) ne TNT_E_NONE then  message, WAVE_Std_Message(/FILE)
       
