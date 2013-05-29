@@ -1169,7 +1169,7 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
       deltaU = (jd1 - jd0) * D_QMS / fac
       if MIN(u) lt deltaU then deltaU = 0
     endif else deltaU = 0
-    time = time0 + fac * LONG64(u - deltaU)
+    time = time0 + ROUND(fac * (u - deltaU), /L64)
     nt = N_ELEMENTS(time)
   endif else begin 
     nt = N_ELEMENTS(u)

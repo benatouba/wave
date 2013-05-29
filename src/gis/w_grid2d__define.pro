@@ -952,6 +952,8 @@ end
 ;               the datum of the lonlats (default is WGS-84)
 ;    MISSING: in, optional
 ;             value to set to missing values in the final grid
+;    LINEAR: in, optional
+;            if linear interpolation has to be used
 ;
 ; :Returns:
 ;    the transformed data array in the grid (same X Y dims as the grid)
@@ -959,7 +961,7 @@ end
 ; :History:
 ;      Written by FaM, 2011.
 ;-
-function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing                 
+function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing, LINEAR=linear               
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -986,6 +988,8 @@ function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing
       ENDCASE
   endif 
   
+  if ~ KEYWORD_SET(LINEAR) then nearest_neighbor = 1B
+  
   siz_src = SIZE(data) 
   if siz_src[0] le 2 then nt = 1 else if siz_src[0] eq 3 then nt = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
   nc = N_ELEMENTS(data[*,*,0])
@@ -1002,8 +1006,8 @@ function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing
   TRIANGULATE, i, j, triangles
   for t=0, nt-1 do begin
     temp = tdata[*,*,t]
-    temp[*] = GRIDDATA(i, j, data, START=[0D,0D], DELTA=[1D,1D], DIMENSION=[self.tnt_c.nx,self.tnt_c.ny], $
-    TRIANGLES=triangles, /NEAREST_NEIGHBOR)        
+    temp[*] = GRIDDATA(i, j, data[*,*,t], START=[0D,0D], DELTA=[1D,1D], DIMENSION=[self.tnt_c.nx,self.tnt_c.ny], $
+    TRIANGLES=triangles, NEAREST_NEIGHBOR=nearest_neighbor, LINEAR=linear)        
     tdata[*,*,t] = TEMPORARY(temp)
   endfor   
 

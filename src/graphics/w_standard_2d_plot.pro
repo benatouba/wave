@@ -66,6 +66,8 @@
 ;    XFACTOR: in, optional, type=float, default=1.
 ;             This is a way to control the X size of the plot. This factor will be multipled 
 ;             to the default length of the plot (usefull if your colorbar is too wide for example)
+;    SPACING: in, optional
+;             control the spacing between tags and DCBar
 ;    NO_BAR: in, optional
 ;            set this keyword if you don't want to plot the color bar
 ;    NO_LEGEND: in, optional
@@ -104,6 +106,7 @@ pro w_standard_2d_plot, map, $
     XFACTOR=xfactor, $
     CHARSIZE=charsize, $
     OOB_FACTOR=oob_factor, $
+    SPACING=spacing, $
     NO_BAR=no_bar, $
     NO_LEGEND=no_legend, $
     NO_SOURCE_INFO=no_source_info, $
@@ -211,7 +214,7 @@ pro w_standard_2d_plot, map, $
   pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
   if ~KEYWORD_SET(NO_BAR) then begin
     map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
-      CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor
+      CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor, SPACING=spacing
     ; Title bar
     cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
       WINDOW=cgWIN, /NORMAL, CHARSIZE=charsize * sfac, CHARTHICK = 1. *sfac

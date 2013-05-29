@@ -42,7 +42,7 @@ pro w_aggTrmm, directory, outFile, CLOBBER=clobber, COMPRESS=compress, ADD_ERROR
   add_error = KEYWORD_SET(ADD_ERROR)
     
   ; Check ncdf files
-  fileList = FILE_SEARCH(directory, '*.7.nc', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, count=cfiles)
+  fileList = FILE_SEARCH(directory, '*.7*.nc', /MATCH_INITIAL_DOT, /EXPAND_ENVIRONMENT, count=cfiles)
   if cfiles eq 0 then Message, 'No TRMM V7 files found in the directory.'
   
   fnames = FILE_BASENAME(fileList)
