@@ -1220,7 +1220,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         tmp = reform(obj->get_Var(info.name, t, ZLEVELS=zlevels, T0=_t0, T1=_t1, HOUROFDAY=hourofday))      
         s = SIZE(tmp, /DIMENSIONS)
         nd = N_ELEMENTS(s)                
-        if (STRMID(info.type, 0, 2) eq '2d') or (STRMID(info.type, 0, 2) eq '3d' and n_elements(zlevels) eq 1) then begin
+        if (STRMID(info.type, 0, 2) eq '2d') or ((STRMID(info.type, 0, 2) eq '3d') and (n_elements(zlevels) eq 1)) then begin
           case nd of
             1: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [out,TEMPORARY(tmp)]
             else: if N_ELEMENTS(out) eq 0 then out = TEMPORARY(tmp) else out = [[[out]],[[TEMPORARY(tmp)]]]
