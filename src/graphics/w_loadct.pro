@@ -287,6 +287,8 @@ end
 ;            set this keyword to update the table list before loading your table
 ;    BREWER: in, optional, type=boolean, default=0
 ;            set this keyword to use the brewer colortables instead of IDL ones
+;    BRIGHTEN: in, optional, type=byte, default=0
+;              if youwant to brighten up the color scale by adding a bit of white
 ;    RGB_TABLE: out, optional, type=array
 ;               set to a named variable to get the RGB palette. If set, the table
 ;               will NOT be loaded in IDL
@@ -313,6 +315,7 @@ end
 pro w_LoadCT, table, $
     UPDATE=update, $
     BREWER=brewer, $
+    BRIGHTEN=brighten, $
     RGB_TABLE=rgb_table, $
     ROW=row, $
     TABLE_SIZE=table_size, $
@@ -411,6 +414,13 @@ pro w_LoadCT, table, $
      g[0:table_size-1] = Reverse(g[0:table_size-1])
      b[0:table_size-1] = Reverse(b[0:table_size-1])
   ENDIF
+  
+  if N_ELEMENTS(BRIGHTEN) ne 0 then begin
+    if ~ arg_okay(brighten, /NUMERIC, /SCALAR) then Message, 'Brighten should be a scalar number'
+    r = BYTE(0B > r +  brighten < 255B)
+    g = BYTE(0B > g +  brighten < 255B)
+    b = BYTE(0B > b +  brighten < 255B)
+  endif
 
   ; Load a color_table, if needed. Otherwise, load color vectors.
   IF Arg_Present(RGB_TABLE) THEN BEGIN

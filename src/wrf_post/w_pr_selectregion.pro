@@ -100,6 +100,7 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   wrf_proj = c.proj
   wpr->setYears, years
   wpr->getTime, time, nt, t0, t1
+  hgt = wpr->getvardata('hgt')
   
   ; Check for variables
   for i=0, N_ELEMENTS(varlist)-1 do if ~ wpr->hasVar(varlist[i]) then message, 'Variable: ' + varlist[i] + ' not found.'
@@ -206,6 +207,12 @@ pro w_pr_selectregion, input_dir, destFile, varlist,   $
   dObj->WriteVarAttr, vn, 'long_name', 'Latitude'
   dObj->WriteVarAttr, vn, 'units', 'degrees_north'
   dObj->WriteVarData, vn, lat
+    
+  vn = 'hgt'
+  dObj->WriteVarDef, vn, [x_dim_name,y_dim_name], DATATYPE='FLOAT'
+  dObj->WriteVarAttr, vn, 'long_name', 'Model topography'
+  dObj->WriteVarAttr, vn, 'units', 'm'
+  dObj->WriteVarData, vn, hgt
     
   for i=0, N_ELEMENTS(varlist)-1 do begin
     data = wpr->getVarData(varlist[i], INFO=inf)

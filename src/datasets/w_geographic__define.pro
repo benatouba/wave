@@ -53,7 +53,10 @@ function w_geographic::init, file, DATUM=datum, _EXTRA=extra
   geo->get_ncdf_coordinates, lon, lat, nx, ny, /NO_REFORM
   
   y0 = max(lat, pm)
-  if pm eq 0 then self.order = 1 ; Check this
+  if pm eq 0 then begin
+    self.order = 1 ; Check this
+    Message, 'I decided that the file is upside down.', /INFORMATIONAL
+  endif
     
   ;Projection
   SetDefaultValue, datum, 'WGS-84'
