@@ -965,28 +965,78 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]        
       endif      
       
-      ;water vapor flux
+      ; Atmospheric moisture fluxes
       d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
       d2 = self->get_Var_Info('QVAPOR')
       d3 = self->get_Var_Info('P')
-      d4 = self->get_Var_Info('PB')  
+      d4 = self->get_Var_Info('PB')      
       if (d1 and d2 and d3 and d4) then begin
         du = self->get_Var_Info('U') 
         dv = self->get_Var_Info('V') 
         if du then begin
-          var = {name:'U_WVFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'zonal water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          var = {name:'U_VAPORFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
-          var = {name:'U_INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated zonal water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          var = {name:'U_INTVAPORFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated zonal water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif
         if dv then begin
-          var = {name:'V_WVFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'meridional water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          var = {name:'V_VAPORFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
-          var = {name:'V_INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          var = {name:'V_INTVAPORFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif
         if du and dv then begin
-          var = {name:'INTWVFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated absolute water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          var = {name:'INTVAPORFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated absolute water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif          
+      endif 
+      
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QCLOUD') or self->get_Var_Info('QRAIN')
+      d3 = self->get_Var_Info('P')
+      d4 = self->get_Var_Info('PB')      
+      if (d1 and d2 and d3 and d4) then begin
+        du = self->get_Var_Info('U') 
+        dv = self->get_Var_Info('V') 
+        if du then begin
+          var = {name:'U_LIQUIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal liquid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'U_INTLIQUIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated zonal liquid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dv then begin
+          var = {name:'V_LIQUIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional liquid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'V_INTLIQUIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional liquid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if du and dv then begin
+          var = {name:'INTLIQUIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated absolute liquid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif          
+      endif 
+      
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)
+      d2 = self->get_Var_Info('QSNOW') or self->get_Var_Info('QICE') or self->get_Var_Info('QGRAUP')
+      d3 = self->get_Var_Info('P')
+      d4 = self->get_Var_Info('PB')      
+      if (d1 and d2 and d3 and d4) then begin
+        du = self->get_Var_Info('U') 
+        dv = self->get_Var_Info('V') 
+        if du then begin
+          var = {name:'U_SOLIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal solid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'U_INTSOLIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated zonal solid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dv then begin
+          var = {name:'V_SOLIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional solid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'V_INTSOLIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional solid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if du and dv then begin
+          var = {name:'INTSOLIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated absolute solid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif          
       endif 
@@ -1492,7 +1542,7 @@ end
 ;             qliquid: Liquid water mixing ratio [kg.kg-1]
 ;             qsolid: Solid water mixing ratio [kg.kg-1]
 ;             et: Evapotranspiration (step-wize) [mm.h-1]
-;             
+;             fluxes: many water fluxes []
 ;    
 ; :Categories:
 ;         WAVE/OBJ_GIS   
@@ -2144,53 +2194,105 @@ function w_WRF::get_Var, Varid, $
         value = value - TEMPORARY(ter)
     end
     
-    'U_WVFLUX': begin
+    'U_VAPORFLUX': begin
       if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
-      u = self->get_Var('U', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
-        dims = dims, $
-        dimnames = dimnames, /UNSTAGG)
-      rh = self->get_Var('RH', T0=t0, T1=t1, ZLEVELS=zlevels)
-      tc = self->get_Var('TC', T0=t0, T1=t1, ZLEVELS=zlevels)
-      value = MET_abs_humidity(tc, MET_vap_pressure(tc, rh)) / 1000. * u
-    end
-      
-    'V_WVFLUX': begin
-      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
-      u = self->get_Var('V', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
-        dims = dims, $
-        dimnames = dimnames, /UNSTAGG)
-      rh = self->get_Var('RH', T0=t0, T1=t1, ZLEVELS=zlevels)
-      tc = self->get_Var('TC', T0=t0, T1=t1, ZLEVELS=zlevels)
-      value = MET_abs_humidity(tc, MET_vap_pressure(tc, rh)) / 1000. * u
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
     end
     
-    'U_INTWVFLUX': begin
-      u = self->get_Var('U_WVFLUX', time, nt, t0=t0, t1=t1,  $
-        dims = dims, $
-        dimnames = dimnames)
-      z = self->get_Var('ZAG', T0=t0, T1=t1)
-      nz = (SIZE(z, /DIMENSIONS))[2]
-      z = (z[*,*,1:nz-1,*] + z[*,*,0:nz-2,*])/2.
-      value= TOTAL(u[*,*,0:nz-2,*] * z, 3)
-      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
-    end
-      
-    'V_INTWVFLUX': begin
-      u = self->get_Var('V_WVFLUX', time, nt, t0=t0, t1=t1,  $
-        dims = dims, $
-        dimnames = dimnames)
-      z = self->get_Var('ZAG', T0=t0, T1=t1)
-      nz = (SIZE(z, /DIMENSIONS))[2]
-      z = (z[*,*,1:nz-1,*] + z[*,*,0:nz-2,*])/2.
-      value= TOTAL(u[*,*,0:nz-2,*] * z, 3)
-      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    'V_VAPORFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
     end
     
-    'INTWVFLUX': begin
-      u = self->get_Var('U_INTWVFLUX', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+    'U_LIQUIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
+    end
+    
+    'V_LIQUIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
+    end
+    
+    'U_SOLIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
+    end
+    
+    'V_SOLIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'U_INTVAPORFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'V_INTVAPORFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'U_INTLIQUIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'V_INTLIQUIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'U_INTSOLIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'V_INTSOLIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'INTVAPORFLUX': begin
+      u = self->get_Var('U_INTVAPORFLUX', time, nt, t0 = t0, t1 = t1,  $
           dims = dims, $
           dimnames = dimnames)
-      v = self->get_Var('V_INTWVFLUX', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels)
+      v = self->get_Var('V_INTVAPORFLUX', time, nt, t0 = t0, t1 = t1)
+      value = SQRT(u^2 + v^2)
+    end
+
+    'INTLIQUIDFLUX': begin
+      u = self->get_Var('U_INTLIQUIDFLUX', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, $
+          dimnames = dimnames)
+      v = self->get_Var('V_INTLIQUIDFLUX', time, nt, t0 = t0, t1 = t1)
+      value = SQRT(u^2 + v^2)
+    end
+
+    'INTSOLIDFLUX': begin
+      u = self->get_Var('U_INTSOLIDFLUX', time, nt, t0 = t0, t1 = t1,  $
+          dims = dims, $
+          dimnames = dimnames)
+      v = self->get_Var('V_INTSOLIDFLUX', time, nt, t0 = t0, t1 = t1)
       value = SQRT(u^2 + v^2)
     end
 
