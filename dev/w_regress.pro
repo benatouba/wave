@@ -18,7 +18,7 @@ function w_regress, x, y, $
   
   
   Np = N_ELEMENTS(y)
-  Nv = N_ELEMENTS(x[*,0])
+  if N_ELEMENTS(x) eq Np then Nv = 1 else Nv = N_ELEMENTS(x[*,0])
   Df = Np - Nv - 1  ; Degrees of freedom
   
   SetDefaultValue, p_value, 0.05
