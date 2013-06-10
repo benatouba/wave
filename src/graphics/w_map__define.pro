@@ -84,6 +84,7 @@ pro w_Map::_DestroyWindParams
   ptr_free, self.wind_params.vely
   ptr_free, self.wind_params.posx
   ptr_free, self.wind_params.posy
+  ptr_free, self.wind_params.color
     
   self.wind_params = {w_Map_WIND_PARAMS}
   self.is_Winded = FALSE
@@ -467,7 +468,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
-function w_Map::_draw_wind, WINDOW = window
+function w_Map::_draw_wind, WINDOW=window
 
   ;--------------------------
   ; Set up environment
@@ -475,14 +476,15 @@ function w_Map::_draw_wind, WINDOW = window
   compile_opt idl2
   @WAVE.inc
   
-  w_partvelvec, *self.wind_params.velx, $
-                *self.wind_params.vely, $
-                *self.wind_params.posx, $
-                *self.wind_params.posy, $
-                VECCOLORS=self.wind_params.color, $
-                LENGTH = self.wind_params.length, $
-                thick = self.wind_params.thick, /OVER, $              
-                /DATA,  /NORMAL, WINDOW = window, NOCLIP = 0
+  w_velvec, *self.wind_params.posx, $
+    *self.wind_params.posy, $
+    *self.wind_params.velx, $
+    *self.wind_params.vely, $
+    COLORS=*self.wind_params.color, $
+    LENGTH=self.wind_params.length, $
+    THICK=self.wind_params.thick, $
+    STDVEL=self.wind_params.stdvel, $
+    /DATA, WINDOW=window, NOCLIP=self.wind_params.noclip
   
   return, 1
   
@@ -2179,18 +2181,32 @@ end
 ;             the vectors density, in grid points
 ;    START_IND: in, optional, type=long, default=0
 ;               the first grid point to draw in the corner
-;    LENGTH: in, optional, type = float, default = 0.08
-;            The maximum vectorlength relative to the plot data 
-;    THICK: in, optional, type = float, default = 1
-;           vectors thickness
-;    COLOR: in, optional, type = string, default = "black"
-;           vectors color
+;    COLOR: in, optional
+;            the vector colors. Can be either a scalar, or
+;            a vector (nmeric or string) the same size as posx
+;    STDVEL: in, optional, default=max velocity
+;            the velocity (in velocity units) associated to
+;            the standard length (see) the length keyword.
+;            set this to be sure to have always the same length
+;            between different plots in the same window (or 
+;            different windows but with the same X size!)
+;    LENGTH: in, optional, default=0.08
+;            the length of a vector of STDVEL velocity,
+;            in X-normal coordinates 
+;    THICK: in, optional
+;           thickness of the vectors
+;    NOCLIP: in, optional
+;            set to 0 to clip the vectors drawing
 ;
-;
-; :History:
-;     Written by FaM, 2011.
 ;-
-function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=thick, COLOR=color, START_IND=start_ind
+function w_Map::set_wind, ud, vd, grid, $
+  DENSITY=density , $
+  LENGTH=length, $
+  NOCLIP=noclip, $
+  STDVEL=stdvel, $
+  THICK=thick, $
+  COLOR=color,  $
+  START_IND=start_ind
                              
   
   ; SET UP ENVIRONNEMENT
@@ -2211,14 +2227,11 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   if N_ELEMENTS(density) eq 0 then _density = 3 else _density = density
   if N_ELEMENTS(color) eq 0 then _color = 'black' else _color = color
   if N_ELEMENTS(start_ind) eq 0 then _start_ind = 0 else _start_ind = FIX(start_ind)
+  if N_ELEMENTS(noclip) eq 0 then _noclip = 0 else _noclip = noclip
   type = 'VECTORS'
   
   if N_PARAMS() eq 0 then begin
    self->_DestroyWindParams
-   self.wind_params.type = type
-   self.wind_params.length = _length
-   self.wind_params.thick = _thick
-   self.wind_params.color = cgColor(_color, /DECOMPOSED)
    return, 1
   endif  
   
@@ -2227,7 +2240,7 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('src_grid', OBJ='w_Grid2D')
   if not array_processing(ud, vd) then Message, WAVE_Std_Message(/ARG)  
             
-  grid->getProperty, tnt_c = c   
+  grid->getProperty, tnt_c=c   
   
   xi = findgen(floor(float(C.nx-_start_ind)/_density)) * _density + _start_ind
   yi = findgen(floor(float(C.ny-_start_ind)/_density)) * _density + _start_ind
@@ -2240,6 +2253,8 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   velx = ud[xi,yi]
   vely = vd[xi,yi] 
   
+  if N_ELEMENTS(stdvel) eq 0 then _stdvel = max(sqrt(velx^2+vely^2)) else _stdvel = stdvel
+  
   posX += 0.5
   posy += 0.5  
   pok = where(posX ge 0 and posX le self.Xsize and posY ge 0 and posY le self.Ysize and FINITE(velx) and FINITE(vely), cnt)
@@ -2249,7 +2264,9 @@ function w_Map::set_wind, ud, vd, grid, DENSITY=density , LENGTH=length, THICK=t
   self.wind_params.type = type
   self.wind_params.length = _length
   self.wind_params.thick = _thick
-  self.wind_params.color = cgColor(_color, /DECOMPOSED)
+  self.wind_params.stdvel = _stdvel
+  self.wind_params.noclip = _noclip
+  self.wind_params.color = PTR_NEW(cgColor(_color, /DECOMPOSED))
   self.wind_params.velx = PTR_NEW(velx[pok], /NO_COPY)
   self.wind_params.vely = PTR_NEW(vely[pok], /NO_COPY)
   self.wind_params.posx = PTR_NEW(posx[pok], /NO_COPY)
@@ -2285,9 +2302,9 @@ pro w_Map::add_img, $
     cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
     xwin = !D.WINDOW
     if PTR_VALID(self.img) then begin
-      cgImage, *self.img, /NORMAL, POSITION=position, MARGIN=margin, MULTIMARGIN=multimargin
+      cgImage, *self.img, /NORMAL, POSITION=position, MARGIN=margin, MULTIMARGIN=multimargin, /SAVE
     endif else begin
-      cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=position
+      cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=position, /SAVE
     endelse
     wdelete, xwin
     wset, tmp
@@ -2393,6 +2410,43 @@ pro w_Map::add_color_bar, TITLE=title, $
                                           FORMAT=format, _EXTRA=extra
     endelse         
   endif
+  
+end
+
+;+
+; :Description:
+;    To draw a wind legend on an existing plot. 
+;
+;-   
+pro w_Map::add_wind_legend, UNITS=units, $
+    WINDOW=window, $
+    POSITION=position, $
+    DECIMALS=decimals, $
+    TITLEPOSITION=titleposition, $
+    CHARSIZE=charsize
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+  
+  if ~ self.is_Winded then return ; do nothing
+  
+  SetDefaultValue, position, [0.8,0.05]
+  SetDefaultValue, titleposition, position - [0., 0.03]
+  SetDefaultValue, units, 'm s!U-1!N'
+  SetDefaultValue, charsize, 1.
+  
+  w_velvec, position[0], position[1], self.wind_params.stdvel, 0., $
+    COLORS=(*self.wind_params.color)[0], $
+    LENGTH=self.wind_params.length, $
+    THICK=self.wind_params.thick, $
+    STDVEL=self.wind_params.stdvel, $
+    /NORMAL, WINDOW=window
+ 
+  strnum =  w_str(self.wind_params.stdvel, decimals)
+  cgText, titleposition[0], titleposition[1], strnum + ' ' + units, CHARSIZE=charsize, /NORMAL, WINDOW=window
   
 end
 
@@ -2744,7 +2798,9 @@ PRO w_Map__Define
             vely           : PTR_new()     , $ ; y velocities
             posx           : PTR_new()     , $ ; coordinates in data device
             posy           : PTR_new()     , $ ; coordinates in data device
-            color          : 0L            , $ ; color of the arrows
+            color          : PTR_new()     , $ ; color of the arrows
+            noclip         : 0L            , $ ; clip or not clip?
+            stdvel         : 0D            , $ ; standard velocity associated to length 
             thick          : 0D            , $ ; thickness of the arrows
             length         : 0D              $ ; lenght of the arrows
             }

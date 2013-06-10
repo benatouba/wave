@@ -2882,10 +2882,11 @@ pro TEST_W_MAP
     v = TOTAL(wrf->get_Var('V10'), 3)
     u = u / nt
     v = v / nt
-    ok = map->set_wind(u, v, wrf, density = 3)
+    ok = map->set_wind(u, v, wrf, density = 3, STDVEL=10)
     if not ok then error +=1
     
     map->show_img
+    map->add_wind_legend
     ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
        
@@ -2911,11 +2912,12 @@ pro TEST_W_MAP
     v = TOTAL(wrf->get_Var('V10'), 3)
     u = u / nt
     v = v / nt
-    ok = map->set_wind(u, v, wrf, density = 1)
+    ok = map->set_wind(u, v, wrf, density = 1, STDVEL=10)
     d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     if not ok then error +=1
     
     map->show_img
+    map->add_wind_legend
     ok = DIALOG_MESSAGE('Do you see a ZOOMED temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
