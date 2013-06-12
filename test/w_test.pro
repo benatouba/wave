@@ -1210,6 +1210,19 @@ pro TEST_GR_DATALEVELS
   if info.loc[0] ne 0 then error += 1
   if info.loc[4] ne 4 then error += 1  
  
+  show = 1
+  file = FILEPATH('convec.dat', SUBDIR=['examples','data'])
+  data = FLOAT(READ_BINARY(file, DATA_DIMS=[248,248]))
+  info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show)
+  if N_ELEMENTS(info.levels) ne 12 then error += 1
+  if N_ELEMENTS(info.colors) ne 11 then error += 1
+  info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show, SIGMA=1)
+  if N_ELEMENTS(info.levels) ne 12 then error += 1
+  if N_ELEMENTS(info.colors) ne 13 then error += 1
+  info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show, /HIST_EQUAL)
+  
+    
+  
   if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
   
   
@@ -2891,10 +2904,20 @@ pro TEST_W_MAP
     if ok eq 'No' then error += 1
        
     ok = map->set_wind()
+    ok = map->set_plot_params(N_LEVELS=125)
     map->show_img
     if not ok then error +=1
+    map->show_color_bar
     ok = DIALOG_MESSAGE('Do you see a temperature plot without wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
+    
+    ok = map->set_plot_params(N_LEVELS=125, /HIST_EQUAL)
+    if not ok then error +=1
+    map->show_img
+    map->show_color_bar
+    ok = DIALOG_MESSAGE('Do you see a temperature plot with different color repartition?', /QUESTION)
+    if ok eq 'No' then error += 1
+    
     cgDelete, /ALL
     OBJ_DESTROY, map  
     

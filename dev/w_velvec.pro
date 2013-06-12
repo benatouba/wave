@@ -121,6 +121,12 @@ pro w_velvec, posx, posy, velx, vely, $
   angle = angle*!dtor  ; Convert from degrees to radians.
   sinangle = sin(angle)  ; Need these.
   cosangle = cos(angle)
+  if KEYWORD_SET(NORMAL) then begin
+    ff = FLOAT(!D.X_Size)/!D.Y_Size
+    if ff gt 1. then ff = 1./ff
+    sinangle *= ff  ; Need these.
+    cosangle *= ff
+  endif
   
   ; Plot vectors  
   for i=0l, nvecs-1l do begin  ; Loop over particles.

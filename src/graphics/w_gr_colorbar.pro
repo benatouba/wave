@@ -124,7 +124,7 @@ pro w_gr_Colorbar, info, $
   
   if N_ELEMENTS(VERTICAL) eq 0 then VERTICAL=1
   if N_ELEMENTS(RIGHT) eq 0 then RIGHT=1
-  if N_ELEMENTS(DIVISIONS) eq 0 then divisions=0
+  if N_ELEMENTS(DIVISIONS) eq 0 then divicolorsions=0
   
   if ~arg_okay(info, /STRUCT) then Message, '$INFO should be a structure.'
   if ~ tag_exist(info, 'dcbar') then  Message, '$INFO should contain a "DCBAR" tag.'
@@ -163,10 +163,16 @@ pro w_gr_Colorbar, info, $
   if _discrete then begin
     if N_ELEMENTS(FORMAT) ne 0 then ticknames = STRING(levels, FORMAT=format) else ticknames = cgNumber_Formatter(levels)
     divisions = ncolors
-;    cgLoadCT, NCOLORS=ncolors
-;    TVLCT, palette
   endif else begin
     range = utils_minmax(levels)
+    if info.is_hist then begin
+      ; So color is allways n_levels-1 
+      my_range = utils_minmax(levels[1:ncolors])
+      reg_levels = Scale_Vector(FINDGEN(ncolors), my_range[0], my_range[1]) 
+      palette[*,0] = FIX(0 > INTERPOL(float(palette[*,0]), levels[1:ncolors], reg_levels) < 255)
+      palette[*,1] = FIX(0 > INTERPOL(float(palette[*,1]), levels[1:ncolors], reg_levels) < 255)
+      palette[*,2] = FIX(0 > INTERPOL(float(palette[*,2]), levels[1:ncolors], reg_levels) < 255)
+    endif
   endelse
   
 

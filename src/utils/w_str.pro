@@ -20,6 +20,8 @@ function w_str, number, decimals
   COMPILE_OPT idl2
   @WAVE.inc
   on_Error, 2
+  
+  if N_ELEMENTS(decimals) eq 1 and decimals eq 0 then return, str_equiv(fix(number))
     
   return, cgNumber_Formatter(number, DECIMALS=decimals)
 

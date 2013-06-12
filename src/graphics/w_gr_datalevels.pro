@@ -233,6 +233,14 @@ end
 ;               the maximal level to consider when generating levels (ignored if LEVELS is set)
 ;    EPSILON: in, optional, default=machar().eps
 ;             the epsilon value when checking for missing or OOB data
+;    HIST_EQUAL: in, optional, default=0
+;                to decide the levels so that each "bin" between levels
+;                contains as many elements as the others.
+;    SIGMA: in, optional, default=0
+;           min and max values are decided as follows: [mean-p1*sigma,mean+p2*sigma]
+;           where mean is the mean value and sigma the standard deviation of the
+;           data. Set sigma=1 to set p1 and p2 to 1, sigma=2 set p1 and p2 to 2,
+;           sigma=[2,1] to set p1 to 2 and p2 to 1, etc. 
 ;    CMIN: in, optional, default=0
 ;          the index where to start in the color table 
 ;          (usefull if the first colors are too dark for example)
@@ -273,6 +281,8 @@ function w_gr_DataLevels, data, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
     EPSILON=epsilon, $
+    SIGMA=sigma, $
+    HIST_EQUAL=hist_equal, $
     CMIN=cmin, $ 
     CMAX=cmax, $
     INVERTCOLORS=invertcolors, $
@@ -293,15 +303,13 @@ function w_gr_DataLevels, data, $
   
   user_Levels = N_ELEMENTS(LEVELS) ne 0 
   user_Colors = N_ELEMENTS(COLORS) ne 0  
-  user_Max = N_ELEMENTS(MAX_VALUE) ne 0
-  user_Min = N_ELEMENTS(MIN_VALUE) ne 0
-  user_MinMax = user_Max and user_Min
   user_dcbar = BYTE(KEYWORD_SET(DCBAR))
   SetDefaultValue, oob_top_arrow, KEYWORD_SET(oob_top_color)
   SetDefaultValue, oob_bot_arrow, KEYWORD_SET(oob_bot_color)
   oob_top_str = arg_okay(oob_top_color, TYPE=IDL_STRING)
   oob_bot_str = arg_okay(oob_bot_color, TYPE=IDL_STRING)
-
+  is_hist = FALSE
+  
   ;Give a value to maxncolors
   if N_ELEMENTS(table_size) ne 0 then begin
     maxncolors = long(table_size)
@@ -312,15 +320,12 @@ function w_gr_DataLevels, data, $
   if oob_top_str and ~ oob_top_arrow then oob_top_arrow = 1
   if oob_bot_str and ~ oob_bot_arrow then oob_bot_arrow = 1
     
-  if (user_Levels and user_Max) or (user_Levels and user_Min) then $
-   Message, 'Ambiguous keyword combination of MIN/MAX with LEVELS.'
-  
   if is_data then begin
     if ~arg_okay(data, /NUMERIC) then Message, WAVE_Std_Message('data', /ARG)
     _data = data ; Working copy
   endif else begin
     ; Check for strange keywords combination
-    if ~user_Levels and ~user_MinMax then $
+    if ~user_Levels and ~ ((N_ELEMENTS(min_value) ne 0) and (N_ELEMENTS(max_value) ne 0)) then $
     Message, 'No $DATA, no $LEVELS, no $MIN and $MAX, what do you want me to do exactly?'  
     ; the user wants me to define colors/levels tables
     ; be sure the programm runs to the end by setting dummy values
@@ -385,6 +390,35 @@ function w_gr_DataLevels, data, $
   valid = BYTARR(SIZE(_data, /DIMENSIONS))
   if is_Valid then valid[pValid] = 1B
   
+  ; Ok. If sigma there then do it now
+  if N_ELEMENTS(sigma) ne 0 then begin
+    if N_ELEMENTS(MAX_VALUE) ne 0 or N_ELEMENTS(MIN_VALUE) ne 0 $
+      then Message, 'Ambiguous combination of SIGMA with min/max values'
+    if user_Levels then Message, 'Ambiguous keyword combination of LEVELS and SIGMA'
+    if ~ is_data or cntValid eq 0 then Message, 'Sigma only works with real (valid) data!'
+    mean_d = mean(_data[pValid])
+    sig_d = stddev(_data[pValid])
+    case (N_ELEMENTS(sigma)) of
+      1: begin
+        ps1 = sigma
+        ps2 = sigma
+      end
+      2: begin
+        ps1 = sigma[0]
+        ps2 = sigma[1]
+      end
+      else: Message, WAVE_Std_Message('SIGMA', NELEMENTS=2)
+    endcase
+    min_value = mean_d - ps1 * sig_d
+    max_value = mean_d + ps2 * sig_d
+  endif
+  
+  user_Max = N_ELEMENTS(MAX_VALUE) ne 0
+  user_Min = N_ELEMENTS(MIN_VALUE) ne 0
+  user_MinMax = user_Max and user_Min
+  if (user_Levels and user_Max) or (user_Levels and user_Min) then $
+   Message, 'Ambiguous keyword combination of MIN/MAX with LEVELS.'
+     
   ; Min and max
   if is_Valid then dataMin = min(_data[pValid]) else dataMin = _missing
   if is_Valid then dataMax = max(_data[pValid]) else dataMax = _missing
@@ -479,21 +513,58 @@ function w_gr_DataLevels, data, $
   ; A few more checks for the crasiest cases
   if user_Levels then if _n_levels ne N_ELEMENTS(_levels) then $
    Message, '$LEVELS and $N_LEVELS are incompatible.'
-  
-  ; Compute the levels
-  if ~ user_Levels then begin
-    case dataTypeName of
-      'FLOAT':  _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-      'DOUBLE':  _levels = (double(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-      else: begin
-        _levels = ROUND((FLOAT(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
-        _levels = _levels[SORT(_levels)]
-        if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then $
-          _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-      end
-    endcase
-  endif
-    
+   
+   ; Compute the levels
+   if ~ user_Levels then begin
+     if KEYWORD_SET(HIST_EQUAL) then begin
+       if user_Levels then Message, 'Ambiguous keyword combination of LEVELS and HIST_EQUAL'
+       if ~ is_data or cntValid eq 0 then Message, 'HIST_EQUAL only works with real (valid) data!'
+       factor = 5000d
+       case dataTypeName of
+         'FLOAT' : binsize = (_max_level-_min_level) / factor
+         'DOUBLE': binsize = (_max_level-_min_level) / factor
+         'BYTE': binsize = 1
+         'LONG': binsize = 1
+         'INT': binsize = 1
+         else: Message, 'Data type too exotic for me'
+       endcase
+       hist = histogram(_data[pValid], MIN=_min_level, MAX=_max_level, $
+          BINSIZE=binsize, LOCATIONS=locs)
+       hist = total(hist, /CUMULATIVE) / TOTAL(hist)
+       hist_levels = Scale_Vector(FINDGEN(_n_levels) / (_n_levels-1), min(hist), max(hist))
+       r =  0 > VALUE_LOCATE(hist, hist_levels) < (N_ELEMENTS(hist)-1)
+       r[0] = 0 ; allways
+       ;Unfortunately, check for uniqueness
+       uu = UNIQ(r)
+       if N_ELEMENTS(uu) ne N_ELEMENTS(r) then begin
+         for i=1, N_ELEMENTS(r)-2 do begin
+           if r[i] eq r[i-1] then begin
+             if r[i] + 1 ne r[i+1] then r[i] = r[i] + 1
+           endif
+           if r[i] eq r[i+1] then begin
+             if r[i] - 1 ne r[i-1] then r[i] = r[i] - 1
+           endif
+         endfor
+         Print, 'I checked for uniqueness'
+       endif
+       uu = UNIQ(r)
+       if N_ELEMENTS(uu) ne N_ELEMENTS(r) then Message, 'sorry, histequal not working with this data / n_level combination...'
+       _levels = locs[r] 
+       is_hist = TRUE
+     endif else begin   
+       case dataTypeName of
+         'FLOAT':  _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+         'DOUBLE':  _levels = (double(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+          else: begin
+            _levels = ROUND((FLOAT(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
+            _levels = _levels[SORT(_levels)]
+            if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then $
+             _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+          end
+       endcase
+     endelse
+   endif
+ 
   ; decide n_colors to compute automatically  
   if user_dcbar then begin
     _n_colors = _n_levels     
@@ -590,6 +661,7 @@ function w_gr_DataLevels, data, $
     is_Missing : is_Missing, $
     is_ooTop : is_ooTop, $
     is_ooBot : is_ooBot, $
+    is_hist : is_hist, $
     missing_value : _missing , $
     epsilon : _epsilon , $
     dataTypeName : dataTypeName , $

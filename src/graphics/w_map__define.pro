@@ -63,6 +63,7 @@ pro w_Map::_DestroyPlotParams
   ptr_free, self.plot_params.oob_top_color
   ptr_free, self.plot_params.oob_bot_arrow
   ptr_free, self.plot_params.oob_top_arrow
+  ptr_free, self.plot_params.sigma
   self.plot_params = {w_Map_PLOT_PARAMS}
   
 end
@@ -627,6 +628,14 @@ end
 ;    OOB_BOT: in, optional, type = boolean
 ;             set this keyword to have a "ot arrow" type colorbar
 ;             this will be done autmatically if there are oob data
+;    HIST_EQUAL: in, optional, default=0
+;                to decide the levels so that each "bin" between levels
+;                contains as many elements as the others.
+;    SIGMA: in, optional, default=0
+;           min and max values are decided as follows: [mean-p1*sigma,mean+p2*sigma]
+;           where mean is the mean value and sigma the standard deviation of the
+;           data. Set sigma=1 to set p1 and p2 to 1, sigma=2 set p1 and p2 to 2,
+;           sigma=[2,1] to set p1 to 2 and p2 to 1, etc. 
 ;    COLORS: in, optional
 ;            an array of N_LEVELS colors to use
 ;    INVERTCOLORS: in, optional, type = boolean
@@ -654,6 +663,8 @@ function w_Map::set_plot_params, $
     OOB_BOT_COLOR=oob_bot_color, $
     OOB_TOP_ARROW=oob_top_arrow, $ 
     OOB_BOT_ARROW=oob_bot_arrow, $
+    SIGMA=sigma, $ 
+    HIST_EQUAL=hist_equal, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
     CONTOUR=contour
@@ -722,10 +733,13 @@ function w_Map::set_plot_params, $
   ptr_free, self.plot_params.oob_top_color 
   ptr_free, self.plot_params.oob_bot_arrow 
   ptr_free, self.plot_params.oob_top_arrow 
+  ptr_free, self.plot_params.sigma 
   if N_ELEMENTS(OOB_BOT_COLOR) ne 0 then self.plot_params.oob_bot_color = PTR_NEW(OOB_BOT_COLOR) 
   if N_ELEMENTS(OOB_TOP_COLOR) ne 0 then self.plot_params.oob_top_color = PTR_NEW(OOB_TOP_COLOR)
   if N_ELEMENTS(OOB_BOT_ARROW) ne 0 then self.plot_params.oob_bot_arrow = PTR_NEW(OOB_BOT_ARROW) 
   if N_ELEMENTS(OOB_TOP_ARROW) ne 0 then self.plot_params.oob_top_arrow = PTR_NEW(OOB_TOP_ARROW)
+  if N_ELEMENTS(SIGMA) ne 0 then self.plot_params.sigma = PTR_NEW(SIGMA)
+  self.plot_params.hist_equal = KEYWORD_SET(HIST_EQUAL)
   
   return, self->set_img()
 
@@ -1726,6 +1740,7 @@ function w_Map::set_img, img, BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_ma
   if PTR_VALID(self.plot_params.oob_bot_color) then oob_bot_color = *self.plot_params.oob_bot_color
   if PTR_VALID(self.plot_params.oob_top_arrow) then oob_top_arrow = *self.plot_params.oob_top_arrow
   if PTR_VALID(self.plot_params.oob_bot_arrow) then oob_bot_arrow = *self.plot_params.oob_bot_arrow
+  if PTR_VALID(self.plot_params.sigma) then sigma = *self.plot_params.sigma
   
   info = w_gr_DataLevels(*self.data, $
     LEVELS=levels, $
@@ -1735,6 +1750,8 @@ function w_Map::set_img, img, BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_ma
     COLORS=dc_colors, $
     MIN_VALUE=min_value, $
     MAX_VALUE=max_value, $
+    SIGMA=sigma, $
+    HIST_EQUAL=self.plot_params.hist_equal, $
     CMIN=self.plot_params.cmin, $
     CMAX=self.plot_params.cmax, $
     OOB_TOP_COLOR=oob_top_color, $
@@ -2706,6 +2723,8 @@ PRO w_Map__Define
             oob_bot_color  : PTR_NEW()     , $ ; if a bot OOB color
             oob_top_arrow  : PTR_NEW()     , $ ; if a top OOB arrow
             oob_bot_arrow  : PTR_NEW()     , $ ; if a bot OOB arrow
+            hist_equal     : 0B            , $ ; if hist equal levels
+            sigma          : PTR_NEW()     , $ ; if sigma auto crop
             cmin           : 0B            , $ ; color index in the table
             cmax           : 0B            , $ ; color index in the table
             neutral        : 0L            , $ ; neutral color
