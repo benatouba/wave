@@ -688,11 +688,14 @@ end
 ;           the northings of (x,y) in the object grid 
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
+;    MARK_EXTERIOR: in, optional
+;                   if set, the i,j couples outside the grid are all marked as [-1, -1],
+;                   the other outputs (*_DST) are kept same
 ;             
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST=nearest
+PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST=lat_dst, E_DST=E_dst, N_DST=N_dst, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -774,6 +777,14 @@ PRO w_Grid2D::transform, x, y, i_dst, j_dst, SRC = src, LON_DST=lon_dst, LAT_DST
   endwhile
   undefine, ind, p1, p2
   j_dst = self.tnt_c.ny - j_dst  - 1 ;up an down
+  
+  if KEYWORD_SET(MARK_EXTERIOR) then begin
+    p = where((i_dst lt -0.5) or (j_dst lt -0.5) or (i_dst gt self.tnt_c.nx - 0.5) or (j_dst gt self.tnt_c.ny - 0.5), cnt)
+    if cnt ne 0 then begin
+      i_dst[p] = -1
+      j_dst[p] = -1      
+    endif    
+  endif  
 
   s = size(x)  
   if s[0] eq 2 then begin ; they gave us something 2D, we should keep it like this
@@ -806,11 +817,13 @@ end
 ; :Keywords:
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-;             
+;    MARK_EXTERIOR: in, optional
+;                   if set, the i,j couples outside the grid are all marked as [-1, -1]
+;                   
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-PRO w_Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
  
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -825,7 +838,7 @@ PRO w_Grid2D::transform_LonLat, lon, lat, datum, i, j, NEAREST = nearest
   
   if not arg_okay(datum, STRUCT={TNT_DATUM}) then Message, WAVE_Std_Message('datum', STRUCT={TNT_DATUM})
   
-  self->transform, lon, lat, i, j, SRC = datum, NEAREST=nearest
+  self->transform, lon, lat, i, j, SRC = datum, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
         
 end
 
@@ -852,11 +865,13 @@ end
 ; :Keywords:
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-
+;    MARK_EXTERIOR: in, optional
+;                   if set, the i,j couples outside the grid are all marked as [-1, -1]
+;
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-PRO w_Grid2D::transform_XY, x, y, proj, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_XY, x, y, proj, i, j, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -871,7 +886,7 @@ PRO w_Grid2D::transform_XY, x, y, proj, i, j, NEAREST = nearest
   
   if not arg_okay(proj, STRUCT={TNT_PROJ}) then Message, WAVE_Std_Message('proj', STRUCT={TNT_PROJ})
   
-  self->transform, x, y, i, j, SRC = proj, NEAREST=nearest
+  self->transform, x, y, i, j, SRC=proj, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
   
 end
 
@@ -898,11 +913,13 @@ end
 ; :Keywords:
 ;    NEAREST: in, optional
 ;             set if the nearest i,j couple is desired
-;
+;    MARK_EXTERIOR: in, optional
+;                   if set, the i,j couples outside the grid are all marked as [-1, -1]
+;                   
 ; :History:
 ;      Written by FaM, 2010.
 ;-
-PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
+PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -917,7 +934,7 @@ PRO w_Grid2D::transform_IJ, i_src, j_src, grid, i, j, NEAREST = nearest
   
   if not OBJ_ISA(grid, 'w_Grid2D')  then Message, WAVE_Std_Message('grid', OBJ='w_Grid2D')
   
-  self->transform, i_src, j_src, i, j, SRC = grid, NEAREST=nearest
+  self->transform, i_src, j_src, i, j, SRC = grid, NEAREST=nearest, MARK_EXTERIOR=mark_exterior
   
 end
 
@@ -1720,9 +1737,14 @@ end
 ;    SHAPE: in, type = string
 ;           the shapefile to read (.shp), coordinate system defined by `SRC`
 ;    POLYGON: in, type = array
-;             not implemented yet, coordinate system defined by `SRC`
+;             a 2xN array with the columns being the x, y coordinates, in the 
+;             coordinate system defined by `SRC`
 ;    MASK: in, type = array
-;          a mask of the desired ROI (dimensions must match the grid)
+;          a mask of the desired ROI. If no grid SRC is given, the mask
+;          is assumed to be in the orginal grid projection, so that the
+;          dimensions of the mask must match the grid [nx, ny]. If the 
+;          mask is in any other gridded projection, set SRC with the 
+;          corresponding w_grid2d
 ;    CROPBORDER: in, type = long
 ;                number of pixels to remove from each border
 ;    GRID: in, type = w_Grid2D
@@ -1880,10 +1902,29 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   endif
   
   if do_mask then begin
-    if ~arg_okay(mask, /NUMERIC, DIM=[self.tnt_c.nx,self.tnt_c.ny]) then Message, WAVE_Std_Message('MASK', /ARG)
-    if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
-    p = where(mask ne 0, cnt)
-    if cnt ne 0 then _mask[p] = 1B
+    if N_ELEMENTS(SRC) ne 0 then begin
+      ; Transform case
+      if ~arg_okay(mask, /NUMERIC, N_DIM=2) then Message, WAVE_Std_Message('MASK', NDIMS=2)
+      if not OBJ_ISA(src, 'w_Grid2D')  then Message, 'With MASK the SRC should be a grid'
+      if min(mask) lt 0 or max(mask) ne 1 then Message, 'The input mask is either empty or full.'
+      self->Get_XY, xx, yy
+      src->transform_XY, xx, yy, self.tnt_c.proj, ii, jj, /NEAREST, /MARK_EXTERIOR
+      p1 = where(ii ne -1 and jj ne -1, cnt)
+      if cnt ne 0 then begin
+        ; ok, some points are in the mask grid. Now check if they are in the mask
+        p2 = where(mask[ii[p1], jj[p1]], cnt)
+        if cnt ne 0 then begin
+          if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+          _mask[p1[p2]] = 1B
+        endif     
+      endif  
+    endif else begin
+      ;"easy" case
+      if ~arg_okay(mask, /NUMERIC, DIM=[self.tnt_c.nx,self.tnt_c.ny]) then Message, WAVE_Std_Message('MASK', DIMARRAY=[self.tnt_c.nx,self.tnt_c.ny])
+      if N_ELEMENTS(_mask) eq 0 then _mask = BYTARR(self.tnt_c.nx,self.tnt_c.ny)
+      p = where(mask ne 0, cnt)
+      if cnt ne 0 then _mask[p] = 1B
+    endelse
   endif
   
   if do_grid then begin
