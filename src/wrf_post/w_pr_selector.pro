@@ -20,6 +20,8 @@
 ;    FORCE: in, optional, type=boolean
 ;           default is not to overwrite existing files in the output directory.
 ;           Set this keyword to force overwriting
+;    CONVERT: in, optional, type=boolean
+;             convert the data to netcdf3
 ;
 ; :History:
 ;     Written by FaM, 2012.
@@ -33,7 +35,8 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
     YEARS=years, $
     AGG_STEPS=agg_steps, $
     FORCE=force, $
-    COMPRESS=compress
+    COMPRESS=compress, $
+    CONVERT=convert
     
   if N_ELEMENTS(INPUT_DIR) eq 0 then input_dir = Dialog_Pickfile(TITLE='Please select the input product directory', /DIRECTORY, /MUST_EXIST)
   if input_dir eq '' then return
@@ -86,12 +89,16 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
               FILE_MKDIR, FILE_DIRNAME(arr_file)
               print, 'Copying file : ' + f
               print, ' to : ' + arr_file + ' ...'
-              FILE_COPY, f, arr_file, OVERWRITE=force
-              if KEYWORD_SET(COMPRESS) then begin
-                c_file = utils_replace_string(arr_file, '.nc', '.zip')
-                SPAWN, 'zip -j ' + c_file + ' ' + arr_file
-                FILE_DELETE, arr_file
-              endif
+              if KEYWORD_SET(CONVERT) then begin
+                w_convert_netcdf4, f, arr_file, CLOBBER=force
+              endif else begin
+                FILE_COPY, f, arr_file, OVERWRITE=force
+                if KEYWORD_SET(COMPRESS) then begin
+                  c_file = utils_replace_string(arr_file, '.nc', '.zip')
+                  SPAWN, 'zip -j ' + c_file + ' ' + arr_file
+                  FILE_DELETE, arr_file
+                endif
+              endelse
               si += (FILE_INFO(arr_file)).size
               nf += 1
             endfor

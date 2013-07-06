@@ -21,7 +21,7 @@ function w_str, number, decimals
   @WAVE.inc
   on_Error, 2
   
-  if N_ELEMENTS(decimals) eq 1 and decimals eq 0 then return, str_equiv(fix(number))
+  if N_ELEMENTS(decimals) eq 1 then if decimals eq 0 then return, str_equiv(fix(number))
     
   return, cgNumber_Formatter(number, DECIMALS=decimals)
 

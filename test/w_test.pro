@@ -2899,7 +2899,7 @@ pro TEST_W_MAP
     if not ok then error +=1
     
     map->show_img
-    map->add_wind_legend
+    map->add_wind_legend, /WINDOW
     ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
        
@@ -2940,7 +2940,7 @@ pro TEST_W_MAP
     if not ok then error +=1
     
     map->show_img
-    map->add_wind_legend
+    map->add_wind_legend, /WINDOW
     ok = DIALOG_MESSAGE('Do you see a ZOOMED temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
     cgDelete, /ALL
@@ -2950,6 +2950,31 @@ pro TEST_W_MAP
     
     if error ne 0 then message, '% TEST_W_MAP NOT passed', /CONTINUE else print, 'TEST_W_MAP passed'
         
+end
+
+pro TEST_MAP_LABEL
+  
+  map = w_make_mercamap()
+  
+;  cgWindow
+;  map->add_img, MARGIN=1, TITLE='My Title - hey', /WIN
+;  cgDisplay, YSIZE=600, XSIZE=400, /FREE
+;  map->add_img, MARGIN=1, TITLE='My Title - hey'
+  cgWindow
+  map->add_img, MARGIN=1, TITLE='My Title - hey', /WIN, LABEL_TYPE='LEFT', CHARSIZE=2
+  cgDisplay, YSIZE=600, XSIZE=400, /FREE
+  map->add_img, MARGIN=1, TITLE='My Title - hey', LABEL_TYPE='LEFT', CHARSIZE=2
+;  cgWindow
+;  map->add_img, MARGIN=1, TITLE='My Title - hey', /WIN, LABEL_TYPE='RIGHT', CHARSIZE=2
+;  cgDisplay, YSIZE=600, XSIZE=400, /FREE
+;  map->add_img, MARGIN=1, TITLE='My Title - hey', LABEL_TYPE='RIGHT', CHARSIZE=2
+;  
+;  cgWindow
+;  map->add_img, pos=[0.1, 0.1, 0.6, 0.6], TITLE='My Title - hey', /WIN, CHARSIZE=2
+;  cgDisplay, YSIZE=600, XSIZE=400, /FREE
+;  map->add_img, pos=[0.1, 0.1, 0.6, 0.6], MARGIN=1, TITLE='My Title - hey', CHARSIZE=2
+  
+
 end
 
 pro TEST_Map_Plots

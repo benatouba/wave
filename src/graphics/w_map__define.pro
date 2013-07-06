@@ -281,6 +281,44 @@ pro w_Map::_add_mask, img, colors
   
 end
 
+function w_Map::_add_label, pos_plot, $
+    TITLE=title, $
+    LABEL_TYPE=label_type, $
+    CHARSIZE=charsize, $
+    CHARTHICK=charthick, $
+    WINDOW=window
+  
+  SetDefaultValue, LABEL_TYPE, 'DEFAULT'
+  
+  case LABEL_TYPE of
+    'DEFAULT': begin
+       if N_ELEMENTS(CHARSIZE) ne 0 then fac = CHARSIZE/2. else fac = 1./2.
+       x0 = (pos_plot[0] + pos_plot[2])/2.
+       y0 = pos_plot[3] + (pos_plot[3]-pos_plot[1]) * 0.04 * fac
+       cgText, x0, y0, title, ALIGNMENT=0.5, $
+         WINDOW=WINDOW, /NORMAL, CHARSIZE=charsize, CHARTHICK=charthick
+    end
+    'LEFT': begin
+       if N_ELEMENTS(CHARSIZE) ne 0 then fac = CHARSIZE/2. else fac = 1./2.
+       x0 = pos_plot[0]
+       y0 = pos_plot[3] + (pos_plot[3]-pos_plot[1]) * 0.04 * fac
+       cgText, x0, y0, title, ALIGNMENT=0., $
+         WINDOW=WINDOW, /NORMAL, CHARSIZE=charsize, CHARTHICK=charthick
+    end
+    'RIGHT': begin
+       if N_ELEMENTS(CHARSIZE) ne 0 then fac = CHARSIZE/2. else fac = 1./2.
+       x0 = pos_plot[2]
+       y0 = pos_plot[3] + (pos_plot[3]-pos_plot[1]) * 0.04 * fac
+       cgText, x0, y0, title, ALIGNMENT=1., $
+         WINDOW=WINDOW, /NORMAL, CHARSIZE=charsize, CHARTHICK=charthick
+    end
+    else: Message, 'LABEL_TYPE not recognized or not implemented yet'
+  endcase
+    
+  return, 1
+  
+end
+
 ;+
 ; :Description:
 ; 
@@ -598,6 +636,91 @@ function w_Map::_draw_windRoses, WINDOW = window
     k.center = [c[0],c[1]]
     w_WindRose_addrose, *wr.wind_dir, *wr.wind_speed, WINDOW=window, _EXTRA = k
   endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the image to the device
+; 
+; :Private:
+;
+;-  
+function w_Map::_draw_image, POSITION=position, $
+    WINDOW=window, $
+    MULTIMARGIN=multimargin, $
+    MARGIN=margin, $
+    NOERASE=noerase
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+ if KEYWORD_SET(WINDOW) then begin ; we have to use a trick to give POSITION as output, too
+    wid = cgQuery(/CURRENT, COUNT=cnt) 
+    message, 'right now some problems with resizable windows. Should be strange with titles', /INFO
+;    wset, wid
+;    dims = SIZE(cgSnapshot(WID=wid), /DIMENSIONS)
+;    cgDisplay, /FREE, XSIZE=dims[1], YSIZE=dims[2], /PIXMAP
+    cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
+    xwin = !D.WINDOW
+    if PTR_VALID(self.img) then begin
+      cgImage, *self.img, /NORMAL, POSITION=out_pos, MARGIN=margin, MULTIMARGIN=multimargin, /SAVE
+    endif else begin
+      cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=out_pos, /SAVE
+    endelse
+    wdelete, xwin
+    cgSet, wid
+  endif
+  
+  
+  if PTR_VALID(self.img) then begin
+    ; User image
+    if self.is_Shaded then begin
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+    endif else begin
+      cgImage, *self.img, /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+    endelse
+  endif else begin
+    ; data image
+    inf = *self.info
+    
+    do_shade = self.is_Shaded and self.shading_params.relief_factor ne 0
+    if do_shade then begin
+      img = inf.loc
+      colors = inf.colors
+      if self.is_Masked then self->_add_mask, img, colors
+      if N_ELEMENTS(colors) gt 128 then begin
+        Message, 'To many colors to do shading (' + str_equiv(N_ELEMENTS(colors)) +', should be less or equal 128). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR', /INFORMATIONAL
+      do_shade = FALSE
+      endif
+    endif
+    
+    if do_shade then begin
+      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
+    endif else begin
+      if self.plot_params.contour_img then begin
+        message, 'contour image, no'
+      endif else begin
+        img = inf.loc
+        colors = inf.colors
+        if self.is_Masked then self->_add_mask, img, colors
+        ncolors = N_ELEMENTS(colors)
+        if ncolors eq 3 then row=1
+        if ncolors le 1 then Message, 'Too few colors. Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
+        if ncolors gt 256 then Message, 'Too many colors ('+str_equiv(ncolors)+'). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
+        palette = w_gr_ColorToRGB(colors, ROW=row)
+        cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MARGIN=margin, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
+      endelse
+    endelse
+    
+  endelse
+  
+  if N_ELEMENTS(out_pos) ne 0 then position = out_pos
   
   return, 1
   
@@ -2298,11 +2421,39 @@ end
 ; :Description:
 ;    Adds the image to the device
 ;
-; :History:
-;     Written by FaM, 2011.
-;-   
+; :Keywords:
+;    POSITION: in
+;              the position of the image
+;    TITLE: in
+;           the title of the plot
+;    LABEL_TYPE: in
+;                the title type:: 
+;                  - 'DEFAULT' is centered on the top
+;                  - 'LEFT' is ajusted left on the top
+;                  - 'IN_LL' is in the plot, lower left corner
+;                  - 'IN_LR' is in the plot, lower right corner
+;                  - 'IN_UR' is in the plot, upper right corner
+;                  - 'IN_UL' is in the plot, upper left corner
+;    CHARSIZE: in
+;              title charsize
+;    CHARTHICK: in
+;               title charthick
+;    WINDOW: in
+;            if th draw in a cgWindow
+;    MULTIMARGIN: in
+;                 see cgImage
+;    MARGIN: in
+;            see cgImage
+;    NOERASE: in
+;             see cgImage
+;
+;-
 pro w_Map::add_img, $
     POSITION=position, $
+    TITLE=title, $
+    LABEL_TYPE=label_type, $
+    CHARSIZE=charsize, $
+    CHARTHICK=charthick, $
     WINDOW=window, $
     MULTIMARGIN=multimargin, $
     MARGIN=margin, $
@@ -2314,88 +2465,42 @@ pro w_Map::add_img, $
   compile_opt idl2
   @WAVE.inc
   
-  if KEYWORD_SET(WINDOW) and ARG_PRESENT(position) then begin ; we have to use a trick to give POSITION as output, too
-    tmp = !D.window
-    cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
-    xwin = !D.WINDOW
-    if PTR_VALID(self.img) then begin
-      cgImage, *self.img, /NORMAL, POSITION=position, MARGIN=margin, MULTIMARGIN=multimargin, /SAVE
-    endif else begin
-      cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=position, /SAVE
-    endelse
-    wdelete, xwin
-    wset, tmp
+  if KEYWORD_SET(WINDOW) then begin
+    p = cgQuery(COUNT=cnt, /CURRENT) 
+    if cnt eq 0 then cgWindow ; just to be sure we have one free
+    cgControl, EXECUTE=0
   endif
   
-    ; Std image
-  if PTR_VALID(self.img) then begin
-    if self.is_Shaded then begin
-      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
-    endif else begin
-      cgImage, *self.img, /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
-    endelse
-  endif else if PTR_VALID(self.info) then begin
+  ; Std image
+  if PTR_VALID(self.img) or PTR_VALID(self.info) then ok = self->_draw_image(POSITION=position, $
+    WINDOW=window, $
+    MULTIMARGIN=multimargin, $
+    MARGIN=margin, $
+    NOERASE=noerase) else message, 'No image set yet...'  
   
-    inf = *self.info
-    
-    do_shade = self.is_Shaded and self.shading_params.relief_factor ne 0
-    if do_shade then begin
-      img = inf.loc
-      colors = inf.colors
-      if self.is_Masked then self->_add_mask, img, colors
-      if N_ELEMENTS(colors) gt 128 then begin
-        Message, 'To many colors to do shading (' + str_equiv(N_ELEMENTS(colors)) +', should be less or equal 128). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR', /INFORMATIONAL
-      do_shade = FALSE
-      endif
-    endif
-    
-    if do_shade then begin
-      cgImage, self->_shading(), /SAVE, /NORMAL, /KEEP_ASPECT_RATIO, MINUS_ONE=0, MARGIN=margin, MULTIMARGIN=multimargin, WINDOW=window, POSITION=position, NOERASE=noerase
-    endif else begin
-      if self.plot_params.contour_img then begin
-        message, 'contour image, no'
-      ;      if self.is_Masked then message, 'w_Map INFO: for CONTOUR plots the masks are ignored.'
-      ;      ; Make no image but just a contour of it
-      ;      if FINITE(*self.missing) then begin
-      ;        levels = [*self.missing, *self.plot_params.levels]
-      ;        colors = [self.plot_params.neutral, *self.plot_params.colors]
-      ;      endif else begin
-      ;        levels = *self.plot_params.levels
-      ;        colors = *self.plot_params.colors
-      ;      endelse
-      ;      n_colors = N_ELEMENTS(colors)
-      ;      utils_color_rgb,  colors, r,g,b
-      ;      cgContour, *self.data, /CELL_FILL, LEVELS=levels, C_COLORS = indgen(n_colors), POSITION=position, XTICKLEN=0,YTICKLEN=0, label = 0, $
-      ;        PALETTE=[[r],[g],[b]], /NORMAL, WINDOW=window, XTICKNAME = REPLICATE(' ', 30), YTICKNAME = REPLICATE(' ', 30)
-      endif else begin
-        img = inf.loc
-        colors = inf.colors
-        if self.is_Masked then self->_add_mask, img, colors
-        ncolors = N_ELEMENTS(colors)
-        if ncolors eq 3 then row=1
-        if ncolors le 1 then Message, 'Too few colors. Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
-        if ncolors gt 256 then Message, 'Too many colors ('+str_equiv(ncolors)+'). Keep in mind that N_COLORS = N_LEVELS+1 + N_MASKS + MISSINGCOLOR'
-        palette = w_gr_ColorToRGB(colors, ROW=row)
-        cgImage, img, PALETTE=palette, WINDOW=window, /SAVE, /NORMAL, POSITION=position, /KEEP_ASPECT_RATIO, MARGIN=margin, MULTIMARGIN=multimargin, MINUS_ONE=0, NOERASE=noerase
-      endelse
-    endelse
-    
-  endif else message, 'No image set yet...'
   
-  if self.is_Contoured then ok = self->_draw_contours(WINDOW = window)
-  if self.is_Shaped then ok = self->_draw_shapes(WINDOW = window)
-  if self.is_Mapped then ok = self->_draw_Map(WINDOW = window)
+  if self.is_Contoured then ok = self->_draw_contours(WINDOW=window)
+  if self.is_Shaped then ok = self->_draw_shapes(WINDOW=window)
+  if self.is_Mapped then ok = self->_draw_Map(WINDOW=window)
   
   ; Draw a frame
   xf = [0, self.xsize, self.xsize, 0, 0]
   yf = [0, 0, self.ysize, self.ysize, 0]
-  cgPlotS, xf, yf, WINDOW = window, /DATA
-  
-  if self.is_Winded then ok = self->_draw_wind(WINDOW = window)
-  if self.is_Polygoned then ok = self->_draw_polygons(WINDOW = window)
-  if self.is_Pointed then ok = self->_draw_points(WINDOW = window)
-  if self.is_WindRosed then ok = self->_draw_windRoses(WINDOW = window)
-  
+  cgPlotS, xf, yf, /DATA, WINDOW=window
+
+  if self.is_Winded then ok = self->_draw_wind(WINDOW=window)
+  if self.is_Polygoned then ok = self->_draw_polygons(WINDOW=window)
+  if self.is_Pointed then ok = self->_draw_points(WINDOW=window)
+  if self.is_WindRosed then ok = self->_draw_windRoses(WINDOW=window)
+  if N_ELEMENTS(TITLE) ne 0 then ok = self->_add_label(position, $
+    TITLE=title, $
+    LABEL_TYPE=label_type, $
+    CHARSIZE=charsize, $
+    CHARTHICK=charthick, $
+    WINDOW=window)
+   
+  if KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 
+    
 end
 
 ;+
@@ -2462,7 +2567,7 @@ pro w_Map::add_wind_legend, UNITS=units, $
     STDVEL=self.wind_params.stdvel, $
     /NORMAL, WINDOW=window
  
-  strnum =  w_str(self.wind_params.stdvel, decimals)
+  strnum =  w_str(self.wind_params.stdvel)
   cgText, titleposition[0], titleposition[1], strnum + ' ' + units, CHARSIZE=charsize, /NORMAL, WINDOW=window
   
 end
@@ -2494,22 +2599,13 @@ pro w_Map::show_img, WINDOW=window, TITLE=title, MARGIN=margin
   
   if KEYWORD_SET(window) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
-    cgControl, EXECUTE=0
   endif else begin
-    cgDisplay, Xs, Ys, /FREE, /PIXMAP
-    xwin = !D.WINDOW
+    cgDisplay, Xs, Ys, /FREE
   endelse
   
   self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=window
-     
-  if KEYWORD_SET(window) then cgControl, EXECUTE=1 else begin 
-    img = Transpose(tvrd(/TRUE), [1,2,0])
-    WDELETE, xwin
-    cgDisplay, Xs, Ys, /FREE, Title=title
-    cgImage, img
- endelse
  
- !ORDER = pp
+  !ORDER = pp
   
 end
 

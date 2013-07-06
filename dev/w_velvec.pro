@@ -104,9 +104,11 @@ pro w_velvec, posx, posy, velx, vely, $
   
   ; if needed, compute length of vectors in /DATA coordinates
   if KEYWORD_SET(data) then begin
+    tmp = !D.WINDOW
     if KEYWORD_SET(WINDOW) then WSet, cgQuery(/Current)
     ll = convert_coord([0., ll], [0., 0.], /NORMAL, /TO_DATA)
     ll = ABS(ll[0,0] - ll[0,1])
+    WSet, tmp
   endif
   
   ; Convert velocities.
