@@ -108,7 +108,7 @@ pro w_velvec, posx, posy, velx, vely, $
     if KEYWORD_SET(WINDOW) then WSet, cgQuery(/Current)
     ll = convert_coord([0., ll], [0., 0.], /NORMAL, /TO_DATA)
     ll = ABS(ll[0,0] - ll[0,1])
-    WSet, tmp
+    if tmp ne -1 then WSet, tmp
   endif
   
   ; Convert velocities.

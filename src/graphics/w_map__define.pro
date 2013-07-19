@@ -2567,7 +2567,7 @@ pro w_Map::add_wind_legend, UNITS=units, $
     STDVEL=self.wind_params.stdvel, $
     /NORMAL, WINDOW=window
  
-  strnum =  w_str(self.wind_params.stdvel)
+  strnum =  w_str(self.wind_params.stdvel, decimals)
   cgText, titleposition[0], titleposition[1], strnum + ' ' + units, CHARSIZE=charsize, /NORMAL, WINDOW=window
   
 end
@@ -2675,7 +2675,7 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid
+PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid, ASPECT=aspect
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2692,7 +2692,8 @@ PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid
   if ARG_PRESENT(YSIZE) then ysize = self.Ysize
   if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C=tnt_c
   if ARG_PRESENT(GRID) then grid = self.grid
-     
+  if ARG_PRESENT(ASPECT) then aspect = self.Ysize / float(self.Xsize)
+  
 end
 
 ;+
