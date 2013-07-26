@@ -375,7 +375,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
     
   ; Title
   if N_ELEMENTS(TITLE) eq 0 then title = ''
-  cgText,xcenter, ycenter + max_radius + 0.05, title, WINDOW=window, ADDCMD=addcmd, ALIGNMENT = 0.5, CHARSIZE=1.3*_charsize, /NORMAL
+  cgText,xcenter, ycenter + max_radius + 0.08*max_radius, title, WINDOW=window, ADDCMD=addcmd, ALIGNMENT = 0.5, CHARSIZE=1.2*_charsize, /NORMAL
   
   if ARG_PRESENT(LEVELS) and ~ KEYWORD_SET(NO_WS) then levels = wsteps
     

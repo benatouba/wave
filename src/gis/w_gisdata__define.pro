@@ -347,8 +347,13 @@ function w_GISdata::getVarTS, id, x, y, time, nt, SRC=src, INFO=info, BILINEAR=b
   ; This is to obtain lat and lons of the selected grid point
   self.ogrid->transform, point_i, point_j, dummy, dummy, src=self.ogrid, $
          LON_DST=point_lon, LAT_DST=point_lat, E_DST=point_x, N_DST=point_y    
-  dist_x = _x - point_x
-  dist_y = _y - point_y   
+  if N_ELEMENTS(point_x) ne 0 then begin
+    dist_x = _x - point_x
+    dist_y = _y - point_y
+  endif else begin  
+    dist_x = !VALUES.F_NAN
+    dist_y = !VALUES.F_NAN
+  endelse
   self.ogrid->getProperty, TNT_C=oc
   if point_i lt 0 or point_i ge oc.nx $
    or point_j lt 0 or point_j ge oc.ny then Message, 'Nearest grid point lies outside the grid.'
