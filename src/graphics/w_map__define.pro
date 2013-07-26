@@ -660,23 +660,18 @@ function w_Map::_draw_image, POSITION=position, $
   compile_opt idl2
   @WAVE.inc
 
- if KEYWORD_SET(WINDOW) then begin ; we have to use a trick to give POSITION as output, too
-    wid = cgQuery(/CURRENT, COUNT=cnt) 
-    message, 'right now some problems with resizable windows. Should be strange with titles', /INFO
-;    wset, wid
-;    dims = SIZE(cgSnapshot(WID=wid), /DIMENSIONS)
-;    cgDisplay, /FREE, XSIZE=dims[1], YSIZE=dims[2], /PIXMAP
-    cgDisplay, /FREE, XSIZE=!D.X_SIZE, YSIZE=!D.Y_SIZE, /PIXMAP
+ if KEYWORD_SET(WINDOW) then begin ; we have to use a trick to give POSITION as output
+    void = cgQuery(/CURRENT, DIMENSIONS=dims)
+    cgDisplay, /FREE, XSIZE=dims[0], YSIZE=dims[1], /PIXMAP
     xwin = !D.WINDOW
+    if N_ELEMENTS(position) eq 4 then out_pos=position
     if PTR_VALID(self.img) then begin
       cgImage, *self.img, /NORMAL, POSITION=out_pos, MARGIN=margin, MULTIMARGIN=multimargin, /SAVE
     endif else begin
       cgImage, (*(self.info)).loc, /NORMAL, MARGIN=margin, MULTIMARGIN=multimargin, POSITION=out_pos, /SAVE
     endelse
     wdelete, xwin
-    cgSet, wid
-  endif
-  
+  endif  
   
   if PTR_VALID(self.img) then begin
     ; User image
@@ -2467,8 +2462,7 @@ pro w_Map::add_img, $
   
   if KEYWORD_SET(WINDOW) then begin
     p = cgQuery(COUNT=cnt, /CURRENT) 
-    if cnt eq 0 then cgWindow ; just to be sure we have one free
-    cgControl, EXECUTE=0
+    if cnt eq 0 then cgWindow ; just to be sure we have one to draw on
   endif
   
   ; Std image
@@ -2498,8 +2492,6 @@ pro w_Map::add_img, $
     CHARSIZE=charsize, $
     CHARTHICK=charthick, $
     WINDOW=window)
-   
-  if KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 
     
 end
 
@@ -2584,12 +2576,7 @@ pro w_Map::show_img, WINDOW=window, TITLE=title, MARGIN=margin
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
-    
-  pp = !ORDER ;To restore later
-  !ORDER = 0
-  
-  DEVICE, RETAIN=2, DECOMPOSED=1  
-  
+      
   SetDefaultValue, title, 'Map Plot'
   SetDefaultValue, margin, 0.07
   SetDefaultValue, window, 1
@@ -2599,13 +2586,13 @@ pro w_Map::show_img, WINDOW=window, TITLE=title, MARGIN=margin
   
   if KEYWORD_SET(window) then begin
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
+    cgControl, EXECUTE=0
   endif else begin
     cgDisplay, Xs, Ys, /FREE
   endelse
   
-  self->add_img, POSITION = [0.+margin,0.+margin,1.-margin,1.-margin], WINDOW=window
- 
-  !ORDER = pp
+  self->add_img, MARGIN=1, WINDOW=window
+  cgControl, EXECUTE=1
   
 end
 
@@ -2627,11 +2614,7 @@ pro w_Map::show_color_bar, WINDOW=window, VERTICAL=vertical, _REF_EXTRA=extra
   ;--------------------------
   compile_opt idl2
   @WAVE.inc
-    
-  pp = !ORDER ;To restore later
-  !ORDER = 0
   
-  DEVICE, RETAIN=2, DECOMPOSED=1    
   title = 'Color bar'
   SetDefaultValue, window, 1
   
@@ -2653,19 +2636,12 @@ pro w_Map::show_color_bar, WINDOW=window, VERTICAL=vertical, _REF_EXTRA=extra
     cgWindow, WXSIZE=xs, WYSIZE=ys, WTitle=title
     cgControl, EXECUTE=0
   endif else begin
-    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, /PIXMAP, Title=title
-    xwin = !D.WINDOW
+    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title=title
   endelse
 
   self->add_color_bar, POSITION=_Position, WINDOW=window, OOB_FACTOR=oob_fac, VERTICAL=_VERTICAL, _EXTRA=extra
-  
-  if KEYWORD_SET(WINDOW) then cgControl, EXECUTE=1 else begin 
-    img = Transpose(tvrd(/TRUE), [1,2,0])
-    WDELETE, xwin
-    cgDisplay, /FREE, XSIZE=xs, YSIZE=ys, Title=title
-    cgImage, img
- endelse
-  
+  cgControl, EXECUTE=1
+    
 end
 
 ;+

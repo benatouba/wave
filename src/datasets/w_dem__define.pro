@@ -74,7 +74,7 @@ function w_DEM::init, file, NO_DELTA=no_delta, _EXTRA=extra
   if proj_name eq 'Geographic Lat/Lon' then begin
     GIS_make_proj, ret, proj, NAME='Geographic (WGS-84)'
   endif else begin
-    proj = coord.proj
+    GIS_make_proj, ret, proj, NAME=proj_name
   endelse
   
   if KEYWORD_SET(NO_DELTA) then begin

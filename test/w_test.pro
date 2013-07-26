@@ -1210,7 +1210,6 @@ pro TEST_GR_DATALEVELS
   if info.loc[0] ne 0 then error += 1
   if info.loc[4] ne 4 then error += 1  
  
-  show = 1
   file = FILEPATH('convec.dat', SUBDIR=['examples','data'])
   data = FLOAT(READ_BINARY(file, DATA_DIMS=[248,248]))
   info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show)
@@ -1221,7 +1220,6 @@ pro TEST_GR_DATALEVELS
   if N_ELEMENTS(info.colors) ne 13 then error += 1
   info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show, /HIST_EQUAL)
   
-    
   
   if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
   
@@ -2870,8 +2868,7 @@ pro TEST_W_MAP
     
     fdir = w_test_file_directory() + 'WRF/'
     error = 0 
-    
-    
+        
     ;-------------------------
     ; Test 3Hourly product
     ;-------------------------
@@ -2898,27 +2895,27 @@ pro TEST_W_MAP
     ok = map->set_wind(u, v, wrf, density = 3, STDVEL=10)
     if not ok then error +=1
     
-    map->show_img
-    map->add_wind_legend, /WINDOW
+    map->show_img, WINDOW=0
+    map->add_wind_legend, WINDOW=0
     ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
-       
+    
     ok = map->set_wind()
     ok = map->set_plot_params(N_LEVELS=125)
-    map->show_img
+    map->show_img, WINDOW=0
     if not ok then error +=1
-    map->show_color_bar
+    map->show_color_bar, WINDOW=0
     ok = DIALOG_MESSAGE('Do you see a temperature plot without wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
     
     ok = map->set_plot_params(N_LEVELS=125, /HIST_EQUAL)
     if not ok then error +=1
-    map->show_img
-    map->show_color_bar
+    map->show_img, WINDOW=0
+    map->show_color_bar, WINDOW=0
     ok = DIALOG_MESSAGE('Do you see a temperature plot with different color repartition?', /QUESTION)
     if ok eq 'No' then error += 1
     
-    cgDelete, /ALL
+    FSCCleanUp7
     OBJ_DESTROY, map  
     
     ok = wrf->define_subset(CROPBORDER=70) 
@@ -2939,12 +2936,12 @@ pro TEST_W_MAP
     d = map->set_topography(GRDFILE=w_test_file_directory() + '/MAPPING/TiP.grd')
     if not ok then error +=1
     
-    map->show_img
-    map->add_wind_legend, /WINDOW
+    map->show_img, WINDOW=0
+    map->add_wind_legend, WINDOW=0
     ok = DIALOG_MESSAGE('Do you see a ZOOMED temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
-    cgDelete, /ALL
-    
+
+    FSCCleanUp7
     OBJ_DESTROY, wrf     
     OBJ_DESTROY, map  
     
