@@ -90,7 +90,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
               print, 'Copying file : ' + f
               print, ' to : ' + arr_file + ' ...'
               if KEYWORD_SET(CONVERT) then begin
-                w_convert_netcdf4, f, arr_file, CLOBBER=force
+                w_convert_netcdf, f, arr_file, CLOBBER=force, /TO_NETCDF3
               endif else begin
                 FILE_COPY, f, arr_file, OVERWRITE=force
                 if KEYWORD_SET(COMPRESS) then begin
