@@ -1448,8 +1448,8 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
       out_data = BYTARR(self.tnt_c.nx, self.tnt_c.ny, n)
       Message, 'Carefull. You give me a byte array, I give you a byte array.'
     end
-    'LONG64': out_data = LONARR(self.tnt_c.nx, self.tnt_c.ny, n)
-    'LONG': out_data = LON64ARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    'LONG': out_data = LONARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    'INT': out_data = INTARR(self.tnt_c.nx, self.tnt_c.ny, n)
     ELSE: Message, 'Dataype a bit exotic. Make it better.'
   ENDCASE
   
