@@ -2894,11 +2894,15 @@ pro TEST_W_MAP
     v = v / nt
     ok = map->set_wind(u, v, wrf, density = 3, STDVEL=10)
     if not ok then error +=1
-    
-    map->show_img, WINDOW=0
-    map->add_wind_legend, WINDOW=0
+   
+    cgWindow, 'add_img', map, /METHOD, MARGIN=1
+    cgWindow, 'add_wind_legend', map, /METHOD, /ADDCMD
+;    map->show_img, WINDOW=0
+;    map->add_wind_legend, WINDOW=0
     ok = DIALOG_MESSAGE('Do you see a temperature plot with wind vectors?', /QUESTION)
     if ok eq 'No' then error += 1
+    
+    return
     
     ok = map->set_wind()
     ok = map->set_plot_params(N_LEVELS=125)

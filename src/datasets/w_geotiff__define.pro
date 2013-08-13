@@ -98,8 +98,13 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
             d = Where(fields eq 'PROJECTEDCSTYPEGEOKEY', cnt)
             if cnt ne 0 then begin
               ; I need to know the datum. Currently WGS84 should be enough
-              if STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 0, 3) ne '326' then Message, 'Projection unknown. Contact Fabi.'
+              kkey = STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 0, 3)
               zone = STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 3, 2)
+              case (kkey) of
+                '326': ; UTM Northern emisphere
+                '327': zone = '-' + zone ; UTM Southern emisphere
+                else: Message, 'Projection unknown. Contact Fabi.
+              endcase
             endif else  Message, 'Projection unknown. Contact Fabi.'
           endelse
                     

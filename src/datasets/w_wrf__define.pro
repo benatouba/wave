@@ -1562,6 +1562,8 @@ end
 ;       if set, it defines the last time of the variable timeserie
 ;   unstagger: in, optional
 ;              if set, the variable will be automatically unstaggered
+;   hour_of_day: in, optional, type = long
+;                the hour of day to get the data from
 ;   eta_levels: in, optional, type = float
 ;            set this keyword to an array of one or two elements, containing the range
 ;            of the indexes to keep from the original NCDF file in the Z dimension (eta-levels).
@@ -1603,6 +1605,7 @@ function w_WRF::get_Var, Varid, $
                             nt,  $
                             T0=t0, $
                             T1=t1, $
+                            HOUROFDAY=hourofday, $
                             UNSTAGGER=unstagger, $
                             ETA_LEVELS=eta_levels, $
                             ZLEVELS=zlevels, $
@@ -2302,7 +2305,8 @@ function w_WRF::get_Var, Varid, $
     
   if N_ELEMENTS(value) eq 0 then begin ;This is probably a standard variable
        
-    value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels,  $
+    value = self->w_GEO_nc::get_Var(vid, time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels, $
+      HOUROFDAY=hourofday,  $
       units = units, $
       description = description, $
       varname = varname , $

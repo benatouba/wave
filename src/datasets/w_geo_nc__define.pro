@@ -359,6 +359,9 @@ end
 ;       if set, it defines the last time of the variable timeserie
 ;   HOUROFDAY: in, optional, type = long
 ;              to get strides of the time serie at specific hours of day
+;   MINUTEOFHOUR: in, optional, type = long, default=0
+;                 together with HOUROFDAY, it defines a stride to get 
+;                 (important for half hourly values for example)
 ;   STATIC: in, optional, boolean
 ;           set this keyword to automaticaly retrieve only the first
 ;           element of the variable in the time dimension
@@ -394,6 +397,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                             T0=t0, $
                             T1=t1, $
                             HOUROFDAY=hourofday, $
+                            MINUTEOFHOUR=minuteofhour, $
                             STATIC=static , $
                             ZLEVELS=zlevels, $
                             ZDIM_ID=zdim_id, $
@@ -477,8 +481,9 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
       
       ; Check for stride
       if N_ELEMENTS(HOUROFDAY) eq 1 then begin
+        SetDefaultValue, minuteofhour, 0
         ok = CHECK_WTIME(time, OUT_ABSDATE=absd)
-        phour = where(absd.hour eq hourofday, cnthour)
+        phour = where(absd.hour eq hourofday and absd.minute eq minuteofhour, cnthour)
         if cnthour eq 0 then message, 'Hour of day not found in the time serie'
         if cnthour lt 2 then message, 'You asking me strange things: not even 2 elements with hour of day?'
         mphour = min(phour)      
@@ -486,7 +491,7 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
         phour = phour-mphour
         diffs = phour[1:*] - phour[0:cnthour-2]
         dh = phour[1]-phour[0]
-        if total(diffs - dh) ne 0 then Message, 'Timeserie not regular!'
+        if total(ABS(diffs - dh)) ne 0 then Message, 'Timeserie not regular!'
         offset[p[0]] = offset[p[0]] + mphour
         count[p[0]] = cnthour
         stride[p[0]] = dh           
