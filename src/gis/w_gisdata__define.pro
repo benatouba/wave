@@ -461,18 +461,18 @@ end
 ;
 ;-
 function w_gisdata::defineSubset, $
-    SHAPE=shape,  $
-    POLYGON=polygon, MASK=mask,  $
-    CROPBORDER=cropborder,  $
-    GRID=grid,    $
-    CORNERS=corners, $
-    NO_ERASE=no_erase, $
-    SRC=src, $
-    REMOVE_ENTITITES=remove_entitites, $
-    KEEP_ENTITITES=keep_entitites, $
-    MARGIN=margin, $
-    ROI_MASK_RULE=roi_mask_rule
-
+  SHAPE=shape,  $
+  POLYGON=polygon, MASK=mask,  $
+  CROPBORDER=cropborder,  $
+  GRID=grid,    $
+  CORNERS=corners, $
+  NO_ERASE=no_erase, $
+  SRC=src, $
+  REMOVE_ENTITITES=remove_entitites, $
+  KEEP_ENTITITES=keep_entitites, $
+  MARGIN=margin, $
+  ROI_MASK_RULE=roi_mask_rule
+  
   ; Set Up environnement
   COMPILE_OPT idl2
   @WAVE.inc
@@ -486,43 +486,99 @@ function w_gisdata::defineSubset, $
   ENDIF
   
   if ~ OBJ_VALID(self.ogrid) then Message, 'Original grid not initialized yet!'
-            
-  if not self.ogrid->set_ROI(SHAPE=shape,  $
-    POLYGON=polygon, MASK=mask,  $
-    CROPBORDER=cropborder,  $
-    GRID=grid,    $
-    CORNERS=corners, $
-    NO_ERASE=no_erase, $
-    SRC=src, $
-    REMOVE_ENTITITES=remove_entitites, $
-    KEEP_ENTITITES=keep_entitites, $
-    ROI_MASK_RULE=roi_mask_rule) then Message, 'Something went wrong while making a ROI.'
   
-  if self.ogrid->is_ROI() then begin
-    self.ogrid->get_ROI, SUBSET=subset, MARGIN=margin
+  ; if corners we do not need ROI which is computationally expensive
+  if N_ELEMENTS(CORNERS) ne 0 then begin
+    if ~ arg_okay(CORNERS, /ARRAY, /NUMERIC, N_ELEM=4) then Message, WAVE_Std_Message('CORNERS', /ARG)
+    x = CORNERS[[0,2]]
+    y = CORNERS[[1,3]]
+    self.ogrid->getProPerty, TNT_C=tnt_c
+    self.ogrid->transform, x, y, i, j, SRC=src, /NEAREST
+    if N_ELEMENTS(margin) eq 1 then begin
+      i += [-margin,+margin]
+      j += [-margin,+margin]
+    endif
+    if i[0] gt i[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if j[0] gt j[1] then message, WAVE_Std_Message('CORNERS', /RANGE)
+    if i[0] lt 0 then begin
+      message, 'X Down left corner out of bounds: set to 0', /INFORMATIONAL
+      i[0] = 0
+    endif
+    if j[0] lt 0 then begin
+      message, 'Y Down left corner out of bounds: set to 0', /INFORMATIONAL
+      j[0] = 0
+    endif
+    if i[1] ge tnt_c.nx then begin
+      message, 'X Upper right corner out of bounds: set to nx-1', /INFORMATIONAL
+      i[1] = tnt_c.nx-1
+    endif
+    if j[1] ge tnt_c.ny then begin
+      message, 'Y Upper right corner out of bounds: set to ny-1', /INFORMATIONAL
+      j[1] = tnt_c.ny-1
+    endif
+    subset = [i[0], i[1]-i[0]+1, j[0], j[1]-j[0]+1]
     case self.order of
       0: begin
-       self.subset = subset
+        self.subset = subset
       end
       1: begin
-       self.ogrid->getProperty, TNT_C=c
-       subset[2] = c.ny - subset[2] - subset[3] ; up an down TODO: test this!
-       self.subset = subset
+        _subs = subset
+        _subs[2] = tnt_c.ny - _subs[2] - _subs[3] ; up an down TODO: test this!
+        self.subset = _subs
       end
       else: Message, 'Order not ok'
     endcase
-
-    new_grid = self.ogrid->reGrid(/TO_ROI, MARGIN=margin)
+    
+    x0 = tnt_c.x0 + subset[0] * tnt_c.dx
+    y0 = tnt_c.y0 - (tnt_c.ny-(subset[2]+subset[3])) * tnt_c.dy
+    nx = subset[1]
+    ny = subset[3]  
+    dx = tnt_c.dx
+    dy = tnt_c.dy
+    new_grid = OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=tnt_c.proj)
     IF NOT self->w_Grid2D::ReInit(GRID=new_grid) then Message, 'Something went wrong while making a new grid.'
-    dummy = self.ogrid->set_ROI()    
+    dummy = self.ogrid->set_ROI()
     undefine, new_grid
+    
   endif else begin
-    self.subset = [0,0,0,0]
-    IF NOT self->w_Grid2D::ReInit(GRID=self.ogrid) then Message, 'Something went wrong while making a new grid.'
+  
+    if not self.ogrid->set_ROI(SHAPE=shape,  $
+      POLYGON=polygon, MASK=mask,  $
+      CROPBORDER=cropborder,  $
+      GRID=grid,    $
+      NO_ERASE=no_erase, $
+      SRC=src, $
+      REMOVE_ENTITITES=remove_entitites, $
+      KEEP_ENTITITES=keep_entitites, $
+      ROI_MASK_RULE=roi_mask_rule) then Message, 'Something went wrong while making a ROI.'
+      
+    if self.ogrid->is_ROI() then begin
+      self.ogrid->get_ROI, SUBSET=subset, MARGIN=margin
+      case self.order of
+        0: begin
+          self.subset = subset
+        end
+        1: begin
+          self.ogrid->getProperty, TNT_C=c
+          subset[2] = c.ny - subset[2] - subset[3] ; up an down TODO: test this!
+          self.subset = subset
+        end
+        else: Message, 'Order not ok'
+      endcase
+      
+      new_grid = self.ogrid->reGrid(/TO_ROI, MARGIN=margin)
+      IF NOT self->w_Grid2D::ReInit(GRID=new_grid) then Message, 'Something went wrong while making a new grid.'
+      dummy = self.ogrid->set_ROI()
+      undefine, new_grid
+    endif else begin
+      self.subset = [0,0,0,0]
+      IF NOT self->w_Grid2D::ReInit(GRID=self.ogrid) then Message, 'Something went wrong while making a new grid.'
+    endelse
+    
   endelse
-    
+  
   return, 1
-    
+  
 end
 
 ;+

@@ -1367,7 +1367,7 @@ end
 ;    MISSING: in, optional
 ;             value to set to missing values in the final grid. NaN or 0 are default values depending on the data type
 ;    METHOD: in, optional, type = str, default = 'MEAN'
-;            the transform method (currently 'MEAN', 'MIN', 'MAX', 'SUM', 'N_SIG' are implemented)
+;            the transform method (currently 'MEAN', 'MIN', 'MAX', 'SUM' are implemented)
 ;    IN_FWD_TRAFO: in, optional
 ;                  to spare time in computation, the user may want want to perform
 ;                  once and only once the `w_Grid2D::fwd_transform_grid` and give its 
@@ -1481,7 +1481,6 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
         'MIN': _out_data[j] = MIN(d, /NAN)
         'MAX': _out_data[j] = MAX(d, /NAN)
         'SUM': _out_data[j] = TOTAL(d, /NAN)
-        'N_SIG': _out_data[j] = cntv
         else: Message, 'Method currently not supported: ' + str_equiv(METHOD)
       endcase
       if do_valid then _n_valid[j] = cntv
