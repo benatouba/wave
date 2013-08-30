@@ -29,7 +29,7 @@ function w_ncdf_format, filename
     string([67b, 68b, 70b, 1b]): return, 'FORMAT_CLASSIC'
     string([67b, 68b, 70b, 2b]): return, 'FORMAT_64BIT'
     string([137b, 72b, 68b, 70b]): return, 'FORMAT_NETCDF4'
-    else: return, 'Unknown'
+    else: return, 'UNKNOWN'
   endcase
   
 end

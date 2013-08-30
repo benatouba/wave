@@ -1779,10 +1779,13 @@ end
 ;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
 ;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
 ;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
-;                       * 3 = Pixel center point is used to test the appartenance to the ROI. This is the default!
-;    ROI_MASK_RULE: in, type = boolean
-;                   set this keyword if the interior/exterior parts of the shape entities are
-;                   not defined by the entities (requires more computing time)
+;                       * 3 = Pixel center point is used to test the appartenance to the ROI (requires more computing time)
+;                             This is the default!
+;    CHECK_INTERIOR: in, type=boolean
+;                    Standard shapes' entities use 'parts' do define interior (island) vertices.
+;                    If this is not the case (corrupted or bad quality files), set this keyword 
+;                    to systematically check if new verticies belong to a new entity or are in
+;                    the interior of the previous one. This requires much more computing time.
 ;
 ; :Returns:
 ;   1 if the ROI has been set correctly, 0 if not
