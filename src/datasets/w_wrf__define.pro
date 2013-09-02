@@ -973,6 +973,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       if (d1 and d2 and d3 and d4) then begin
         du = self->get_Var_Info('U') 
         dv = self->get_Var_Info('V') 
+        dw = self->get_Var_Info('W')
         if du then begin
           var = {name:'U_VAPORFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
@@ -983,6 +984,12 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
           var = {name:'V_VAPORFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
           var = {name:'V_INTVAPORFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dw then begin
+          var = {name:'W_VAPORFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Vertical water vapor flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'W_INTVAPORFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated vertical water vapor flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif
         if du and dv then begin
@@ -998,6 +1005,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       if (d1 and d2 and d3 and d4) then begin
         du = self->get_Var_Info('U') 
         dv = self->get_Var_Info('V') 
+        dw = self->get_Var_Info('W')
         if du then begin
           var = {name:'U_LIQUIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal liquid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
@@ -1008,6 +1016,12 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
           var = {name:'V_LIQUIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional liquid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
           var = {name:'V_INTLIQUIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional liquid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dw then begin
+          var = {name:'W_LIQUIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Vertical liquid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'W_INTLIQUIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated vertical liquid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif
         if du and dv then begin
@@ -1023,6 +1037,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       if (d1 and d2 and d3 and d4) then begin
         du = self->get_Var_Info('U') 
         dv = self->get_Var_Info('V') 
+        dw = self->get_Var_Info('W')
         if du then begin
           var = {name:'U_SOLIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Zonal solid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
@@ -1033,6 +1048,12 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
           var = {name:'V_SOLIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Meridional solid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
           dvars = [dvars,var]
           var = {name:'V_INTSOLIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated meridional solid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
+          dvars = [dvars,var]
+        endif
+        if dw then begin
+          var = {name:'W_SOLIDFLUX',unit:'kg m-2 s-1',ndims:N_elements(dims),description:'Vertical solid water flux',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+          dvars = [dvars,var]
+          var = {name:'W_INTSOLIDFLUX',unit:'kg m-1 s-1',ndims:N_elements(dims)-1,description:'Column integrated vertical solid water flux',type:'FLOAT', dims:PTR_NEW([dims[0],dims[1],dims[3]]), dimnames:PTR_NEW([dnames[0],dnames[1],dnames[3]])}
           dvars = [dvars,var]
         endif
         if du and dv then begin
@@ -2211,6 +2232,13 @@ function w_WRF::get_Var, Varid, $
           dimnames=dimnames)
     end
     
+    'W_VAPORFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
+    end
+    
     'U_LIQUIDFLUX': begin
       if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
       value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
@@ -2219,6 +2247,13 @@ function w_WRF::get_Var, Varid, $
     end
     
     'V_LIQUIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+          dims=dims, $
+          dimnames=dimnames)
+    end
+    
+    'W_LIQUIDFLUX': begin
       if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
       value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
           dims=dims, $
@@ -2239,6 +2274,13 @@ function w_WRF::get_Var, Varid, $
         dimnames=dimnames)
     end
     
+    'W_SOLIDFLUX': begin
+      if N_ELEMENTS(zlevels) eq 1 then Message, 'ZLEVELS and moisture fluxes not compatible'
+      value = w_wrf_moisture_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
     'U_INTVAPORFLUX': begin
       value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
         dims=dims, $
@@ -2246,6 +2288,12 @@ function w_WRF::get_Var, Varid, $
     end
     
     'V_INTVAPORFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'W_INTVAPORFLUX': begin
       value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
         dims=dims, $
         dimnames=dimnames)
@@ -2263,6 +2311,12 @@ function w_WRF::get_Var, Varid, $
         dimnames=dimnames)
     end
     
+    'W_INTLIQUIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
     'U_INTSOLIDFLUX': begin
       value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
         dims=dims, $
@@ -2270,6 +2324,12 @@ function w_WRF::get_Var, Varid, $
     end
     
     'V_INTSOLIDFLUX': begin
+      value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
+        dims=dims, $
+        dimnames=dimnames)
+    end
+    
+    'W_INTSOLIDFLUX': begin
       value = w_wrf_integrate_flux(vid, self, time, nt, t0=t0, t1=t1, $
         dims=dims, $
         dimnames=dimnames)

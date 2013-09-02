@@ -48,6 +48,7 @@ function w_wrf_moisture_flux, vid, wrf, time, nt, T0=t0, T1=t1, DIMS=dims, DIMNA
   case wind of
     'U':
     'V':
+    'W':
     else: Message, 'Variable ID not understood or not valid'
   endcase
   

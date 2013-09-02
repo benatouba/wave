@@ -48,6 +48,7 @@ function w_wrf_integrate_flux, vid, wrf, time, nt, t0=t0, t1=t1, dims=dims, dimn
   case wind of
     'U':
     'V':
+    'W':
     else: Message, 'Variable ID not understood or not valid'
   endcase
   
