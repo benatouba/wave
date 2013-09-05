@@ -446,11 +446,7 @@ end
 ;                   All other entities are ignored.
 ;    ROI_MASK_RULE: Set this keyword to an integer specifying the rule used to determine whether
 ;                   a given pixel should be set within the mask when computing a mask with
-;                   polygons or shapes. Valid values include::
-;                       * 0 = Boundary only. All pixels falling on a region's boundary are set.
-;                       * 1 = Interior only. All pixels falling within the region's boundary, but not on the boundary, are set.
-;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
-;                       * 3 = Pixel center point is used to test the appartenance to the ROI. This is the default!
+;                   polygons or shapes. Only 2 is implemented for define_subset!!!
 ;    MARGIN: in
 ;            set to a positive integer value to add a margin to the subset
 ;            (MARGIN=1 will put one grid point on each side of the subset, so two
@@ -540,8 +536,18 @@ function w_gisdata::defineSubset, $
     dummy = self.ogrid->set_ROI()
     undefine, new_grid
     
+  endif else if N_ELEMENTS(shape) ne 0 then begin
+     ; For shapes we use a workaround too
+     if N_ELEMENTS(ROI_MASK_RULE) ne 0 then if ROI_MASK_RULE ne 2 then Message, 'For defineSubset only ROI_MASK_RULE=2 is implemented.'
+     self->transform_shape, shape, x, y, conn, SHP_SRC=src, REMOVE_ENTITITES=remove_entitites, KEEP_ENTITITES=keep_entitites, $
+      /NO_COORD_SHIFT, /MARK_INTERIOR, ENTRULE=entrule
+    if N_ELEMENTS(x) eq 0 then Message, 'Nothing usable in the shapefile: ' + shape
+    xr = 0 > round(utils_minmax(x)) < (self.tnt_c.nx-1) ;TODO: I THINK this is equivalent to ROI_MASK_RULE=2. This should be checked somehow
+    yr = 0 > round(utils_minmax(y)) < (self.tnt_c.ny-1) 
+    corners = [xr[0],yr[0],xr[1],yr[1]]
+    return, self->defineSubset(CORNERS=corners, MARGIN=margin)
   endif else begin
-  
+    ; This is the general case
     if not self.ogrid->set_ROI(SHAPE=shape,  $
       POLYGON=polygon, MASK=mask,  $
       CROPBORDER=cropborder,  $
