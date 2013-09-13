@@ -179,11 +179,6 @@ Function w_GEO_nc::Init, FILE = file, SUBSET = subset
   self.YID = foundY
   self.TID = foundT
   
-  ;******************************
-  ; Check  coordinate variables *
-  ;******************************
-  if ~utils_nc_LonLat(self.cdfid) then  Message, 'X and Y variables could not be found.'
-  
   self.t0 = -1LL
   self.t1 = -1LL 
   time = -1LL
@@ -837,11 +832,11 @@ pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   ENDIF  
   
   ok = utils_nc_LonLat(self.cdfid, lon_id, lat_id)
+  if ~ ok then  Message, 'X and Y variables could not be found.'
   
   lon = self->w_GEO_nc::get_Var(lon_id, dimnames = londims)  
   lat = self->w_GEO_nc::get_Var(lat_id, dimnames = latdims)  
   
-
   nlondims = N_ELEMENTS(londims)
   nlatdims = N_ELEMENTS(latdims)
   
