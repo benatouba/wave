@@ -791,6 +791,18 @@ pro w_GEO_nc::plot_TimeSerie, Varid, $ ; The netCDF variable ID, returned from a
     
 end
 
+;+
+; :Description:
+;   Checks if geolocalisation info is found in the NCDF file.
+;               
+;-
+function w_GEO_nc::has_ncdf_coordinates
+  
+  return, utils_nc_LonLat(self.cdfid)
+  
+end
+
+;+
 ; :Description:
 ;   Retrieve geolocalisation info from the NCDF file.
 ;    
@@ -816,7 +828,6 @@ end
 ;               
 ; :History:
 ;      Written by FaM, 2010.
-
 ;-
 pro w_GEO_nc::get_ncdf_coordinates, lon, lat, nx, ny, NO_REFORM = no_reform
   
