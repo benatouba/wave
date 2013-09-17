@@ -525,6 +525,9 @@ function w_gisdata::defineSubset, $
       else: Message, 'Order not ok'
     endcase
     
+    pnok = where(self.subset lt 0, cntno)
+    if cntno ne 0 then Message, 'Something wrong with subset'
+    
     x0 = tnt_c.x0 + subset[0] * tnt_c.dx
     y0 = tnt_c.y0 - (tnt_c.ny-(subset[2]+subset[3])) * tnt_c.dy
     nx = subset[1]

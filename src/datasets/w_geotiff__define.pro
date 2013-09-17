@@ -107,7 +107,7 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
               endcase
             endif else  Message, 'Projection unknown. Contact Fabi.'
           endelse
-                    
+          
           ;Projection
           GIS_make_proj, ret, proj, PARAM='2, ' + zone
           grid = OBJ_NEW('w_Grid2D', nx=nx, $
@@ -125,8 +125,13 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
             if ~ (geotiff.GEOGCITATIONGEOKEY eq 'GCS_WGS_1984' $
               or geotiff.GEOGCITATIONGEOKEY eq 'WGS 84') $
               then Message, 'Projection unknown. Contact Fabi.'
-          endif else Message, 'Projection unknown. Contact Fabi.'
-          
+          endif else begin
+            d = Where(fields eq 'GEOGRAPHICTYPEGEOKEY', cnt)
+            if cnt ne 0 then begin
+              ; I need to know the datum. Currently WGS84 should be enough
+              if geotiff.GEOGRAPHICTYPEGEOKEY ne 4326 then Message, 'Projection unknown. Contact Fabi.'
+            endif else   Message, 'Projection unknown. Contact Fabi.'
+          endelse
           ;Projection
           GIS_make_proj, ret, proj, PARAM='1, WGS-84'
           grid = OBJ_NEW('w_Grid2D', nx=nx, $
