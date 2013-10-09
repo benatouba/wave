@@ -1776,7 +1776,7 @@ end
 ;   to worry about it).
 ;   
 ;   You can give a true color as argument to override this behavior and 
-;   set by yourself a true color img (3,nx,ny) to put on the map. If you do
+;   set by yourself a true color img (3,nx,ny or nx,ny,3) to put on the map. If you do
 ;   so, the data and levels will be ignored on the plot.
 ;   
 ; :Params:
@@ -1827,8 +1827,13 @@ function w_Map::set_img, img, BLUE_MARBLE=blue_marble, HR_BLUE_MARBLE=hr_blue_ma
   endif
   
   if N_ELEMENTS(img) ne 0 then begin
-    s = SIZE(img, /DIMENSIONS)
-    if s[0] ne 3 then Message, '$IMG does not seem to be a TRUECOLOR image. Check it (dims = [3,nx,ny]).'
+    _img = img
+    s = SIZE(_img, /DIMENSIONS)
+    if s[0] ne 3 then begin
+      if s[2] ne 3 then Message, '$IMG does not seem to be a TRUECOLOR image. Check it (dims = [3,nx,ny]).'
+      _img = Transpose(_img, [2,0,1])
+      s = SIZE(_img, /DIMENSIONS)
+    endif
     PTR_FREE, self.img
     PTR_FREE, self.info
     if s[1] ne self.Xsize or s[2] ne self.Ysize then $
@@ -2388,7 +2393,7 @@ function w_Map::set_wind, ud, vd, grid, $
   velx = ud[xi,yi]
   vely = vd[xi,yi] 
   
-  if N_ELEMENTS(stdvel) eq 0 then _stdvel = max(sqrt(velx^2+vely^2)) else _stdvel = stdvel
+  if N_ELEMENTS(stdvel) eq 0 then _stdvel = max(sqrt(velx^2+vely^2), /NAN) else _stdvel = stdvel
   
   posX += 0.5
   posy += 0.5  

@@ -120,13 +120,21 @@ pro w_NCDF::Cleanup
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    if STRMID(!Error_State.Msg, 11, 12, /REVERSE_OFFSET) ne 'valid cdfid.' then $
+      ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
 
-  NCDF_CLOSE, self.cdfid
   PTR_FREE, self.varNames
   PTR_FREE, self.dimNames
   PTR_FREE, self.dimSizes
   PTR_FREE, self.gattNames
-  
+  NCDF_CLOSE, self.cdfid
+
 END
 
 ;+

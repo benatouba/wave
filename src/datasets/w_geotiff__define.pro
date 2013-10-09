@@ -176,6 +176,35 @@ end
 
 ;+
 ; :Description:
+;    Get access to some params. 
+;
+; :Keywords:
+;    INFO: out, optional
+;          structure containing information about the image in the file
+;    GEOTIFF: out, optional
+;          GeoTIFF tags and keys found in the file
+;    _Ref_Extra: out
+;                all parent classed property
+;                
+;-      
+pro w_GEOTIFF::GetProperty,  $
+    INFO=info, $
+    GEOTIFF=geotiff, $
+    _Ref_Extra=extra
+    
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  IF Arg_Present(INFO) THEN info = *self.info
+  IF Arg_Present(GEOTIFF) THEN geotiff = *self.geotiff
+  
+  self->w_GISdata::GetProperty, _Extra=extra
+  
+end
+
+;+
+; :Description:
 ;    To obtain the list af available variables in the dataset.
 ;
 ; :Keywords:
@@ -293,6 +322,8 @@ function w_GEOTIFF::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
   
   undefine, info, time, nt
   
+  tifinfo = *self.info
+  
   if N_ELEMENTS(id) eq 0 then begin
     id = '0'
   endif
@@ -303,9 +334,11 @@ function w_GEOTIFF::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
     sub_rect = [self.subset[0], self.subset[2], self.subset[1], self.subset[3]]
   endif
  
-  out = READ_TIFF(self.file, SUB_RECT=sub_rect)
+  out = READ_TIFF(self.file, SUB_RECT=sub_rect, INTERLEAVE=2)
   
-  return, ROTATE(out, 7)
+  for i=0, tifinfo.CHANNELS-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
+  
+  return, out
   
 end
 
