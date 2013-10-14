@@ -545,7 +545,6 @@ function w_gr_DataLevels, data, $
              if r[i] - 1 ne r[i-1] then r[i] = r[i] - 1
            endif
          endfor
-         Print, 'I checked for uniqueness'
        endif
        uu = UNIQ(r)
        if N_ELEMENTS(uu) ne N_ELEMENTS(r) then Message, 'sorry, histequal not working with this data / n_level combination...'

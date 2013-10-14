@@ -2540,7 +2540,7 @@ pro TEST_WRF_OUT
     if abs(GISLAT[NX-1,Ny-1]-33.) gt MEAN(GISLAT[nx-1,1:*]-GISLAT[nx-1,0:Ny-2])/2. then error +=1
     
     t2_after_crop = dom1->get_var('t2')
-    dom1_crop = dom1->reGrid(/TO_ROI)
+    dom1_crop = dom1->reGrid()
     if ~w_gis_compareGrid(dom1_crop, dom1) then error+=1  
     
     ok = dom1->define_subset()
