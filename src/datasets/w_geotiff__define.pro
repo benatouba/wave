@@ -146,12 +146,17 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
       endcase
     endif else Message, 'Projection unknown. Contact Fabi.'
   endelse
+    
+  case (info.orientation) of
+    0: self.order = 0
+    1: self.order = 1
+    4: self.order = 0
+    else: Message, 'GEOTIFF orientation not supported'
+  endcase 
   
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
   if ~ ok then return, 0
   undefine, grid
-  
-  self.order = 1 ;TODO: important! Are all geotiff files UL corner???
   
   return, 1
   

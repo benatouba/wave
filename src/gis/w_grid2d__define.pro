@@ -1094,6 +1094,10 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING=missing, BILINEAR=b
   if siz_src[0] eq 2 then n = 1 else if siz_src[0] eq 3 then n = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
   mx = siz_src[1] & my = siz_src[2]
   
+  src_grid->getProperty, tnt_c=src_c
+  if mx ne src_c.nx then Message, 'DATA array and GRID do not agree.'
+  if my ne src_c.ny then Message, 'DATA array and GRID do not agree.'
+  
   is_dst = FALSE
   if N_ELEMENTS(DATA_DST) ne 0 then begin
      if ~ arg_okay(DATA_DST, /NUMERIC) then Message, WAVE_Std_Message('DATA_DST', /ARG)
@@ -1118,7 +1122,6 @@ function w_Grid2D::map_gridded_data, data, src_grid, MISSING=missing, BILINEAR=b
   cubic = KEYWORD_SET(CUBIC)
   if ~cubic and ~bili then nearest = TRUE else nearest = false ;Otherwize, we need the decimals of course
   
-  src_grid->getProperty, tnt_c = src_c  
   utils_1d_to_2d, INDGEN(self.tnt_c.nx, /LONG), -INDGEN(self.tnt_c.ny, /LONG) + self.tnt_c.ny - 1, xi, yi
   
   if self->is_ROI() and KEYWORD_SET(TO_ROI) then begin
@@ -1402,6 +1405,10 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
   siz_src = SIZE(data) 
   if siz_src[0] eq 2 then n = 1 else if siz_src[0] eq 3 then n = siz_src[3] else  Message, WAVE_Std_Message('data', /ARG)
   mx = siz_src[1] & my = siz_src[2]
+  
+  src_grid->getProperty, tnt_c=src_c
+  if mx ne src_c.nx then Message, 'DATA array and GRID do not agree.'
+  if my ne src_c.ny then Message, 'DATA array and GRID do not agree.'
   
   dataTypeName = Size(data, /TNAME)
   

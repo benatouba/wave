@@ -2502,6 +2502,28 @@ end
 
 ;+
 ; :Description:
+;    Gets the image produced by w_Map as RGB triplet. No map, 
+;    no countours, no country borders, no shapes, no bling bling.
+;    
+;    This is usefull if you want to play around and make transparent stuffs
+;    for example.
+;
+;-
+function w_Map::get_img
+
+   cgDisplay, self.Xsize, self.Ysize, /FREE, /PIXMAP
+   xwin = !D.WINDOW
+   
+   ; Std image
+  if PTR_VALID(self.img) or PTR_VALID(self.info) then ok = self->_draw_image() else message, 'No image set yet...'
+  disp_img = tvrd(TRUE=3)
+  wdelete, xwin
+  return, disp_img
+
+end
+
+;+
+; :Description:
 ;    To draw a color bar on an existing plot. 
 ;
 ;-   
