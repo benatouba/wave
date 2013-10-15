@@ -1304,16 +1304,27 @@ end
 ;           a factor to multiply to nx and ny (ignored if XSIZE or YSIZE are set)
 ;    TO_ROI: in, optional, type = boolean
 ;            if set, the returned grid will be will be the 
-;            smallest enclosing grid of the grid ROIs (if present).  
+;            smallest enclosing grid of the grid ROIs (if present). 
+;    ROIMARGIN: in 
+;               set to a positive integer value to add a margin to the ROI subset
+;               (ROIMARGIN=1 will put one grid point on each side of the ROI subset, 
+;               so two more columns per dimension in total)
+;    EXPAND: in 
+;            set to a scalar integer N to expand the new grid of N pixels on each side
+;            (note that setting a negative value could work too...)
 ;    MARGIN: in
-;            set to a positive integer value to add a margin to the subset
-;            (MARGIN=1 will put one grid point on each side of the subset, so two
-;             more columns per dimension in total)
+;            decprecated. Now called ROIMARGIN
 ; :Returns:
 ;     A new w_Grid2D, which is a resampled version of the object grid
 ;     
 ;-
-function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_roi, MARGIN=margin
+function w_Grid2D::reGrid, XSIZE=Xsize, $
+  YSIZE=Ysize, $
+  FACTOR=factor, $
+  TO_ROI=to_roi, $
+  ROIMARGIN=roimargin, $
+  EXPAND=expand, $
+  MARGIN=margin
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1322,6 +1333,7 @@ function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_ro
   ON_ERROR, 2
   
   if ~ arg_okay(FACTOR, /NUMERIC) then factor = 1
+  if KEYWORD_SET(MARGIN) then ROIMARGIN=1 ; dperecated keyword
   
   if N_ELEMENTS(Xsize) ne 0 and N_ELEMENTS(Ysize) ne 0 then Message, 'Ambiguous keyword combination.' 
   if N_ELEMENTS(Xsize) ne 0 then factor = double(Xsize) / self.tnt_c.nx
@@ -1347,6 +1359,13 @@ function w_Grid2D::reGrid, Xsize=Xsize, Ysize=Ysize, FACTOR=factor, TO_ROI=to_ro
   
   x0 = x0 - 0.5d*self.tnt_c.dx + dx/2d
   y0 = y0 + 0.5d*self.tnt_c.dy - dy/2d
+  
+  if N_ELEMENTS(EXPAND) eq 1 then begin
+    nx += 2 * long(expand)
+    ny += 2 * long(expand)
+    x0 = x0 - dx * float(expand)
+    y0 = y0 + dy * float(expand)
+  endif
   
   return, OBJ_NEW('w_Grid2D', x0=x0, y0=y0, nx=nx, ny=ny, dx=dx, dy=dy, PROJ=self.tnt_c.proj, META=self.meta + ' resampled (factor ' +str_equiv(factor) + ')')
     

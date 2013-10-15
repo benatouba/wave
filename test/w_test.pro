@@ -2425,6 +2425,15 @@ pro TEST_WRF_OUT
     if TOTAL(ABS(out_data-t2_after_crop)) ne 0 then error+=1
     if ~w_gis_compareGrid(dom1_crop, out_grid) then error+=1
     
+    ;EXPAND Stuff
+    ok = dom1->define_subset()
+    if ~ ok then  error+=1
+    out_grid = dom1->reGrid(EXPAND=-5)
+    ok = dom1->define_subset(CROPBORDER=5)
+    if ~w_gis_compareGrid(dom1, out_grid) then error+=1
+    OBJ_DESTROY, out_grid
+    ok = dom1->define_subset()   
+    
     ok = dom1->set_ROI()
     if ~ ok then error+=1
     OBJ_DESTROY, out_grid
