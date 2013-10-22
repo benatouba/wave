@@ -458,7 +458,10 @@ end
 ;         WAVE/OBJ_GIS 
 ;
 ; :Keywords:
-;    
+;    SN_STAGGERED_GRID: out
+;                       a grid object for the south-north staggered grid
+;    WE_STAGGERED_GRID: out
+;                       a grid object for the west-east staggered grid
 ;    _Ref_Extra: out
 ;                all parent classed property
 ;    
@@ -466,6 +469,8 @@ end
 ;     Written by FaM, 2010.
 ;-      
 PRO w_WRF::GetProperty,  $
+    SN_STAGGERED_GRID=sn_staggered_grid,  $
+    WE_STAGGERED_GRID=we_staggered_grid,  $
     _Ref_Extra=extra
     
   ; SET UP ENVIRONNEMENT
@@ -479,9 +484,21 @@ PRO w_WRF::GetProperty,  $
     RETURN
   ENDIF
   
+    
+  if ARG_PRESENT(SN_STAGGERED_GRID) then begin
+    c = self.tnt_c    
+    sn_staggered_grid = OBJ_NEW('w_Grid2D', PROJ=c.proj, X0=c.x0, Y0=c.y0+c.dy/2, DX=c.dx, DY=c.dy, NX=c.nx, NY=c.ny+1)     
+  endif
+  
+  if ARG_PRESENT(WE_STAGGERED_GRID) then begin
+    c = self.tnt_c    
+    we_staggered_grid = OBJ_NEW('w_Grid2D', PROJ=c.proj, X0=c.x0-c.dx/2, Y0=c.y0, DX=c.dx, DY=c.dy, NX=c.nx+1, NY=c.ny)     
+  endif
+  
+  
   self->w_Grid2D::GetProperty, _Extra=extra
   self->w_GEO_nc::GetProperty, _Extra=extra
-  
+
 end
 
 ;+

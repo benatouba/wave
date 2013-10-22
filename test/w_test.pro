@@ -2683,6 +2683,38 @@ pro TEST_MODIS
         
 end
 
+pro TEST_WRF_STAGGRID
+    
+    fdir = w_test_file_directory() + 'WRF/'
+    error = 0 
+    
+    ;-------------------------
+    ; Test 3Hourly product
+    ;-------------------------
+    
+    w = OBJ_NEW('w_WRF', FILE=fdir+'geo_em.d03.nc')
+    w->GetProperty, SN_STAGGERED_GRID=sn, WE_STAGGERED_GRID=we
+      
+    w->Get_XY, x, y, nx, ny
+    
+    sn->Get_XY, tx, ty, tnx, tny
+    if tnx ne nx then error += 1
+    if MAX(ABS(tx[*,0:ny-1]-x)) gt 1e-6 then error += 1
+    if tny ne (ny+1) then error += 1
+    half = (ty[*,1:*] + ty[*,0:tny-2])/2   
+    if MAX(ABS(half-y)) gt 1e-6 then error += 1
+    
+    we->Get_XY, tx, ty, tnx, tny
+    if tny ne ny then error += 1
+    if MAX(ABS(ty[0:nx-1,*]-y)) gt 1e-6 then error += 1
+    if tnx ne (nx+1) then error += 1
+    half = (tx[1:*,*] + tx[0:tnx-2,*])/2   
+    if MAX(ABS(half-x)) gt 1e-6 then error += 1    
+        
+    if error ne 0 then message, '% TEST_WRF_STAGGRID NOT passed', /CONTINUE else print, 'TEST_WRF_STAGGRID passed'
+    
+end
+
 pro TEST_WRF_GEO
     
     fdir = w_test_file_directory() + 'WRF/'
@@ -4900,6 +4932,7 @@ pro TEST_DATASETS, NCDF = ncdf
   TEST_FNL
   TEST_DEM
   TEST_GEOTIF
+  TEST_WRF_STAGGRID
 end
 
 pro TEST_UTILS
