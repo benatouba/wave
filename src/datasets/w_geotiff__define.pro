@@ -341,7 +341,7 @@ function w_GEOTIFF::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
  
   out = READ_TIFF(self.file, SUB_RECT=sub_rect, INTERLEAVE=2)
   
-  for i=0, tifinfo.CHANNELS-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
+  if self.order eq 1 then for i=0, tifinfo.CHANNELS-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
   
   return, out
   
