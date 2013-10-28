@@ -802,6 +802,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       
       
       ;THETA
+      d1 = self->get_Var_Info('T', DIMNAMES=dnames,DIMS=dims)   
       if (d1) then begin
         var = {name:'THETA',unit:'K',ndims:N_elements(dims),description:'Potential Temperature (theta)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]    

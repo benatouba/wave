@@ -631,24 +631,30 @@ pro w_GISdata::QuickPlotVar, id, WID=wid, _EXTRA=extra
   nd = SIZE(var, /N_DIMENSIONS)
   case nd of
     2: begin
-       dimnames = ['EAST-WEST','SOUTH-NORTH']
-       w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
-                      dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid 
+      dimnames = ['EAST-WEST','SOUTH-NORTH']
+      w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
+        dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid
     end
     3: begin
-       dimnames = ['EAST-WEST','SOUTH-NORTH','TIME']
-       w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
-                      dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid , $
-                       dim3tags=tsrt
+      if N_ELEMENTS(tsrt) eq (SIZE(var, /DIMENSIONS))[2] then begin
+        dimnames = ['EAST-WEST','SOUTH-NORTH','TIME']
+        w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
+          dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid , $
+          dim3tags=tsrt
+      endif else begin
+        dimnames = ['EAST-WEST','SOUTH-NORTH','Z']
+        w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
+          dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid
+      endelse
     end
     4: begin
-       dimnames = ['EAST-WEST','SOUTH-NORTH','Z','TIME']
-       w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
-                      dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid , $
-                       dim4tags=tsrt
+      dimnames = ['EAST-WEST','SOUTH-NORTH','Z','TIME']
+      w_QuickPlot, var, COLORTABLE=13, TITLE=title, WINDOW_TITLE='QuickPlot: ' + info.name, $
+        dimnames=dimnames, CBARTITLE=info.unit, COORDX=lon, COORDY=lat, WID=wid , $
+        dim4tags=tsrt
     end
     else: MESSAGE, 'Variable is not of suitable dimension.'
-  endcase      
+  endcase 
 
 end
 
