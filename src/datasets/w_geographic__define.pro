@@ -254,6 +254,7 @@ function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
   
   if self.order eq 1 then begin
      s = SIZE(out, /N_DIMENSIONS)
+     if s eq 2 then out = ROTATE(out, 7)
      if s eq 3 then for i=0, nt-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
      if s eq 4 then for i=0, nt-1 do for j=0, N_ELEMENTS(out[0,0,*,0])-1 do out[*,*,j,i] = ROTATE(out[*,*,j,i], 7)
   endif
