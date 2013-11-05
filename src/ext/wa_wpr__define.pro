@@ -501,6 +501,7 @@ pro wa_WPR::GetProperty,  $
   DOMAIN=domain, $
   EXPE=expe,  $
   DIRECTORY=directory,  $
+  PRESSURELEVELS=pressurelevels, $
   _Ref_Extra=extra
   
   ; SET UP ENVIRONNEMENT
@@ -512,6 +513,7 @@ pro wa_WPR::GetProperty,  $
   IF Arg_Present(HRES) THEN hres = self.hres  
   IF Arg_Present(EXPE) THEN expe = self.expe  
   IF Arg_Present(DOMAIN) THEN domain = self.domain
+  IF Arg_Present(PRESSURELEVELS) then pressurelevels = self.pressurelevels
   self->w_GISdata::GetProperty, _Extra=extra
   
 end
@@ -688,10 +690,10 @@ function wa_WPR::getVarObj, id, INFO=info
   if ~ self.objs->hasKey(v.id) then begin
     if v.pos eq -1 then Message, 'big problem, pos was not initialised'
     obj = OBJ_NEW('w_GEO_nc', FILE=(*self.files)[v.pos]) ; add the object to the hash
-    if OBJ_VALID(obj) then self.objs[v.id] = obj 
+    if OBJ_VALID(obj) then (self.objs)[v.id] = obj 
   endif
   
-  obj = self.objs[v.id]
+  obj = (self.objs)[v.id]
   
   return, obj
   
@@ -906,6 +908,7 @@ function wa_WPR::getVarData, id, $
   endif else begin
   
     ; ORIGINAL VARIABLE FROM FILE
+   
     obj = self->getVarObj(id)
     
     ; Some time subsetting
