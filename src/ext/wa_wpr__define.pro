@@ -513,7 +513,7 @@ pro wa_WPR::GetProperty,  $
   IF Arg_Present(HRES) THEN hres = self.hres  
   IF Arg_Present(EXPE) THEN expe = self.expe  
   IF Arg_Present(DOMAIN) THEN domain = self.domain
-  IF Arg_Present(PRESSURELEVELS) then pressurelevels = self.pressurelevels
+  IF Arg_Present(PRESSURELEVELS) then pressurelevels = *self.pressurelevels
   self->w_GISdata::GetProperty, _Extra=extra
   
 end
