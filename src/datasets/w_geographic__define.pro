@@ -232,6 +232,8 @@ end
 ;            in which dimension these indexes must be kept, otherwise `get_Var` will try
 ;            to do its best from what it knows 
 ;            (in most cases -4D arrays-, it should work fine).
+;   INVERTZ: in, optional, type=boolean
+;            if set, the Z levels are upside down
 ;            
 ; :Returns:
 ;   the data array
@@ -239,6 +241,7 @@ end
 ;-
 function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
     HOUROFDAY=hourofday, $
+    INVERTZ=invertz, $
     ZLEVELS=zlevels
 
   ; Set up environnement
@@ -258,6 +261,17 @@ function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
      if s eq 3 then for i=0, nt-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
      if s eq 4 then for i=0, nt-1 do for j=0, N_ELEMENTS(out[0,0,*,0])-1 do out[*,*,j,i] = ROTATE(out[*,*,j,i], 7)
   endif
+  
+  if KEYWORD_SET(INVERTZ) then begin
+    s = SIZE(out, /N_DIMENSIONS)
+    if nt eq 1 and s eq 2 then Message, 'INVERTZ not possible'
+    if nt ne 1 and s eq 3 then Message, 'INVERTZ not possible'
+    nz = N_ELEMENTS(out[0,0,*,0])
+    _out = out
+    for i=0, nt-1 do for j=0, nz-1 do out[*,*,j,i] = _out[*,*,nz-j-1,i]
+    undefine, _out
+  endif  
+  
   return, out
  
   
