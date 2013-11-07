@@ -256,25 +256,20 @@ function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
   out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1, HOUROFDAY=hourofday, ZLEVELS=zlevels)
   
   if self.order eq 1 then begin
-     s = SIZE(out, /N_DIMENSIONS)
-     if s eq 2 then out = ROTATE(out, 7)
-     if s eq 3 then for i=0, nt-1 do out[*,*,i] = ROTATE(out[*,*,i], 7)
-     if s eq 4 then for i=0, nt-1 do for j=0, N_ELEMENTS(out[0,0,*,0])-1 do out[*,*,j,i] = ROTATE(out[*,*,j,i], 7)
+    s = SIZE(out, /N_DIMENSIONS)
+    if s gt 4 then Message, 'More than four dimensions currently no, sorry.'
+    for i=0, N_ELEMENTS(out[0,0,*,0])-1 do for j=0, N_ELEMENTS(out[0,0,0,*])-1 do out[*,*,i,j] = ROTATE(out[*,*,i,j], 7)
   endif
   
   if KEYWORD_SET(INVERTZ) then begin
     s = SIZE(out, /N_DIMENSIONS)
-    if nt eq 1 and s eq 2 then Message, 'INVERTZ not possible'
+    if s eq 2 then Message, 'INVERTZ not possible'
     if nt ne 1 and s eq 3 then Message, 'INVERTZ not possible'
-    nz = N_ELEMENTS(out[0,0,*,0])
-    _out = out
-    for i=0, nt-1 do for j=0, nz-1 do out[*,*,j,i] = _out[*,*,nz-j-1,i]
-    undefine, _out
+    out = REVERSE(out, 3, /OVERWRITE)
   endif  
   
   return, out
- 
-  
+   
 end
 
 ;+
