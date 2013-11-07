@@ -396,47 +396,65 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::_draw_Map, WINDOW = window
+function w_Map::_draw_map, WINDOW = window
 
-  if self.map_params.type eq 'LONLAT' then begin
-    self.grid->get_Lonlat, lon, lat
-    if N_ELEMENTS(*(self.map_params.xlevels)) ne 0 then begin
-      cgContour, lon, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled, $
-        LEVELS = *(self.map_params.xlevels), C_THICK =  self.map_params.thick, WINDOW=window
-    endif
-    if N_ELEMENTS(*(self.map_params.ylevels)) ne 0 then begin
-      cgContour, lat, COLOR = self.map_params.color, C_LINESTYLE = self.map_params.style, /OVERPLOT, LABEL = self.map_params.labeled,$
-        LEVELS = *(self.map_params.ylevels), C_THICK =  self.map_params.thick, WINDOW=window
-    endif
+  format = self.map_params.tick_format
+  decimals = 0
+  if self.map_params.interval lt 0.01 then decimals = 3 $
+    else if self.map_params.interval lt 0.1 then decimals = 2 $
+      else if self.map_params.interval lt 1. then decimals = 1
+  add_lab = 0
+  case (self.map_params.type) of
+    'LONLAT': begin
+      self.grid->get_Lonlat, xx, yy, nx, ny
+      add_lab = 1
+    end
+    'EN_M': begin
+      self.grid->get_XY, xx, yy, nx, ny
+    end
+    'EN_KM': begin
+      self.grid->get_XY, xx, yy, nx, ny
+      xx = xx/1000.
+      yy = yy/1000.
+    end
+    else: Message, 'Big problem'
+  endcase
+  
+  if N_ELEMENTS(*(self.map_params.xlevels)) ne 0 then begin
+    cgContour, xx, COLOR=self.map_params.color, C_LINESTYLE=self.map_params.style, /OVERPLOT, LABEL=self.map_params.labeled, $
+      LEVELS=*(self.map_params.xlevels), C_THICK=self.map_params.thick, WINDOW=window
   endif
+  if N_ELEMENTS(*(self.map_params.ylevels)) ne 0 then begin
+    cgContour, yy, COLOR=self.map_params.color, C_LINESTYLE=self.map_params.style, /OVERPLOT, LABEL=self.map_params.labeled,$
+      LEVELS=*(self.map_params.ylevels), C_THICK=self.map_params.thick, WINDOW=window
+  endif
+
+  tick_label = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
+  if tick_label then begin 
     
-  TICK_LABEL = (N_ELEMENTS(*self.map_params.xtickvalues) ne 0) or (N_ELEMENTS(*self.map_params.ytickvalues) ne 0)
-  if TICK_LABEL then begin    
     x_ddy = - 0.023 * self.ysize + self.map_params.xtick_dy * self.ysize
-    x_ddx = self.map_params.xtick_dx * self.xsize
-    
+    x_ddx = self.map_params.xtick_dx * self.xsize    
     y_ddx = - 0.008 * self.ysize + self.map_params.ytick_dx * self.xsize 
     y_ddy = self.map_params.ytick_dy * self.ysize + x_ddy/3.
      
     ; Tick labels
     if !D.NAME eq 'PS' then charsize = 0.8 * self.map_params.label_size_f else charsize = double(!D.X_VSIZE) / self.Xsize * 0.7 * self.map_params.label_size_f
+    
     charthick = charsize
-    format = self.map_params.tick_format
     incr = self.map_params.tick_interval
-    if format eq '' then begin
-      if self.map_params.interval lt 0.1 then format = '(F8.2)' $
-        else if self.map_params.interval lt 1. then format = '(F8.1)' $
-          else format = '(I4)'
-    endif
     for i=self.map_params.xtick_start, N_ELEMENTS(*self.map_params.xticks)-1, incr do begin
-      label = string(abs((*self.map_params.xtickvalues)[i]),FORMAT=format)
-      if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
+      if add_lab then begin
+        label = w_Str(abs((*self.map_params.xtickvalues)[i]), decimals, FORMAT=format)
+        if (*self.map_params.xtickvalues)[i] lt 0 then label += 'W' else label += 'E'
+      endif else label = w_Str((*self.map_params.xtickvalues)[i], decimals, FORMAT=format)
       cgText, (*self.map_params.xticks)[i] + x_ddx, x_ddy, GEN_strtrim(label,/ALL), ALI = 0.5, WINDOW=window, /DATA, CHARSIZE=charsize, CHARTHICK=charthick
     endfor
     for i=self.map_params.ytick_start,N_ELEMENTS(*self.map_params.yticks)-1, incr do begin
-      label = string(abs((*self.map_params.ytickvalues)[i]),FORMAT=format)
-      if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
-      if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
+      if add_lab then begin
+        label = w_Str(abs((*self.map_params.ytickvalues)[i]), decimals, FORMAT=format)
+        if (*self.map_params.ytickvalues)[i] lt 0 then label += 'S' else label += 'N'
+        if (*self.map_params.ytickvalues)[i] eq 0 then label = 'Eq.'
+      endif else label = w_Str((*self.map_params.ytickvalues)[i], decimals, FORMAT=format)
       cgText, y_ddx, (*self.map_params.yticks)[i] + y_ddy, GEN_strtrim(label,/ALL), ALI = 1, CHARSIZE=charsize, WINDOW=window, CHARTHICK=charthick, /DATA
     endfor
   end
@@ -869,9 +887,9 @@ end
 ;    This is to define the lat-lon contouring on the map. 
 ;
 ; :Keywords:
-;    TYPE: in, optional, type = string, default = 'LONLAT'
-;          currently, only 'LONLAT' accepted. If set to '', removes the map contours.
-;          TODO: soon, 'UTM' will be implemented.
+;    TYPE: in, optional, type=string, default='LONLAT'
+;          either LONLAT, EN_M (eastings northings in m),
+;          or EN_KM (eastings northings in km);         
 ;    INTERVAL: in, optional, type = float, default = 10
 ;              interval between contours
 ;    YINTERVAL: in, optional, type = float, default = INTERVAL
@@ -1003,54 +1021,62 @@ function w_Map::set_map_params,  $
     return, 1
   endif
   
-  if self.map_params.type eq 'LONLAT' then begin
+  case (self.map_params.type) of  
+    'LONLAT': begin
+      self.grid->get_Lonlat, xx, yy, nx, ny
+    end
+    'EN_M': begin
+      self.grid->get_XY, xx, yy, nx, ny
+    end
+    'EN_KM': begin
+      self.grid->get_XY, xx, yy, nx, ny
+      xx = xx/1000.
+      yy = yy/1000.      
+    end
+    else: Message, 'Contour type not supported: ' + self.map_params.type
+  endcase
+
+  ;Change XY into interval coordinates
+  _xx = xx / _interval
+  _yy = yy / _yinterval
+  minmax_x = [ceil(min(_xx)), floor(max(_xx))]
+  minmax_y = [ceil(min(_yy)), floor(max(_yy))]
   
-    self.grid->get_Lonlat, lon, lat, nx, ny
-    ;Decimal factor for small contours    
-    if _interval lt 0.1 then dec_factor = 100. $
-     else if _interval lt 1. then dec_factor = 10. $
-      else dec_factor = 1.
-    if _yinterval lt 0.1 then ydec_factor = 100. $
-     else if _yinterval lt 1. then ydec_factor = 10. $
-      else ydec_factor = 1.
-    
-    Nlevels = (180 + 360) / _interval
-    levels = INDGEN(Nlevels) * (_interval*dec_factor) - 170 * dec_factor
-    p = where(levels le floor(max(Lon * dec_factor)) and levels ge ceil(min(Lon * dec_factor)), cnt)
-    if cnt gt 0 then lonlevels = levels[p] / dec_factor
-    Nlevels = (180 + 360) / _yinterval
-    levels = INDGEN(Nlevels) * (_yinterval*ydec_factor) - 170 * ydec_factor
-    p = where(levels le floor(max(Lat * ydec_factor)) and levels ge ceil(min(Lat * ydec_factor)), cnt)
-    if cnt gt 0 then latlevels = levels[p] / ydec_factor
-    
-    if _tick_labels then begin
-      for i=0,N_ELEMENTS(lonlevels)-1 do begin
-        p = where(Lon[*,0] le lonlevels[i] ,cnt)
-        if cnt gt 1 and cnt lt nx then begin
-          if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
-          if N_ELEMENTS(xtickValues) eq 0 then xtickValues =  lonlevels[i] else xtickValues = [xtickValues, lonlevels[i]]
-        endif
-      endfor
-      for i=0,N_ELEMENTS(latlevels)-1 do begin
-        p = where(Lat[0,*] le latlevels[i] ,cnt)
-        if cnt gt 1 and cnt lt ny then begin
-          if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
-          if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  latlevels[i] else ytickValues = [ytickValues, latlevels[i]]
-        endif
-      endfor
-    endif
-    
-    self.map_params.xlevels = PTR_NEW(lonlevels, /NO_COPY)
-    self.map_params.ylevels = PTR_NEW(latlevels, /NO_COPY)
-    self.map_params.xticks = PTR_NEW(xticks, /NO_COPY)
-    self.map_params.yticks = PTR_NEW(yticks, /NO_COPY)
-    self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
-    self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY)
-    self.map_params.interval = _interval
-    self.map_params.tick_format = _tick_format
-    self.map_params.tick_interval = _tick_interval
-    
-  endif else Message, 'Currently only LONLAT type is supported'
+  ;Back to normal coordinates
+  nxx = minmax_x[1] - minmax_x[0] + 1
+  nyy = minmax_y[1] - minmax_y[0] + 1
+  if nxx ne 0 then xlevels = minmax_x[0] * _interval +  FINDGEN(nxx) * _interval
+  if nyy ne 0 then ylevels = minmax_y[0] * _yinterval +  FINDGEN(nyy) * _yinterval
+
+  ;The labels 
+  if _tick_labels then begin
+    _xx = xx[*,0]
+    for i=0,N_ELEMENTS(xlevels)-1 do begin
+      p = where(_xx le xlevels[i], cnt)
+      if cnt gt 1 and cnt lt nx then begin
+        if N_ELEMENTS(xticks) eq 0 then xticks =  max(p) else xticks = [xticks, max(p)]
+        if N_ELEMENTS(xtickValues) eq 0 then xtickValues =  xlevels[i] else xtickValues = [xtickValues, xlevels[i]]
+      endif
+    endfor
+    _yy = yy[0,*]
+    for i=0,N_ELEMENTS(ylevels)-1 do begin
+      p = where(_yy le ylevels[i], cnt)
+      if cnt gt 1 and cnt lt ny then begin
+        if N_ELEMENTS(yticks) eq 0 then yticks =  max(p) else yticks = [yticks, max(p)]
+        if N_ELEMENTS(ytickValues) eq 0 then ytickValues =  ylevels[i] else ytickValues = [ytickValues, ylevels[i]]
+      endif
+    endfor
+  endif
+  
+  self.map_params.xlevels = PTR_NEW(xlevels, /NO_COPY)
+  self.map_params.ylevels = PTR_NEW(ylevels, /NO_COPY)
+  self.map_params.xticks = PTR_NEW(xticks, /NO_COPY)
+  self.map_params.yticks = PTR_NEW(yticks, /NO_COPY)
+  self.map_params.xtickValues = PTR_NEW(xtickValues, /NO_COPY)
+  self.map_params.ytickValues = PTR_NEW(ytickValues, /NO_COPY)
+  self.map_params.tick_format = _tick_format
+  self.map_params.tick_interval = _tick_interval
+  self.map_params.interval = min([_tick_interval, _yinterval])
   
   return, 1
   
@@ -2900,7 +2926,7 @@ PRO w_Map__Define
             ytick_dx       : 0.            , $ ; tick marks offset factor           
             ytick_dy       : 0.            , $ ; tick marks offset factor            
             t_Charsize     : 0D            , $ ; Ticks charsizes
-            interval       : 0D            , $ ; The interval between ticks
+            interval       : 0D            , $ ; The interval between levels
             tick_interval  : 0L            , $ ; The interval between tick annotations
             tick_format    : ''            , $ ; The tick annotations format
             color          : 0L            , $ ; color of the contour lines

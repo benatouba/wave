@@ -168,7 +168,7 @@ pro w_gr_Colorbar, info, $
     if info.is_hist then begin
       ; So color is allways n_levels-1 
       my_range = utils_minmax(levels[1:ncolors])
-      reg_levels = Scale_Vector(FINDGEN(ncolors), my_range[0], my_range[1]) 
+      reg_levels = cgScaleVector(FINDGEN(ncolors), my_range[0], my_range[1]) 
       palette[*,0] = FIX(0 > INTERPOL(float(palette[*,0]), levels[1:ncolors], reg_levels) < 255)
       palette[*,1] = FIX(0 > INTERPOL(float(palette[*,1]), levels[1:ncolors], reg_levels) < 255)
       palette[*,2] = FIX(0 > INTERPOL(float(palette[*,2]), levels[1:ncolors], reg_levels) < 255)

@@ -51,10 +51,12 @@ pro w_ScatterPlot, x, y, $
   CORRELATION=correlation, $
   MD=md, $
   MAD=mad, $
+  POSITION=position, $
   COLOR=color, $
   PSYM=psym, $
   SCORE_POS=score_pos, $
   ADDCMD=addcmd, $
+  SYMSIZE=symsize, $
   S_CHARSIZE=s_charsize, $
   BINSIZE=binsize, MIN=min, MAX=max, $
   _REF_EXTRA=extra
@@ -109,11 +111,11 @@ pro w_ScatterPlot, x, y, $
   
   ; Empty plot
   cgPlot, _x, _y, TITLE=title, XTITLE=xtitle, YTITLE=ytitle, $
-            XRANGE=_xrange, YRANGE=_yrange, $
-            /NODATA, ADDCMD=addcmd, _EXTRA=extra
+            XRANGE=_xrange, YRANGE=_yrange, POSITION=position, $
+            /NODATA, ADDCMD=addcmd, _EXTRA=extra, Aspect=1., /NOERASE
     
   ; The points
-  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd, NOCLIP=0
+  cgplot, _x, _y,  COLOR=color, PSYM=psym, /OVERPLOT, ADDCMD=addcmd, NOCLIP=0, symsize=symsize
 
   ; Grey one to one line
   cgplots, [-1e5,1e5], [-1e5,1e5], color='grey', LINESTYLE=5, NOCLIP=0, ADDCMD=addcmd
@@ -125,8 +127,8 @@ pro w_ScatterPlot, x, y, $
   endif
   
   ; Restore plot
-  Axis, XAXIS=0, XRANGE=_xrange;, ADDCMD=addcmd, /SAVE
-  Axis, YAXIS=0, YRANGE=_yrange;, ADDCMD=addcmd, /SAVE
+;  Axis, XAXIS=0, XRANGE=_xrange;, ADDCMD=addcmd, /SAVE
+;  Axis, YAXIS=0, YRANGE=_yrange;, ADDCMD=addcmd, /SAVE
   
   if KEYWORD_SET(FIT) then begin  
     Message, 'Fit temporarily non-available'        
@@ -151,7 +153,7 @@ pro w_ScatterPlot, x, y, $
   endif
   
   if N_ELEMENTS(legtext) ne 0 then begin
-    al_legend, legtext, BOX=0, POSITION=score_pos, CHARSIZE=s_charsize, WINDOW=addcmd, _EXTRA=extra
+    al_legend, legtext, BOX=0, POSITION=score_pos, CHARSIZE=s_charsize, WINDOW=addcmd, /DATA
   endif
   
 

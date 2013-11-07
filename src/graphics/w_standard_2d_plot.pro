@@ -197,10 +197,10 @@ pro w_standard_2d_plot, map, $
     wobj->GetProperty, WID=cgWID
   endif else begin
     if total([keyword_set(eps),keyword_set(pdf),keyword_set(png),keyword_set(jpeg)]) gt 1 then message, 'In /PIXMAP mode, only one image can be written at the same time.'
-      if keyword_set(eps) then PS_Start, FILENAME=eps, /DECOMPOSED $
-        else if keyword_set(pdf) then PS_Start, FILENAME=pdf, /DECOMPOSED   $
-          else if keyword_set(png) then PS_Start, FILENAME=png, /DECOMPOSED   $
-            else if keyword_set(jpeg) then PS_Start, FILENAME=jpeg, /DECOMPOSED
+      if keyword_set(eps) then cgPS_Open, FILENAME=eps, /DECOMPOSED $
+        else if keyword_set(pdf) then cgPS_Open, FILENAME=pdf, /DECOMPOSED   $
+          else if keyword_set(png) then cgPS_Open, FILENAME=png, /DECOMPOSED   $
+            else if keyword_set(jpeg) then cgPS_Open, FILENAME=jpeg, /DECOMPOSED
   endelse
 
    ; Begin the plot
@@ -300,10 +300,10 @@ endif
     
   endif else begin
   
-    if keyword_set(eps) then PS_End
-    if keyword_set(pdf) then PS_End, /PDF
-    if keyword_set(png) then PS_End, /PNG, RESIZE=im_resize
-    if keyword_set(jpeg) then PS_End, /JPEG, RESIZE=im_resize
+    if keyword_set(eps) then cgPS_Close
+    if keyword_set(pdf) then cgPS_Close, /PDF
+    if keyword_set(png) then cgPS_Close, /PNG, RESIZE=im_resize
+    if keyword_set(jpeg) then cgPS_Close, /JPEG, RESIZE=im_resize
     
     disp_img = tvrd(TRUE=1)
     if do_as then disp_img = rebin(disp_img, 3, oxs, oys)

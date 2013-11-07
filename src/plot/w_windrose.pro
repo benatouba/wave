@@ -500,9 +500,9 @@ pro w_WindRose, wind_dir, wind_speed, $
   
   window = 0
   if N_ELEMENTS(png) ne 0 then begin
-    PS_Start, FILENAME=png, /DECOMPOSED, /LAND
+    cgPS_Open, FILENAME=png, /DECOMPOSED, /LAND
   endif else if N_ELEMENTS(EPS) ne 0 then begin
-    PS_Start, FILENAME=eps, /DECOMPOSED, /LAND
+    cgPS_Open, FILENAME=eps, /DECOMPOSED, /LAND
   endif else if N_ELEMENTS(std_png) ne 0 then begin
      
   endif else window = 1
@@ -560,9 +560,9 @@ pro w_WindRose, wind_dir, wind_speed, $
   endif
   
   if N_ELEMENTS(png) ne 0 then begin
-    PS_End, /PNG, RESIZE=im_resize
+    cgPS_Close, /PNG, RESIZE=im_resize
   endif else if N_ELEMENTS(EPS) ne 0 then begin
-    PS_End
+    cgPS_Close
   endif else if N_ELEMENTS(std_png) ne 0 then begin
     write_png, std_png, tvrd(TRUE=1)
   endif

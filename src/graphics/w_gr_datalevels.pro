@@ -54,7 +54,7 @@
 ; 
 ;    Overplot points with a WAVE colortable:: 
 ;      data = cgDemoData(1)
-;      time = Scale_Vector(Findgen(101), 0, 6)  
+;      time = cgScaleVector(Findgen(101), 0, 6)  
 ;      cgPlot, time, data, POSITION=[0.1,0.1,0.7,0.85]
 ;      w_loadct, 'humidity'
 ;      info = w_gr_DataLevels(data)
@@ -531,7 +531,7 @@ function w_gr_DataLevels, data, $
        hist = histogram(_data[pValid], MIN=_min_level, MAX=_max_level, $
           BINSIZE=binsize, LOCATIONS=locs)
        hist = total(hist, /CUMULATIVE) / TOTAL(hist)
-       hist_levels = Scale_Vector(FINDGEN(_n_levels) / (_n_levels-1), min(hist), max(hist))
+       hist_levels = cgScaleVector(FINDGEN(_n_levels) / (_n_levels-1), min(hist), max(hist))
        r =  0 > VALUE_LOCATE(hist, hist_levels) < (N_ELEMENTS(hist)-1)
        r[0] = 0 ; allways
        ;Unfortunately, check for uniqueness
@@ -590,7 +590,7 @@ function w_gr_DataLevels, data, $
       _cmax = BYTE(cmax)
     endif else _cmax = BYTE(maxncolors-1)
     if _n_levels eq 1 then _colors = _cmin $
-    else _colors = Scale_Vector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)
+    else _colors = cgScaleVector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)
     if KEYWORD_SET(INVERTCOLORS) then _colors  = Reverse(_colors)
     if N_ELEMENTS(_colors) eq 3 then begin
       _colors = (cgColor([0B,_colors], /DECOMPOSED))[1:*]

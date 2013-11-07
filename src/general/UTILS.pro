@@ -1626,7 +1626,7 @@ function utils_color_convert, COLORS = colors, NCOLORS = ncolors, CMIN = cmin, C
     IF N_Elements(ncolors) EQ 0 THEN begin
      _colors = 'white' 
       NCOLORS = 1
-    endif else if NCOLORS gt 1 then _colors = Scale_Vector(Indgen(ncolors), cmin, cmax) else _COLORS = cmin
+    endif else if NCOLORS gt 1 then _colors = cgScaleVector(Indgen(ncolors), cmin, cmax) else _COLORS = cmin
     
   ENDIF ELSE begin ; COLORS given
     if arg_okay(colors, N_DIM=2) then begin

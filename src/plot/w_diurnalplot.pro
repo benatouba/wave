@@ -258,8 +258,8 @@ pro w_diurnalPlot, data,$  ; array to plot
     cgWIN = true
   endif else begin
     if KEYWORD_SET(EPS) and KEYWORD_SET(PNG) then Message, 'In pixmap mode you have to choose between EPS and PNG'
-    if KEYWORD_SET(EPS) then PS_START, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric
-    if KEYWORD_SET(PNG) then PS_START, FILENAME= png, Decomposed=1
+    if KEYWORD_SET(EPS) then cgPS_Open, FILENAME= eps, Decomposed=1, /Encapsulated, /Metric
+    if KEYWORD_SET(PNG) then cgPS_Open, FILENAME= png, Decomposed=1
   endelse
   
   
@@ -475,8 +475,8 @@ pro w_diurnalPlot, data,$  ; array to plot
     if KEYWORD_SET(PNG) then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
     if KEYWORD_SET(EPS) then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   endif else begin
-    if KEYWORD_SET(PNG) then PS_END, /PNG, resize = im_resize
-    if KEYWORD_SET(EPS) then PS_END
+    if KEYWORD_SET(PNG) then cgPS_Close, /PNG, resize = im_resize
+    if KEYWORD_SET(EPS) then cgPS_Close
     WDELETE, xwin
   endelse
   
