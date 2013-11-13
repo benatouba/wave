@@ -26,7 +26,7 @@ function w_str, number, decimals, FORMAT=format
     if format ne '' then return, STRING(number, FORMAT=format)
   endif
   
-  if N_ELEMENTS(decimals) eq 1 then if decimals eq 0 then return, str_equiv(fix(number))
+  if N_ELEMENTS(decimals) eq 1 then if decimals eq 0 then return, str_equiv(LONG(number))
     
   return, cgNumber_Formatter(number, DECIMALS=decimals)
 
