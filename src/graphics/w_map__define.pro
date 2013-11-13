@@ -1030,8 +1030,8 @@ function w_Map::set_map_params,  $
     end
     'EN_KM': begin
       self.grid->get_XY, xx, yy, nx, ny
-      xx = xx/1000.
-      yy = yy/1000.      
+      xx = xx/1000
+      yy = yy/1000      
     end
     else: Message, 'Contour type not supported: ' + self.map_params.type
   endcase
@@ -1045,8 +1045,8 @@ function w_Map::set_map_params,  $
   ;Back to normal coordinates
   nxx = minmax_x[1] - minmax_x[0] + 1
   nyy = minmax_y[1] - minmax_y[0] + 1
-  if nxx ne 0 then xlevels = minmax_x[0] * _interval +  FINDGEN(nxx) * _interval
-  if nyy ne 0 then ylevels = minmax_y[0] * _yinterval +  FINDGEN(nyy) * _yinterval
+  if nxx ne 0 then xlevels = minmax_x[0] * _interval +  DINDGEN(nxx) * _interval
+  if nyy ne 0 then ylevels = minmax_y[0] * _yinterval +  DINDGEN(nyy) * _yinterval
 
   ;The labels 
   if _tick_labels then begin
@@ -2921,10 +2921,10 @@ PRO w_Map__Define
             ylevels        : PTR_new()     , $ ; values of the plotted contours in Ycoordinates
             xtick_start    : 0L            , $ ; tick marks start
             ytick_start    : 0L            , $ ; tick marks start
-            xtick_dx       : 0.            , $ ; tick marks offset factor
-            xtick_dy       : 0.            , $ ; tick marks offset factor            
-            ytick_dx       : 0.            , $ ; tick marks offset factor           
-            ytick_dy       : 0.            , $ ; tick marks offset factor            
+            xtick_dx       : 0D            , $ ; tick marks offset factor
+            xtick_dy       : 0D            , $ ; tick marks offset factor            
+            ytick_dx       : 0D            , $ ; tick marks offset factor           
+            ytick_dy       : 0D            , $ ; tick marks offset factor            
             t_Charsize     : 0D            , $ ; Ticks charsizes
             interval       : 0D            , $ ; The interval between levels
             tick_interval  : 0L            , $ ; The interval between tick annotations

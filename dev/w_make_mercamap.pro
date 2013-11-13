@@ -32,16 +32,21 @@ function w_make_mercamap, $
   if N_ELEMENTS(XX) eq 0 then xx = 2000000.
   if N_ELEMENTS(YY) eq 0 then yy = 2000000.
   
-  if N_ELEMENTS(YSIZE) eq 0 and N_ELEMENTS(XSIZE) eq 0 then ysize = 600
-  if N_ELEMENTS(DX) eq 0 then dx = 1000
-  if N_ELEMENTS(DY) eq 0 then dy = 1000
-
+  if N_ELEMENTS(YSIZE) eq 0 and N_ELEMENTS(XSIZE) eq 0 then begin
+    ysize = 600
+    xsize = ysize * DOUBLE(yy)/xx
+  endif else begin
+    if N_ELEMENTS(XSIZE) ne 0 then ysize = xsize * DOUBLE(xx)/yy
+    if N_ELEMENTS(YSIZE) ne 0 then xsize = ysize * DOUBLE(yy)/xx
+  endelse
+      
+  xsize = ROUND(xsize)
+  ysize = ROUND(ysize)
+  
   GIS_make_datum, ret, wgs, NAME='WGS-84'
   
-  
-; 3 - Transverse Mercator
-;   a, b, lat0, lon0, x0, y0, k0, [datum], name
-
+  ; 3 - Transverse Mercator
+  ;   a, b, lat0, lon0, x0, y0, k0, [datum], name
   str = '3, '
   str += cgNumber_Formatter(wgs.ellipsoid.a) + ', '
   str += cgNumber_Formatter(wgs.ellipsoid.b) + ', '
@@ -54,14 +59,14 @@ function w_make_mercamap, $
   
   x0 = - xx/2.
   x1 = xx/2.
-  y0 = - yy/2.
-  y1 = yy/2.
+  y0 = yy/2.
+  y1 = - yy/2.
    
   
-  grid = OBJ_NEW('w_Grid2D', PROJ=proj, X0=x0, Y0=y0, X1=x1, y1=y1, DX=dx, DY=dy)
+  grid = OBJ_NEW('w_Grid2D', PROJ=proj, X0=x0, Y0=y0, X1=x1, y1=y1, NX=xsize, NY=ysize)
   if ~ OBJ_VALID(grid) then Message, 'Grid not ok'
   
-  map = OBJ_NEW('w_Map', grid, XSIZE=xsize, YSIZE=ysize)
+  map = OBJ_NEW('w_Map', grid, XSIZE=xsize)
   if ~ OBJ_VALID(map) then Message, 'map not ok'
   
   if ARG_PRESENT(GRID_OUT) then map->GetProperty, grid=grid_out

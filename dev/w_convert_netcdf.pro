@@ -1,16 +1,16 @@
 ;+
 ; :Description:
-;    Converts a file between NetCDF4 and NetCDF3 formats. Converting a 
-;    file from NetCDF3 to NetCDF4 is mostly done to take advantage of 
-;    the compression features of the NetCDF4 format (IDL8+). Converting
-;    a file from NetCDF4 to NetCDF3 is mostly done when you want to 
-;    distribute the file to users who cannot read NetCDF4. 
+;    Converts a file between NetCDF4 and NetCDF3 file formats (IDL8+ only!). 
+;    Converting a file from NetCDF3 to NetCDF4 is advantageous if you want 
+;    to use the compression features offered by NetCDF4. Converting
+;    a file from NetCDF4 to NetCDF3 maybe useful if you want to distribute 
+;    your files to users who cannot read NetCDF4. 
 ;    
 ;    The default behavior of the procedure is to check the format 
 ;    of the input file and set the keywords accordingly::
 ;      - if the file format is NetCDF3 then /TONETCDF4 is set automatically
 ;      - if the file format is NetCDF4 then /TONETCDF3 is set automatically
-;    You will have to manually set TONETCDF3=0 or TONETCDF4=0 to prevent this.
+;    You will have to set TONETCDF3=0 or TONETCDF4=0 to prevent this (probably never)
 ;
 ; :Params:
 ;    sourceFile: in, required
@@ -20,11 +20,11 @@
 ;
 ; :Keywords:
 ;    CLOBBER: in, optional, default=0
-;             set this keyword to force overwriting of the file
-;    TONETCDF3: in, optional
+;             set this keyword to force overwriting of the output file
+;    TONETCDF3:  in, optional
 ;                convert to netcdf3. Default behiavor is based on the 
 ;                input file format, see the doc
-;    TONETCDF4: in, optional
+;    TONETCDF4:  in, optional
 ;                convert to netcdf4. Default behiavor is based on the 
 ;                input file format, see the doc
 ;    CHUNK_DIMENSIONS: in, optional, default=auto
@@ -64,9 +64,9 @@ pro w_convert_netcdf, sourceFile, destFile, $
 
   ; Set Up environnement
   COMPILE_OPT idl2
-  @WAVE.inc
   ON_ERROR, 2
   
+  ; Check input and decide which conversion to do
   format = w_ncdf_format(sourceFile)
   if format eq 'UNKNOWN' then Message, 'File format unknown'
   
@@ -78,6 +78,8 @@ pro w_convert_netcdf, sourceFile, destFile, $
   
   if ~ (_tonetcdf3 xor _tonetcdf4) then Message, 'Conflicting keyword combination with file format: ' + format
   
+  ; Set the default value for NetCDF4 keywords. 
+  ; They are ignored if netcdf3 is asked
   SetDefaultValue, gzip, 5
   SetDefaultValue, shuffle, 1
   
