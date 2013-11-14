@@ -1,3 +1,22 @@
+;+
+; :Description:
+;    Generates new min and max products in the 2d_alternate directory.
+;    With a hourly directory, min and max are generated in the daily directory, 
+;    with the daily in the monthly, etc.
+;
+; :Params:
+;    varid: in, required
+;           the 2d variable to compute the max from
+;
+; :Keywords:
+;    DIRECTORY: in, required
+;               the product directory
+;    FORCE: in, optional
+;           force overwrite of the file if it exists already
+;
+; :Author: FM
+; 
+;-
 pro w_pr_MinMax, varid, $
     DIRECTORY=directory, $
     FORCE=force
@@ -21,6 +40,7 @@ pro w_pr_MinMax, varid, $
       
   ;Check if the variable is available
   if ~ wpr->hasVar(varid, INFO=info) then Message, 'Did not find variable: ' + str_equiv(varid)
+  if info.type ne '2d' then Message, 'works only on 2d variables'
       
   minvn = STRLOWCASE(varid) + '_min'
   maxvn = STRLOWCASE(varid) + '_max'
@@ -34,8 +54,10 @@ pro w_pr_MinMax, varid, $
     obj = wpr->getVarObj(varid, (_y)[y], INFO=info)
     ok = obj->define_subset()
     obj->getProperty, Nvars=Nvars, PATH=fPath
-    ominPath = utils_replace_string(utils_replace_string(utils_replace_string(fPath, varid, minvn), '_' + tres + '_', '_' + my_tres + '_'), '/' + tres + '/', '/' + my_tres + '/')
-    omaxPath = utils_replace_string(utils_replace_string(utils_replace_string(fPath, varid, maxvn), '_' + tres + '_', '_' + my_tres + '_'), '/' + tres + '/', '/' + my_tres + '/')
+    ominPath = utils_replace_string(utils_replace_string(utils_replace_string(utils_replace_string(fPath, varid, minvn), '_' + tres + '_', '_' + my_tres + '_'), '/' + tres + '/', '/' + my_tres + '/'), '/2d/', '/2d_alternate/')
+    omaxPath = utils_replace_string(utils_replace_string(utils_replace_string(utils_replace_string(fPath, varid, maxvn), '_' + tres + '_', '_' + my_tres + '_'), '/' + tres + '/', '/' + my_tres + '/'), '/2d/', '/2d_alternate/')
+    
+    if ~ FILE_TEST(FILE_DIRNAME(ominPath), /DIRECTORY) then FILE_MKDIR, FILE_DIRNAME(ominPath)
     
     ; Check
     if FILE_TEST(ominPath) and ~KEYWORD_SET(FORCE) then Message, 'Output file already here. Set /FORCE if you want to overwrite it.'
