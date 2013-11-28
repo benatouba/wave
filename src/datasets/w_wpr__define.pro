@@ -779,12 +779,15 @@ end
 ;    PRINT: in, optional
 ;           set this keyword to print the variables (and info)
 ;           in the console
+;    TOFILE: in, optional
+;            set this keyword with a path to a scv file were the 
+;            variables will be printed out
 ;           
 ; :Returns:
 ;   An array of variable ids
 ;
 ;-
-function w_WPR::getVarNames, COUNT=count, PRINT=print
+function w_WPR::getVarNames, COUNT=count, PRINT=print, TOFILE=tofile
 
   ; Set up environnement
   @WAVE.inc
@@ -795,21 +798,36 @@ function w_WPR::getVarNames, COUNT=count, PRINT=print
   out = vars.id
   
   if KEYWORD_SET(PRINT) then begin
-    print, '   ID                NAME            DESCRIPTION                                       UNIT       TYPE'
+    print, '   ID                 NAME            DESCRIPTION                                       UNIT       TYPE'
     
     for i = 0L, count-1 do begin
       v = vars[i]
       ns = '                                                                                                                                  '
       STRPUT, ns, str_equiv(i), 0
-      STRPUT, ns, v.id, 3
-      STRPUT, ns, v.name, 4+18
-      STRPUT, ns, v.description, 20+18
-      STRPUT, ns, v.unit, 70+18
+      STRPUT, ns, v.id, 4
+      STRPUT, ns, v.name, 5+18
+      STRPUT, ns, v.description, 21+18
+      STRPUT, ns, v.unit, 71+18
       t = v.type
       if v.derived then t += ' (derived)'
-      STRPUT, ns, t, 81+18
+      STRPUT, ns, t, 82+18
       print, ns
     endfor
+  endif
+  
+  if N_ELEMENTS(TOFILE) ne 0 then begin
+    header = ['ID','NAME','DESCRIPTION','UNIT','TYPE','DIAGNOSTIC']
+    str = STRARR(6,count)
+    for i = 0L, count-1 do begin
+      v = vars[i]
+      str[0,i] = v.id
+      str[1,i] = v.name
+      str[2,i] = v.description
+      str[3,i] = v.unit
+      str[4,i] = v.type
+      if v.derived then str[5,i] = 'YES' else str[5,i] = 'NO'
+    endfor
+    WRITE_CSV, tofile, str, HEADER=header
   endif
   
   return, out

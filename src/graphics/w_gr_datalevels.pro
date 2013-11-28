@@ -7,7 +7,9 @@
 ; your data on the display and have access to some easy statistics.
 ; 
 ; The output of `w_gr_data_levels` is a structure containing all necessary 
-; information to generate a colored plot and/or a colorbar. 
+; information to generate a colored plot and/or a colorbar. It should be used
+; in combination with w_gr_image, w_gr_contour, w_gr_dcbar, w_gr_colorbar.
+; 
 ; Here its most important tags::
 ;   
 ;     info.levels: array of the data levels that the routine chose for you or
@@ -46,7 +48,6 @@
 ; is to handle those cases automatically, and to help you to assign the right
 ; color to the right value.
 ; 
-; 
 ; :Categories:
 ;    Graphics
 ;    
@@ -71,7 +72,6 @@
 ;     Written by FaM, 2012.
 ;    
 ;-
-
 
 ;+
 ; :Private:
@@ -132,7 +132,7 @@ pro w_gr_DataLevels_show, info
     ;Nice plot of the data
     cgWindow, WXSIZE=700, WYSIZE=500
     if info.dataNdims eq 2 then begin ; Image case
-      cgImage, info.loc, PALETTE=w_gr_ColorToRGB(info.colors), /WINDOW, $
+      w_gr_image, info, /WINDOW, $
         MINUS_ONE=0, /AXIS, TITLE='Data image', MARGIN=0.2
     endif else begin
       d = CEIL(SQRT(info.dataNel))
@@ -247,6 +247,15 @@ end
 ;    CMAX: in, optional, default=TABLE_SIZE-1
 ;          the index where to end in the color table 
 ;          (usefull if the last colors are too dark for example)
+;    CENTER_LEV: in, optional
+;                set to the index of the level which has to be at the center of the 
+;                colortable (e.g. if your levels are [-100, -50, 0, 50, 100, 200, 300]
+;                set CENTER_LEV=2). 
+;                This is quite useful when you have diverging color tables
+;                and more levels on one side than on the other
+;    CENTER_RANGE: in, optional
+;                  set to an integer (e.g. 20) to define the color strength around the
+;                  center level, which is otherwise white on both sides
 ;    INVERTCOLORS: in, optional, type=boolean, default=0
 ;                  If this keyword is set, the color table vectors are reversed.
 ;    OOB_TOP_ARROW: in, optional, Default=1
@@ -285,6 +294,8 @@ function w_gr_DataLevels, data, $
     HIST_EQUAL=hist_equal, $
     CMIN=cmin, $ 
     CMAX=cmax, $
+    CENTER_LEV=center_lev, $
+    CENTER_RANGE=center_range, $
     INVERTCOLORS=invertcolors, $
     OOB_TOP_COLOR=oob_top_color, $ 
     OOB_BOT_COLOR=oob_bot_color, $
@@ -589,8 +600,21 @@ function w_gr_DataLevels, data, $
       if ~ arg_okay(cmax, /INTEGER, /SCALAR) then Message, WAVE_Std_Message('CMAX', /ARG)
       _cmax = BYTE(cmax)
     endif else _cmax = BYTE(maxncolors-1)
-    if _n_levels eq 1 then _colors = _cmin $
-    else _colors = cgScaleVector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)
+    if _n_levels eq 1 then begin
+      _colors = _cmin
+    endif else begin
+      if N_ELEMENTS(CENTER_LEV) ne 0 then begin
+        ; could it be possible to define where in the middle?
+        if is_ooBot then midd = center_lev + 1 else midd = center_lev
+        center_c = FIX((_cmax-_cmin)/2.)
+        if N_ELEMENTS(CENTER_RANGE) eq 0 then _cr = 0 else _cr = center_range
+        _cc1 = cgScaleVector(Indgen(midd, /BYTE), _cmin, center_c-_cr, /PRESERVE_TYPE)
+        _cc2 = cgScaleVector(Indgen(_n_colors-midd, /BYTE), center_c+_cr, _cmax, /PRESERVE_TYPE)
+        _colors = [_cc1,_cc2]
+      endif else begin
+        _colors = cgScaleVector(Indgen(_n_colors, /BYTE), _cmin, _cmax, /PRESERVE_TYPE)
+      endelse
+    endelse
     if KEYWORD_SET(INVERTCOLORS) then _colors  = Reverse(_colors)
     if N_ELEMENTS(_colors) eq 3 then begin
       _colors = (cgColor([0B,_colors], /DECOMPOSED))[1:*]
@@ -639,6 +663,7 @@ function w_gr_DataLevels, data, $
            levels : _levels, $ 
            colors : _colors, $ 
            palette : _palette, $ 
+           is_hist : FALSE, $
            dcbar : user_dcbar, $   
            is_ooTopColor : is_ooTopColor, $
            is_ooBotColor : is_ooBotColor, $
