@@ -458,6 +458,20 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
+   ;Sea level pressure
+  d1 = self->hasVar('PSFC')
+  d2 = self->hasVar('T2')
+  d3 = self->hasVar('HGT')
+  if (d1 and d2 and d3) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'slp_b'
+    v.name = 'slp'
+    v.unit = 'hPa'
+    v.description = 'Sea Level Pressure Barometric'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
   ; OK. Now add all the pressure stuff for the 3d variables
   c = where(vars.type eq '3d_eta', nc)
   if nc eq 0 then return
@@ -876,6 +890,17 @@ function wa_WPR::getVarData, id, $
       'P2HPA': begin
         return, self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)*0.01
       end
+      'SLP_B': begin
+      ps = self->get_Var('PSFC', time, nt, T0=t0, T1=t1,  $
+        dims = dims, $
+        dimnames = dimnames) * 0.01 ; in hPa
+      T2 = self->get_Var('T2', T0=t0, T1=t1) - 273.15 ; in degC
+      zs = self->get_Var('HGT', T0=t0, T1=t1) ; in m
+      mdims = SIZE(t2, /DIMENSIONS)
+      value = FLTARR(mdims[0],mdims[1],nt)
+      for k=0,Nt-1 do value[*,*,k] = MET_barometric(ps[*,*,k], zs, T2[*,*,k], 0.)
+      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
+    end
       'TK_ETA': begin
         T = self->GetVarData('T_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + 300.
         P = self->GetVarData('PB_ETA', T0=t0, T1=t1, ZLEVELS=zlevels) + self->GetVarData('P_ETA', T0=t0, T1=t1, ZLEVELS=zlevels)
