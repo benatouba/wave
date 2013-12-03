@@ -891,15 +891,12 @@ function wa_WPR::getVarData, id, $
         return, self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)*0.01
       end
       'SLP_B': begin
-      ps = self->get_Var('PSFC', time, nt, T0=t0, T1=t1,  $
-        dims = dims, $
-        dimnames = dimnames) * 0.01 ; in hPa
-      T2 = self->get_Var('T2', T0=t0, T1=t1) - 273.15 ; in degC
-      zs = self->get_Var('HGT', T0=t0, T1=t1) ; in m
+      ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
+      T2 = self->getVarData('T2', T0=t0, T1=t1) - 273.15 ; in degC
+      zs = self->getVarData('HGT', T0=t0, T1=t1) ; in m
       mdims = SIZE(t2, /DIMENSIONS)
       value = FLTARR(mdims[0],mdims[1],nt)
       for k=0,Nt-1 do value[*,*,k] = MET_barometric(ps[*,*,k], zs, T2[*,*,k], 0.)
-      if nt eq 1 then dimnames = [dimnames[0],dimnames[1]] else dimnames = [dimnames[0],dimnames[1],dimnames[3]]
     end
       'TK_ETA': begin
         T = self->GetVarData('T_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + 300.
