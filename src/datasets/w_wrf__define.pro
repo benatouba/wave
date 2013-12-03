@@ -179,14 +179,24 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
   ; GRID info *
   ;************      
   if self.type eq 'PRO' then begin
-    x = self->w_NCDF::get_Var('west_east')
-    y = self->w_NCDF::get_Var('south_north')         
-    nx = N_ELEMENTS(x)        
-    ny = N_ELEMENTS(y)              
-    dx = x[1]-x[0] ;TODO CHANGE this!!
-    dy = y[1]-y[0] ;TODO CHANGE this!!
-    x0 = min(x)             
-    y0 = max(y) 
+    if self->w_NCDF::get_Gatt_Info('GRID_DX') then begin
+      nx = LONG(self->w_NCDF::get_Gatt('GRID_NX'))
+      ny = LONG(self->w_NCDF::get_Gatt('GRID_NY'))
+      dx = FLOAT(self->w_NCDF::get_Gatt('GRID_DX'))
+      dy = FLOAT(self->w_NCDF::get_Gatt('GRID_DY'))
+      x0 = FLOAT(self->w_NCDF::get_Gatt('GRID_X01'))
+      y0 = FLOAT(self->w_NCDF::get_Gatt('GRID_Y01')) 
+    endif else begin
+      ; for older product versions
+      x = self->w_NCDF::get_Var('west_east')
+      y = self->w_NCDF::get_Var('south_north')
+      nx = N_ELEMENTS(x)
+      ny = N_ELEMENTS(y)
+      dx = x[1]-x[0]
+      dy = y[1]-y[0]
+      x0 = min(x)
+      y0 = max(y)
+    endelse
   endif else begin
     center_lat = self->w_NCDF::get_Gatt('CEN_LAT')
     center_lon = self->w_NCDF::get_Gatt('CEN_LON')
