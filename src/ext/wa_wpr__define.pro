@@ -13,18 +13,18 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function wa_WPR::init, DIRECTORY=directory, _EXTRA=extra
+function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
 
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
   
-;  Catch, theError
-;  IF theError NE 0 THEN BEGIN
-;    Catch, /Cancel
-;    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
-;    RETURN, 0
-;  ENDIF
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
+    RETURN, 0
+  ENDIF
   
   ; Check arguments
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select WRF product directory to read', /MUST_EXIST, /DIRECTORY)
@@ -52,8 +52,9 @@ function wa_WPR::init, DIRECTORY=directory, _EXTRA=extra
   self.hres = hres
   self.directory = dir
   self.expe = expe
+  self.years = year
   
-  file_list=FILE_SEARCH([self.directory, statdir], '*_' + self.domain +'*.nc', count=filecnt)
+  file_list=FILE_SEARCH([self.directory, statdir], '*_' + self.domain +'*'+self.years+'.nc', count=filecnt)
   if filecnt eq 0 then MESSAGE, 'No files in the directory?'
   
   ; This is for the XLAT XLON variable
@@ -64,6 +65,23 @@ function wa_WPR::init, DIRECTORY=directory, _EXTRA=extra
   endif
   
   fnames = FILE_BASENAME(file_list, '.nc')
+  
+;    years = LONARR(filecnt)
+;    for i=0, filecnt-1 do begin
+;      spl = STRSPLIT(fnames[i], '_', /EXTRACT, count=nspl)
+;      type = FILE_BASENAME(FILE_DIRNAME(file_list[i]))
+;      if type eq 'static' then begin
+;        years[i] = -1
+;      endif else begin
+;        years[i] = spl[nspl-1]
+;        fnames[i] = STRMID(fnames[i], 0, N_ELEMENTS(BYTE(fnames[i]))-5)
+;      endelse
+;    endfor
+;    years = years[UNIQ(years, sort(years))]
+;    years = years[where(years gt 0)]
+;    nyears = N_ELEMENTS(years)
+;    self.oyears = PTR_NEW(years)
+;    self->setYears
   
   so = sort(fnames)
   fnames = fnames[so]
@@ -120,7 +138,7 @@ function wa_WPR::init, DIRECTORY=directory, _EXTRA=extra
   self->_addPressureLevels
   self->_addDerivedVars
   
-  w = OBJ_NEW('w_WRF', FILE=statdir+'/xlatlong_'+self.domain+'.nc')
+  w = OBJ_NEW('w_WRF', FILE=statdir+'/xlatlong_'+self.domain+'_'+self.years+'.nc')
   ok = self->w_GISdata::init(w, _EXTRA=extra)
   undefine, w
   if ~ ok then return, 0
@@ -563,6 +581,35 @@ end
 
 ;+
 ; :Description:
+;    This set the period of interest to a set of years
+;    and prevents to use getVarData(YEARS=years) all
+;    the time. Since the object remmbers this choice,
+;    use setYears without argument to reset to the original
+;    period.
+;
+; :Params:
+;    years: in, array
+;           the years of the period of interest
+;           if no argument, set to original period
+;
+;-
+pro wa_WPR::setYears, years
+
+  PTR_FREE, self.years
+  if N_ELEMENTS(years) eq 0 then begin
+    self.years = PTR_NEW(*self.oyears)
+  endif else begin
+    self.years = PTR_NEW(years)
+  endelse
+  
+  ; Time
+  PTR_FREE, self.time
+  self.time = PTR_NEW(self->_makeTime(*self.years))
+  
+end
+
+;+
+; :Description:
 ;    The standard pressure levels
 ;
 ; :Keywords:
@@ -890,7 +937,7 @@ function wa_WPR::getVarData, id, $
       'P2HPA': begin
         return, self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)*0.01
       end
-      'SLP_B': begin
+      'SLP': begin
       ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
       T2 = self->getVarData('T2', T0=t0, T1=t1) - 273.15 ; in degC
       zs = self->getVarData('HGT', T0=t0, T1=t1) ; in m
@@ -1066,7 +1113,7 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress
   prdir = FILE_DIRNAME(self.directory)
   out_dir = prdir + '/d/' + info.type + '/'
   if ~ FILE_TEST(out_dir) then FILE_MKDIR, out_dir  
-  out_file = out_dir + vname + '_' + self.domain + '_d_' + self.expe + '.nc'
+  out_file = out_dir + vname + '_' + self.domain + '_d_' + self.expe +'_'+self.years+'.nc'
   
   ; Right now I need a dummy obj. Not very elegant but well
   vars = *self.vars
@@ -1195,7 +1242,7 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
   prdir = FILE_DIRNAME(self.directory)
   out_dir = prdir + '/m/' + info.type + '/'
   if ~ FILE_TEST(out_dir) then FILE_MKDIR, out_dir
-  out_file = out_dir + vname + '_' + self.domain + '_m_' + self.expe + '.nc'
+  out_file = out_dir + vname + '_' + self.domain + '_m_' + self.expe +'_'+self.years+'.nc'
   
   if FILE_TEST(out_file) and ~ KEYWORD_SET(CLOBBER) then Message, 'File exists and CLOBBER not set. Stop here'
   
@@ -1275,6 +1322,8 @@ pro wa_WPR__Define, class
     INHERITS w_GISdata                  ,  $
     directory:          ''              ,  $ ; path to the file directory
     time:               PTR_NEW()       ,  $ ; the time PTR
+    oyears:             PTR_NEW()       ,  $ ; The available product years
+    years:              ''       ,  $ ; The product years set by user
     vars:               PTR_NEW()       ,  $ ; array of var structures (see w_WPR::_varStruct)
     pressurelevels:     PTR_NEW()       ,  $ ; array of pressure levels (saved by init, not modifiable)
     tres:               ''              ,  $ ; type of active directory: h, d, m, y
