@@ -61,6 +61,14 @@
 ;    right: in, optional, type=boolean, default=1   
 ;       This puts the labels on the right-hand side of a vertical color bar. It applies 
 ;       only to vertical color bars.
+;    tcharsize: in, optional, type=float
+;       The title size. By default, the same as `Charsize`. Note that this keyword is
+;       ignored for vertical color bars unless the title location (`TLocation`) is on
+;       the opposite side of the color bar from the color bar labels. This is a consequence
+;       of being upable to determine the length of color bar labels programmatically in this
+;       orientation.
+;    textthick: in, optional, type=float, default=1.0
+;        Sets the thickness of the textual annotations on the color bar.
 ;    ticklen: in, optional, type=float, default=0.25
 ;       Set this keyword to the major tick length desired. Default is 0.25. Setting this 
 ;       keyword to a value greater than or equal to 0.5 will result in major tick marks 
@@ -103,6 +111,8 @@ pro w_gr_Colorbar, info, $
     OOB_FACTOR=oob_factor, $
     POSITION=position, $
     RIGHT=right, $
+    TCHARSIZE=tcharsize, $
+    TEXTTHICK=textthick, $
     TICKLEN=ticklen, $
     TICKNAMES=ticknames, $
     TICKINTERVAL=tickinterval, $
@@ -197,6 +207,8 @@ pro w_gr_Colorbar, info, $
     POSITION=position, $
     RANGE=range, $
     RIGHT=right, $
+    TCHARSIZE=tcharsize, $
+    TEXTTHICK=textthick, $
     TICKLEN=ticklen, $
     TICKNAMES=ticknames, $
     TICKINTERVAL=tickinterval, $
