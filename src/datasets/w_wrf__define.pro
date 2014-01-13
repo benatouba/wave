@@ -202,8 +202,13 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
     center_lon = self->w_NCDF::get_Gatt('CEN_LON')
     ; Get easting and northings from dom center
     GIS_coord_trafo, ret, center_lon, center_lat, e, n, SRC=self.tnt_c.proj.datum, DST= self.tnt_c.proj
-    nx = self->w_NCDF::get_Gatt('WEST-EAST_GRID_DIMENSION')-1
-    ny = self->w_NCDF::get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1
+    if self.type eq 'ASR' then begin
+      nx = self->w_NCDF::get_Gatt('WEST_EAST_GRID_DIMENSION')-1
+      ny = self->w_NCDF::get_Gatt('SOUTH_NORTH_GRID_DIMENSION')-1
+    endif else begin
+      nx = self->w_NCDF::get_Gatt('WEST-EAST_GRID_DIMENSION')-1
+      ny = self->w_NCDF::get_Gatt('SOUTH-NORTH_GRID_DIMENSION')-1
+    endelse
     dx = self->w_NCDF::get_Gatt('DX')
     dy = self->w_NCDF::get_Gatt('DY')
     x0 =  - (nx-1) / 2. * dx + e ; UL corner
@@ -239,7 +244,9 @@ function w_WRF::define_subset,  SUBSET_LL  = subset_ll,  $ ; Place holder for ba
           lon[pnest]=0 & lat[pnest]=0 & gislon[pnest]=0 & gislat[pnest]=0
         endif
       endif
-      if (max(abs(gislon-lon)) gt 1e-4) or (max(abs(gislat-lat)) gt 1e-4) then begin
+      threshold = 1e-4
+      if self.type eq 'ASR' then threshold = 1e-3
+      if (max(abs(gislon-lon)) gt threshold) or (max(abs(gislat-lat)) gt threshold) then begin
         w_QuickPlot, abs(gislon-lon)
         Message, 'My lons different from the file lons? Diff: ' + str_equiv(max(abs(gislon-lon))), /INFORMATIONAL
         Message, 'My lats different from the file lats? Diff: ' + str_equiv(max(abs(gislat-lat))), /INFORMATIONAL
@@ -331,6 +338,8 @@ Function w_WRF::Init, FILE=file, _EXTRA=extra
   ftype = ''
   isHere = STRPOS(str_equiv(title), 'WRF')
   if isHere ne -1 then ftype = 'WRF'
+  isHere = STRPOS(str_equiv(title), 'ARCTIC SYSTEM REANALYSIS')
+  if isHere ne -1 then ftype = 'ASR'
   isHere = STRPOS(str_equiv(title), 'GEOGRID')
   if isHere ne -1 then ftype = 'GEO'
   isHere = STRPOS(str_equiv(title), 'METGRID')
