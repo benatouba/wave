@@ -8,7 +8,7 @@
 ;    img1: in, required
 ;          RGB image, dimensions = [nx, ny, 3]
 ;    img2: in, required
-;          RGB image, dimensions = [nx, ny, 3]
+;          can be a RGB image, dimensions = [nx, ny, 3] or a COLOR (string or RGB triplet)
 ;
 ; :Keywords:
 ;    ALPHA: in, otional, default=0.5
@@ -30,10 +30,24 @@ function w_transparentImages, img1, img2, ALPHA=alpha, COLOR_TO_ALPHA=color_to_a
   COMPILE_OPT IDL2
   
   ;ON_ERROR, 2
+  if N_ELEMENTS(img2) eq 1 then begin
+    rgb = cgColor(img2, /TRIPLE)
+    _img2 = img1 * 0B
+    _img2[*,*,0] = rgb[0]
+    _img2[*,*,1] = rgb[1]
+    _img2[*,*,2] = rgb[2]
+  endif else if N_ELEMENTS(img2) eq 3 then begin
+    _img2 = img1 * 0B
+    _img2[*,*,0] = img2[0]
+    _img2[*,*,1] = img2[1]
+    _img2[*,*,2] = img2[2]
+  endif else begin
+    _img2 = img2
+  endelse
   s1 = SIZE(img1)
-  s2 = SIZE(img2)
-  if s1[0] ne 3 then Message, WAVE_Std_Message('img1', NDIMS=3) 
-  if s2[0] ne 3 then Message, WAVE_Std_Message('img2', NDIMS=3) 
+  s2 = SIZE(_img2)
+  if s1[0] ne 3 then Message, WAVE_Std_Message('img1', NDIMS=3)
+  if s2[0] ne 3 then Message, WAVE_Std_Message('img2', NDIMS=3)
   nx = s1[1]
   ny = s1[2]
   if s1[3] ne 3 then Message, '$IMG1 should be a [nx, ny, 3] array'
@@ -54,7 +68,7 @@ function w_transparentImages, img1, img2, ALPHA=alpha, COLOR_TO_ALPHA=color_to_a
     2: begin
       if sa[1] ne nx then Message, '$ALPHA should be a [nx, ny] array'
       if sa[2] ne ny then Message, '$ALPHA should be a [nx, ny] array'
-      _alpha = [[[alpha]],[[alpha]],[[alpha]]] 
+      _alpha = [[[alpha]],[[alpha]],[[alpha]]]
     end
     3: begin
       if sa[1] ne nx then Message, '$ALPHA should be a [nx, ny, 3] array'
@@ -65,14 +79,14 @@ function w_transparentImages, img1, img2, ALPHA=alpha, COLOR_TO_ALPHA=color_to_a
     else: Message, WAVE_Std_Message('ALPHA', /ARG)
   endcase
   _alpha = 0. > FLOAT(_alpha) < 1.
-   
+  
   if N_ELEMENTS(COLOR_TO_ALPHA) ne 0 then begin
     case N_ELEMENTS(COLOR_TO_ALPHA) of
       1: _ca = cgColor(COLOR_TO_ALPHA, /TRIPLE)
       3: _ca = COLOR_TO_ALPHA
-    else: Message, WAVE_Std_Message('COLOR_TO_ALPHA', /ARG)
+      else: Message, WAVE_Std_Message('COLOR_TO_ALPHA', /ARG)
     endcase
-    p = where((img2[*,*,0] eq _ca[0]) and (img2[*,*,1] eq _ca[1]) and (img2[*,*,2] eq _ca[2]), cnt)
+    p = where((_img2[*,*,0] eq _ca[0]) and (_img2[*,*,1] eq _ca[1]) and (_img2[*,*,2] eq _ca[2]), cnt)
     if cnt ne 0 then for i=0, 2 do begin
       _tmp = _alpha[*,*,i]
       _tmp[p] = 1.
@@ -80,6 +94,6 @@ function w_transparentImages, img1, img2, ALPHA=alpha, COLOR_TO_ALPHA=color_to_a
     endfor
   endif
   
-  return, byte(0 > img1 * _alpha + img2 * (1.-_alpha) < 255)
-
+  return, byte(0 > img1 * _alpha + _img2 * (1.-_alpha) < 255)
+  
 end
