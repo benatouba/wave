@@ -57,7 +57,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
   file_list=FILE_SEARCH(self.directory, '*_' + self.domain +'*'+self.years+'.nc', count=filecnt)
   file_list=[file_list, FILE_SEARCH(statdir, '*_' + self.domain +'*.nc', count=filecnt)]
   if filecnt eq 0 then MESSAGE, 'No files in the directory?'
-  print, file_list
+  
   ; This is for the XLAT XLON variable
   matches = Where(StrMatch(file_list, '*xlatlong*'), cm)
   if cm ne 0 then begin
