@@ -54,9 +54,10 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
   self.expe = expe
   self.years = year
   
-  file_list=FILE_SEARCH([self.directory, statdir], '*_' + self.domain +'*'+self.years+'.nc', count=filecnt)
+  file_list=FILE_SEARCH(self.directory, '*_' + self.domain +'*'+self.years+'.nc', count=filecnt)
+  file_list=[file_list, FILE_SEARCH(statdir, '*_' + self.domain +'*.nc', count=filecnt)]
   if filecnt eq 0 then MESSAGE, 'No files in the directory?'
-  
+  print, file_list
   ; This is for the XLAT XLON variable
   matches = Where(StrMatch(file_list, '*xlatlong*'), cm)
   if cm ne 0 then begin
@@ -124,6 +125,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
     undefine, ncObj        
     ; here possible mismasch wiht d , press blabla
     if v.type eq 'static' or v.type eq '2d' then begin
+      print, v.type
       v.id = v.name
     endif else if v.type eq '3d_eta' then begin
       v.id = v.name + '_' + STRMID(v.type, 3, N_ELEMENTS(BYTE(v.type))-3)
@@ -138,7 +140,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
   self->_addPressureLevels
   self->_addDerivedVars
   
-  w = OBJ_NEW('w_WRF', FILE=statdir+'/xlatlong_'+self.domain+'_'+self.years+'.nc')
+  w = OBJ_NEW('w_WRF', FILE=statdir+'/xlatlong_'+self.domain+'.nc')
   ok = self->w_GISdata::init(w, _EXTRA=extra)
   undefine, w
   if ~ ok then return, 0
