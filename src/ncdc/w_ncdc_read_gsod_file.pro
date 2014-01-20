@@ -161,9 +161,8 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag, PRCP_FILTE
       val = {data:data, vname:ascii_tag, unit:'hPa', description:'Mean station pressure', missing:missing, agg_method:'MEAN'} 
     end    
     
-;    'FRSHTT': begin
-;      missing = ''
-;      agg_method = 'NONE'
+    'FRSHTT': begin
+      agg_method = 'MEAN'
 ;      frshtt = data
 ;      str = STRARR(N_ELEMENTS(ascii_data.FRSHTT))  ;  ' 011000'
 ;      res = STRMID(frshtt, 0, 1)
@@ -184,8 +183,16 @@ function w_ncdc_read_gsod_file_parse_val_from_ascii, data, ascii_tag, PRCP_FILTE
 ;      res = STRMID(frshtt, 5, 1)
 ;      p = where(res eq 1, cnt)
 ;      if cnt ne 0 then str[p] += 'Tornado or Funnel Cloud, '
-;      val = {data:res, vname:ascii_tag, unit:'', description:'Indicator for certain occurences during the day', missing:missing, agg_method:agg_method} 
-;    end    
+      frshtt = data
+      data = FLTARR(N_ELEMENTS(data)) ;  ' 011000'
+      res = STRMID(frshtt, 2, 1)
+      p = where(res eq 1, cnt)
+      if cnt ne 0 then data[p] = 1
+      res = STRMID(frshtt, 3, 1)
+      p = where(res eq 1, cnt)
+      if cnt ne 0 then data[p] = 1
+      val = {data:data, vname:'SNOW', unit:'', description:'Frozen prcp: yes or no', missing:missing, agg_method:agg_method} 
+    end    
 
     ELSE :
   ENDCASE
