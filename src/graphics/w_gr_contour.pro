@@ -99,7 +99,7 @@ pro w_gr_contour, info, data, x, y, $
   if ~ info.is_ooTopColor then colors = [colors, colors[N_elements(colors)-1]] 
   if info.is_ooBotColor then begin
     ; the trick
-    mlev = info.data_min - (10*info.epsilon)
+    mlev = min([info.data_min, levels])  - 1
     levels = [mlev, levels]
   endif  
   
