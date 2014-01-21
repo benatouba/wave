@@ -182,7 +182,11 @@ pro w_gr_Colorbar, info, $
       palette[*,0] = FIX(0 > INTERPOL(float(palette[*,0]), levels[1:ncolors], reg_levels) < 255)
       palette[*,1] = FIX(0 > INTERPOL(float(palette[*,1]), levels[1:ncolors], reg_levels) < 255)
       palette[*,2] = FIX(0 > INTERPOL(float(palette[*,2]), levels[1:ncolors], reg_levels) < 255)
-    endif
+    endif else begin
+      dd = ABS(levels[1:*] - levels[0:N_ELEMENTS(levels)-2])
+      if (max(dd) - min(dd))/min(dd) gt 1e-5 then $
+        message, 'You have a lot of levels which seem NOT regularly spaced. I have to make a regular colorbar of it!'
+    endelse
   endelse
   
 
