@@ -23,11 +23,28 @@ function w_str, number, decimals, FORMAT=format
   on_Error, 2
   
   if N_ELEMENTS(FORMAT) ne 0 then begin
-    if format ne '' then return, STRING(number, FORMAT=format)
+    if format ne '' then begin
+      if N_ELEMENTS(number) le 1 then begin
+        r = STRING(number, FORMAT=format)
+      endif else begin
+        s = SIZE(number, /DIMENSIONS)
+        r = reform(STRING(number, FORMAT=format), s)
+      endelse
+      return, r
+    endif
   endif
   
-  if N_ELEMENTS(decimals) eq 1 then if decimals eq 0 then return, str_equiv(LONG(number))
+ 
     
-  return, cgNumber_Formatter(number, DECIMALS=decimals)
+  if N_ELEMENTS(decimals) eq 1 then if decimals eq 0 then return, str_equiv(LONG(number))
+  
+  if N_ELEMENTS(number) le 1 then begin
+    r = cgNumber_Formatter(number, DECIMALS=decimals)
+  endif else begin
+    s = SIZE(number, /DIMENSIONS)
+    r = reform(cgNumber_Formatter(number, DECIMALS=decimals), s)
+  endelse
+  
+  return, r
 
 end
