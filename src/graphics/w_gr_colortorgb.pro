@@ -40,7 +40,7 @@ function w_gr_ColorToRGB, color, r, g, b, ROW=row
   b = r
   
   for i = 0, N_ELEMENTS(color)-1 do begin  
-    bi = ROTATE(BitGet(LONG(color[i])), 2)  
+    bi = ROTATE(cgBitGet(LONG(color[i])), 2)  
     tr = 0L
     tg = 0L
     tb = 0L

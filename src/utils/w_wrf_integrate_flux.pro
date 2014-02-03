@@ -62,11 +62,15 @@ function w_wrf_integrate_flux, vid, wrf, time, nt, t0=t0, t1=t1, dims=dims, dimn
   ; Set some tolerance level to avoid underflows
   pu = where(ABS(u) lt (machar()).eps, cntu)
   if cntu ne 0 then u[pu] = 0.
+ 
   z = wrf->get_Var('ZAG', T0=t0, T1=t1)
   nz = (SIZE(z, /DIMENSIONS))[2]
+  ; Height of grid point boundaries  
   z = (z[*,*,1:nz-1,*] + z[*,*,0:nz-2,*])/2.
-  
-  ; Midpoint approximation - rectangle method  
+  ; For all levels above Lev 1, dh is eual to the 
+  ; height beween boundaries.
+  z[*,*,1:nz-2,*] = z[*,*,1:nz-2,*] - z[*,*,0:nz-3,*]
+   ; Midpoint approximation - rectangle method  
   return, TOTAL(u[*,*,0:nz-2,*] * z, 3)
   
 end
