@@ -253,6 +253,17 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
+  d1 = self->hasVar('p2hpa')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'psfc'
+    v.name = 'psfc'
+    v.unit = 'Pa'
+    v.description = 'Surface Pressure'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
   ; Prcp rate of resolved/explicit precipitation
   d1 = self->hasVar('rainnc')
   if (d1) then begin
@@ -302,13 +313,26 @@ pro wa_WPR::_addDerivedVars
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
+  
+  ;2m Temperature in kelvin
+  d1 = self->hasVar('t2c')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 't2'
+    v.name = 't2'
+    v.unit = 'K'
+    v.description = '2m Temperature'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
     
   ; 2m Relative humidity
   d1 = self->hasVar('t2')
   d2 = self->hasVar('q2')
   d3 = self->hasVar('psfc')
   d4 = self->hasVar('p2hpa')
-  if (d1 and d2 and (d3 or d4)) then begin
+  d5 = self->hasVar('t2c')
+  if ((d1 or d5) and d2 and (d3 or d4)) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'rh2'
     v.name = 'rh2'
@@ -484,7 +508,8 @@ pro wa_WPR::_addDerivedVars
   d2 = self->hasVar('T2')
   d3 = self->hasVar('HGT')
   d4 = self->hasVar('p2hpa')
-  if ((d1 or d4) and d2 and d3) then begin
+  d5 = self->hasVar('t2c')
+  if ((d1 or d4) and (d2 or d5) and d3) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'slp_b'
     v.name = 'slp'
@@ -900,6 +925,9 @@ function wa_WPR::getVarData, id, $
         qvapor = self->GetVarData('q2', T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_td(temporary(p),temporary(qvapor))
       end
+      'T2' : begin
+        return, self->GetVarData('t2c', time, nt, T0=t0, T1=t1, MONTH=month) + 273.15
+      end
       'T2C': begin
         return, self->GetVarData('t2', time, nt, T0=t0, T1=t1, MONTH=month) - 273.15
       end
@@ -941,6 +969,9 @@ function wa_WPR::getVarData, id, $
       end
       'P2HPA': begin
         return, self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)*0.01
+      end
+      'PSFC': begin
+        return, self->GetVarData('p2hpa', time, nt, T0=t0, T1=t1, MONTH=month)/0.01
       end
       'SLP': begin
       ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
