@@ -125,7 +125,6 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
     undefine, ncObj        
     ; here possible mismasch wiht d , press blabla
     if v.type eq 'static' or v.type eq '2d' then begin
-      print, v.type
       v.id = v.name
     endif else if v.type eq '3d_eta' then begin
       v.id = v.name + '_' + STRMID(v.type, 3, N_ELEMENTS(BYTE(v.type))-3)
@@ -281,7 +280,8 @@ pro wa_WPR::_addDerivedVars
   ;2m Dewpoint Temperature
   d1 = self->hasVar('psfc')
   d2 = self->hasVar('q2')
-  if (d1 and d2) then begin
+  d3 = self->hasVar('p2hpa')
+  if ((d1 or d3) and d2) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'td2'
     v.name = 'td2'
@@ -307,7 +307,8 @@ pro wa_WPR::_addDerivedVars
   d1 = self->hasVar('t2')
   d2 = self->hasVar('q2')
   d3 = self->hasVar('psfc')
-  if (d1 and d2 and d3) then begin
+  d4 = self->hasVar('p2hpa')
+  if (d1 and d2 and (d3 or d4)) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'rh2'
     v.name = 'rh2'
@@ -482,7 +483,8 @@ pro wa_WPR::_addDerivedVars
   d1 = self->hasVar('PSFC')
   d2 = self->hasVar('T2')
   d3 = self->hasVar('HGT')
-  if (d1 and d2 and d3) then begin
+  d4 = self->hasVar('p2hpa')
+  if ((d1 or d4) and d2 and d3) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'slp_b'
     v.name = 'slp'
@@ -494,7 +496,7 @@ pro wa_WPR::_addDerivedVars
   
   ; OK. Now add all the pressure stuff for the 3d variables
   c = where(vars.type eq '3d_eta', nc)
-  if nc eq 0 then return
+  if nc ne 0 then begin
   for i=0, nc-1 do begin
     _v = vars[c[i]]
     v = self->_varStruct(/DERIVED)
@@ -505,8 +507,9 @@ pro wa_WPR::_addDerivedVars
     v.type = '3d_press'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endfor
-
+  endif
   PTR_FREE, self.vars
+  
   self.vars = PTR_NEW(vars)  
    
 end
