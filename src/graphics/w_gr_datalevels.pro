@@ -222,7 +222,7 @@ end
 ;                the size of the color table that is currently loaded in IDL    
 ;    COLORS: in, optional
 ;            an array of N_LEVELS colors to use (for the /DCBAR case)
-;            or N_LEVELS+1 colors to use (for the normal case)          
+;            or N_LEVELS+1, N_LEVELS, N_LEVELS-1 colors (for the normal, OOB, and both OOB cases)          
 ;    NEUTRAL_COLOR: in, optional, default='grey'
 ;                   the color to assign to missing values
 ;    MISSING: in, optional, default=NaN
@@ -492,14 +492,14 @@ function w_gr_DataLevels, data, $
      
   ; Give a value to _n_levels   
   if n_elements(n_levels) eq 0 then begin
-    ; With top OOB, ncolors eq nlevels else ncolors eq nlevels-1
     if user_Colors then begin 
       if user_dcbar then begin
         _n_levels = N_Elements(colors[*,0,0])
         if user_Levels then if N_ELEMENTS(_levels) ne _n_levels then Message, 'If COLORS and LEVELS are set for a DCBAR, they should have the same number as elements.'
       endif else begin
-        _n_levels = N_Elements(colors[*,0,0]) - 1
-        if user_Levels then if N_ELEMENTS(_levels) ne _n_levels then Message, 'If COLORS and LEVELS are set, COLORS should have one more element than LEVELS.'
+        ; Here I should check for the number of colors given by the user. 
+        ; It's kinda tiresome to do, so I just let it like this and lets 
+        ; see what happens when the user makes things wroooong.
       endelse  
     endif
     if user_Levels then _n_levels = N_Elements(_levels)

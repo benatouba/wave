@@ -195,6 +195,25 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-  
+pro w_Map::_DestroyTexts
+
+    ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2 
+  
+  ptr_free, self.texts
+  self.ntexts = 0L
+  self.is_Texted = FALSE
+  
+end
+
+;+
+; :Description:
+;   utilitary routine to properly destroy the pointers.
+;
+; :History:
+;     Written by FaM, 2011.
+;-  
 pro w_Map::_DestroyContours
 
     ; SET UP ENVIRONNEMENT
@@ -596,7 +615,35 @@ function w_Map::_draw_points, WINDOW = window
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
     cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, Color=p.color, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+  endfor
+  
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Adds the texts to the device
+; 
+; :Private:
+;
+; :History:
+;     Written by FaM, 2013.
+;-  
+function w_Map::_draw_texts, WINDOW = window
+
+  ;--------------------------
+  ; Set up environment
+  ;--------------------------
+  compile_opt idl2
+  @WAVE.inc
+
+  for i = 0, self.ntexts-1 do begin
+    p = (*self.texts)[i]
+    if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
+    if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
+    cgText, p.coord[0], p.coord[1], p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, COLOR=p.color, NOCLIP=0, WINDOW=window, /DATA
   endfor
   
   return, 1
@@ -1692,7 +1739,7 @@ function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsiz
   self.grid->transform, _x, _y, _x, _y, SRC = src
   coord = [1#_x,1#_y]  + 0.5 ; Because Center point of the pixel is not the true coord 
   
-  if KEYWORD_SET(TEXT) then begin
+  if N_ELEMENTS(TEXT) ne 0 then begin
     if ~ arg_okay(TEXT, TYPE=IDL_STRING) then Message, WAVE_Std_Message('TEXT', /ARG)
     if N_ELEMENTS(TEXT) eq 1 then _TEXT = REPLICATE(TEXT, n_coord) $
      else if N_ELEMENTS(TEXT) eq n_coord then  _TEXT = text $
@@ -1710,7 +1757,7 @@ function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsiz
   if N_ELEMENTS(SYMSIZE) eq 1 then _symsize = SYMSIZE
   if N_ELEMENTS(DELTA_TEXT) eq 2 then _dpText = DELTA_TEXT
   if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
-  if KEYWORD_SET(CHARSIZE) then _charsize = CHARSIZE
+  if N_ELEMENTS(CHARSIZE) eq 1 then _charsize = CHARSIZE
   
   point = REPLICATE({w_Map_POINT}, n_coord)  
   for i = 0, n_coord -1 do begin
@@ -1737,6 +1784,99 @@ function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsiz
   endelse
      
   self.is_Pointed = TRUE
+  return, 1
+  
+end
+
+;+
+; :Description:
+;    Set a text or an array of texts to draw on the map.
+;    
+;  :Params:
+;    x: in, required
+;       the x coordinates of the text(s) to draw
+;    y: in, required
+;       the y coordinates of the text(s) to draw 
+;    text: in, required
+;          the text(s) to draw 
+;       
+; :Keywords:
+;    SRC: in, optional
+;         the coordinate system (datum or proj) of the coordinates. Default is WGS-84
+;    COLOR: in, optional, type = string
+;           the color of the points
+;    ALIGN:in, optional, type = float
+;          the alignment of the annotation
+;    CHARSIZE:in, optional, type = float
+;           the annotation size
+;    
+; :History:
+;     Written by FaM, 2013.
+;-    
+function w_Map::set_text, x, y, text, SRC=src, COLOR=color, $
+                                 ALIGN=align, CHARSIZE=charsize
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    self->_DestroyTexts
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN, 0
+  ENDIF 
+
+  ;******************
+  ; Check arguments *
+  ;******************
+  if N_PARAMS() ne 3 then begin
+   self->_DestroyTexts
+   return, 1
+  endif
+    
+  if N_ELEMENTS(src) eq 0 then GIS_make_datum, ret, src, NAME = 'WGS-84'
+
+  if not array_processing(x, y, REP_A0=_x, REP_A1=_y) then Message, WAVE_Std_Message(/ARG)
+  n_coord = N_ELEMENTS(_x)
+  self.grid->transform, _x, _y, _x, _y, SRC = src
+  coord = [1#_x,1#_y]  + 0.5 ; Because Center point of the pixel is not the true coord 
+  
+  if ~ arg_okay(TEXT, TYPE=IDL_STRING) then Message, WAVE_Std_Message('TEXT', /ARG)
+  if N_ELEMENTS(TEXT) eq 1 then _TEXT = REPLICATE(TEXT, n_coord) $
+     else if N_ELEMENTS(TEXT) eq n_coord then  _TEXT = text $
+      else  Message, WAVE_Std_Message('TEXT', /ARG)    
+  
+  _color = 'black'
+  _align = 0.
+  _charsize = 1.
+  if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
+  if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
+  if KEYWORD_SET(CHARSIZE) then _charsize = CHARSIZE
+  
+  point = REPLICATE({w_Map_TEXT}, n_coord)  
+  for i = 0, n_coord -1 do begin
+    point[i].color = cgColor(_color, /DECOMPOSED)
+    point[i].text = _text[i]
+    point[i].align = _align
+    point[i].coord = [_x[i],_y[i]]
+    point[i].charsize = _charsize
+  endfor
+
+  if self.ntexts eq 0 then begin
+   self.ntexts = n_coord
+   self.texts = PTR_NEW(point, /NO_COPY)
+  endif else begin
+   temp = *self.texts
+   npoints = self.ntexts
+   self->_DestroyTexts
+   temp = [temp, point]
+   self.texts = PTR_NEW(temp, /NO_COPY)
+   self.ntexts = npoints + n_coord
+  endelse
+     
+  self.is_Texted = TRUE
   return, 1
   
 end
@@ -2516,6 +2656,7 @@ pro w_Map::add_img, $
   if self.is_Winded then ok = self->_draw_wind(WINDOW=window)
   if self.is_Polygoned then ok = self->_draw_polygons(WINDOW=window)
   if self.is_Pointed then ok = self->_draw_points(WINDOW=window)
+  if self.is_Texted then ok = self->_draw_texts(WINDOW=window)
   if self.is_WindRosed then ok = self->_draw_windRoses(WINDOW=window)
   if N_ELEMENTS(TITLE) ne 0 then ok = self->_add_label(position, $
     TITLE=title, $
@@ -2891,6 +3032,15 @@ PRO w_Map__Define
             coord          : [0D,0D]         $ ; coordinates of the point       
             }
   
+  ; This is the information for one text to draw
+  struct = {w_Map_TEXT                     , $ 
+            text           : ''            , $ ; annotation
+            color          : 0L            , $ ; color of the text
+            charsize       : 0D            , $ ; annotation size
+            align          : 0D            , $ ; annotation alignement
+            coord          : [0D,0D]         $ ; coordinates of the text       
+            }
+  
   ; This is the information for one contour to draw
   struct = {w_Map_CONTOUR                  , $ 
             keywords       : PTR_NEW()     , $ ; Keywords for cgContour 
@@ -2970,6 +3120,8 @@ PRO w_Map__Define
              shapes        : PTR_NEW()              , $ ; array of nshapes {w_Map_SHAPE} structures                               
              npolygons     : 0L                     , $ ; number of active polygons to plot                  
              polygons      : PTR_NEW()              , $ ; array of npolygons {w_Map_POLYGON} structures                               
+             ntexts        : 0L                     , $ ; number of texts to plot                  
+             texts         : PTR_NEW()              , $ ; array of ntexts {w_Map_TEXT} structures                               
              npoints       : 0L                     , $ ; number of points to plot                  
              points        : PTR_NEW()              , $ ; array of npoints {w_Map_POINT} structures                               
              ncontours     : 0L                     , $ ; number of additional contours to plot                  
@@ -2990,7 +3142,8 @@ PRO w_Map__Define
              is_Winded     : FALSE                  , $ ; did the user specify wind flows?         
              is_Contoured  : FALSE                  , $ ; did the user specify additional contour plots?      
              is_WindRosed  : FALSE                  , $ ; did the user specify additional windroses?      
-             is_Masked     : FALSE                    $ ; did the user specify masks to overplot?      
+             is_Masked     : FALSE                  , $ ; did the user specify masks to overplot?      
+             is_Texted     : FALSE                    $ ; did the user specify texts to draw?      
              }
     
 END

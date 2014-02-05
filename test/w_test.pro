@@ -1220,6 +1220,19 @@ pro TEST_GR_DATALEVELS
   if N_ELEMENTS(info.colors) ne 13 then error += 1
   info = w_gr_DataLevels(data, N_LEVELS=12, SHOW=show, /HIST_EQUAL)
   
+  ; This is for the new regular check
+  info = w_gr_DataLevels(N_LEVELS=100, MIN_VALUE=1e-5, MAX_VALUE=5e-5, SHOW=show)
+  info = w_gr_DataLevels(N_LEVELS=100, MIN_VALUE=1e-9, MAX_VALUE=5e-9, SHOW=show)
+  info = w_gr_DataLevels(N_LEVELS=100, MIN_VALUE=1e-11, MAX_VALUE=5e-11, SHOW=show)
+  
+
+  ; Control the coloooors
+  colors = BYTE([1, 3, 18, 180])
+  info = w_gr_DataLevels(LEVELS=FINDGEN(5), COLORS=colors, SHOW=show)
+  colors = BYTE([1, 3, 18, 180,230])
+  info = w_gr_DataLevels(LEVELS=FINDGEN(5), COLORS=colors, SHOW=show, /OOB_TOP_COLOR)
+  colors = BYTE([245,1, 3, 18, 180,230])
+  info = w_gr_DataLevels(LEVELS=FINDGEN(5), COLORS=colors, SHOW=show, /OOB_BOT_COLOR, /OOB_TOP_COLOR)
   
   if error ne 0 then message, '% TEST_GR_DATALEVELS NOT passed', /CONTINUE else print, 'TEST_GR_DATALEVELS passed'
   
