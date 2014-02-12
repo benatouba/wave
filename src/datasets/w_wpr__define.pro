@@ -1201,7 +1201,8 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         p1 = cnot-1
         if check_WTIME(t0, OUT_QMS=it0) and cnot gt 1 then p0 = 0 > min(where(ot ge it0)) < (cnot-1)
         if check_WTIME(t1, OUT_QMS=it1) and cnot gt 1 then p1 = 0 > max(where(ot le it1)) < (cnot-1)
-        ot = MAKE_ABS_DATE(QMS=ot[p0:p1]-H_QMS) ; the -HQMS is because of the last element in year
+        if self.tres eq 'h' then ot = MAKE_ABS_DATE(QMS=ot[p0:p1]-H_QMS) $
+           else ot = MAKE_ABS_DATE(QMS=ot[p0:p1]) ;TODO: check this! Tom removed the -H_QMS wrong dates the -HQMS is because of the last element in year
         _y = (ot.year)[uniq(ot.year, sort(ot.year))]
       endif
       if do_m then begin
