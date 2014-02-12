@@ -45,6 +45,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
   if output_dir eq '' then return
   if ~FILE_TEST(output_dir, /DIRECTORY) then message, '$OUTPUT_DIR not ok'
   
+  sep = '\' + path_sep()
   force = KEYWORD_SET(FORCE)
   
   ; Parse dir
@@ -57,15 +58,15 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
   si = 0LL
   nf = 0LL
   for i=0, N_ELEMENTS(dres)-1 do begin
-    pok = where(StrMatch(file_list_l0, '*/'+dres[i]+'/*'), cnt)
+    pok = where(StrMatch(file_list_l0, '*'+sep+dres[i]+sep+'*'), cnt)
     if cnt eq 0 then continue
     file_list_l1 = file_list_l0[pok]
     for j=0, N_ELEMENTS(agg_steps)-1 do begin
-      pok = where(StrMatch(file_list_l1, '*/'+agg_steps[j]+'/*'), cnt)
+      pok = where(StrMatch(file_list_l1, '*'+sep+agg_steps[j]+sep+'*'), cnt)
       if cnt eq 0 then continue
       file_list_l2 = file_list_l1[pok]
       for k=0, N_ELEMENTS(vtype)-1 do begin
-        pok = where(StrMatch(file_list_l2, '*/'+vtype[k]+'/*'), cnt)
+        pok = where(StrMatch(file_list_l2, '*'+sep+vtype[k]+sep+'*'), cnt)
         if cnt eq 0 then continue
         file_list_l3 = file_list_l2[pok]
         for l=0, N_ELEMENTS(variables)-1 do begin
