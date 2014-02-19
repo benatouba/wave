@@ -288,6 +288,7 @@ PRO w_BoxPlot_Draw, thisdata, $
     x1 = xlocation - halfwidth
     x2 = xlocation + halfwidth
     PLOTS, [x1, x2], [stats.median, stats.median], COLOR=cgColor(color)
+    PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor('red')
     RETURN
   ENDIF
   
@@ -332,8 +333,8 @@ PRO w_BoxPlot_Draw, thisdata, $
   IF fillboxes THEN POLYFILL, [x1,x1,x2,x2,x1], [y1,y2,y2,y1,y1], COLOR=cgColor(boxcolor)
   PLOTS, [x1,x1,x2,x2,x1], [y1,y2,y2,y1,y1], COLOR=cgColor(outlinecolor)
   PLOTS, [x1, x2], [medianData, medianData], COLOR=cgColor(outlinecolor)
-  
- 
+  PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor('red')
+
   
   ; Are there any data greater than 1.5*iqr
   imax = Where(data GT quartile_75 + (outlierthreshold * iqr), maxcount)
@@ -541,7 +542,7 @@ PRO w_BoxPlot, data, $
   Catch, theError
   IF theError NE 0 THEN BEGIN
     Catch, /CANCEL
-    void = Error_Message()
+    void = cgErrorMsg()
     IF N_Elements(theState) NE 0 THEN Device, Decomposed=theState
     IF N_Elements(thisMulti) NE 0 THEN !P.Multi = thisMulti
     RETURN
