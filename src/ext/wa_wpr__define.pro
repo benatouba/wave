@@ -973,7 +973,7 @@ function wa_WPR::getVarData, id, $
       'PSFC': begin
         return, self->GetVarData('p2hpa', time, nt, T0=t0, T1=t1, MONTH=month)/0.01
       end
-      'SLP': begin
+      'SLP_B': begin
       ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
       T2 = self->getVarData('T2', T0=t0, T1=t1) - 273.15 ; in degC
       zs = self->getVarData('HGT', T0=t0, T1=t1) ; in m
@@ -1117,7 +1117,7 @@ end
 ;    COMPRESS: set this keyword to use compression option and netcdf4
 ;
 ;-
-pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress
+pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress, ST0=st0
   
   ; Set up environnement
   @WAVE.inc
@@ -1133,7 +1133,7 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress
   
   self->getTime, otime, ont, ot0, ot1
   oabs=MAKE_ABS_DATE(QMS=otime)
-  ot0 = MAKE_ABS_DATE(QMS=ot0)
+  if ~KEYWORD_SET(ST0) then ot0 = MAKE_ABS_DATE(QMS=ot0) else ot0= MAKE_ABS_DATE(QMS=st0)
   ot1 = MAKE_ABS_DATE(QMS=ot1)
   if ot0.hour ne 0 then message, 'Please do not make it too complicated buhuhu'
   if ot1.hour ne 0 then begin; message, 'Please do not make it too complicated buhuhu'
@@ -1141,6 +1141,9 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress
     ot1=oabs[hval[N_ELEMENTS(hval)-1]]
     print, 'Please do not make it too complicated buhuhu - ot1 is', time_to_str(ot1)
   endif
+  
+  print, 'T0: ', ot0
+  print, 'T1: ', ot1
  
   if (ot1.qms-ot0.qms) lt D_QMS then message, 'Please do not make it too complicated buhuhu'  
   ndays = (ot1.qms-ot0.qms) / D_QMS
@@ -1207,8 +1210,10 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress
      
   ; Ok. now go through the days
   for i=0, ndays-1 do begin
+
     t0 = interval_time[i]
     t1 = interval_time[i+1]
+
     ; Because of PRCP we take n+1 timesteps but keep the last ns
     var = self->getVarData(id, T0=t0, T1=t1) 
     if STRMID(str_equiv(id), 0, 4) eq 'PRCP' then begin
@@ -1326,6 +1331,7 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
   for i=0, nmonths-1 do begin
     t0 = interval_time[i]
     t1 = interval_time[i+1] - D_QMS
+
     var = self->getVarData(id, T0=t0, T1=t1)
     if info.type eq '3d_press' or info.type eq '3d_eta' then begin
       var = MEAN(TEMPORARY(var), DIMENSION=4)
