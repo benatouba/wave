@@ -358,10 +358,10 @@ pro w_LoadCT, table, $
   
   if N_ELEMENTS(table) eq 0 then table=0  
 
-  if arg_okay(table, TYPE=IDL_STRING, /SCALAR) then begin ; wave table case
+  if ~arg_okay(table, /NUMERIC) and arg_okay(table, /SCALAR) then begin ; wave table case
     p = WHERE(str_equiv(tables.Name) eq str_equiv(table), cnt)
     if cnt ne 0 then out_id = p[0] else MESSAGE, 'Table not found: ' + table
-  endif else if arg_okay(table, /INTEGER, /SCALAR) then begin ; coyote table case
+  endif else if arg_okay(table, /NUMERIC, /SCALAR) then begin ; coyote table case
     if ARG_PRESENT(RGB_TABLE) then begin
       cgLoadCT, table, $
         ADDCMD=addcmd, $
