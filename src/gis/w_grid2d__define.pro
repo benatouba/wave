@@ -1666,13 +1666,6 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   for i=0L, N_ent-1 do begin
     ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)
     if not ptr_valid(ent.vertices) then continue
- 
-    if _entrule then begin
-      if ~ CALL_FUNCTION(ENTRULE, ent, i) then begin
-        shpmodel->IDLffShape::DestroyEntity, ent
-        continue
-      endif
-    endif
     
     _x = reform((*ent.vertices)[0,*])
     _y = reform((*ent.vertices)[1,*])
@@ -1685,6 +1678,13 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
       or max(_x) lt range[0] then begin
       shpmodel->IDLffShape::DestroyEntity, ent
       continue
+    endif
+    
+    if _entrule then begin
+      if ~ CALL_FUNCTION(ENTRULE, ent, i) then begin
+        shpmodel->IDLffShape::DestroyEntity, ent
+        continue
+      endif
     endif
     
     mg_x->add, _x

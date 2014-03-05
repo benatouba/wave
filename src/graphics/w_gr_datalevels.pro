@@ -563,8 +563,8 @@ function w_gr_DataLevels, data, $
        is_hist = TRUE
      endif else begin   
        case dataTypeName of
-         'FLOAT':  _levels = (float(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
-         'DOUBLE':  _levels = (double(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level
+         'FLOAT':  _levels = cgScaleVector(FINDGEN(_n_levels), _min_level, _max_level + same_minmax, /PRESERVE_TYPE)
+         'DOUBLE':  _levels = cgScaleVector(DINDGEN(_n_levels), _min_level, _max_level + same_minmax, /PRESERVE_TYPE)
           else: begin
             _levels = ROUND((FLOAT(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
             _levels = _levels[SORT(_levels)]

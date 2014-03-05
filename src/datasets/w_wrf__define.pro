@@ -81,7 +81,7 @@ END
 ;    to the chosen subset.
 ;    
 ;    Call this function without arguments to reset the WRF object to its original
-;    form.
+;    state.
 ;    
 ;    Internally, the w_Grid2D::set_ROI method is called but the indexes of the
 ;    spatially heterogen ROI are then used to create the 

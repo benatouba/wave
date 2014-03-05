@@ -68,6 +68,8 @@
 ;             to the default length of the plot (usefull if your colorbar is too wide for example)
 ;    SPACING: in, optional
 ;             control the spacing between tags and DCBar
+;    HORIZONTALCB: in, optional
+;                  set this keyword if you want an horizontal Color Bar (experimental)
 ;    NO_BAR: in, optional
 ;            set this keyword if you don't want to plot the color bar
 ;    NO_LEGEND: in, optional
@@ -104,6 +106,7 @@ pro w_standard_2d_plot, map, $
     DISP_IMG=disp_img, $
     ANTI_ALIASING=anti_aliasing, $
     XFACTOR=xfactor, $
+    HORIZONTALCB=horizontalcb, $
     CHARSIZE=charsize, $
     OOB_FACTOR=oob_factor, $
     SPACING=spacing, $
@@ -145,6 +148,14 @@ pro w_standard_2d_plot, map, $
     xs = FLOOR(xsize * 1.34d)
     ys = FLOOR(ysize * 1.14d)
   endelse
+  
+  _hcb = KEYWORD_SET(HORIZONTALCB)
+  
+  if _hcb then begin
+    _ys = xs
+    xs = ys
+    ys = _ys
+  endif
   
   if N_ELEMENTS(XFACTOR) eq 0 then XFACTOR = 1.
   xs *= XFACTOR
@@ -211,13 +222,23 @@ pro w_standard_2d_plot, map, $
     WINDOW=cgWIN, /NORMAL, CHARSIZE=1.5*sfac, CHARTHICK = 1.*sfac
     
   ; Bar
-  pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
+
   if ~KEYWORD_SET(NO_BAR) then begin
-    map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
-      CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor, SPACING=spacing
-    ; Title bar
-    cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
-      WINDOW=cgWIN, /NORMAL, CHARSIZE=charsize * sfac, CHARTHICK = 1. *sfac
+    if _hcb then begin
+      pbar = [pos[0] + 0.06, pos[3]+0.06, pos[2] - 0.06, pos[3]+0.08]
+      map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, VERTICAL=0, FORMAT=bar_format, $
+        CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor, SPACING=spacing
+      ; Title bar
+      cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.01, bar_title, ALIGNMENT=0.5, $
+        WINDOW=cgWIN, /NORMAL, CHARSIZE=charsize * sfac, CHARTHICK = 1. *sfac
+    endif else begin
+      pbar = [pos[2] + 0.04, pos[1]+0.05, pos[2] + 0.06, pos[3]-0.05]
+      map->add_color_bar, TITLE='', LABELS=bar_tags, WINDOW=cgWIN, POSITION=pbar, /RIGHT, /VERTICAL, FORMAT=bar_format, $
+        CHARSIZE=charsize *sfac, CHARTHICK = 1.* sfac, OOB_FACTOR=oob_factor, SPACING=spacing
+      ; Title bar
+      cgText, (pbar[0]+pbar[2])/2., pbar[3]+0.025, bar_title, ALIGNMENT=0.5, $
+        WINDOW=cgWIN, /NORMAL, CHARSIZE=charsize * sfac, CHARTHICK = 1. *sfac
+    endelse
   endif
   
   if ~ KEYWORD_SET(NO_LEGEND) then begin

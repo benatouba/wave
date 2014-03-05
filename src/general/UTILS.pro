@@ -1548,7 +1548,7 @@ end
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-function utils_aggregate_grid_data, array, ratio ; TODO: Update routine: add grid update
+function utils_aggregate_grid_data, array, ratio, DOUBLE=double ; TODO: Update routine: add grid update
 
   ; Set Up environnement
   @WAVE.inc
@@ -1556,23 +1556,30 @@ function utils_aggregate_grid_data, array, ratio ; TODO: Update routine: add gri
   
   if ~arg_okay(array, /NUMERIC, /ARRAY, N_DIM=2) then message, WAVE_Std_Message('array',/ARG)
   if ~arg_okay(ratio, /NUMERIC, /SCALAR) then message, WAVE_Std_Message('ratio',/ARG)
+  
+  if KEYWORD_SET(DOUBLE) then _r = DOUBLE(ratio) else _r = ratio
      
   siz = SIZE(array, /DIMENSIONS)
   nxin = siz[0]
   nyin = siz[1]
   
-  if nxin / DOUBLE(ratio) ne (nxin / ratio) or nyin / DOUBLE(ratio) ne (nyin / ratio) then message, 'Ratio is not a divider of array.'
+  if nxin / _r ne (nxin / ratio) or nyin / _r ne (nyin / ratio) then message, 'Ratio is not a divider of array.'
 
   nxout = nxin / ratio
   nyout = nyin / ratio
   
-  agg = DBLARR(nxout,nyout)
-  tempx = DBLARR(nxout,nyin)
+  if KEYWORD_SET(DOUBLE) then begin
+    agg = DBLARR(nxout,nyout)
+    tempx = DBLARR(nxout,nyin)
+  endif else begin
+    agg = FLTARR(nxout,nyout)
+    tempx = FLTARR(nxout,nyin)
+  endelse
     
   for i = 0, nxin-1 do tempx[i/ratio,*] += array[i,*]            
   for j = 0, nyin-1 do agg[*,j/ratio] += tempx[*,j]      
 
-  return, agg / DOUBLE(ratio*ratio)
+  return, agg / (_r^2)
   
 end
 

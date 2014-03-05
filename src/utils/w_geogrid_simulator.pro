@@ -30,23 +30,26 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
 
   while ~EOF(lun) do begin
     readf, lun, l
-    s = STRSPLIT(l, '=', /EXTRACT)
-    if str_equiv(s[0]) eq 'PARENT_ID' then parent_id = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'PARENT_GRID_RATIO' then parent_grid_ratio = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'I_PARENT_START' then i_parent_start = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'J_PARENT_START' then j_parent_start = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'E_WE' then e_we = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'E_SN' then e_sn = long(STRSPLIT(s[1], ',', /EXTRACT))
-    if str_equiv(s[0]) eq 'DX' then dx = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
-    if str_equiv(s[0]) eq 'DY' then dy = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
+    s = STRSPLIT(l, '=', /EXTRACT, COUNT=nn)
+    if nn le 1 then continue
+    s0 = str_equiv(s[0])
+    s1 = STRSPLIT(str_equiv(s[1]), ',', /EXTRACT)
+    if s0 eq 'PARENT_ID' then parent_id = long(s1)
+    if s0 eq 'PARENT_GRID_RATIO' then parent_grid_ratio = long(s1)
+    if s0 eq 'I_PARENT_START' then i_parent_start = long(s1)
+    if s0 eq 'J_PARENT_START' then j_parent_start = long(s1)
+    if s0 eq 'E_WE' then e_we = long(s1)
+    if s0 eq 'E_SN' then e_sn = long(s1)
+    if s0 eq 'DX' then dx = float(s1[0])
+    if s0 eq 'DY' then dy = float(s1[0])
     
-    if str_equiv(s[0]) eq 'MAP_PROJ' then map_proj = utils_replace_string(str_equiv((STRSPLIT(s[1], ',', /EXTRACT))[0]), "'", '')
+    if s0 eq 'MAP_PROJ' then map_proj = utils_replace_string(s1[0], "'", '')
     
-    if str_equiv(s[0]) eq 'REF_LAT' then ref_lat = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
-    if str_equiv(s[0]) eq 'REF_LON' then ref_lon = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
-    if str_equiv(s[0]) eq 'TRUELAT1' then truelat1 = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
-    if str_equiv(s[0]) eq 'TRUELAT2' then truelat2 = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
-    if str_equiv(s[0]) eq 'STAND_LON' then stand_lon = float((STRSPLIT(s[1], ',', /EXTRACT))[0])
+    if s0 eq 'REF_LAT' then ref_lat = float(s1[0])
+    if s0 eq 'REF_LON' then ref_lon = float(s1[0])
+    if s0 eq 'TRUELAT1' then truelat1 = float(s1[0])
+    if s0 eq 'TRUELAT2' then truelat2 = float(s1[0])
+    if s0 eq 'STAND_LON' then stand_lon = float(s1[0])
   endwhile
   free_lun, lun
   
@@ -139,6 +142,11 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
   m = OBJARR(ndoms)
   for i = 0, ndoms-1 do begin
     map = OBJ_NEW('w_Map', g[i], YSIZE=700)
+    ok = map->set_shape_file(/LAKES)
+    ok = map->set_topography(/DEFAULT, Z=z)
+    w_LoadCT, 'wiki-schwarzwald-cont', TABLE_SIZE=ts
+    ok = map->set_plot_params(N_L=127, CMAX=ts-1)
+    ok = map->set_data(z)
     for j=i+1, ndoms-1 do begin
       (g[j])->Get_XY, x, y, nx, ny
       x = [0,nx-1,nx-1,0,0]
@@ -146,7 +154,7 @@ pro w_geogrid_simulator, namelist, GRIDS=grids, MAPS=maps, DOPLOT=doplot
       k = map->set_polygon(x, y, SRC=(g[j]), THICK=(ndoms-j)*1.5)
     endfor
     m[i] = map
-    if KEYWORD_SET(DOPLOT) then w_standard_2d_plot, map, /NO_BAR, TITLE='Domain ' + str_equiv(i+1)
+    if KEYWORD_SET(DOPLOT) then w_standard_2d_plot, map, TITLE='Domain ' + str_equiv(i+1)
   endfor
        
   if ARG_PRESENT(grids) then grids = g else undefine, g
