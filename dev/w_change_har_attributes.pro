@@ -1,4 +1,17 @@
-pro w_change_har_attributes, file
+pro change_har_attributes_file, file
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+
+  do_time = 0
+  wObj = w_geo_nc(FILE=file)
+  wObj->get_time, time, nt
+  if nt eq 12 or nt eq 1 then begin
+    do_time = 1
+    tindays = (time - time[0])/D_QMS
+  endif
+  undefine, wObj
 
   sObj = Obj_New('NCDF_FILE', file, /MODIFY)
   IF Obj_Valid(sObj) EQ 0 THEN Message, 'Source object cannot be created.'
@@ -70,15 +83,16 @@ pro w_change_har_attributes, file
   
   projlis = STRSPLIT(PROJ_ENVI_STRING, ',', /EXTRACT)
   sObj->WriteGlobalAttr, 'PROJ_NAME', PROJECTION
-  sObj->WriteGlobalAttr, 'PROJ_CENTRAL_LON', projlis[3]
-  sObj->WriteGlobalAttr, 'PROJ_CENTRAL_LAT', projlis[4]
+  sObj->WriteGlobalAttr, 'PROJ_CENTRAL_LON', projlis[4]
+  sObj->WriteGlobalAttr, 'PROJ_CENTRAL_LAT', projlis[3]
   sObj->WriteGlobalAttr, 'PROJ_STANDARD_PAR1', projlis[7]
   sObj->WriteGlobalAttr, 'PROJ_STANDARD_PAR2', projlis[8]
   sObj->WriteGlobalAttr, 'PROJ_SEMIMAJOR_AXIS', projlis[1]
   sObj->WriteGlobalAttr, 'PROJ_SEMIMINOR_AXIS', projlis[2]
   sObj->WriteGlobalAttr, 'PROJ_FALSE_EASTING', projlis[5]
   sObj->WriteGlobalAttr, 'PROJ_FALSE_NORTHING', projlis[6]
-  sObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', PROJ_ENVI_STRING
+  sObj->WriteGlobalAttr, 'PROJ_DATUM', 'WGS-84'
+  sObj->WriteGlobalAttr, 'PROJ_ENVI_STRING', proj_envi_string
   
   
   sObj->WriteGlobalAttr, 'GRID_INFO', 'Grid spacing: GRID_DX and GRID_DY (unit: m), Down left corner: GRID_X00 and GRID_Y00 (unit: m), Upper Left Corner: GRID_X01 and GRID_Y01 (unit: m)'
@@ -91,7 +105,58 @@ pro w_change_har_attributes, file
   sObj->WriteGlobalAttr, 'GRID_NX', nx
   sObj->WriteGlobalAttr, 'GRID_NY', ny
   
+  varName = sObj->GetGlobalAttrValue('VARNAME')  
+  sObj->writeVarAttr, varName, 'coordinates', 'lon lat'
+  
+  if str_equiv(varname) eq 'SCLDFRA' then begin
+    sObj->WriteVarAttr, 'scldfra', 'long_name', 'Surface cloud fraction computed in a 50km radius FOV (Moelg and Kaser 2011).' 
+  endif
+  
+  if do_time then begin
+    units = sObj->GetVarAttrValue('time', 'units')
+    if nt eq 12 then begin
+      if STRMID(units, 0,6) ne 'months' then message, 'wrf'
+      units = utils_replace_string(units, 'months', 'days')
+    endif
+    if nt eq 1 then begin
+      if STRMID(units, 0,5) eq 'years' then begin
+        units = utils_replace_string(units, 'years', 'days')
+      endif else begin
+        do_time = 0
+      endelse
+    endif
+    if do_time then begin
+      sObj->WriteVarAttr, 'time', 'units', units
+      sObj->WriteVarData, 'time', tindays
+    endif
+  endif
+  
   sObj->Sync
   undefine, sObj 
+
+end
+
+pro test_change_har_attributes
+  
+  outD = '/home/mowglie/tmp/test_aattr/'
+  
+  inF =  '/home/mowglie/disk/Data/Products/HAR/d30km/m/2d/tibet_d30km_m_2d_albedo_2003.nc'
+  inF =   '/home/mowglie/disk/Data/Products/HAR/d30km/static/tibet_d30km_static_hgt.nc'
+  
+  tf = utils_replace_string(utils_replace_string(inF, '/HAR/', '/HAR_DS/'), 'tibet_', 'har_')
+  
+  fname = FILE_BASENAME(inF)
+  outF = outD + utils_replace_string(fname, 'tibet_', 'har_')
+  
+  FILE_COPY, inF, outF, /OVERWRITE
+  change_har_attributes_file, outF
+  
+  wi = w_NCDF(FILE=inF)
+  wi->dump, FILE= outD +'orig.txt'
+  wi = w_NCDF(FILE=outF)
+  wi->dump, FILE= outD +'new.txt'  
+  wi = w_NCDF(FILE=tF)
+  wi->dump, FILE= outD + 'ds.txt'  
+  
 
 end
