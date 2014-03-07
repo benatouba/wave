@@ -228,6 +228,20 @@ pro wa_WPR::_addDerivedVars
   c = where(vars.derived eq 0, nc)
   if nc eq 0 then Message, 'Big problem'
   vars = vars[c]
+ 
+ 
+  ;LW up in W/m²
+  d1 = self->hasVar('TSK')
+  d2 = self->hasVar('EMISS')
+  if (d1 and d2) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'lw_up'
+    v.name = 'lw_up'
+    v.unit = 'w m-2'
+    v.description = 'upward long wave flux at ground surface'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
     
   ;Precipitation rate in mm h-1
   d1 = self->hasVar('rainc')
@@ -920,6 +934,11 @@ function wa_WPR::getVarData, id, $
     
     ; Its a derived variable that we have to compute
     case str_equiv(id) of
+       'LWUP': begin
+      value = self->GetVarData('TSK', time, nt, t0 = t0, t1 = t1, MONTH=month) 
+      e = self->GetVarData('EMISS', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      value = (5.6704e-8) * e * value^4
+    end
       'TD2': begin
         p = self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)
         qvapor = self->GetVarData('q2', T0=t0, T1=t1, MONTH=month)
