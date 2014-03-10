@@ -66,7 +66,7 @@
 ;
 ;    Here are the IDL commands to read the data and produce a box plot of it::
 ;
-;        OpenR, 1, Find_Resource_File('mm_data.dat')
+;        OpenR, 1, cgFindPathTo('mm_data.dat')
 ;        header = Strarr(2)
 ;        Readf, 1, header
 ;        data = Intarr(5, 20)
@@ -97,11 +97,6 @@
 ;         labels = ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF']
 ;         for j=0,5 do cgText, (index+2)[j], -1, labels[j], Alignment=0.5
 ;
-; .. image:: cgboxplot.png
-;
-;    An article about his program can be found here::
-;
-;         http://www.idlcoyote.com/graphics_tips/box_whisker.html
 ;
 ; :Author:
 ;       FANNING SOFTWARE CONSULTING::
@@ -236,6 +231,7 @@ END ; --------------------------------------------------------------------------
 PRO w_BoxPlot_Draw, thisdata, $
   BOXCOLOR=boxcolor, $
   COLOR=color, $
+  DRAW_MEAN=draw_mean, $
   FILLBOXES=fillboxes, $
   MINMAXWHISKERS=minmaxwhiskers, $
   OUTLIERTHRESHOLD=outlierthreshold, $
@@ -248,6 +244,7 @@ PRO w_BoxPlot_Draw, thisdata, $
   On_Error, 1
   
   ; Check the parameters.
+  if N_ELEMENTS(DRAW_MEAN) ne 0 then _draw_mean = 1 else _draw_mean = 0
   IF N_Elements(thisdata) EQ 0 THEN Message, 'Data vector is undefined.'
   IF N_Elements(boxcolor) EQ 0 THEN boxcolor = 'rose'
   IF N_Elements(color) EQ 0 THEN color = 'opposite'
@@ -288,7 +285,7 @@ PRO w_BoxPlot_Draw, thisdata, $
     x1 = xlocation - halfwidth
     x2 = xlocation + halfwidth
     PLOTS, [x1, x2], [stats.median, stats.median], COLOR=cgColor(color)
-    PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor('red')
+    if _draw_mean then PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor(draw_mean)
     RETURN
   ENDIF
   
@@ -333,8 +330,7 @@ PRO w_BoxPlot_Draw, thisdata, $
   IF fillboxes THEN POLYFILL, [x1,x1,x2,x2,x1], [y1,y2,y2,y1,y1], COLOR=cgColor(boxcolor)
   PLOTS, [x1,x1,x2,x2,x1], [y1,y2,y2,y1,y1], COLOR=cgColor(outlinecolor)
   PLOTS, [x1, x2], [medianData, medianData], COLOR=cgColor(outlinecolor)
-  PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor('red')
-
+  if _draw_mean then PLOTS, [x1, x2], [stats.mean, stats.mean], COLOR=cgColor(draw_mean)
   
   ; Are there any data greater than 1.5*iqr
   imax = Where(data GT quartile_75 + (outlierthreshold * iqr), maxcount)
@@ -393,7 +389,7 @@ END ;---------------------------------------------------------------------------
 ;   range (IQR), defined at IQR75-IQR25. The whiskers extend out to the maximum
 ;   or minimum value of the data, or to the 1.5 times either the IQR75 or IQR25,
 ;   if there is data beyond this range. Outliers are identified with small circles.
-
+;
 ; :Params:
 ;    data: in, required
 ;       A two-dimensional array. The data for each box plot will be in
@@ -420,6 +416,8 @@ END ;---------------------------------------------------------------------------
 ;    color: in, optional, type=string, default='opposite'
 ;       A string color name, as appropriate for the cgColor program. The boxplot
 ;       will be drawn in this color.
+;    draw_mean: in, optional
+;       set to a cgColor to draw a bar for the mean also
 ;    fillboxes: in, optional, type=boolean, default=0
 ;       Set this keyword to fill the IQR box with a color, specified by BOXCOLOR.
 ;    labels: in, optional, type=string
@@ -518,6 +516,7 @@ PRO w_BoxPlot, data, $
   BOXCOLOR=boxcolor, $
   CHARSIZE=charsize, $
   COLOR=color, $
+  DRAW_MEAN=draw_mean, $
   FILLBOXES=fillboxes, $
   LABELS=labels, $
   LAYOUT=layout, $
@@ -538,6 +537,9 @@ PRO w_BoxPlot, data, $
   WINDOW=window, $
   _REF_EXTRA=extra
   
+  BACKGROUND_COLOR='white'
+  COLOR='black'
+  
   ; Error handling.
   Catch, theError
   IF theError NE 0 THEN BEGIN
@@ -553,7 +555,7 @@ PRO w_BoxPlot, data, $
     Print, 'USE SYNTAX: w_BoxPlot, data'
     RETURN
   ENDIF
-  
+ 
   ; Do they want this plot in a resizeable graphics window?
   IF Keyword_Set(addcmd) THEN window = 1
   IF Keyword_Set(window) AND ((!D.Flags AND 256) NE 0) THEN BEGIN
@@ -568,6 +570,7 @@ PRO w_BoxPlot, data, $
         BOXCOLOR=boxcolor, $
         CHARSIZE=charsize, $
         COLOR=color, $
+        DRAW_MEAN=draw_mean, $
         FILLBOXES=fillboxes, $
         LABELS=labels, $
         MINMAXWHISKERS=minmaxwhiskers, $
@@ -595,6 +598,7 @@ PRO w_BoxPlot, data, $
       BOXCOLOR=boxcolor, $
       CHARSIZE=charsize, $
       COLOR=color, $
+      DRAW_MEAN=draw_mean, $
       FILLBOXES=fillboxes, $
       LABELS=labels, $
       MINMAXWHISKERS=minmaxwhiskers, $
@@ -788,7 +792,7 @@ PRO w_BoxPlot, data, $
   ENDELSE
   
   if N_ELEMENTS(boxcolor) ne numbox then _boxcolor = REPLICATE(boxcolor, numbox) else _boxcolor = boxcolor
-  
+
   ; If you are not overplotting, then draw a plot for the box plots.
   IF ~overplot THEN BEGIN
     rr = maxData - minData
@@ -801,16 +805,13 @@ PRO w_BoxPlot, data, $
     ENDIF ELSE BEGIN
       plotlabels = ['  ', labels, '  ']
     ENDELSE
-    IF (!D.Flags AND 256) NE 0 THEN BEGIN
-      Device, Get_Visual_Depth=theDepth
-      IF theDepth GE 24 THEN Device, Decomposed=1, Get_Decomposed=theState
-    ENDIF
+    cgSetColorState, 1, CURRENT=theState
     IF ((!D.Flags AND 256) NE 0) && (!D.Window LT 0) THEN cgDisplay
     Plot, xrange, yrange, /NODATA, _STRICT_EXTRA=extra, $
       XMINOR=1, XTICKS=numbox+1, YSTYLE=1, BACKGROUND=cgColor(background_color), $
       COLOR=cgColor(axiscolor), XTICK_GET=xloc, XTICKFORMAT='(A1)', $
       XCHARSIZE=xcharsize, XTHICK=xthick, CHARSIZE=charsize
-      
+
     ; Put the labels on the plots.
     CASE 1 OF
       (rotate EQ 0): alignment = 0.5
@@ -827,13 +828,13 @@ PRO w_BoxPlot, data, $
         ALIGNMENT=alignment, COLOR=cgColor(axiscolor), $
         ORIENTATION=rotate, CHARSIZE=xcharsize, CHARTHICK=xthick
     ENDFOR
-    IF N_Elements(theState) NE 0 THEN Device, Decomposed=theState
+    cgSetColorState, theState
   ENDIF
-  
+
   ; Draw the boxes.
   IF N_Elements(width) EQ 0 THEN width = ((!X.CRange[1] - !X.Crange[0]) / (numbox+2.0)) * 0.9
   s = { Median:0.0D, Mean: 0.0D, Min:0.0D, Max:0.0D, $
-    Q25:0.0D, Q75:0.0D, IQR:0.0D, SDEV:0.0D, N:0L }
+    Q25:0.0D,Q75:0.0D, IQR:0.0D, SDEV:0.0D, N:0L }
   IF Arg_Present(stats) THEN stats = Replicate(s, numbox)
   FOR j=1,numbox DO BEGIN
     IF passedDataType EQ 'POINTER' THEN BEGIN
@@ -846,7 +847,7 @@ PRO w_BoxPlot, data, $
     IF N_Elements(xlocation) EQ 0 THEN location=j ELSE location = xlocation[j-1]
     w_BoxPlot_Draw, dataToBox, COLOR=color, BOXCOLOR=_boxcolor[j-1], FILLBOXES=fillboxes, $
       OUTLINECOLOR=outlinecolor, OUTLIERCOLOR=outliercolor, WIDTH=width, XLOCATION=location, STATS=s, $
-      OUTLIERTHRESHOLD=outlierthreshold, MINMAXWHISKERS=minmaxwhiskers
+      OUTLIERTHRESHOLD=outlierthreshold, MINMAXWHISKERS=minmaxwhiskers, DRAW_MEAN=draw_mean
     IF Arg_Present(stats) THEN stats[j-1] = s
   ENDFOR
   
