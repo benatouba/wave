@@ -1,12 +1,82 @@
-pro change_har_attributes_file, file
+function change_test_time, file
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2  
-
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' ' + file)
+    RETURN, 0
+  ENDIF 
+  
   do_time = 0
   wObj = w_geo_nc(FILE=file)
   wObj->get_time, time, nt
+  
+  bn = FILE_BASENAME(file)
+  if FILE_BASENAME(FILE_DIRNAME(file)) ne 'static' then begin
+    year = LONG(STRMID(bn, STRLEN(bn)-7, 4))
+    tts = MAKE_ABS_DATE(QMS=time)
+    p = where(tts.year ne year, cnt)
+    if cnt ne 0 then begin
+      if cnt eq 1 and p[0] eq (nt-1) then begin
+      ;ok
+      endif else begin
+        test = 1
+        print, 'Houston!'
+        print, file
+      endelse
+    endif
+  endif else begin
+    print, 'Static!'
+    print, file
+    print, TIME_to_STR(time)
+  end    
+
+  undefine, wObj
+  return, 1
+
+end
+
+
+function change_har_attributes_file, file
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg + ' ' + file)
+    RETURN, 0
+  ENDIF 
+  
+  do_time = 0
+  wObj = w_geo_nc(FILE=file)
+  wObj->get_time, time, nt
+  
+  bn = FILE_BASENAME(file)
+  if FILE_BASENAME(FILE_DIRNAME(file)) ne 'static' then begin
+    year = LONG(STRMID(bn, STRLEN(bn)-7, 4))
+    tts = MAKE_ABS_DATE(QMS=time)
+    p = where(tts.year ne year, cnt)
+    if cnt ne 0 then begin
+      if cnt eq 1 and p[0] eq (nt-1) then begin
+      ;ok
+      endif else begin
+        test = 1
+        print, 'Houston!'
+        print, file
+      endelse
+    endif
+  endif else begin
+    print, 'Static!'
+    print, file
+    print, TIME_to_STR(time)
+  end    
   if nt eq 12 or nt eq 1 then begin
     do_time = 1
     tindays = (time - time[0])/D_QMS
@@ -133,30 +203,106 @@ pro change_har_attributes_file, file
   
   sObj->Sync
   undefine, sObj 
+  
+  return, 1
 
 end
 
-pro test_change_har_attributes
-  
-  outD = '/home/mowglie/tmp/test_aattr/'
-  
-  inF =  '/home/mowglie/disk/Data/Products/HAR/d30km/m/2d/tibet_d30km_m_2d_albedo_2003.nc'
-  inF =   '/home/mowglie/disk/Data/Products/HAR/d30km/static/tibet_d30km_static_hgt.nc'
-  
-  tf = utils_replace_string(utils_replace_string(inF, '/HAR/', '/HAR_DS/'), 'tibet_', 'har_')
-  
-  fname = FILE_BASENAME(inF)
-  outF = outD + utils_replace_string(fname, 'tibet_', 'har_')
-  
-  FILE_COPY, inF, outF, /OVERWRITE
-  change_har_attributes_file, outF
-  
-  wi = w_NCDF(FILE=inF)
-  wi->dump, FILE= outD +'orig.txt'
-  wi = w_NCDF(FILE=outF)
-  wi->dump, FILE= outD +'new.txt'  
-  wi = w_NCDF(FILE=tF)
-  wi->dump, FILE= outD + 'ds.txt'  
-  
-
+pro w_change_har_names
+ ; SET UP ENVIRONNEMENT
+ 
+  @WAVE.inc
+  COMPILE_OPT IDL2
+ 
+ dir = '/cfs/tip-pr1/HAR/d30km/'
+ 
+ files = FILE_SEARCH(dir, '*tibet*.nc', COUNT=cnt)
+ ok = LONARR(cnt)
+ 
+ for i=0, cnt-1 do begin
+  inF = files[i]  
+  outF = utils_replace_string(inF, '/tibet_', '/har_')  
+  FILE_MOVE, inF, outF, /VERBOSE   
+ endfor
+ 
 end
+
+pro w_change_check_har_attributes
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  dir = '/cfs/tip-pr1/HAR/d30km/'
+  
+  ; files = FILE_SEARCH(dir, '*tibet*.nc', COUNT=cnt)
+  files = FILE_SEARCH(dir, '*.nc', COUNT=cnt)
+  ok = LONARR(cnt)
+  
+ cgProgressBar = Obj_New("CGPROGRESSBAR", /Cancel)
+ cgProgressBar->Start    
+  for i=0, cnt-1 do begin
+    inF = files[i]
+    ;  outF = utils_replace_string(inF, '/tibet_', '/har_')
+    ;  FILE_MOVE, inF, outF, /VERBOSE
+;    print, inF
+    ok[i] = change_test_time(inF)
+    cgProgressBar->update, (i / DOUBLE(cnt-1)) * 100
+  endfor
+  cgProgressBar->Destroy
+  
+;  save, files, ok, FILENAME='w_change_har_attributes_definitiv_har10.sav'
+  
+end
+
+pro w_change_har_attributes
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  dir = '/cfs/tip-pr1/HAR/d10km/'
+  
+  ; files = FILE_SEARCH(dir, '*tibet*.nc', COUNT=cnt)
+  files = FILE_SEARCH(dir, '*har*.nc', COUNT=cnt)
+  ok = LONARR(cnt)
+  
+  cgProgressBar = Obj_New("CGPROGRESSBAR", /Cancel)
+  cgProgressBar->Start    
+  for i=0, cnt-1 do begin
+    inF = files[i]
+    ;  outF = utils_replace_string(inF, '/tibet_', '/har_')
+    ;  FILE_MOVE, inF, outF, /VERBOSE
+    ok[i] = change_har_attributes_file(inF)
+    cgProgressBar->update, (i / DOUBLE(cnt-1)) * 100
+  endfor
+  cgProgressBar->Destroy
+  
+  save, files, ok, FILENAME='w_change_har_attributes_definitiv_har10.sav'
+  
+end
+;
+;pro test_change_har_attributes
+;  
+;  outD = '/home/mowglie/tmp/test_aattr/'
+;    
+;  inF =  '/home/mowglie/disk/Data/Products/HAR/d30km/m/2d/tibet_d30km_m_2d_albedo_2003.nc'
+;  inF =   '/home/mowglie/disk/Data/Products/HAR/d30km/static/tibet_d30km_static_hgt.nc'
+;  
+;  tf = utils_replace_string(utils_replace_string(inF, '/HAR/', '/HAR_DS/'), 'tibet_', 'har_')
+;  
+;  fname = FILE_BASENAME(inF)
+;  outF = outD + utils_replace_string(fname, 'tibet_', 'har_')
+;  
+;  FILE_COPY, inF, outF, /OVERWRITE
+;  change_har_attributes_file, outF
+;  
+;  wi = w_NCDF(FILE=inF)
+;  wi->dump, FILE= outD +'orig.txt'
+;  wi = w_NCDF(FILE=outF)
+;  wi->dump, FILE= outD +'new.txt'  
+;  wi = w_NCDF(FILE=tF)
+;  wi->dump, FILE= outD + 'ds.txt'  
+;  
+;
+;end

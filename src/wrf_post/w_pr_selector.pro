@@ -22,6 +22,9 @@
 ;           Set this keyword to force overwriting
 ;    CONVERT: in, optional, type=boolean
 ;             convert the data to netcdf3
+;    SIMULATE: in, optional, type=boolean
+;              if set, this just computes the size of the 
+;              data to copy (not compatible with CONVERT)
 ;
 ; :History:
 ;     Written by FaM, 2012.
@@ -36,6 +39,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
     AGG_STEPS=agg_steps, $
     FORCE=force, $
     COMPRESS=compress, $
+    SIMULATE=simulate, $
     CONVERT=convert
     
   if N_ELEMENTS(INPUT_DIR) eq 0 then input_dir = Dialog_Pickfile(TITLE='Please select the input product directory', /DIRECTORY, /MUST_EXIST)
@@ -44,6 +48,8 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
   if N_ELEMENTS(OUTPUT_DIR) eq 0 then output_dir = Dialog_Pickfile(TITLE='Please select the output product directory', /DIRECTORY, /MUST_EXIST)
   if output_dir eq '' then return
   if ~FILE_TEST(output_dir, /DIRECTORY) then message, '$OUTPUT_DIR not ok'
+  
+  _simu = KEYWORD_SET(SIMULATE)
   
   sep = '\' + path_sep()
   force = KEYWORD_SET(FORCE)
@@ -85,6 +91,11 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
             file_list_l5 = file_list_l4[pok]
             for n=0, N_ELEMENTS(file_list_l5)-1 do begin
               f = file_list_l5[n]
+              if _simu then begin
+                si += (FILE_INFO(f)).size
+                nf += 1
+                continue
+              endif              
               arr_file = output_dir + PATH_SEP() + utils_replace_string(f, dir, '')
               if FILE_TEST(arr_file) and ~ force then continue
               FILE_MKDIR, FILE_DIRNAME(arr_file)
@@ -108,7 +119,7 @@ pro w_pr_selector, INPUT_DIR=input_dir, $
       endfor
     endfor
   endfor
-  si = cgNumber_Formatter(si/1000000000d) + ' Gb'
+  si = cgNumber_Formatter(si/double(1024LL^3)) + ' Gb'
   print, 'Done. Number of files copied: ' + str_equiv(nf) + '. Total size copied: ' + si
   
 end
