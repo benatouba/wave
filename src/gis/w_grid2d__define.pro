@@ -971,6 +971,9 @@ end
 ;             value to set to missing values in the final grid
 ;    LINEAR: in, optional
 ;            if linear interpolation has to be used
+;    NOBOUNDS: in, optional
+;              standard beavior is to replace bounds by MISSING data do avoid
+;              stupid extrapolating. Set this keyword to avoid this 
 ;
 ; :Returns:
 ;    the transformed data array in the grid (same X Y dims as the grid)
@@ -978,7 +981,7 @@ end
 ; :History:
 ;      Written by FaM, 2011.
 ;-
-function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing, LINEAR=linear               
+function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing, LINEAR=linear, NOBOUNDS=nobounds              
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -1018,13 +1021,19 @@ function w_Grid2D::map_lonlat_data, data, lon, lat, SRC=src, MISSING=missing, LI
   type = SIZE(data,/TYPE)
   tdata = MAKE_ARRAY(self.tnt_c.nx, self.tnt_c.ny, nt, TYPE=type)
   tdata[*] = missing
+  if ~KEYWORD_SET(NOBOUNDS) then begin
+    data[0:(siz_src[1]-1),0,*] = missing
+    data[0:(siz_src[1]-1),siz_src[2]-1,*] = missing
+    data[0,0:(siz_src[2]-1),*] = missing
+    data[siz_src[1]-1,0:(siz_src[2]-1),*] = missing
+  endif
    
   self->transform_LonLat, lon, lat, src, i, j
   TRIANGULATE, i, j, triangles
   for t=0, nt-1 do begin
     temp = tdata[*,*,t]
     temp[*] = GRIDDATA(i, j, data[*,*,t], START=[0D,0D], DELTA=[1D,1D], DIMENSION=[self.tnt_c.nx,self.tnt_c.ny], $
-    TRIANGLES=triangles, NEAREST_NEIGHBOR=nearest_neighbor, LINEAR=linear)        
+    TRIANGLES=triangles, NEAREST_NEIGHBOR=nearest_neighbor, LINEAR=linear, MISSING=missing)        
     tdata[*,*,t] = TEMPORARY(temp)
   endfor   
 

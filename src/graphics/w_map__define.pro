@@ -2184,13 +2184,20 @@ end
 ;               the datum of the lonlats (default is WGS-84)
 ;    MISSING: in, optional
 ;             value to set to missing values in the final grid
+;    LINEAR: in, optional
+;            if linear interpolation has to be used
+;    NOBOUNDS: in, optional
+;              standard beavior is to replace bounds by MISSING data do avoid
+;              stupid extrapolating. Set this keyword to avoid this 
 ;             
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
 function w_Map::set_ll_data, data, lon, lat, $
-    SRC=src, $
-    MISSING=missing
+  SRC=src, $
+  MISSING=missing, $
+  LINEAR=linear, $
+  NOBOUNDS=nobounds
   
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2207,7 +2214,7 @@ function w_Map::set_ll_data, data, lon, lat, $
 
   if N_PARAMS() eq 0 then return, self->set_data()
  
-  _data = self.grid->map_lonlat_data(data, lon, lat, SRC=src, MISSING = missing)
+  _data = self.grid->map_lonlat_data(data, lon, lat, SRC=src, MISSING=missing, LINEAR=linear, NOBOUNDS=nobounds)
   
   return, self->set_data(_data, MISSING = missing)
 

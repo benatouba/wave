@@ -782,12 +782,16 @@ end
 ;    TOFILE: in, optional
 ;            set this keyword with a path to a scv file were the 
 ;            variables will be printed out
+;    NODERIVED: in, optional
+;               set this keyword to get only the original variables
+;    VARINFO: out, optional
+;             a structure containg the variables information
 ;           
 ; :Returns:
 ;   An array of variable ids
 ;
 ;-
-function w_WPR::getVarNames, COUNT=count, PRINT=print, TOFILE=tofile
+function w_WPR::getVarNames, COUNT=count, PRINT=print, TOFILE=tofile, NODERIVED=noderived, VARINFO=varinfo
 
   ; Set up environnement
   @WAVE.inc
@@ -795,6 +799,13 @@ function w_WPR::getVarNames, COUNT=count, PRINT=print, TOFILE=tofile
   
   vars = *self.vars
   count = N_ELEMENTS(vars)
+   
+  if KEYWORD_SET(NODERIVED) then begin
+   pok = where(~ vars.derived, count)
+   if count eq 0 then return, ''
+   vars = vars[pok]
+  endif
+  
   out = vars.id
   
   if KEYWORD_SET(PRINT) then begin
@@ -830,6 +841,8 @@ function w_WPR::getVarNames, COUNT=count, PRINT=print, TOFILE=tofile
     WRITE_CSV, tofile, str, HEADER=header
   endif
   
+  
+  varinfo = vars
   return, out
   
 end
