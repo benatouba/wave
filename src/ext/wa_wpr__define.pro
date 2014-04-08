@@ -13,7 +13,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
+function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=domain
 
   ; Set up environnement
   @WAVE.inc
@@ -26,6 +26,8 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
     RETURN, 0
   ENDIF
   
+  if N_ELEMENTS(DOMAIN) eq 0 then DOMAIN='d01' 
+  if N_ELEMENTS(DOMAIN) ne 0 then DOMAIN='d0'+w_str(domain)
   ; Check arguments
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select WRF product directory to read', /MUST_EXIST, /DIRECTORY)
   if directory eq '' then MESSAGE, WAVE_Std_Message(/FILE)
@@ -47,7 +49,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
     ' Be sure you are at the right place in the product directory structure'
   
   self.hres=hres
-  self.domain='d01' 
+  self.domain= domain 
   self.tres = tres
   self.hres = hres
   self.directory = dir
