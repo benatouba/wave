@@ -946,16 +946,23 @@ end
 ;
 ; :Keywords:
 ;    FILE: in, optional, type = string
-;          An optional string containing the path to the output ASCII file. If not set, a dialog window will open
-;
+;          An optional string containing the path to the output ASCII file. 
+;          If not set, a dialog window will open
+;    SAMEDIR: in, optional
+;             if set the dumpfile is creaated in the same directory as 
+;             the original file
 ; :History:
 ;     Written by FaM, 2010.
 ;-
-PRO w_NCDF::dump, FILE = file
+PRO w_NCDF::dump, FILE=file, SAMEDIR=samedir
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
+  
+  if KEYWORD_SET(SAMEDIR) then begin
+    file = file_dirname(self.path) + path_sep() + file_basename(self.fname, '.nc') + '_dump.txt'
+  endif
 
   if N_ELEMENTS(file) eq 0 then begin
     isPoint = STRPOS(self.fname, '.')

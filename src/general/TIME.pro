@@ -2253,7 +2253,7 @@ end
 ;+
 ; :Description:
 ;    
-;    Same as `TS_AGG` but for 2D or 3D arrays.
+;    Same as `TS_AGG` but for 3D or 4D arrays.
 ;    
 ;    Computes interval mean values and other statistics from a time serie. 
 ;    Both input and output time series can be irregular. You can compute hourly 

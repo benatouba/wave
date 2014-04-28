@@ -59,7 +59,10 @@
 ;    MISSING: in, optional, type=string
 ;             value for missing data in the timeserie (see `w_ts_Data::addData`)
 ;             Ignored if `data` and `time` are not set
-;
+;    SETPERIOD: in, optional, type=boolean
+;               if set, a call to ->setPeriod is done for you at the end
+;               This is not done automatically for efficiency reasons
+;               
 ;-
 function w_ts_Data::init, data, time, NAME=name, $
                                       DESCRIPTION=description, $
@@ -68,7 +71,8 @@ function w_ts_Data::init, data, time, NAME=name, $
                                       AGG_METHOD=agg_method, $
                                       STEP=step, $
                                       TIMESTEP=timestep, $ 
-                                      MISSING=missing
+                                      MISSING=missing, $ 
+                                      SETPERIOD=setperiod
   
   ; Set up environnement
   @WAVE.inc
@@ -93,7 +97,7 @@ function w_ts_Data::init, data, time, NAME=name, $
   self.unit = _unit
   self.validity = _validity
   
-  if N_PARAMS() eq 2 then self->addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing
+  if N_PARAMS() eq 2 then self->addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, SETPERIOD=setperiod
   
   return, 1
     
@@ -311,9 +315,12 @@ end
 ;             First call only, ignored afterwards            
 ;    REPLACE: in, optional, type=boolean
 ;             replace the old data?
+;    SETPERIOD: in, optional, type=boolean
+;               if set, a call to ->setPeriod is done for you at the end
+;               This is not done automatically for efficiency reasons
 ;
 ;-
-pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, REPLACE=replace
+pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missing, REPLACE=replace, SETPERIOD=setperiod
 
   ; Set up environnement
   @WAVE.inc
@@ -419,6 +426,8 @@ pro w_ts_Data::addData, data, time, STEP=step, TIMESTEP=timestep, MISSING=missin
   PTR_FREE, self.time
   self.data = PTR_NEW(_data, /NO_COPY)
   self.time = PTR_NEW(qms, /NO_COPY)
+  
+  if KEYWORD_SET(SETPERIOD) then self->setPeriod
   
 end
 
@@ -552,7 +561,7 @@ end
 ;+
 ; :Description:
 ;    Get the data
-;  
+; 
 ; :Keywords:
 ;    nt: out
 ;        the number of times
@@ -562,6 +571,7 @@ end
 ;
 ;-
 function w_ts_Data::getData, NT=nt
+;TODO: should be renamed to getVarData
 
   ; Set up environnement
   @WAVE.inc
@@ -897,14 +907,17 @@ end
 ;              MIN_NSIG can be eather a scalar or an array of the size
 ;              of the number of intervals (N_ELEMENTS(NEW_TIME)- 1)
 ;              Ignored if MIN_SIG is set
-;             
+;    SETPERIOD: in, optional, type=boolean
+;               if set, a call to ->setPeriod is done for you at the end
+;               This is not done automatically for efficiency reasons
+;                      
 ; :Returns:
 ;    A new object with the aggregated data
 ;
 ;-
 function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
-                                 STEP=_step, TIMESTEP=_timestep
+                                 STEP=_step, TIMESTEP=_timestep, SETPERIOD=setperiod
 
   ; Set up environnement
   @WAVE.inc
@@ -1030,7 +1043,8 @@ function w_ts_Data::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, Y
     AGG_METHOD=self.agg_method, $
     STEP=step, $
     TIMESTEP=timestep, $
-    MISSING=*self.missing)
+    MISSING=*self.missing, $
+    SETPERIOD=setperiod)
     
   return, out
   

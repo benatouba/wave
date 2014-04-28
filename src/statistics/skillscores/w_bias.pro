@@ -20,7 +20,7 @@
 ; :History:
 ;     Written by FaM, 2012.
 ;-
-function w_BIAS, ref, data, threshold, VALID=valid
+function w_BIAS, ref, data, threshold, VALID=valid, CONT=cont
 
   ; Set up environnement
   @WAVE.inc
@@ -34,7 +34,8 @@ function w_BIAS, ref, data, threshold, VALID=valid
   if cnt ne 0 then denom[pnok] = 1.
   out = float(s.a+s.b) / denom
   if cnt ne 0 then out[pnok] = !VALUES.F_NAN
-
+  
+  cont = s
   return, FLOAT(out)
 
 end

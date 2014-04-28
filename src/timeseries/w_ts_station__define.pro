@@ -881,14 +881,17 @@ end
 ;              MIN_NSIG can be eather a scalar or an array of the size
 ;              of the number of intervals (N_ELEMENTS(NEW_TIME)- 1)
 ;              Ignored if MIN_SIG is set
-;             
+;    SETPERIOD: in, optional, type=boolean
+;               if set, a call to ->setPeriod is done for you at the end
+;               This is not done automatically for efficiency reasons
+;                     
 ; :Returns:
 ;    A new object with the aggregated data
 ;
 ;-
 function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month, YEAR=year, $
                                 NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
-                                 STEP=_step, TIMESTEP=_timestep
+                                 STEP=_step, TIMESTEP=_timestep, SETPERIOD=setperiod
   
   ; Set up environnement
   @WAVE.inc
@@ -908,6 +911,8 @@ function w_ts_Station::aggregate, MINUTE=minute, HOUR=hour, DAY=day, MONTH=month
                                  NEW_TIME=new_time, MIN_SIG=min_sig, MIN_NSIG=min_nsig, $
                                  STEP=_step, TIMESTEP=_timestep)   
   endfor
+  
+  if KEYWORD_SET(SETPERIOD) then out->setPeriod
   
   return, out
 
