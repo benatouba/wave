@@ -437,16 +437,20 @@ function w_ts_Station::getVarNames, COUNT=varCount, PRINT=print
   IF varCount EQ 0 THEN return, ''
   
   varNames = StrArr(varCount)
+  varInfo = StrArr(varCount)
   FOR j=0,varCount-1 DO BEGIN
     thisObj = self.vars->Get(POSITION=j)
     varNames[j] = thisObj->GetProperty('NAME')
+    varInfo[j] = '; ' + thisObj->GetProperty('DESCRIPTION') + $
+                 ' [' + thisObj->GetProperty('UNIT') + ']'
   ENDFOR
   
   ; Return a scalar if necessary.
   IF varCount EQ 1 THEN varNames = varNames[0]
   
   if KEYWORD_SET(PRINT) then begin
-    for i=0, varCount-1 do print, str_equiv(i) + ': ' + varNames[i]
+    strn = STRING(varNames, FORMAT='(A-'+w_str(max(strlen(varNames))+1)+')')
+    for i=0, varCount-1 do print, w_Str(i, FORMAT='(I02)') + ': ' + strn[i] + varInfo[i]
   endif
   
   RETURN, varNames

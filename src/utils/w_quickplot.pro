@@ -529,6 +529,7 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
     dim3tags = dim3tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,*,0])
     dim4tags = dim4tags,  $ ; vector of strings of the dimension of N_ELEMENTS(image[0,0,0,*])
     INTERPOLATE = interpolate, $ ; bilinear interoplation of the image
+    RANGE = range, $ ; user defined range
     wid = wid, $
     Group_Leader = group
     
@@ -595,7 +596,11 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   ; Create the image object.
   imagePtr = Ptr_New(image[*,*,varinds[0],varinds[1]])
   processPtr = Ptr_New(image[*,*,varinds[0],varinds[1]])
-  thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr), Dimensions=[xsize,ysize], Palette=thisPalette, INTERPOLATE = interpolate)
+  if n_elements(range) eq 2 then begin
+    rmaxi = range[1]
+    rmini = range[0] 
+  endif
+  thisImage = Obj_New('IDLgrImage', BytScl(*imagePtr, max=rmaxi, min=rmini), Dimensions=[xsize,ysize], Palette=thisPalette, INTERPOLATE = interpolate)
   
   ; Create scaling parameters for the image. I get position coordinates for a normalized window from
   ; my w_QuickPlot_Aspect function. Then use my cgNormalize function to create scaling factors for the image.
@@ -687,7 +692,11 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   ; Create colorbar
   pfin = where(finite(*imagePtr) eq 1, cntfin)
   if cntfin eq 0 then MESSAGE, '$data has no finite element.'
-  brange = [min((*imagePtr)[pfin]), max((*imagePtr)[pfin])]
+  if n_elements(RANGE) eq 2 then begin
+    brange = range
+  endif else begin
+    brange = [min((*imagePtr)[pfin]), max((*imagePtr)[pfin])]
+  endelse
   if brange[0] eq brange[1] then brange[1] += 1
   cbar =  Obj_New('VColorBar', Palette=THISPALETTE, Range=brange, $
     Position=posbar, color = axisColor, Title=CbarTitle)

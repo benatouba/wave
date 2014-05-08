@@ -11,6 +11,11 @@
 ; :Author: FaM, 2014
 ;-
 function w_correlation_matrix, x
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
   
   d = SIZE(x)
   if d[0] ne 2 then Message, 'X should be of dimension 2.'

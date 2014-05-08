@@ -122,6 +122,24 @@ end
 
 ;+
 ; :Description:
+;     Accessor
+;-
+pro w_geographic::GetProperty, $
+  OBJ=obj, $
+  _Ref_Extra=extra
+
+  ; Environment
+  compile_opt idl2
+  on_error, 2
+  
+  if arg_present(obj) then obj = self.obj
+  
+  self->w_GISdata::GetProperty, _Extra=extra
+  
+end
+
+;+
+; :Description:
 ;    To obtain the list af available variables in the dataset.
 ;
 ; :Keywords:
@@ -198,7 +216,7 @@ function w_geographic::hasVar, id, INFO=info
     dims = dims, $ ;
     dimnames = dimnames)
 
-  info = {id:id, name:id, description:description, unit:units}
+  info = {id:id, name:id, description:description, unit:units, ndims:n_elements(dims), dims:dims}
   
   return, 1
 
