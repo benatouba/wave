@@ -1225,7 +1225,7 @@ function utils_wrf_time, cdfid, time, time0, time1, nt, READ_SECONDS=read_second
     RETURN, FALSE
   ENDIF  
 
-  SetDefaultValue, read_seconds, 0B, /BOOLEAN
+  SetDefaultValue, read_seconds, 1B, /BOOLEAN
   
   NCDF_VARGET, cdfid, 'Times', stimes
   ntimes = N_ELEMENTS(stimes[0,*])
