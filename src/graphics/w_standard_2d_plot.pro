@@ -208,7 +208,7 @@ pro w_standard_2d_plot, map, $
     wobj->GetProperty, WID=cgWID
   endif else begin
     if total([keyword_set(eps),keyword_set(pdf),keyword_set(png),keyword_set(jpeg)]) gt 1 then message, 'In /PIXMAP mode, only one image can be written at the same time.'
-      if keyword_set(eps) then cgPS_Open, FILENAME=eps, /DECOMPOSED $
+      if keyword_set(eps) then cgPS_Open, FILENAME=eps, /DECOMPOSED, /ENCAPSULATED $
         else if keyword_set(pdf) then cgPS_Open, FILENAME=pdf, /DECOMPOSED   $
           else if keyword_set(png) then cgPS_Open, FILENAME=png, /DECOMPOSED   $
             else if keyword_set(jpeg) then cgPS_Open, FILENAME=jpeg, /DECOMPOSED

@@ -3,12 +3,12 @@ pro w_partial_correlation_test
    ; Let's make two independant random time series
    n = 1000
    r = RANDOMNUMBERGENERATOR()
-   d1 = r->GetRandomNumbers(n) * 10
-   d2 = r->GetRandomNumbers(n) * 10
+   d1 = r->GetRandomNumbers(n)
+   d2 = r->GetRandomNumbers(n)
    
    ; D0 is a linear combination of d1 and d2, with a 
    ; bit of random inside
-   d0 = 0.8 * d1 + 1.2 * d2 + r->GetRandomNumbers(n)*3
+   d0 = 0.8 * d1 + 0.2 * d2 + r->GetRandomNumbers(n, /NORMAL) * 0.1
    
    ; I can restitute the linear model with w_regress()
    xx = FLTARR(2,n)
@@ -21,7 +21,7 @@ pro w_partial_correlation_test
    print, ''
    
    ; D3 is simply a linear combination of d2 with a bit of random
-   d3 = 0.5 * d2 + r->GetRandomNumbers(n) * 0.5
+   d3 = 0.5 * d2 + r->GetRandomNumbers(n, /NORMAL) * 0.5
    
    ; So if I add d3 to the model, this sould not improve it 
    xx = FLTARR(3,n)
@@ -66,7 +66,18 @@ pro w_partial_correlation_test
    print, 'Partial correlation of d0 with d2: ' + w_STR(w_partial_correlation(xx, 0, 2))
    print, 'Partial correlation of d0 with d3: ' + w_STR(w_partial_correlation(xx, 0, 3))
    
-   ; Now is is clear that d2 explains more variance id d0 then d3 does.  
+   ; Now is is clear that d2 explains more variance id d0 then d3 does.
+   
+   
+   ; I would like to check that the results are in accordance with 
+   ; the standard formula with N=3   
+   rr = w_r(d0,d1) - w_r(d0,d2)*w_r(d1,d2)
+   rr = rr / (sqrt(1.-w_r(d0,d2)^2) * sqrt(1.-w_r(d1,d2)^2))
+   
+   xx = [transpose(d0),transpose(d1),transpose(d2)]
+   mrr = w_partial_correlation(xx, 0, 1)
+   
+   if abs(rr-mrr) gt 0.0001 then Message, 'nooo'
    
 end
 
@@ -94,8 +105,8 @@ function w_partial_correlation, x, i1, i2
   d = SIZE(x)
   if d[0] ne 2 then Message, 'X should be of dimension 2.'
   nn = d[1]
-    
-  m = INVERT(w_correlation_matrix(x)) 
+  
+  m = INVERT(CORRELATE(x)) 
   
   return, - m[i1,i2] / SQRT(m[i1,i1]*m[i2,i2])
   

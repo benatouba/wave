@@ -1533,6 +1533,112 @@ end
 
 ;+
 ; :Description:
+;    Same as transform_shape but returning a list of structures instead of an array
+;    with connectivity. History will decide if it's better/faster or not...
+;    (it's not, currently)
+;  
+;  
+; :Params:
+;    SHPFILE: in, required
+;             the shapefile to read (.shp). If not set, a dialog window will open  
+;  
+; :Keywords:
+;    
+;    SHP_SRC: in, optional
+;             the shapefile coordinate system (datum or proj) default is WGS-84
+;    REMOVE_ENTITITES:in, optional, type = long
+;                     an array containing the id of the shape entities to remove from the shape
+;                     All other entities are plotted normally.
+;    KEEP_ENTITITES:in, optional, type = long
+;                   an array containing the id of the shape entities to keep for the shape. 
+;                   All other entities are ignored.
+;
+; :Returns:
+;    Not sure yet
+; 
+; :History:
+;     Written by FaM, 2014
+;- 
+function w_Grid2D::get_shape, shpfile, $
+  SRC=src, $
+  REMOVE_ENTITITES=remove_entitites, $
+  KEEP_ENTITITES=keep_entitites
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2  
+  
+  if N_ELEMENTS(shpfile) eq 0 then shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
+
+  if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
+  
+  if N_ELEMENTS(src) eq 0 then GIS_make_datum, ret, src, NAME = 'WGS-84'
+  
+  if arg_okay(src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
+  if arg_okay(src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
+  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('src', /ARG)
+  
+  ; read shp file and create polygon object from entities
+  shpmodel = OBJ_NEW('IDLffShape', shpfile)
+  if ~obj_valid(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
+  
+  ;Get the number of entities so we can parse through them
+  shpModel->GetProperty, N_ENTITIES=n_ent, ATTRIBUTE_NAMES=attnames, N_ATTRIBUTES=nattr
+  _shift = keyword_set(NO_COORD_SHIFT)
+  
+  ent_indices= lindgen(n_ent)
+  if N_ELEMENTS(REMOVE_ENTITITES) ne 0 then utils_array_remove, remove_entitites, ent_indices
+  if N_ELEMENTS(KEEP_ENTITITES) ne 0 then ent_indices = keep_entitites
+    
+  vx = list()
+  vy = list()
+  inds = list()
+  ents = shpmodel->GetEntity(/ALL, /ATTRIBUTES)
+  nents = ents.n_vertices
+  verts = ents.vertices
+  i0 = 0L
+  foreach v, verts, i do begin
+    vx->Add, (*v)[0,*], /EXTRACT
+    vy->Add, (*v)[1,*], /EXTRACT
+    inds->Add, i0 + lindgen(nents[i])
+    i0 += nents[i]
+  endforeach
+  vx = vx->ToArray()
+  vy = vy->ToArray()
+  self->transform, vx, vy, vx, vy, SRC=src
+  
+  out = list()
+  n_ent = N_ELEMENTS(ent_indices)
+  for i=0L, n_ent-1 do begin
+    id = ent_indices[i]
+    ent = ents[id]
+    _x = vx[inds[id]]
+    _y = vy[inds[id]]
+    n_vert = n_elements(_x)
+    h = {}
+    for k=0, nattr-1 do h = create_struct(attnames[k], (*(ent.attributes)).(k), h)
+    
+    h = create_struct('n_parts', ent.n_parts, h)
+    h = create_struct('parts', list(), h)
+    if h.n_parts le 1 then begin
+      h.n_parts = 1
+      h.parts.add, {x:_x, y:_y}
+    endif else begin
+       parts = [*ent.parts, n_vert]
+       for k=0L, ent.n_parts-1 do begin
+         h.parts.add, {x:_x[(parts[k]):(parts[k+1]-1)], $
+          y:_y[(parts[k]):(parts[k+1]-1)]}
+       endfor
+    endelse
+    out->add, h
+  endfor
+  
+  return, out
+  
+end
+
+;+
+; :Description:
 ;    Transforms the coordinates of a shape file into grid coordinates.
 ;    
 ;    The entities are organised using a connectivity array (see example).
@@ -1582,8 +1688,6 @@ end
 ;                   this is for shapes with islands in it, and if you want
 ;                   to make ROIs with them or filled plot them
 ;
-;    NO_PARTS: in, optional, type = boolean
-;              If entities have parts in it, don't treat them as parts (usefull for polygon /FILL)
 ;
 ; :Examples:
 ;    
@@ -1641,9 +1745,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
   if ~is_proj and ~is_dat then Message, WAVE_Std_Message('shp_src', /ARG)
   
-  ;****************************************
-  ; Make boundaries to spare computations *
-  ;****************************************
+  ; Make boundaries to spare computations 
   if is_dat then begin
    self->get_LonLat, glon, glat
    p = where(glon gt 180, cnt)
@@ -1674,33 +1776,23 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   mg_conn = obj_new('MGcoArrayList', type=IDL_LONG)
   for i=0L, N_ent-1 do begin
     ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)
-    if not ptr_valid(ent.vertices) then continue
     
-    _x = reform((*ent.vertices)[0,*])
-    _y = reform((*ent.vertices)[1,*])
+    _x = (*ent.vertices)[0,*]
+    _y = (*ent.vertices)[1,*]
     n_vert = n_elements(_x)
     
-    if n_vert lt 3 $
-      or min(_y) gt range[3] $
-      or max(_y) lt range[2] $
-      or min(_x) gt range[1] $
-      or max(_x) lt range[0] then begin
-      shpmodel->IDLffShape::DestroyEntity, ent
-      continue
-    endif
+    if  min(_y) gt range[3] $
+      || max(_y) lt range[2] $
+      || min(_x) gt range[1] $
+      || max(_x) lt range[0] then continue
+
+    if _entrule && ~CALL_FUNCTION(ENTRULE, ent, i) then continue
     
-    if _entrule then begin
-      if ~ CALL_FUNCTION(ENTRULE, ent, i) then begin
-        shpmodel->IDLffShape::DestroyEntity, ent
-        continue
-      endif
-    endif
+    mg_x->add, _x[*]
+    mg_y->add, _y[*]
     
-    mg_x->add, _x
-    mg_y->add, _y
-    
-    parts = *ent.parts
     if _mi then begin
+      parts = *ent.parts
       for k=0L, ent.n_parts-1 do begin
         if k eq ent.n_parts-1 then begin
           n_vert = ent.n_vertices - parts[k]
@@ -1713,8 +1805,9 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
         n_coord += n_vert
       endfor
     endif else begin
+      parts = [*ent.parts, ent.n_vertices]
       for k=0L, ent.n_parts-1 do begin
-        if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
+        n_vert = parts[k+1]-parts[k]
         mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
         n_coord += n_vert
       endfor
@@ -1738,10 +1831,11 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   endif  
   if FILE_BASENAME(shpfile) eq '10m_ocean.shp' then y = y < 90. ;TODO: dirty temporary workaround
   self->transform, x, y, x, y, SRC = shp_src
-
-  if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin ; Because Center point of the pixel is not the true coord
-    x = x + 0.5
-    y = y + 0.5
+  
+   ; Because Center point of the pixel is not the true coord
+  if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin
+    x -= 0.5
+    y -= 0.5
   endif
 
 end

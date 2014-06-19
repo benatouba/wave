@@ -87,7 +87,7 @@ function w_lh_bulk, ws, t, st, vp, $
 
   ; Latent heat depending on surface conditions.
   lv = fltarr(nt) + lvvap
-  if cntcold ne 0 then lv[pcold] =  lvsub[pcold]
+  if cntcold ne 0 then lv[pcold] = lvsub
 
   ; Saturation vapor pressure over ice or water? TODO: not used in MBM V1.6 (2010)
   vps = w_vp_water(st)

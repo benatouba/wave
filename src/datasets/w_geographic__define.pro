@@ -2,10 +2,13 @@
 ;+
 ;
 ;  w_geographic is the basis class for all NCDF files with a
-;  geographic coordinate system
+;  geographic coordinate system. If the projection is obvious
+;  (i.e. equirectangular projection) then the object
+;  will find it out. If not, you can provide a grid object
+;  as parameter (the file must be w_geo_nc compatible)
 ;  
 ; :History:
-;     Written by FaM, 2013.
+;     Written by FaM, 2013,2014
 ;
 ;-      
 
@@ -28,7 +31,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_geographic::init, file, DATUM=datum, _EXTRA=extra
+function w_geographic::init, file, FILEGRID=filegrid, DATUM=datum, _EXTRA=extra
   
   ; Set up environnement
   @WAVE.inc
@@ -50,27 +53,35 @@ function w_geographic::init, file, DATUM=datum, _EXTRA=extra
       
   ; Original grid geoloc
   ok = geo->define_subset()
-  geo->get_ncdf_coordinates, lon, lat, nx, ny, /NO_REFORM
   
-  y0 = max(lat, pm)
-  if pm eq 0 then begin
-    self.order = 1 ; Check this
-    Message, 'I decided that the file is upside down.', /INFORMATIONAL
-  endif
-    
-  ;Projection
-  SetDefaultValue, datum, 'WGS-84'
-  GIS_make_proj, ret, proj, PARAM='1, ' + datum
-  
-  grid = OBJ_NEW('w_Grid2D', nx=nx, $
-    ny=ny, $
-    dx=ABS(lon[1]-lon[0]), $
-    dy=ABS(lat[1]-lat[0]), $
-    x0=lon[0], $
-    y0=y0, $
-    proj=proj, $
-    meta=meta)
+  if n_elements(FILEGRID) ne 0 then begin
+    if ~(obj_valid(filegrid) && obj_isa(filegrid, 'w_grid2d')) then Message, '$FILEGRID not valid' 
+    grid = filegrid
+  endif else begin
+    ; Try the equirectangular case
+    geo->get_ncdf_coordinates, lon, lat, nx, ny, /NO_REFORM
 
+    y0 = max(lat, pm)
+    if pm eq 0 then begin
+      self.order = 1 ; Check this
+      message, 'I decided that the file is upside down.', /INFORMATIONAL
+    endif
+
+    ;Projection
+    SetDefaultValue, datum, 'WGS-84'
+    GIS_make_proj, ret, proj, PARAM='1, ' + datum
+
+    grid = obj_new('w_Grid2D', nx=nx, $
+      ny=ny, $
+      dx=abs(lon[1]-lon[0]), $
+      dy=abs(lat[1]-lat[0]), $
+      x0=lon[0], $
+      y0=y0, $
+      proj=proj, $
+      meta=meta)
+  endelse
+
+  ; Give the grid to the real worker here
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
   undefine, grid
   if ~ ok then return, 0
@@ -145,6 +156,8 @@ end
 ; :Keywords:
 ;    COUNT: out, optional
 ;           the number of variables
+;    INFO: out, optional
+;          an array of variables info structure
 ;    PRINT: in, optional
 ;           set this keyword to print the variables (and info)
 ;           in the console
@@ -153,7 +166,7 @@ end
 ;   An array of variable ids
 ;
 ;-
-function w_geographic::getVarNames, COUNT=count, PRINT=print
+function w_geographic::getVarNames, COUNT=count, INFO=info, PRINT=print
 
   ; Set up environnement
   @WAVE.inc
@@ -161,7 +174,21 @@ function w_geographic::getVarNames, COUNT=count, PRINT=print
   
   self.obj->get_Varlist, varid, varnames, varndims, varunits, vardescriptions, vartypes
   count = N_ELEMENTS(varid)
-    
+  
+  if arg_present(info) then begin
+    info = !NULL
+    for i=0L, count-1 do begin
+      str = {id:varid[i], $
+        name:varnames[i], $
+        ndims:varndims[i], $
+        unit:varunits[i], $
+        description:vardescriptions[i], $
+        type:vartypes[i] $
+      }
+      info = [info, str]
+    endfor
+  endif
+  
   if KEYWORD_SET(PRINT) then begin
     print, '   ID   NAME            DESCRIPTION                                 UNIT                   TYPE'
     
