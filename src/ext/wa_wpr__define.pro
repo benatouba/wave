@@ -25,9 +25,9 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF
-  
+
   if N_ELEMENTS(DOMAIN) eq 0 then DOMAIN='d01' 
-  if N_ELEMENTS(DOMAIN) ne 0 then DOMAIN='d0'+w_str(domain)
+
   ; Check arguments
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select WRF product directory to read', /MUST_EXIST, /DIRECTORY)
   if directory eq '' then MESSAGE, WAVE_Std_Message(/FILE)
@@ -237,8 +237,8 @@ pro wa_WPR::_addDerivedVars
   d2 = self->hasVar('EMISS')
   if (d1 and d2) then begin
     v = self->_varStruct(/DERIVED)
-    v.id = 'lw_up'
-    v.name = 'lw_up'
+    v.id = 'lwup'
+    v.name = 'lwup'
     v.unit = 'w m-2'
     v.description = 'upward long wave flux at ground surface'
     v.type = '2d'
