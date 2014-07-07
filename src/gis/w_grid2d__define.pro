@@ -1671,7 +1671,8 @@ end
 ;            iteration over the shapefile entities. It can be used
 ;            to e.g filter entities after shapefile specific criterias.
 ;            the function has to return 1 if the entity must be kept, 0 if not
-;            the function must accept two arguments, entity and i (index of the entity)
+;            the function must accept two arguments, entity and i (index of the entity),
+;            and two keywords: ATTRIBUTE_NAMES and N_ATTRIBUTES
 ;                     
 ;    REMOVE_ENTITITES:in, optional, type = long
 ;                     an array containing the id of the shape entities to remove from the shape
@@ -1763,7 +1764,8 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   if ~OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
   
   ;Get the number of entities so we can parse through them
-  shpModel->GetProperty, N_ENTITIES=N_ent
+  shpModel->GetProperty, N_ENTITIES=N_ent, ATTRIBUTE_NAMES=attnames, N_ATTRIBUTES=nattr
+  
   entities = LINDGEN(N_ent)
   if N_ELEMENTS(REMOVE_ENTITITES) ne 0 then utils_array_remove, remove_entitites, entities
   if N_ELEMENTS(KEEP_ENTITITES) ne 0 then entities = keep_entitites
@@ -1786,7 +1788,8 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
       || min(_x) gt range[1] $
       || max(_x) lt range[0] then continue
 
-    if _entrule && ~CALL_FUNCTION(ENTRULE, ent, i) then continue
+    if _entrule && ~CALL_FUNCTION(ENTRULE, ent, i, $
+      ATTRIBUTE_NAMES=attnames, N_ATTRIBUTES=nattr) then continue
     
     mg_x->add, _x[*]
     mg_y->add, _y[*]
@@ -1839,201 +1842,6 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   endif
 
 end
-
-;+
-; :Description:
-;    Project_shape is an intent to make transform_shape more flexible,
-;    more 21th century, but maybe also slowier (NEVER try to optimise first).
-;    It transforms the coordinates of a shape file into the grid coordinates
-;    and keeps the other information of the shape (entities, attributes, etc).
-; 
-; :Params:
-;    SHPFILE: in, required
-;             the shapefile to read (.shp). If not set, a dialog window will open  
-;    
-; :Keywords:
-;    
-;    SHP_SRC: in, optional
-;             the shapefile coordinate system (datum or proj) default is WGS-84
-;    
-;    
-;    ENTRULE:in, optional, type=string
-;            the name of a compiled FUNCTION to call at each
-;            iteration over the shapefile entities. It can be used
-;            to e.g filter entities after shapefile specific criterias.
-;            the function has to return 1 if the entity must be kept, 0 if not
-;            the function must accept two arguments, entity and i (index of the entity)
-;                     
-;    REMOVE_ENTITITES:in, optional, type = long
-;                     an array containing the id of the shape entities to remove from the shape
-;                     All other entities are plotted normally.
-;                     
-;    KEEP_ENTITITES:in, optional, type = long
-;                   an array containing the id of the shape entities to keep for the shape. 
-;                   All other entities are ignored.
-;
-;    NO_COORD_SHIFT: in, optional, type = boolean
-;                    prevent the shift of the coordinates of a half pixel.
-;
-; :Examples:
-;    
-;    Plot the world boundaries on a device::
-;    
-;      grid = OBJ_NEW('w_TRMM')
-;      
-;      GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
-;      shpf = WAVE_resource_dir+'/shapes/world_borders/world_borders.shp'
-;      grid->transform_shape, shpf, x, y, conn, SHP_SRC=shp_src
-;      
-;      grid->Get_XY, dummyx, dummyy, nx, ny, proj
-;      cgDisplay, nx, ny, /FREE
-;     
-;      index = 0
-;      while index lt N_ELEMENTS(conn) do begin
-;        nbElperConn = conn[index]
-;        idx = conn[index+1:index+nbElperConn]
-;        index += nbElperConn + 1
-;        cgPlots, x[idx], y[idx], /DEVICE, COLOR='black'
-;      endwhile
-;      
-;      undefine, grid
-; 
-; :History:
-;     Written by FaM, 2013
-;- 
-function w_Grid2D::project_shape, shpfile, $
-  SHP_SRC=shp_src, $
-  ENTRULE=entrule, $
-  REMOVE_ENTITITES=remove_entitites, $
-  KEEP_ENTITITES=keep_entitites
-  
-  ; SET UP ENVIRONNEMENT
-  @WAVE.inc
-  COMPILE_OPT IDL2  
-  
-  ON_ERROR, 2
-
-;  undefine, x, y, conn
-;  
-;  if N_ELEMENTS(shpfile) eq 0 then shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
-;  
-;  if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
-;  
-;  if N_ELEMENTS(shp_src) eq 0 then begin
-;   GIS_make_datum, ret, shp_src, NAME = 'WGS-84'
-;  endif
-;  
-;  _mi = KEYWORD_SET(MARK_INTERIOR)
-;  
-;  if arg_okay(shp_src, STRUCT={TNT_PROJ}) then is_proj = TRUE else is_proj = FALSE 
-;  if arg_okay(shp_src, STRUCT={TNT_DATUM}) then is_dat = TRUE else is_dat = FALSE 
-;  if ~is_proj and ~is_dat then Message, WAVE_Std_Message('shp_src', /ARG)
-;  
-;  ;****************************************
-;  ; Make boundaries to spare computations *
-;  ;****************************************
-;  if is_dat then begin
-;   self->get_LonLat, glon, glat
-;   p = where(glon gt 180, cnt)
-;   if cnt ne 0 then glon[p] = glon[p] - 360
-;   range = [min(glon),max(glon),min(glat),max(glat)]   
-;  end
-;  if is_proj then begin   
-;   range = [-99999999999d,99999999999d,-99999999999d,99999999999d] ; TODO: decide a range if the shape is not in LL coordinates
-;  end
-;
-;  SetDefaultValue, _entrule, N_ELEMENTS(ENTRULE) ne 0
-;  
-;  ; read shp file and create polygon object from entities
-;  shpmodel = OBJ_NEW('IDLffShape',shpfile)
-;  if ~OBJ_VALID(shpmodel) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
-;  
-;  ;Get the number of entities so we can parse through them
-;  shpModel->GetProperty, N_ENTITIES=N_ent
-;  entities = LINDGEN(N_ent)
-;  if N_ELEMENTS(REMOVE_ENTITITES) ne 0 then utils_array_remove, remove_entitites, entities
-;  if N_ELEMENTS(KEEP_ENTITITES) ne 0 then entities = keep_entitites
-;  
-;  N_ent = N_ELEMENTS(entities)
-;  n_coord = 0L
-;
-;  mg_x = obj_new('MGcoArrayList', type=IDL_DOUBLE)
-;  mg_y = obj_new('MGcoArrayList', type=IDL_DOUBLE)
-;  mg_conn = obj_new('MGcoArrayList', type=IDL_LONG)
-;  for i=0L, N_ent-1 do begin
-;    ent = shpmodel->GetEntity(entities[i], /ATTRIBUTES)
-;    if not ptr_valid(ent.vertices) then continue
-;    
-;    _x = reform((*ent.vertices)[0,*])
-;    _y = reform((*ent.vertices)[1,*])
-;    n_vert = n_elements(_x)
-;    
-;    if n_vert lt 3 $
-;      or min(_y) gt range[3] $
-;      or max(_y) lt range[2] $
-;      or min(_x) gt range[1] $
-;      or max(_x) lt range[0] then begin
-;      shpmodel->IDLffShape::DestroyEntity, ent
-;      continue
-;    endif
-;    
-;    if _entrule then begin
-;      if ~ CALL_FUNCTION(ENTRULE, ent, i) then begin
-;        shpmodel->IDLffShape::DestroyEntity, ent
-;        continue
-;      endif
-;    endif
-;    
-;    mg_x->add, _x
-;    mg_y->add, _y
-;    
-;    parts = *ent.parts
-;    if _mi then begin
-;      for k=0L, ent.n_parts-1 do begin
-;        if k eq ent.n_parts-1 then begin
-;          n_vert = ent.n_vertices - parts[k]
-;          next_is = 0
-;        endif else begin
-;          n_vert = parts[k+1]-parts[k]
-;          next_is = 1
-;        endelse
-;        mg_conn->add, [n_vert, next_is, (lindgen(n_vert)) + n_coord]
-;        n_coord += n_vert
-;      endfor
-;    endif else begin
-;      for k=0L, ent.n_parts-1 do begin
-;        if k eq ent.n_parts-1 then n_vert = ent.n_vertices - parts[k]  else n_vert = parts[k+1]-parts[k]
-;        mg_conn->add, [n_vert, (lindgen(n_vert)) + n_coord]
-;        n_coord += n_vert
-;      endfor
-;    endelse
-;    shpmodel->IDLffShape::DestroyEntity, ent
-;    
-;  endfor
-;  
-;  x = mg_x->get(/all)
-;  y = mg_y->get(/all)
-;  conn = mg_conn->get(/all)
-;  if N_ELEMENTS(conn) eq 1 and conn[0] eq -1 then undefine, conn
-;  
-;  ; clean unused objects
-;  undefine, shpModel, mg_x, mg_y, mg_conn
-;    
-;  if N_ELEMENTS(CONN) eq 0 then begin
-;   message, 'Did not find anything in the shapefile that matches to the grid (' + FILE_BASENAME(shpfile) +')', /INFORMATIONAL
-;   undefine, x, y, conn
-;   return
-;  endif  
-;  if FILE_BASENAME(shpfile) eq '10m_ocean.shp' then y = y < 90. ;TODO: dirty temporary workaround
-;  self->transform, x, y, x, y, SRC = shp_src
-;
-;  if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin ; Because Center point of the pixel is not the true coord
-;    x = x + 0.5
-;    y = y + 0.5
-;  endif
-
-end
-
 
 ;+
 ; :Description:

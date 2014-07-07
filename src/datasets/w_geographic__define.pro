@@ -23,6 +23,10 @@
 ; :Keywords:
 ;    DATUM: in, optional, default='WGS-84'
 ;           a string to define the datum
+;    FILEGRID: in, optional
+;              default behavior for w_geographic is to try to set up a grid
+;              for the ncdf file automatically. Use this keyword to specify the 
+;              file's grid by yourself
 ;    _EXTRA: in, optional
 ;            any keyword accepted by `w_GISdata::defineSubset`
 ;            
@@ -54,6 +58,7 @@ function w_geographic::init, file, FILEGRID=filegrid, DATUM=datum, _EXTRA=extra
   ; Original grid geoloc
   ok = geo->define_subset()
   
+  ; Did the user provide a grid?
   if n_elements(FILEGRID) ne 0 then begin
     if ~(obj_valid(filegrid) && obj_isa(filegrid, 'w_grid2d')) then Message, '$FILEGRID not valid' 
     grid = filegrid
@@ -83,7 +88,7 @@ function w_geographic::init, file, FILEGRID=filegrid, DATUM=datum, _EXTRA=extra
 
   ; Give the grid to the real worker here
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
-  undefine, grid
+  if n_elements(FILEGRID) eq 0 then undefine, grid ; I instanciated this object
   if ~ ok then return, 0
     
   return, 1
@@ -270,6 +275,8 @@ end
 ;            - unit
 ;   HOUROFDAY: in, optional, type = long
 ;              to get strides of the time serie at specific hours of day
+;   MONTHOFYEAR: in, optional, type = long
+;               to get strides of the time serie at specific months
 ;   ZLEVELS: in, optional, type = long
 ;            set this keyword to an array of one or two elements, containing the range
 ;            of the indexes to keep from the original NCDF file in the Z dimension.
@@ -278,7 +285,9 @@ end
 ;            to do its best from what it knows 
 ;            (in most cases -4D arrays-, it should work fine).
 ;   INVERTZ: in, optional, type=boolean
-;            if set, the Z levels are upside down
+;            if set, the Z levels are reversed (upside-down) before being returned.
+;            This occurs after eading the data in the netcdf file, so be carefull 
+;            when using ZLEVELS in combination with INVERTZ
 ;            
 ; :Returns:
 ;   the data array
@@ -286,6 +295,7 @@ end
 ;-
 function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
     HOUROFDAY=hourofday, $
+    MONTHOFYEAR=monthofyear, $
     INVERTZ=invertz, $
     ZLEVELS=zlevels
 
@@ -298,7 +308,7 @@ function w_geographic::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, $
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
   if TOTAL(self.subset) ne 0 then ok = self.obj->define_subset(SUBSET=self.subset) else ok = self.obj->define_subset()
-  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1, HOUROFDAY=hourofday, ZLEVELS=zlevels)
+  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1, HOUROFDAY=hourofday, MONTHOFYEAR=monthofyear, ZLEVELS=zlevels)
   
   if self.order eq 1 then begin
     s = SIZE(out, /N_DIMENSIONS)

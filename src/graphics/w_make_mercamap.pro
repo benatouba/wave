@@ -13,6 +13,8 @@
 ;           X size (in window pixels) of the graphic map
 ;    YSIZE: in, required, default=600
 ;           Y size (in window pixels) of the graphic map
+;    UTM: in, optional
+;         set to the UTM zone if you want to use a specific utm
 ;    GRID_out: out, optional
 ;              the Mercator grid, if you want it for any reason
 ;
@@ -26,6 +28,7 @@ function w_make_mercamap, $
     YY=yy, $
     XSIZE=xsize, $
     YSIZE=ysize, $
+    UTM=utm, $
     GRID_out=grid_out
 
   if N_ELEMENTS(center) eq 0 then center = [13.4, 52.52]
@@ -34,7 +37,7 @@ function w_make_mercamap, $
   
   if N_ELEMENTS(YSIZE) eq 0 and N_ELEMENTS(XSIZE) eq 0 then begin
     ysize = 600
-    xsize = ysize * DOUBLE(yy)/xx
+    xsize = ysize * DOUBLE(xx)/ yy
   endif else begin
     if N_ELEMENTS(XSIZE) ne 0 then ysize = xsize * DOUBLE(xx)/yy
     if N_ELEMENTS(YSIZE) ne 0 then xsize = ysize * DOUBLE(yy)/xx
@@ -45,23 +48,26 @@ function w_make_mercamap, $
   
   GIS_make_datum, ret, wgs, NAME='WGS-84'
   
-  ; 3 - Transverse Mercator
-  ;   a, b, lat0, lon0, x0, y0, k0, [datum], name
-  str = '3, '
-  str += cgNumber_Formatter(wgs.ellipsoid.a) + ', '
-  str += cgNumber_Formatter(wgs.ellipsoid.b) + ', '
-  str += str_equiv(center[1]) + ', '
-  str += str_equiv(center[0]) + ', '
-  str += '0, 0, 0.9996, WGS-84, Mercator'
-  GIS_make_proj, ret, proj, PARAM=str
+  if n_elements(utm) eq 1 then begin
+    GIS_make_proj, ret, proj, PARAM='2, ' + w_str(utm)
+  endif else begin
+    ; 3 - Transverse Mercator
+    ;   a, b, lat0, lon0, x0, y0, k0, [datum], name
+    str = '3, '
+    str += cgNumber_Formatter(wgs.ellipsoid.a) + ', '
+    str += cgNumber_Formatter(wgs.ellipsoid.b) + ', '
+    str += str_equiv(center[1]) + ', '
+    str += str_equiv(center[0]) + ', '
+    str += '0, 0, 0.9996, WGS-84, Mercator'
+    GIS_make_proj, ret, proj, PARAM=str
+  endelse
   
   GIS_coord_trafo, ret, center[0], center[1], e, n, SRC=wgs, DST=proj
   
-  x0 = - xx/2.
-  x1 = xx/2.
-  y0 = yy/2.
-  y1 = - yy/2.
-   
+  x0 = - xx/2. + e
+  x1 = xx/2. + e
+  y0 = yy/2. + n
+  y1 = - yy/2. + n
   
   grid = OBJ_NEW('w_Grid2D', PROJ=proj, X0=x0, Y0=y0, X1=x1, y1=y1, NX=xsize, NY=ysize)
   if ~ OBJ_VALID(grid) then Message, 'Grid not ok'
