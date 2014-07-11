@@ -74,7 +74,7 @@ pro w_gr_contour, info, data, x, y, $
   YTICKS=yticks, $
   YTITLE=ytitle, $
   ZVALUE=zvalue, $
-  _REF_EXTRA=extra
+  _EXTRA=extra
 
   @WAVE.inc
   compile_opt idl2
@@ -161,6 +161,6 @@ pro w_gr_contour, info, data, x, y, $
   YTICKS=yticks, $
   YTITLE=ytitle, $
   ZVALUE=zvalue, $
-  _REF_EXTRA=extra
+  _EXTRA=extra
   
 end  
