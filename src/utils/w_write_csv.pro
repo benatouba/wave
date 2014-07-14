@@ -60,7 +60,7 @@ pro w_write_csv, fileName, data, $
       if cntk ne 0 then continue
     endif
     if n_elements(d) eq 0 then continue
-    if obj_valid(d) && obj_isa(d, 'list') then d = d->toArray()
+    if n_elements(d) eq 1 && obj_valid(d) && obj_isa(d, 'list') then d = d->toArray()
     if ff && (size(d, /TNAME) eq 'FLOAT' or size(d, /TNAME) eq 'DOUBLE') then begin
       d = string(d, FORMAT=floatformat)
     endif
