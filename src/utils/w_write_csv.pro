@@ -15,8 +15,6 @@
 ;                  if you want to put some lines at the top of the file
 ;    IGNORETAG: in, optional
 ;               keys to ignore in the input hash
-;    IGNORETAG: in, optional
-;               keys to ignore in the input hash
 ;    MAXCHAR: in, optional
 ;             limit the number of characters printed in one column
 ;    FLOATFORMAT: in, optional

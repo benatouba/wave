@@ -353,12 +353,12 @@ end
 ;   T1: in, optional, type = qms/{ABS_DATE}
 ;       if set, it defines the last time of the variable timeserie
 ;   HOUROFDAY: in, optional, type = long
-;              to get strides of the time serie at specific hours of day
+;              to get strides of the time serie at a specific hour of the day
 ;   MINUTEOFHOUR: in, optional, type = long, default=0
 ;                 together with HOUROFDAY, it defines a stride to get 
 ;                 (important for half hourly values for example)
 ;   MONTHOFYEAR: in, optional, type=long
-;                to get strides of the time serie at specific months only
+;                to get strides of the time serie at a specific month
 ;   DAYOFMONTH: in, optional, type = long, default=1
 ;                together with MONTHOFYEAR, it defines a stride to get 
 ;                (get every 15th of each month for example (rare))
@@ -482,12 +482,13 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
       count[p[0]] = p1 - p0 + 1
       
       ; Check for stride
-      if N_ELEMENTS(HOUROFDAY) eq 1 then begin
+      if N_ELEMENTS(HOUROFDAY) ne 0 then begin
+        if N_ELEMENTS(HOUROFDAY) ne 1 then message, 'HOUROFDAY should be a scalar integer'
         SetDefaultValue, minuteofhour, 0
         ok = CHECK_WTIME(time, OUT_ABSDATE=absd)
         phour = where(absd.hour eq hourofday and absd.minute eq minuteofhour, cnthour)
         if cnthour eq 0 then message, 'Hour of day not found in the time serie'
-        if cnthour lt 2 then message, 'You asking me strange things: not even 2 elements with hour of day?'
+        if cnthour lt 2 then message, 'Youre asking me strange things: not even 2 elements with hour of day?'
         mphour = min(phour)      
         time = time[phour]  
         phour = phour-mphour
@@ -499,12 +500,13 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
         stride[p[0]] = dh           
       endif
       
-      if N_ELEMENTS(MONTHOFYEAR) eq 1 then begin
+      if N_ELEMENTS(MONTHOFYEAR) ne 0 then begin
+        if N_ELEMENTS(MONTHOFYEAR) ne 1 then message, 'MONTHOFYEAR should be a scalar integer'
         SetDefaultValue, dayofmonth, 1
         ok = CHECK_WTIME(time, OUT_ABSDATE=absd)
         pm = where(absd.month eq monthofyear and absd.day eq dayofmonth, cntm)
         if cntm eq 0 then message, 'Specified month not found in the time serie'
-        if cntm lt 2 then message, 'You asking me strange things: not even 2 elements with the pecified month?'
+        if cntm lt 2 then message, 'Youre asking me strange things: not even 2 elements with the specified month?'
         mpm = min(pm)      
         time = time[pm]  
         pm = pm-mpm
