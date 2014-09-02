@@ -3,7 +3,7 @@
 ;   Wrapper for the the IDL LABEL_REGION function, but returning a list of
 ;   region indexes instead of an array
 ;   
-;   Furthermore, the border problem is solved by adding a 0 at
+;   Furthermore, the "border problem" is solved by adding a 0 at
 ;   each side of the input array
 ;
 ; :Params:
@@ -20,8 +20,8 @@
 ;                   Set this keyword to indicate that all adjacent neighbors 
 ;                   to a given pixel should be searched. The default is to 
 ;                   search only the neighbors that are exactly 
-;                   one unit in distance from the current pixel. Irrelevant for
-;                   1D arrays.
+;                   one unit in distance from the current pixel. 
+;                   Irrelevant for 1D arrays.
 ;                  
 ; :Returns:
 ;    a list() with nregions elements containing the indices of each region
@@ -47,13 +47,12 @@ function w_label_region, array, $
   case nd of
     1: tmp[1] = array
     2: tmp[1,1] = array
-    else: message, 'dims not tested yet'
+    else: message, 'dim > 2 not tested yet'
   endcase
   tmp = label_region(tmp, ALL_NEIGHBORS=all_neighbors)
   case nd of
     1: tmp = tmp[1:-2]
     2: tmp = tmp[1:-2,1:-2]
-    else: message, 'dims not tested yet'
   endcase
   
   nregions = max(tmp)

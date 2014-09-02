@@ -291,7 +291,7 @@ pro w_TimeLinePlot, data,$  ; array to plot
   
   ; Make X AXIS
   w_date_tickformat, xtickformat, xtickunits, xtickinterval, TIME = tqms, HOURS = hours, DAYS = days, MONTHS = months, YEARS = years, MONTHYEARS = monthyears
-
+  
   ; Legend    
   x = [0.75, 0.79] ; Line for legend 1
   y = [0.85, 0.85 ] ; Line for legend 1

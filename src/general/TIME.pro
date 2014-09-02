@@ -175,8 +175,9 @@ end
 ; :History:
 ;       Written by FaM, 2010.
 ;-
-function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
-                      TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day
+function QMS_TIME, yr, mo, d, h, min, s, ms, $
+  YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SECOND=second, MILLISECOND = millisecond, $
+  TNT_T = tnt_t, DATE_Str = DATE_Str, TIME_Str = TIME_Str, JULIAN_DAY = julian_day
 
 
   ; SET UP ENVIRONNEMENT
@@ -185,6 +186,17 @@ function QMS_TIME, YEAR=year, MONTH=month, DAY=day, HOUR=hour, MINUTE=minute, SE
   
   ; Standard error handling.
   ON_ERROR, 2
+  
+  ; Params ?
+  if n_params() ge 1 then begin
+    return, QMS_TIME(YEAR=yr, $
+    MONTH=mo, $
+    DAY=d, $
+    HOUR=h, $
+    MINUTE=min, $
+    SECOND=s, $
+    MILLISECOND=ms)
+  endif
   
   mytime = 0LL
   

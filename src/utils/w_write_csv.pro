@@ -39,7 +39,7 @@ pro w_write_csv, fileName, data, $
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2
-  on_error, 2
+;  on_error, 2
   
   if ~ obj_valid(data) && ~obj_isa(data, 'ORDEREDHASH') then $
     Message, '$data must be an ORDEREDHASH'
@@ -58,7 +58,7 @@ pro w_write_csv, fileName, data, $
       if cntk ne 0 then continue
     endif
     if n_elements(d) eq 0 then continue
-    if n_elements(d) eq 1 && obj_valid(d) && obj_isa(d, 'list') then d = d->toArray()
+    if isa(d, 'LIST') then d = d->toArray()
     if ff && (size(d, /TNAME) eq 'FLOAT' or size(d, /TNAME) eq 'DOUBLE') then begin
       d = string(d, FORMAT=floatformat)
     endif

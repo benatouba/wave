@@ -606,6 +606,7 @@ function w_NCDF::get_Var_Info, Varid, $ ; The netCDF variable ID, returned from 
       AttName = NCDF_ATTNAME(self.Cdfid, out_id, i)
       if str_equiv(AttName) eq str_equiv('description') $
         or str_equiv(AttName) eq str_equiv('long_name') $
+          or str_equiv(AttName) eq str_equiv('des') $
           then NCDF_ATTGET, self.Cdfid, out_id, AttName, description
     endfor
     description = STRING(description)

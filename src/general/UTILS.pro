@@ -1100,7 +1100,7 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
   unit = ts[psince - 1]
   d = ts[psince + 1]
   t = ts[psince + 2]  
-  if N_ELEMENTS(ts) gt psince + 3 then Message, 'Time contains a zone (which is currently not supported) or is not of suitable format'
+  if N_ELEMENTS(ts) gt psince + 3 then Message, 'Time contains a zone (which is currently not supported) or is not of suitable format', /INFORMATIONAL
    
   d = STRSPLIT(d,'-', /EXTRACT)   
   if N_ELEMENTS(d) ne 3 then return, FALSE  
