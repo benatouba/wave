@@ -2852,7 +2852,8 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid, ASPECT=aspect
+PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid, $
+                        ASPECT=aspect, BARINFO=barinfo
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -2870,6 +2871,7 @@ PRO w_Map::GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_C=tnt_c, GRID=grid, ASPECT
   if ARG_PRESENT(TNT_C) then self.grid->getProperty, TNT_C=tnt_c
   if ARG_PRESENT(GRID) then grid = self.grid
   if ARG_PRESENT(ASPECT) then aspect = self.Ysize / float(self.Xsize)
+  if ARG_PRESENT(BARINFO) then barinfo = *self.info
   
 end
 
