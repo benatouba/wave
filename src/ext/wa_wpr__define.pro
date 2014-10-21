@@ -13,7 +13,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=domain
+function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
 
   ; Set up environnement
   @WAVE.inc
@@ -25,16 +25,15 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
     RETURN, 0
   ENDIF
-
-  if N_ELEMENTS(DOMAIN) eq 0 then DOMAIN='d01' 
-
+  
   ; Check arguments
-  if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select WRF product directory to read', /MUST_EXIST, /DIRECTORY)
+  if N_ELEMENTS(directory) eq 0 then message, 'File directory does not exist' 
   if directory eq '' then MESSAGE, WAVE_Std_Message(/FILE)
-  if ~ FILE_TEST(directory, /DIRECTORY) then MESSAGE, WAVE_Std_Message(/FILE)
+  if ~ FILE_TEST(directory, /DIRECTORY) then MESSAGE, 'No files in directory'
   
   dir = utils_clean_path(directory)
   prdir = FILE_DIRNAME(dir)
+
   if KEYWORD_SET(TRES) then tres=tres else tres = FILE_BASENAME(dir)
   hres = FILE_BASENAME(prdir)
   str = STRSPLIT(dir, '/', /EXTRACT, COUNT=nstr)
@@ -42,14 +41,13 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
   if cntp eq 0 then MEssage, 'POST_OUT not found'
   statdir = '/'+strjoin(str[0:statpos],'/')+'/static'
   expe = str[statpos+1]
-  
   if ~ FILE_TEST(statdir, /DIRECTORY) then Message, 'Cannot find a static directory.' + $
     ' Be sure you are at the right place in the product directory structure'
   if (tres ne 'h') and (tres ne 'd') and (tres ne 'm') and  (tres ne 'y') then Message, 'Cannot understand timestep.' + $
     ' Be sure you are at the right place in the product directory structure'
   
   self.hres=hres
-  self.domain= domain 
+  self.domain='d01' 
   self.tres = tres
   self.hres = hres
   self.directory = dir
@@ -59,7 +57,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
   file_list=FILE_SEARCH(self.directory, '*_' + self.domain +'*'+self.years+'.nc', count=filecnt)
   file_list=[file_list, FILE_SEARCH(statdir, '*_' + self.domain +'*.nc', count=filecnt)]
   if filecnt eq 0 then MESSAGE, 'No files in the directory?'
-  
+ 
   ; This is for the XLAT XLON variable
   matches = Where(StrMatch(file_list, '*xlatlong*'), cm)
   if cm ne 0 then begin
@@ -97,19 +95,17 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
   nv = N_ELEMENTS(uv)
   if nv ne N_ELEMENTS(file_list) then Message, 'Mini WPR has no years, so only one file per variable !!!'
   vars = REPLICATE(self->_varStruct(), nv)
+
   for i=0, nv-1 do begin
     v = vars[i]
     v.type = FILE_BASENAME(FILE_DIRNAME(file_list[uv[i]]))
     if v.type eq '2d_alternate' then v.type = '2d'
-    
     ncObj = NCDF_FILE(file_list[i])    
     varNames = ncObj->GetVarNames()
-    
     pos=where(str_equiv(varNames) eq 'TIMES', cnt)
     if cnt eq 0 then message, 'No times?? Need times variable!!'
     pos=where((str_equiv(varNames) ne 'TIMES') and (str_equiv(varNames) ne 'XLAT') and (str_equiv(varNames) ne 'XLONG'), cnt)
     if cnt ne 1 then message, 'Not ONE variable?? Need ONE variable!!'
-    
     if v.type eq '2d' and ~ PTR_VALID(self.time) then begin
       ; use the opportunity to read time
       cdfid = ncObj->GetProperty('FILEID')
@@ -123,7 +119,6 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
     v.name = varNames[pos[0]]
     v.description = ncObj->GetVarAttrValue(v.name, 'description')
     v.unit = ncObj->GetVarAttrValue(v.name, 'units')
-    
     undefine, ncObj        
     ; here possible mismasch wiht d , press blabla
     if v.type eq 'static' or v.type eq '2d' then begin
@@ -137,7 +132,8 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
     vars[i] = v
   endfor
   self.vars = PTR_NEW(vars)
-  
+
+
   self->_addPressureLevels
   self->_addDerivedVars
   
@@ -145,7 +141,6 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra, DOMAIN=doma
   ok = self->w_GISdata::init(w, _EXTRA=extra)
   undefine, w
   if ~ ok then return, 0
-  
   return, 1
   
 end
@@ -179,9 +174,11 @@ end
 ; :Keywords:
 ;   DERIVED: in, optional
 ;            set if the variable is derived
+;   PL: in, optional
+;            set if the pressure level variable is interpolated from WRF       
 ;
 ;-
-function wa_WPR::_varStruct, DERIVED=derived
+function wa_WPR::_varStruct, DERIVED=derived, PL=pl
 
   ; SEt up environnement
   @WAVE.inc
@@ -194,6 +191,7 @@ function wa_WPR::_varStruct, DERIVED=derived
     type: '' , $ ; 2d, 3d_eta, 3d_soil, 3d_press, static
     open: 0 , $
     derived: KEYWORD_SET(DERIVED), $
+    pl: KEYWORD_SET(PL), $
     pos: -1L $  ; The position in the file list !!!
   }
   
@@ -244,7 +242,65 @@ pro wa_WPR::_addDerivedVars
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
-    
+  
+    ;SW up in W/m²
+  d1 = self->hasVar('SWDOWN')
+  d2 = self->hasVar('ALBEDO')
+  if (d1 and d2) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'swup'
+    v.name = 'swup'
+    v.unit = 'w m-2'
+    v.description = 'upward short wave flux at ground surface'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+ 
+      ;SW up in W/m²
+  d1 = self->hasVar('LWDOWN')
+  d2 = self->hasVar('GLW')
+  if (d1 or d2) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'lwdown'
+    v.name = 'lwdown'
+    v.unit = 'w m-2'
+    v.description = 'upward short wave flux at ground surface'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif 
+
+       ;NETRAD up in W/m²
+  d1 = self->hasVar('SWDOWN')
+  d2 = self->hasVar('LWDOWN')
+  d3 = self->hasVar('SWUP')
+  d4 = self->hasVar('LWUP')
+  if (d1 and d2 and d3 and d4) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'netrad'
+    v.name = 'netrad'
+    v.unit = 'w m-2'
+    v.description = 'net radiation flux at ground surface'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+    ;TD in K
+  d1 = self->hasVar('QVAPOR_eta')
+  d2 = self->hasVar('P_eta')
+  d3 = self->hasVar('PB_eta')
+  if (d1 and d2 and d3) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'td_eta'
+    v.name = 'td_eta'
+    v.unit = 'k'
+    v.description = 'dew point'
+    v.type = '3d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+
+
+
+  
   ;Precipitation rate in mm h-1
   d1 = self->hasVar('rainc')
   d2 = self->hasVar('rainnc')
@@ -428,19 +484,7 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
-  ; longwave
-  d1 = self->hasVar('GLW')
-  if d1 then begin
-    v = self->_varStruct(/DERIVED)
-    v.id = 'lwdown'
-    v.name = 'lwdown'
-    v.unit = 'W m-2'
-    v.description = 'Downward long wave flux at ground surface'
-    v.type = '2d'
-    if ~ self->hasVar(v.id) then vars = [vars,v]
-  endif
-  
-  ;pressure
+;pressure
   d1 = self->hasVar('P_eta')
   d2 = self->hasVar('PB_eta')
   if (d1 and d2) then begin
@@ -455,7 +499,7 @@ pro wa_WPR::_addDerivedVars
   
   ; geopotential, z
   d1 = self->hasVar('PH_eta')
-  d2 = self->hasVar('PHB_eta')
+  d1 = self->hasVar('PHB_eta')
   if (d1 and d2) then begin
     v = self->_varStruct(/DERIVED)
     v.id = 'geopotential_eta'
@@ -506,6 +550,21 @@ pro wa_WPR::_addDerivedVars
     v.type = '3d_eta'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
+
+   ;TD
+  d1 = self->hasVar('QVAPOR_eta')
+  d2 = self->hasVar('P_eta')
+  d3 = self->hasVar('PB_eta')
+  if (d1 and d2 and d3) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'td_eta'
+    v.name = 'td'
+    v.unit = 'K'
+    v.description = 'Dewpoint Temperature'
+    v.type = '3d_eta'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+
   
   ;THETA
   d1 = self->hasVar('T_eta')
@@ -527,7 +586,7 @@ pro wa_WPR::_addDerivedVars
   d5 = self->hasVar('t2c')
   if ((d1 or d4) and (d2 or d5) and d3) then begin
     v = self->_varStruct(/DERIVED)
-    v.id = 'slp_b'
+    v.id = 'slp'
     v.name = 'slp'
     v.unit = 'hPa'
     v.description = 'Sea Level Pressure Barometric'
@@ -549,6 +608,23 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endfor
   endif
+  
+;    ; OK. Now add all the pressure stuff for the 3d pl variables
+  for j=0, N_ELEMENTS(vars.name)-1 do begin
+    str=STRMID(str_equiv((vars.name)[j]), N_ELEMENTS(byte((vars.name)[j]))-3, 3)
+    if str eq '_PL' then begin
+
+    _v = vars[j]
+    v = self->_varStruct(/PL)
+    v.id =   utils_replace_string(str_equiv(_v.name), '_PL', '_press')
+    v.name = _v.name
+    v.unit = _v.unit
+    v.description = _v.description
+    v.type = '3d_press'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+    endif
+  endfor
+
   PTR_FREE, self.vars
   
   self.vars = PTR_NEW(vars)  
@@ -757,7 +833,7 @@ function wa_WPR::hasVar, id, INFO=info
   if cnt eq 0 then return, 0
   
   v = (*self.vars)[p]
-  info = {id:v.id, name:v.name, description:v.description, unit:v.unit, type:v.type, derived:v.derived}
+  info = {id:v.id, name:v.name, description:v.description, unit:v.unit, type:v.type, derived:v.derived, pl:v.pl}
   
   return, 1
   
@@ -885,7 +961,7 @@ function wa_WPR::getVarData, id, $
 ;  on_Error, 2
   
   undefine, info, time, nt
-  
+ 
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
   ;Some check
@@ -902,6 +978,11 @@ function wa_WPR::getVarData, id, $
     obj = self->getVarObj(id)
     if TOTAL(self.subset) ne 0 then ok = obj->define_subset(SUBSET=self.subset) else ok = obj->define_subset()
     return, obj->get_Var(info.name, time, nt)
+  endif
+  
+  if info.pl then begin
+    id = utils_replace_string(str_equiv(id), '_PRESS', '_PL')
+    
   endif
     
   if info.derived then begin
@@ -926,8 +1007,6 @@ function wa_WPR::getVarData, id, $
       return, temporary(value)
     endif
     
-    ; This is for the standard pressure levels. If we are here 
-    ; than it is not available from the file, so that's fine
     if STRMID(str_equiv(id), N_ELEMENTS(byte(id))-6, 6) eq '_PRESS' then begin
       _id = utils_replace_string(str_equiv(id), '_PRESS', '_ETA')
       pl = self.getPressureLevels()
@@ -941,9 +1020,22 @@ function wa_WPR::getVarData, id, $
       e = self->GetVarData('EMISS', time, nt, t0 = t0, t1 = t1, MONTH=month)
       value = (5.6704e-8) * e * value^4
     end
+     'SWUP': begin
+      value = self->GetVarData('SWDOWN', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      e = self->GetVarData('ALBEDO', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      return,value*e
+    end
+    'LWDOWN': begin
+      value = self->GetVarData('GLW', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      return,value
+    end
+
+
       'TD2': begin
         p = self->GetVarData('psfc', time, nt, T0=t0, T1=t1, MONTH=month)
+        help, p
         qvapor = self->GetVarData('q2', T0=t0, T1=t1, MONTH=month)
+        help, qvapor
         return, utils_wrf_td(temporary(p),temporary(qvapor))
       end
       'T2' : begin
@@ -994,7 +1086,7 @@ function wa_WPR::getVarData, id, $
       'PSFC': begin
         return, self->GetVarData('p2hpa', time, nt, T0=t0, T1=t1, MONTH=month)/0.01
       end
-      'SLP_B': begin
+      'SLP': begin
       ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
       T2 = self->getVarData('T2', T0=t0, T1=t1) - 273.15 ; in degC
       zs = self->getVarData('HGT', T0=t0, T1=t1) ; in m
@@ -1010,6 +1102,11 @@ function wa_WPR::getVarData, id, $
       'TC_ETA': begin
         value = self->GetVarData('TK_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) - 273.15
       end
+      'TD_ETA': begin
+        QVAPOR = self->getVarData('QVAPOR_ETA', time, nt, t0 = t0, t1 = t1, ZLEVELS=zlevels)
+        P = self->GetVarData('PB_ETA', T0=t0, T1=t1, ZLEVELS=zlevels) + self->GetVarData('P_ETA', T0=t0, T1=t1, ZLEVELS=zlevels)
+        value = utils_wrf_td(temporary(P),temporary(QVAPOR))    ; calculate TD
+    end
       'THETA_ETA': begin
         value = self->GetVarData('T_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + 300.
       end
@@ -1017,15 +1114,16 @@ function wa_WPR::getVarData, id, $
         value = (self->GetVarData('PB_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + self->GetVarData('P_ETA', T0=t0, T1=t1, ZLEVELS=zlevels)) * 0.01
       end
       'GEOPOTENTIAL_ETA': begin
-        value = self->GetVarData('PH_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + self->get_Var('PHB_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels)
+        value = self->GetVarData('PH_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) + self->GetVarData('PHB_ETA', T0=t0, T1=t1, ZLEVELS=zlevels)
       end
+      
       'Z_ETA': begin
         value = self->GetVarData('GEOPOTENTIAL_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels) / 9.81
       end
       'ZAG_ETA': begin
         value = self->GetVarData('Z_ETA', time, nt, T0=t0, T1=t1, ZLEVELS=zlevels)
         _dims = SIZE(value, /DIMENSIONS) & _dims[2:*] = 1
-        ter =  rebin(reform(self->get_Var('ter'),_dims), dims) ; make it same dim as z
+        ter =  rebin(reform(self->getVarData('ter'),_dims), dims) ; make it same dim as z
         value = TEMPORARY(value) - TEMPORARY(ter)
       end
       else: Message, 'No'
@@ -1072,6 +1170,7 @@ function wa_WPR::getVarData, id, $
       if dim_stag eq 'WEST_EAST' then found_stag = 0
       if dim_stag eq 'SOUTH_NORTH' then found_stag = 1
       if dim_stag eq 'BOTTOM_TOP' then found_stag = 2
+      if dim_stag eq 'NUM_PRESS_LEVELS' then found_stag = -1
     endif
     
     ; Subset spatially if needed
@@ -1113,11 +1212,11 @@ function wa_WPR::getVarData, id, $
     value = reform(utils_wrf_intrp3d(value, p, pressure_levels))
   endif
   if _do_h then begin
-    h = self->get_Var('z_eta', T0=t0, T1=t1, HOUROFDAY=hourofday)
+    h = self->getVarData('z_eta', T0=t0, T1=t1, HOUROFDAY=hourofday)
     value = reform(utils_wrf_intrp3d(value, h, height_levels))
   endif
   if _do_ag then begin
-    h = self->get_Var('zag_eta', T0=t0, T1=t1, HOUROFDAY=hourofday)
+    h = self->getVarData('zag_eta', T0=t0, T1=t1, HOUROFDAY=hourofday)
     value = reform(utils_wrf_intrp3d(value, h, above_ground_levels, /EXTRAPOLATE))
   endif
   
@@ -1144,14 +1243,12 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress, ST0=st0
   @WAVE.inc
   COMPILE_OPT IDL2
 ;  on_Error, 2
-  
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   if self.tres ne 'h' then Message, 'I need to be an H to make means'
-  vname = STRLOWCASE(info.name)
+  vname = (STRLOWCASE(info.name))
   if info.type eq '3d_soil' then message, 'soil not yet'
   if info.type eq 'static' then message, 'static dont need averages'
   _compress = KEYWORD_SET(COMPRESS)
-  
   self->getTime, otime, ont, ot0, ot1
   oabs=MAKE_ABS_DATE(QMS=otime)
   if ~KEYWORD_SET(ST0) then ot0 = MAKE_ABS_DATE(QMS=ot0) else ot0= MAKE_ABS_DATE(QMS=st0)
@@ -1177,11 +1274,14 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress, ST0=st0
   
   ; Right now I need a dummy obj. Not very elegant but well
   vars = *self.vars
-  if info.type eq '2d' then c = where(vars.type eq '2d', nc) else c = where(vars.type eq '3d_eta', nc)
+  if info.type eq '2d' then c = where(vars.type eq '2d', nc)
+  if info.type eq '3d_eta' then c = where(vars.type eq '3d_eta', nc)
+  if info.type eq '3d_press' then c = where(vars.type eq '3d_press', nc)
   if nc eq 0 then message, 'Noooo'
   sObj = NCDF_FILE((*self.files)[(vars[c[0]]).pos])
+  print, 'Clobber prob?' 
   dObj = NCDF_FILE(out_file, CLOBBER=clobber, /CREATE, NETCDF4_FORMAT=_compress)
-  
+  print, 'No clobber prob'
   ; Find all the global attributes in the source file and copy them.
   attrNames = sObj->GetGlobalAttrNames(COUNT=attrCount)
   for j=0,attrCount-1 do begin
@@ -1237,15 +1337,18 @@ pro wa_WPR::makeDailyMeans, id, CLOBBER=clobber, COMPRESS=compress, ST0=st0
 
     ; Because of PRCP we take n+1 timesteps but keep the last ns
     var = self->getVarData(id, T0=t0, T1=t1) 
+    nok =where(var eq -999.)
+    var[nok]=!VALUES.F_NAN
+    
     if STRMID(str_equiv(id), 0, 4) eq 'PRCP' then begin
       pnok=where(var lt (machar()).eps, cnt)
       if cnt ne 0 then var[pnok] = 0
     endif
     if info.type eq '3d_press' or info.type eq '3d_eta' then begin
-      var = MEAN(var[*,*,*,1:*], DIMENSION=4)
+      var = MEAN(var[*,*,*,1:*], DIMENSION=4, /NAN)
       offset = [0,0,0,i]
     endif else begin
-      var = MEAN(var[*,*,1:*], DIMENSION=3)
+      var = MEAN(var[*,*,1:*], DIMENSION=3, /NAN)
       offset = [0,0,i]
     endelse
     ;write
@@ -1276,14 +1379,14 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
   @WAVE.inc
   COMPILE_OPT IDL2
   ;  on_Error, 2
-  
+  print, 'Starting monthly means' 
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   if self.tres ne 'd' then Message, 'I need to be an d to make means'
   if info.type eq '3d_soil' then message, 'soil not yet'
   if info.type eq 'static' then message, 'static dont need averages'
   vname = STRLOWCASE(info.name)
   _compress = KEYWORD_SET(COMPRESS)
-  
+  print, 'Get time'
   self->getTime, otime, ont, ot0, ot1
   oabs=MAKE_ABS_DATE(QMS=otime)
   ot0 = MAKE_ABS_DATE(QMS=ot0)
@@ -1302,6 +1405,7 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
   
   ; Directory stuff
   prdir = FILE_DIRNAME(self.directory)
+  print, 'indir', prdir
   out_dir = prdir + '/m/' + info.type + '/'
   if ~ FILE_TEST(out_dir) then FILE_MKDIR, out_dir
   out_file = out_dir + vname + '_' + self.domain + '_m_' + self.expe +'_'+self.years+'.nc'
@@ -1354,11 +1458,13 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
     t1 = interval_time[i+1] - D_QMS
 
     var = self->getVarData(id, T0=t0, T1=t1)
+    nok =where(var eq -999.)
+    var[nok]=!VALUES.F_NAN
     if info.type eq '3d_press' or info.type eq '3d_eta' then begin
-      var = MEAN(TEMPORARY(var), DIMENSION=4)
+      var = MEAN(TEMPORARY(var), DIMENSION=4, /NAN)
       offset = [0,0,0,i]
     endif else begin
-      var = MEAN(TEMPORARY(var), DIMENSION=3)
+      var = MEAN(TEMPORARY(var), DIMENSION=3, /NAN)
       offset = [0,0,i]
     endelse
     ;write
