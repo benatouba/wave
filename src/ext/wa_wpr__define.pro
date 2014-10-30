@@ -13,7 +13,7 @@
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
+function wa_WPR::init, DIRECTORY=directory, YEAR=year, DOMAIN=domain, _EXTRA=extra
 
   ; Set up environnement
   @WAVE.inc
@@ -26,6 +26,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
     RETURN, 0
   ENDIF
   
+ 
   ; Check arguments
   if N_ELEMENTS(directory) eq 0 then message, 'File directory does not exist' 
   if directory eq '' then MESSAGE, WAVE_Std_Message(/FILE)
@@ -46,8 +47,9 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, _EXTRA=extra
   if (tres ne 'h') and (tres ne 'd') and (tres ne 'm') and  (tres ne 'y') then Message, 'Cannot understand timestep.' + $
     ' Be sure you are at the right place in the product directory structure'
   
+  if ~KEYWORD_SET(domain) then dom='d01' else dom='d0'+w_str(domain)
   self.hres=hres
-  self.domain='d01' 
+  self.domain=dom
   self.tres = tres
   self.hres = hres
   self.directory = dir
@@ -313,6 +315,32 @@ pro wa_WPR::_addDerivedVars
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
+  
+   ;Accumulated sensible heat flux stepped
+  d1 = self->hasVar('achfx')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'achfx'
+    v.name = 'achfx'
+    v.unit = 'J m-2 h-1'
+    v.description = 'Flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+
+
+  ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('aclhf')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'aclhf'
+    v.name = 'aclhf'
+    v.unit = 'J m-2 h-1'
+    v.description = 'Flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
   
   d1 = self->hasVar('psfc')
   if (d1) then begin
@@ -1029,6 +1057,15 @@ function wa_WPR::getVarData, id, $
       value = self->GetVarData('GLW', time, nt, t0 = t0, t1 = t1, MONTH=month)
       return,value
     end
+    'NETRAD': begin
+        value = self->getVarData('SWDOWN', time, nt, t0 = t0, t1=t1, MONTH=month)
+      swup = self->getVarData('SWUP', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      lwup = self->getVarData('LWUP', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      lwdown = self->getVarData('LWDOWN', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      value += lwdown - swup - lwup
+      return, value
+    end
+    
 
 
       'TD2': begin
@@ -1068,6 +1105,24 @@ function wa_WPR::getVarData, id, $
         if ts ne 1 then value = value / ts
         _acc_to_step = TRUE
       end
+      'ACLHF': begin
+      value = self->GetVarData('ACLHF', time, nt, t0 = t0, t1 = t1, MONTH=month)      
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE      
+    end
+     'ACHFX': begin
+      value = self->GetVarData('ACHFX', time, nt, t0 = t0, t1 = t1, MONTH=month)      
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE      
+    end
+      'ET': begin
+      value = self->GetVarData('ACLHF', time, nt, t0 = t0, t1 = t1, MONTH=month) / 2.5e6       ; Heat of vaporization
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE      
+    end
       'PRCP_NC': begin
         value = self->GetVarData('RAINNC', time, nt, t0 = t0, t1 = t1)
         ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
