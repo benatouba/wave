@@ -1096,10 +1096,11 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
     psince = WHERE(str_equiv(ts) eq str_equiv('since'), csince)    
   endif
   if csince ne 1 then return, FALSE
+  psince = psince[0] ; to avoid hidden errors
   
   unit = ts[psince - 1]
   d = ts[psince + 1]
-  t = ts[psince + 2]  
+  if N_ELEMENTS(ts) gt psince + 2 then t = ts[psince + 2]  
   if N_ELEMENTS(ts) gt psince + 3 then Message, 'Time contains a zone (which is currently not supported) or is not of suitable format', /INFORMATIONAL
    
   d = STRSPLIT(d,'-', /EXTRACT)   
@@ -1108,18 +1109,20 @@ function utils_nc_coards_time, cdfid, time, time0, time1, nt, VARNAME = varname
   mo = LONG(d[1])
   d = LONG(d[2])
   
-  t = STRSPLIT(t,':', /EXTRACT)   
-  if N_ELEMENTS(t) eq 1 then begin
-   h = LONG(t[0])
-  endif else if N_ELEMENTS(t) eq 2 then begin
-   h = LONG(t[0])
-   mi = LONG(t[1])
-  endif else if N_ELEMENTS(t) eq 3 then begin
-   h = LONG(t[0])
-   mi = LONG(t[1])
-   s = LONG(t[2])
-   milli = LONG64( (DOUBLE(t[2]) - FLOOR(double(t[2]))) * 1000D )
-  endif else return, FALSE  
+  if n_elements(t) ne 0 then begin
+    t = STRSPLIT(t,':', /EXTRACT)
+    if n_elements(t) eq 1 then begin
+      h = long(t[0])
+    endif else if n_elements(t) eq 2 then begin
+      h = long(t[0])
+      mi = long(t[1])
+    endif else if n_elements(t) eq 3 then begin
+      h = long(t[0])
+      mi = long(t[1])
+      s = long(t[2])
+      milli = long64( (double(t[2]) - floor(double(t[2]))) * 1000D )
+    endif else return, FALSE
+  endif
        
   is_OLD = FALSE
   if y lt 1900 then begin 

@@ -69,7 +69,7 @@ function w_geographic::init, file, FILEGRID=filegrid, DATUM=datum, _EXTRA=extra
     y0 = max(lat, pm)
     if pm eq 0 then begin
       self.order = 1 ; Check this
-      message, 'I decided that the file is upside down.', /INFORMATIONAL
+      ; message, 'I decided that the file is upside down.', /INFORMATIONAL
     endif
 
     ;Projection

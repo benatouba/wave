@@ -2482,3 +2482,69 @@ function w_WRF::get_Var, Varid, $
   return, value
   
 end
+
+;+
+; :Description:
+;    Plots a desired variable for quick visualisation purposes.
+;    It adds geolocalisation info, too.
+;    
+; :Categories:
+;         WAVE/OBJ_GIS   
+;         
+; :Params:
+;    Varid : in, required, type = integer/ string
+;            variable index or name of the desired variable
+;
+; :Keywords:
+;    WID: out
+;         the widget id     
+;    
+;    _EXTRA: in, optional
+;            All keywords accepted by the get_var() function
+;    
+;         
+; :History:
+;     Written by FaM, 2010.
+;-
+pro w_WRF::QuickPlotVar, Varid, WID = wid, _EXTRA = extra
+  
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  Catch, theError
+  IF theError NE 0 THEN BEGIN
+    Catch, /Cancel
+    ok = WAVE_Error_Message(!Error_State.Msg)
+    RETURN
+  ENDIF
+  
+  if ~self->get_Var_Info(Varid) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.' 
+  var = self->get_Var(Varid, time, _EXTRA = extra, varname = varname, dimnames = dimnames, units = units, description=description)
+
+
+  if DESCRIPTION ne '' then varname = varname + ' - ' + DESCRIPTION 
+  
+  self->get_lonlat, lon, lat, nx, ny  
+  
+  if self.TID ge 0 and time[0] gt -1 then begin ; We found the time dimension in the file  
+    p = where(dimnames eq (*self.dimNames)[self.TID], cnt)    
+    if cnt ne 0 then tsrt = TIME_to_STR(time)
+  endif   
+  
+  case (N_ELEMENTS(DIMNAMES)) of
+    2: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+        dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, WID = wid 
+    end
+    3: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+         dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim3tags = tsrt, WID = wid
+    end
+    4: begin
+       w_QuickPlot, var, COLORTABLE=13, TITLE= varname, WINDOW_TITLE='w_GEO_nc view: ' + self.fname, $
+            dimnames = dimnames, CBARTITLE=units, COORDX=lon, COORDY = lat, dim4tags = tsrt, WID = wid
+    end
+    else: MESSAGE, 'Variable is not of suitable dimension.'
+  endcase      
+
+end

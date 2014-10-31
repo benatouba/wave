@@ -96,6 +96,7 @@ PRO w_GEO_nc__Define
             INHERITS w_NCDF             , $
             XID : 0L                    , $
             YID : 0L                    , $
+            ZID : 0L                    , $
             TID : 0L                    , $
             time: ptr_new()             , $ 
             t0  : 0LL                   , $
@@ -157,10 +158,12 @@ Function w_GEO_nc::Init, FILE = file, SUBSET = subset
   ;*****************************
   xp = ['west_east','lon','longitude','longitudes','lons','xlong','xlong_m', 'dimlon','x','lon_3','long']
   yp = ['south_north','lat','latitude' ,'latitudes' ,'lats','xlat' ,'xlat_m', 'dimlat','y','lat_3']
+  zp = ['levelist','level', 'pressure', 'press', 'zlevel', 'z']
   tp = ['time','times','xtime']
   
   foundX = -1
   foundY = -1
+  foundZ = -1
   foundT = -1
   
   for i=0, self.Ndims-1 do begin
@@ -169,14 +172,17 @@ Function w_GEO_nc::Init, FILE = file, SUBSET = subset
     if cnt ne 0 then foundX = i
     p = where(str_equiv(yp) eq str_equiv(dimn), cnt)
     if cnt ne 0 then foundY = i
+    p = where(str_equiv(zp) eq str_equiv(dimn), cnt)
+    if cnt ne 0 then foundZ = i
     p = where(str_equiv(tp) eq str_equiv(dimn), cnt)
     if cnt ne 0 then foundT = i
-    if foundX ge 0 and foundY ge 0 and foundT ge 0 then break
+    if foundX ge 0 and foundY ge 0 and foundZ ge 0 and foundT ge 0 then break
   endfor
   
   if foundX lt 0 or foundY lt 0 then Message, 'X and Y dimensions could not be found.'
   self.XID = foundX
   self.YID = foundY
+  self.ZID = foundZ
   self.TID = foundT
   
   self.t0 = -1LL
@@ -237,6 +243,8 @@ END
 ;         ncdf ID of the X dimension
 ;    YID: out, optional, type = integer
 ;         ncdf ID of the Y dimension
+;    ZID: out, optional, type = integer
+;         ncdf ID of the Z dimension (-1 if not found)
 ;    TID: out, optional, type = integer
 ;         ncdf ID of the T dimension
 ;    time: out, optional, type = ptr
@@ -260,6 +268,7 @@ END
 PRO w_GEO_nc::GetProperty  , $
             XID = XID    , $
             YID = YID    , $
+            ZID = ZID    , $
             TID = TID    , $
             time = time  , $ 
             t0 = t0      , $
@@ -282,6 +291,7 @@ PRO w_GEO_nc::GetProperty  , $
   
   IF Arg_Present(XID) NE 0 THEN XID = self.XID
   IF Arg_Present(YID) NE 0 THEN YID = self.YID
+  IF Arg_Present(ZID) NE 0 THEN ZID = self.ZID
   IF Arg_Present(TID) NE 0 THEN TID = self.TID
   IF Arg_Present(time) NE 0 THEN time = *self.time
   IF Arg_Present(t0) NE 0 THEN t0 = self.t0

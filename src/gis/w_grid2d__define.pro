@@ -1516,6 +1516,7 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
         'MIN': _out_data[j] = MIN(d, /NAN)
         'MAX': _out_data[j] = MAX(d, /NAN)
         'SUM': _out_data[j] = TOTAL(d, /NAN)
+        'STDDEV': _out_data[j] = STDDEV(d, /NAN)
         else: Message, 'Method currently not supported: ' + str_equiv(METHOD)
       endcase
       if do_valid then _n_valid[j] = cntv
@@ -1734,7 +1735,7 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   
   if N_ELEMENTS(shpfile) eq 0 then shpfile = DIALOG_PICKFILE(TITLE='Please select shape file file to read', /MUST_EXIST, FILTER = '*.shp' )
   
-  if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', /FILE)
+  if ~FILE_TEST(shpfile) then MESSAGE, WAVE_Std_Message('shpfile', FILE=shpfile)
   
   if N_ELEMENTS(shp_src) eq 0 then begin
    GIS_make_datum, ret, shp_src, NAME = 'WGS-84'

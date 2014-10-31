@@ -402,7 +402,7 @@ function WAVE_Std_Message, var   , $
   if KEYWORD_SET(NDIMS) then mess = 'Argument not correct : $' + var + '. Unexpected number of dimensions: ' + str_equiv(NDIMS)
   if KEYWORD_SET(NELEMENTS) then mess = 'Argument not correct : $' + var + '. An array of ' + str_equiv(NELEMENTS) +' elements is expected.'
   if KEYWORD_SET(OBJ) then mess = 'Argument not correct : $' + var + '. An instance of ' + str_equiv(OBJ) +' is expected.'
-  if KEYWORD_SET(FILE) then mess = 'File doesnt exist or is not valid.'
+  if KEYWORD_SET(FILE) then mess = 'File doesnt exist or is not valid:' + FILE
   if KEYWORD_SET(STRUCT) then begin
     ok = var_info(struct) eq IDL_STRUCT
     if ok then sn = '. A structure of type {' + tag_names(struct,/STRUCT) + '} is expected.' else sn = '. A structure is expected.'
