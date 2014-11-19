@@ -38,7 +38,7 @@ pro w_ncdc_read_ish_history_csv, CACHE_DIRECTORY=cache_directory
   name = t['STATION NAME']
   lon = t['LON']
   lat = t['LAT']
-  elev = t['LAT']
+  elev = t['ELEV(M)']
   begind = t['BEGIN']
   endd = t['END']
   
