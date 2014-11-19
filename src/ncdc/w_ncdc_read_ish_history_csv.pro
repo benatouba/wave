@@ -12,19 +12,6 @@
 ;
 ;-
 
-;+
-; :Description:
-;    To remove the " string from ascii fields
-;
-;-
-function w_ncdc_read_ish_history_csv_clean_str, str
-
-  n = N_ELEMENTS(str)
-  for i=0, N_ELEMENTS(str)-1 do str[i] = STRJOIN(STRTOK(str[i], '"', /REGEX, /EXTRACT))
-  return, str
-  
-end
-
 pro w_ncdc_read_ish_history_csv, CACHE_DIRECTORY=cache_directory
 
   ; SET UP ENVIRONNEMENT
@@ -33,28 +20,27 @@ pro w_ncdc_read_ish_history_csv, CACHE_DIRECTORY=cache_directory
   ;  ON_ERROR, 2
   
   if N_ELEMENTS(CACHE_DIRECTORY) eq 0 then CACHE_DIRECTORY = ''
-  local_path = 'tmp_ish-history.csv'
+  local_path = CACHE_DIRECTORY + 'tmp_ish-history.csv'
 
   oUrl = OBJ_NEW('IDLnetUrl', URL_SCHEME='ftp', URL_HOST='ftp.ncdc.noaa.gov/pub/data/gsod/')
-  oURL->SetProperty, URL_PATH = 'ish-history.csv'
-  dummy = oURL->Get(FILENAME = local_path) 
+  oURL->SetProperty, URL_PATH = 'isd-history.csv'
+  dummy = oURL->Get(FILENAME=local_path) 
   UNDEFINE, ourl
     
   ; Read the CSV file (READ_CSV not possible because of the wrong datatypes)
-  restore, WAVE_RESOURCE_DIR + '/ncdc/ascii_template_ish_history_file.tpl'
-  ascii_data = READ_ASCII(local_path, TEMPLATE=template)
+  t = w_READ_CSV(local_path, /NOCONVERT)
   FILE_DELETE, local_path
   
   ;Read the needed tags and remove the "
-  usaf= STRMID(ascii_data.usaf, 1, 6)
-  wban= STRMID(ascii_data.wban, 1, 5)
+  usaf= t['USAF']
+  wban= t['WBAN']
   
-  name = w_ncdc_read_ish_history_csv_clean_str(ascii_data.name)
-  lon = w_ncdc_read_ish_history_csv_clean_str(ascii_data.lon)
-  lat = w_ncdc_read_ish_history_csv_clean_str(ascii_data.lat)
-  elev = w_ncdc_read_ish_history_csv_clean_str(ascii_data.elev)
-  begind = w_ncdc_read_ish_history_csv_clean_str(ascii_data.begind)
-  endd = w_ncdc_read_ish_history_csv_clean_str(ascii_data.endd)
+  name = t['STATION NAME']
+  lon = t['LON']
+  lat = t['LAT']
+  elev = t['LAT']
+  begind = t['BEGIN']
+  endd = t['END']
   
   ; Select valid stations
   pnok = where(lon eq '' or lat eq '' or elev eq '' or lon eq '-99999' or lat eq '-99999' or elev eq '-99999', cntnok, COMPLEMENT=pok, NCOMPLEMENT=cntok)
@@ -62,9 +48,9 @@ pro w_ncdc_read_ish_history_csv, CACHE_DIRECTORY=cache_directory
     usaf = usaf[pok]
     wban = wban[pok]
     name = name[pok]
-    lon = lon[pok] * 0.001
-    lat = lat[pok] * 0.001
-    elev = elev[pok] * 0.1
+    lon = float(lon[pok])
+    lat = float(lat[pok])
+    elev = float(elev[pok])
     begind = begind[pok]
     endd = endd[pok]
   endif else message, WAVE_Std_Message('ish_history_file', /FILE)

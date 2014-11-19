@@ -89,7 +89,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
       return
     endif
     
-    if do_p then map = OBJ_NEW('w_Map', grid, YSIZE=600, /BLUE_MARBLE)
+    if do_p then map = OBJ_NEW('w_Map', grid, YSIZE=600)
     
   endif else if N_ELEMENTS(LLBOX) eq 4 then begin
   
@@ -112,6 +112,7 @@ pro w_ncdc_select_stations, stations, GRID=grid, LLBOX=llbox, DO_PLOT=do_plot
   stations = w_ncdc_select_stations_crop_struct(_h, p_in, cnt_in)
   
   if do_p and stations.n_stations ne 0 then begin
+    ok = map->set_img(/BLUE_MARBLE)
     h = stations.elev
     lon = stations.lon
     lat = stations.lat

@@ -347,8 +347,9 @@ function w_ncdc_read_gsod_file, FILE=file, $
       id = ids[i]
       id_str=stn[i]+'-'+wban[i]
       
-      s=where(ncdc_history.usaf+ncdc_history.wban eq id, cnt)
+      s = where(ncdc_history.usaf+ncdc_history.wban eq id, cnt)
       if cnt eq 0 then Message, id + ' not found, please update your NCDC history file!'
+      s= s[0]
       
       lat = ncdc_history.lat[s]
       lon = ncdc_history.lon[s]
@@ -360,6 +361,7 @@ function w_ncdc_read_gsod_file, FILE=file, $
       un = uniq(_t, sort(_t))
       if N_ELEMENTS(un) ne N_ELEMENTS(_t) then print, sname, ' ' , str_equiv(id), ' not unique'
       _t = _t[un]
+      
       if verbose then print, sname + ' ' + id_str + '. ' + str_equiv(filecnt-1-t) + ' left.'
       
       ncdc_station = OBJ_NEW('w_ts_Station',NAME=sname, $ ; The name of the station
