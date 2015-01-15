@@ -706,7 +706,7 @@ pro w_ts_Station::setPeriod, T0=t0, T1=t1
   
   ; Count the number of variables.
   varCount = self.vars->Count()
-          
+ 
   for i=0, varCount-1 do begin
     _var = self.vars->get(POSITION=i)
     _var->setPeriod, T0=t0, T1=t1
@@ -1029,81 +1029,92 @@ end
 ;            the string format code for floats
 ;
 ;-
-pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
+pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format, NOINFO=noinfo
 
   ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
+  compile_opt IDL2
   on_error, 2
 
-  if N_ELEMENTS(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)   
-  
-  if N_ELEMENTS(format) eq 0 then format = '(F9.3)'
-  
-  openw, id, file, /GET_LUN
-  
-  if N_ELEMENTS(title) eq 0 then title = 'File generated with IDL.'
-  printf, id, '% TITLE: ' + title
-  
-  meta = '% STATION_NAME: ' + self.name
-  printf, id, meta
-  meta = '% STATION_DESCRIPTION: ' + self.description
-  printf, id, meta
-  meta = '% STATION_LOCATION: Longitude ' + str_equiv(STRING(self.loc_x)) + ' ; Latitude ' + str_equiv(STRING(self.loc_y)) + ' ; Altitude ' + STRING(self.elevation, FORMAT='(I4)') 
-  printf, id, meta
-  
-  
+  if n_elements(file) eq 0 then message, WAVE_Std_Message('FILE', /ARG)
+
+  if file_test(FILE, /DIRECTORY) then begin
+    _file = utils_clean_path(file, /MARK_DIRECTORY)
+    _file = _file + 'w_ts_' + self.id + '.csv'
+  endif else _file = file
+
+  if n_elements(format) eq 0 then format = '(F9.3)'
+
+  openw, id, _file, /GET_LUN
+
+  if ~keyword_set(NOINFO) then begin
+
+    if n_elements(title) eq 0 then title = 'File generated with IDL.'
+    printf, id, '% TITLE: ' + title
+
+    meta = '% STATION_NAME: ' + self.name
+    printf, id, meta
+    meta = '% STATION_DESCRIPTION: ' + self.description
+    printf, id, meta
+    meta = '% STATION_LOCATION: Longitude ' + str_equiv(string(self.loc_x)) + ' ; Latitude ' + str_equiv(string(self.loc_y)) + ' ; Altitude ' + string(self.elevation, FORMAT='(I4)')
+    printf, id, meta
+  endif
+
+
   varCount = self.vars->Count()
- 
-  vNames = STRARR(varCount)
-  units = STRARR(varCount)
-  types = STRARR(varCount)
-  descriptions = STRARR(varCount)
-  valids = STRARR(varCount)
-    
+
+  vNames = strarr(varCount)
+  units = strarr(varCount)
+  types = strarr(varCount)
+  descriptions = strarr(varCount)
+  valids = strarr(varCount)
+
   for i = 0, varCount - 1 do begin
-   _var = self.vars->Get(POSITION=i)
-   _var->getProperty, NAME=name, $
-                      DESCRIPTION=description, $
-                      UNIT=unit, $
-                      VALIDITY=Validity, $
-                      TYPE=type, $
-                      AGG_METHOD=agg_method
-   
-   vNames[i] = name
-   units[i] = unit
-   types[i] = type_name(type)
-   descriptions[i] = description
-   valids[i] = Validity      
-  endfor 
-  
-  meta = '% DATA_VALIDITY: ' + valids[0]
-  printf, id, meta
-  meta = '% FILE_FORMAT: NAME, DESCRIPTION, UNIT, TYPE'
-  printf, id, meta
-  
-  time = _var->getTime(NT=nt)    
-  
-  sep = '","'  
+    _var = self.vars->Get(POSITION=i)
+    _var->getProperty, NAME=name, $
+      DESCRIPTION=description, $
+      UNIT=unit, $
+      VALIDITY=Validity, $
+      TYPE=type, $
+      AGG_METHOD=agg_method
+
+    vNames[i] = name
+    units[i] = unit
+    types[i] = type_name(type)
+    descriptions[i] = description
+    valids[i] = Validity
+  endfor
+
+  if ~keyword_set(NOINFO) then begin
+    meta = '% DATA_VALIDITY: ' + valids[0]
+    printf, id, meta
+    meta = '% FILE_FORMAT: NAME, DESCRIPTION, UNIT, TYPE'
+    printf, id, meta
+  endif
+  time = _var->getTime(NT=nt)
+
+  sep = '","'
   text = '"TIMESTAMP","'
   for i = 0, varCount - 2 do text +=vNames[i] + sep
   text += vNames[varCount- 1]  + '"'
   printf, id, text
-  
-  text = '"-","'
-  for i = 0, varCount - 2 do text +=descriptions[i] + sep
-  text += descriptions[varCount- 1]  + '"'
-  printf, id, text
-  
-  text = '"-","'
-  for i = 0, varCount - 2 do text +=units[i] + sep
-  text += units[varCount- 1]  + '"'
-  printf, id, text
-  
-  text = '"STRING","'
-  for i = 0, varCount - 2 do text +=types[i] + sep
-  text += types[varCount- 1]  + '"'
-  printf, id, text
+
+  if ~keyword_set(NOINFO) then begin
+    text = '"-","'
+    for i = 0, varCount - 2 do text +=descriptions[i] + sep
+    text += descriptions[varCount- 1]  + '"'
+    printf, id, text
+
+    text = '"-","'
+    for i = 0, varCount - 2 do text +=units[i] + sep
+    text += units[varCount- 1]  + '"'
+    printf, id, text
+
+    text = '"STRING","'
+    for i = 0, varCount - 2 do text +=types[i] + sep
+    text += types[varCount- 1]  + '"'
+    printf, id, text
+  endif
     
   sep = ','
   
@@ -1124,6 +1135,7 @@ pro w_ts_Station::ASCIIwrite, FILE=file, TITLE=title, FORMAT=format
     for i = 0, varCount - 1 do begin
       data = (*(datas[i]))[l]
       if str_equiv(types[i]) eq str_equiv('float') then v = strcompress(STRING(data, FORMAT=format),/REMOVE_ALL)
+      if str_equiv(types[i]) eq str_equiv('double') then v = strcompress(STRING(data, FORMAT=format),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('long') then v = strcompress(STRING(data,FORMAT = '(I8)'),/REMOVE_ALL)
       if str_equiv(types[i]) eq str_equiv('string') then v = strcompress(STRING(data),/REMOVE_ALL)
       if i lt varCount - 1 then text += v + sep else text += v
@@ -1165,7 +1177,10 @@ pro w_ts_Station::NCDFwrite, FILE=file, OVERWRITE=overwrite
   
   ; Count the number of global attribute objects.
   varCount = self.vars->Count()  
-  IF varCount EQ 0 THEN Message, 'No variables stored in the station!'
+  IF varCount EQ 0 THEN begin
+    print, 'No variables stored in station: ' + self.name
+    return
+  endif
   time = self->getTime(NT=nt)
   IF nt EQ 0 THEN Message, 'No times in the station!'
       

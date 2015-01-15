@@ -798,6 +798,7 @@ pro w_ts_StatSet::setPeriod, T0=t0, T1=t1
           
   for i=0, StatCount-1 do begin
     _stat = self.Stats->Get(POSITION=i)
+    if _stat->GetVarCount() eq 0 then continue
     _stat->setPeriod, T0=t0, T1=t1
     if i eq 0 then begin
       _t0 = _stat->getProperty('t0')
@@ -948,6 +949,41 @@ pro w_ts_StatSet::NCDFwrite, DIRECTORY=directory, OVERWRITE=overwrite
   
   for i=0, statCount-1 do begin
     (self.stats->get(POSITION=i))->NCDFwrite, FILE=directory, OVERWRITE=overwrite
+  endfor
+  
+end
+
+;+
+; :Description:
+;    Writes the station data in one single directory as ASCII files.
+;    
+;    This can be done for save/restore purposes, since the 
+;    directory can be later parsed automatically (and efficiently)
+;    for the object initialisation.
+;
+; :Keywords:
+;    DIRECTORY: in, required, type=string
+;                the path to the directory where to write the 
+;                ncdf files
+;    OVERWRITE: in, optional
+;               default behavior is to stop if the file already exists.
+;               Set this keyword to avoid this
+;
+;-
+pro w_ts_StatSet::ASCIIwrite, DIRECTORY=directory, NOINFO=noinfo
+
+  ; Set up environnement
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  on_error, 2
+  
+  if ~ FILE_TEST(directory, /DIRECTORY) then Message, WAVE_Std_Message('DIRECTORY', /FILE)
+  
+  StatCount = self.Stats->Count()  
+  iF StatCount EQ 0 THEN return
+  
+  for i=0, statCount-1 do begin
+    (self.stats->get(POSITION=i))->ASCIIwrite, FILE=directory, NOINFO=noinfo
   endfor
   
 end

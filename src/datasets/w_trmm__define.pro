@@ -62,7 +62,7 @@ function w_TRMM::init, file, _EXTRA=extra
   if isHere ge 0 then type = '3B42'
   isHere = STRPOS(fname, '3B42_DAILY')
   if isHere ge 0 then type = '3B42d'  
-  if type eq '' then message, WAVE_Std_Message('Input file not recognized as a known TRMM product.')
+  if type eq '' then message, 'Input file not recognized as a known TRMM product.'
   self.type = type
     
   ; Original grid geoloc

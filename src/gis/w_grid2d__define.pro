@@ -607,7 +607,7 @@ end
 
 ;+
 ; :Description:
-;   To retrieve the ROI in the form of a mask or a shape file
+;   To retrieve the ROI in the form of a mask
 ;   (if a ROI has been previously set)
 ;
 ; :Keywords:
@@ -652,6 +652,138 @@ pro w_Grid2D::get_ROI, MASK=mask, SUBSET=subset, MARGIN=margin
   endif
   
 end
+
+
+;+
+; :Description:
+;   To save the ROI as a shapefile in lon lat coordinates
+;   
+;   TODO: !CAREFULL: still in alpha version. Possible improvements needed, 
+;   such as better smooth and such things... There are probable memory leaks
+;   in IDL7- but wel...
+;   
+; :Params:
+; 
+;    file: the path to the file you want to write. Should be ending in *.shp
+; 
+; :History:
+;     Written by FaM, 2015.
+;
+;-
+pro w_Grid2D::roi_to_shape, file
+
+  ; SET UP ENVIRONNEMENT
+  @WAVE.inc
+  COMPILE_OPT IDL2
+  
+  self->get_ROI, MASK=mask
+  if total(mask) eq 0 then Message, 'Mask is empty'
+  
+;  This was for testing
+;  mask = mask * 0.
+;  mask[10:60, 10:60] = 1
+;  mask[30:40, 30:40] = 0
+;  mask[80:90, 80:90] = 1
+;  mask[82:87, 82:87] = 0
+;  mask[10:30, 70:80] = 1
+  
+  Contour, FLOAT(mask), PATH_INFO=info, PATH_XY=xy, XSTYLE=1, YSTYLE=1, /PATH_DATA_COORDS, LEVELS=0.5
+  
+  ; Transform to lon lat
+  self->transform, xy[0, *], xy[1, *], LON_DST=xx, LAT_DST=yy
+  xy[0, *] = xx
+  xy[1, *] = yy
+  
+  pin = where(info.high_low eq 0, cnt_in, COMPLEMENT=pout, NCOMPLEMENT=cnt_out)
+  
+  outlist = ptrarr(cnt_out)
+  for i=0, cnt_out-1 do begin
+    inf = info[pout[i]]
+    _xy = xy[*, inf.offset :(inf.offset+inf.N-1)]
+    _xy = [[_xy], [_xy[*,0]]]
+    _n = inf.N + 1
+    s = {verts: ptr_new(_xy), $
+         nverts: _n, $
+         n_parts: 1, $
+         parts: ptr_new([0, _n]) $
+         }
+    outlist[i] = ptr_new(s)
+  endfor
+  
+  for k=0, cnt_in-1 do begin
+    found = 0
+    inf = info[pin[k]]
+    _xy = xy[*, inf.offset :(inf.offset+inf.N-1)]
+    _xy = [[_xy], [_xy[*,0]]]
+    _n = inf.N + 1
+    
+    for i=0, cnt_out-1 do begin
+      if found eq 1 then continue
+      out = *(outlist[i])
+      outv = *(out.verts)
+      parts = *(out.parts)
+      roi = OBJ_NEW('IDLanROI', outv[0, 0:parts[1]-1], outv[1, 0:parts[1]-1])
+      p_in = where(roi->ContainsPoints(_xy[0, *], _xy[1, *]) eq 1, cnt_in)
+      if cnt_in ne 0 then begin
+        out.verts = ptr_new([[outv], [_xy]])
+        out.parts = ptr_new([parts, out.nverts+_n])
+        out.nverts = out.nverts + _n
+        out.n_parts = out.n_parts + 1
+        found = 1
+        outlist[i] = ptr_new(out)
+      endif
+    endfor
+    if found eq 0 then Message, 'Parent not found!'
+  endfor
+  
+  dObj = obj_new('IDLffShape', file, /UPDATE, ENTITY_TYPE=5)
+  dObj->AddAttribute, 'ROI_ID', 7, 5, PRECISION=0
+
+  for i=0, cnt_out-1 do begin
+    out = *(outlist[i])
+    
+    xy= *(out.verts)
+    xx= reform(xy[0,*])
+    yy= reform(xy[1,*])
+    ; Create structure for new entity
+    entNew = {IDL_SHAPE_ENTITY}
+
+    ; Define the values for the new entity
+    entNew.SHAPE_TYPE = 5
+    entNew.BOUNDS[0] = min(xx)
+    entNew.BOUNDS[1] = min(yy)
+    entNew.BOUNDS[2] = 0.00000000
+    entNew.BOUNDS[3] = 0.00000000
+    entNew.BOUNDS[4] = max(xx)
+    entNew.BOUNDS[5] = max(yy)
+    entNew.BOUNDS[6] = 0.00000000
+    entNew.BOUNDS[7] = 0.00000000
+
+    entNew.N_VERTICES = out.nverts
+    entNew.VERTICES = ptr_new(xy)
+    
+    entNew.N_PARTS = out.n_parts
+    entNew.PARTS =  ptr_new(*(out.parts))
+    
+    ; Create structure for new attributes
+    attrNew = dObj->GetAttributes(/ATTRIBUTE_STRUCTURE)
+
+    ; Define the values for the new attributes
+    attrNew.ATTRIBUTE_0 = w_str(i)
+
+    ; Add the new entity to new shapefile
+    dObj->PutEntity, entNew
+    ; Add the Colorado attributes to new shapefile.
+    dObj->SetAttributes, i, attrNew
+
+    dObj->PutEntity, entNew
+  endfor
+  
+  obj_destroy, dObj
+  undefine, outlist
+  
+end
+
 
 ;+
 ; :Description:

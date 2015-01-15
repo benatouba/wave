@@ -62,7 +62,7 @@
 ; :Requires: IDL 8.0.
 ;
 ; :Author: Paulo Penteado (pp.penteado@gmail.com), July/2010
-           Adapted to the WAVE, 2013
+;           Adapted to the WAVE, 2013
 ;-
 function w_histogram, array, $
   REVERSE_LIST=rl, $

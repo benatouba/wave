@@ -39,8 +39,8 @@ function w_make_mercamap, $
     ysize = 600
     xsize = ysize * DOUBLE(xx)/ yy
   endif else begin
-    if N_ELEMENTS(XSIZE) ne 0 then ysize = xsize * DOUBLE(xx)/yy
-    if N_ELEMENTS(YSIZE) ne 0 then xsize = ysize * DOUBLE(yy)/xx
+    if N_ELEMENTS(XSIZE) ne 0 then ysize = xsize * DOUBLE(yy)/xx
+    if N_ELEMENTS(YSIZE) ne 0 then xsize = ysize * DOUBLE(xx)/yy
   endelse
       
   xsize = ROUND(xsize)
