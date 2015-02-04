@@ -660,42 +660,60 @@ end
 ;   
 ;   TODO: !CAREFULL: still in alpha version. Possible improvements needed, 
 ;   such as better smooth and such things... There are probable memory leaks
-;   in IDL7- but wel...
+;   in IDL7- but well...
 ;   
 ; :Params:
-; 
 ;    file: the path to the file you want to write. Should be ending in *.shp
+; 
+; :Keywords:
+;    HIGHRES: set to a positive integer greater than 1 to obtain a shape which
+;             is closer to the actual "pixels" of the mask. This is not always
+;             better, so try HIGHRES=10 and see what happends
 ; 
 ; :History:
 ;     Written by FaM, 2015.
 ;
 ;-
-pro w_Grid2D::roi_to_shape, file
+pro w_Grid2D::roi_to_shape, file, HIGHRES=highres
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
-  COMPILE_OPT IDL2
-  
+  compile_opt IDL2
+
   self->get_ROI, MASK=mask
-  if total(mask) eq 0 then Message, 'Mask is empty'
+  if total(mask) eq 0 then message, 'Mask is empty: cannot save to shape'
+
+  ; Define the path of the prj file, but we will write it only if we succeed
+  ext = STRSPLIT(file, '.', /EXTRACT)
+  ext = ext[n_elements(ext)-1]
+  if ext ne 'shp' then message, 'File should end in *.shp'
+  prjfile = utils_replace_string(file, '.shp', '.prj')
+  prjstr = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",' + $
+    'SPHEROID["WGS_1984",6378137.0,298.257223563]],'  + $
+    'PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]'
+    
   
-;  This was for testing
-;  mask = mask * 0.
-;  mask[10:60, 10:60] = 1
-;  mask[30:40, 30:40] = 0
-;  mask[80:90, 80:90] = 1
-;  mask[82:87, 82:87] = 0
-;  mask[10:30, 70:80] = 1
+  if n_elements(highres) ne 0 then begin
+    hrgrid = self->reGrid(FACTOR=highres)
+    mask = REBIN(mask, self.tnt_c.nx * highres, self.tnt_c.ny * highres, /SAMPLE)
+;    ok = hrgrid->set_ROI(MASK=mask, SRC=self)
+;    hrgrid->get_ROI, MASK=mask
+    if total(mask) eq 0 then message, 'Something went wrong'
+  endif 
   
-  Contour, FLOAT(mask), PATH_INFO=info, PATH_XY=xy, XSTYLE=1, YSTYLE=1, /PATH_DATA_COORDS, LEVELS=0.5
+  ; use contour to get the polygons
+  Contour, float(mask), PATH_INFO=info, PATH_XY=xy, XSTYLE=1, YSTYLE=1, /PATH_DATA_COORDS, LEVELS=0.5
   
   ; Transform to lon lat
-  self->transform, xy[0, *], xy[1, *], LON_DST=xx, LAT_DST=yy
+  if n_elements(highres) ne 0 then tobj = hrgrid else tobj = self
+  tobj->transform, xy[0, *], xy[1, *], LON_DST=xx, LAT_DST=yy
   xy[0, *] = xx
   xy[1, *] = yy
   
+  ; Check which are classified as "inside" and "outside"
   pin = where(info.high_low eq 0, cnt_in, COMPLEMENT=pout, NCOMPLEMENT=cnt_out)
   
+  ; Start with the outside (major) polygons
   outlist = ptrarr(cnt_out)
   for i=0, cnt_out-1 do begin
     inf = info[pout[i]]
@@ -710,6 +728,8 @@ pro w_Grid2D::roi_to_shape, file
     outlist[i] = ptr_new(s)
   endfor
   
+  ; Since I don't know where the insides belong, I have to check all 
+  ; of them and find their parent
   for k=0, cnt_in-1 do begin
     found = 0
     inf = info[pin[k]]
@@ -736,7 +756,8 @@ pro w_Grid2D::roi_to_shape, file
     if found eq 0 then Message, 'Parent not found!'
   endfor
   
-  dObj = obj_new('IDLffShape', file, /UPDATE, ENTITY_TYPE=5)
+  ; OK we're done, write out the data
+  dObj = obj_new('IDLffShape', file, ENTITY_TYPE=5) ; 5 is "polygon"
   dObj->AddAttribute, 'ROI_ID', 7, 5, PRECISION=0
 
   for i=0, cnt_out-1 do begin
@@ -745,6 +766,7 @@ pro w_Grid2D::roi_to_shape, file
     xy= *(out.verts)
     xx= reform(xy[0,*])
     yy= reform(xy[1,*])
+    
     ; Create structure for new entity
     entNew = {IDL_SHAPE_ENTITY}
 
@@ -758,10 +780,9 @@ pro w_Grid2D::roi_to_shape, file
     entNew.BOUNDS[5] = max(yy)
     entNew.BOUNDS[6] = 0.00000000
     entNew.BOUNDS[7] = 0.00000000
-
+    
     entNew.N_VERTICES = out.nverts
     entNew.VERTICES = ptr_new(xy)
-    
     entNew.N_PARTS = out.n_parts
     entNew.PARTS =  ptr_new(*(out.parts))
     
@@ -773,14 +794,18 @@ pro w_Grid2D::roi_to_shape, file
 
     ; Add the new entity to new shapefile
     dObj->PutEntity, entNew
-    ; Add the Colorado attributes to new shapefile.
+    ; Add the attributes to new shapefile.
     dObj->SetAttributes, i, attrNew
-
-    dObj->PutEntity, entNew
+    
   endfor
   
   obj_destroy, dObj
-  undefine, outlist
+  undefine, outlist, hrgrid
+  
+  ; OK now write the prj
+  openw, lun, prjfile, /GET_LUN
+  printf, lun, prjstr
+  free_lun, lun
   
 end
 
@@ -1649,6 +1674,7 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
         'MAX': _out_data[j] = MAX(d, /NAN)
         'SUM': _out_data[j] = TOTAL(d, /NAN)
         'STDDEV': _out_data[j] = STDDEV(d, /NAN)
+        'MEDIAN': _out_data[j] = MEDIAN(d)
         else: Message, 'Method currently not supported: ' + str_equiv(METHOD)
       endcase
       if do_valid then _n_valid[j] = cntv
@@ -1776,11 +1802,11 @@ end
 ;    
 ;    The entities are organised using a connectivity array (see example).
 ;    
-;    Default behavior is to consider the grid as an image grid, (grid coordinates 
-;    located in the center of the pixel), and therefore to shift the transformed
-;    coordinates of a half pixel down left. This is a good default for all common
-;    applications (w_Map), but if you want to avoid this you can set the 
-;    `NO_COORD_SHIFT` keyword to 1.
+;    Default behavior is to consider the grid as an image grid, ([0,0] 
+;    located in the lowerleft of the pixel), and therefore to shift the transformed
+;    coordinates of a half pixel up right. This is a good default for graphic
+;    applications (w_Map), but not for other stuffs. If you want to avoid this 
+;    you can set the`NO_COORD_SHIFT` keyword to True.
 ; 
 ; :Params:
 ;    SHPFILE: in, required
@@ -1970,8 +1996,8 @@ pro w_Grid2D::transform_shape, shpfile, x, y, conn, $
   
    ; Because Center point of the pixel is not the true coord
   if ~ KEYWORD_SET(NO_COORD_SHIFT) then begin
-    x -= 0.5
-    y -= 0.5
+    x += 0.5
+    y += 0.5
   endif
 
 end

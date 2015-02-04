@@ -2600,7 +2600,7 @@ pro TEST_WRF_OUT
     dom1->plot_TimeSerie, 'T2', 90.1, 31.2, src = dat, OBJECT=object
     ok = DIALOG_MESSAGE('Do you see a temperature time serie?', /QUESTION)
     if ok eq 'No' then error += 1
-    OBJ_DESTROY, object
+    undefine, object
     cgDelete, /ALL
     OBJ_DESTROY, dom1     
     if error ne 0 then message, '% TEST_WRF_OUT NOT passed', /CONTINUE else print, 'TEST_WRF_OUT passed'
@@ -4917,6 +4917,65 @@ pro TEST_GEOTIF
   
 end
 
+pro TEST_ROI_TO_SHAPE
+
+   error = 0
+   
+   fgeo = w_test_file_directory() + '/TRMM/' + '3B42.081001.3.6A.nc'
+   
+   GIS_make_datum, ret, wgs
+   o = OBJ_NEW('w_geographic', fgeo, CORNERS=[90., 30., 90., 30.], MARGIN=1, SRC=wgs)
+   
+   o->Get_LonLat, lon, lat, nx, ny
+   lons = [89.875000,90.125000, 90.375000]
+   lats = [29.625000,29.875000, 30.125000]
+   if total(ABS(lons-lon[*,0])) gt 1e-6 then error+=1
+   if total(ABS(lats-lat[0, *])) gt 1e-6 then error+=1
+   
+   expected_points = [[lons[1], (lats[1]+lats[2])/2], $
+                      [lons[1], (lats[0]+lats[1])/2], $
+                      [(lons[1]+lons[2])/2, lats[1]], $
+                      [(lons[0]+lons[1])/2, lats[1]]]
+   
+   mask = lonarr(nx, ny)
+   mask[1, 1] = 1
+   
+   ok = o->set_ROI(MASK=mask)
+   
+   fb = 'TEST_ROI_TO_SHAPE'
+   
+   fbs = fb + ['.shp', '.shx', '.prj', '.dbf']
+   for i=0, 3 do if file_test(fbs[i]) then file_delete, fbs[i]   
+   o->roi_to_shape, fbs[0]
+   for i=0, 3 do if ~ file_test(fbs[i]) then error+=1
+   
+   tot = obj_new('IDLffShape', fbs[0])
+   e = tot->GetEntity(0)
+   xy = *(e.VERTICES)
+   
+   for i=0, 3 do begin
+     expp = expected_points[*, i]
+     found = 0
+     for j=0, e.N_VERTICES-1 do begin
+      if total(ABS(expp - xy[*, j])) lt 1e-6 then begin
+        found = 1
+        break
+      endif
+     endfor
+     if found eq 0 then error += 1
+   endfor
+   
+  ok = o->set_ROI()
+  ok = o->set_ROI(SHAPE=fbs[0])
+  o->get_ROI, mask=tomaks
+  if total(ABS(tomaks-mask)) gt 1e-6 then error+=1
+   
+  for i=0, 3 do if file_test(fbs[i]) then file_delete, fbs[i]
+
+  if error ne 0 then message, '% TEST_ROI_TO_SHAPE NOT passed', /CONTINUE else print, 'TEST_ROI_TO_SHAPE passed'
+
+end
+
 pro TEST_TIME
   TEST_MAKE_ABS_DATE
   TEST_QMS_TIME
@@ -4959,6 +5018,7 @@ pro TEST_UTILS
   TEST_TS_STATION
   TEST_TS_STATSET
   TEST_GEOGRID_SIMULATOR
+  TEST_ROI_TO_SHAPE
 end
 
 pro TEST_POST, REDO = redo
