@@ -320,10 +320,10 @@ pro wa_WPR::_addDerivedVars
   d1 = self->hasVar('achfx')
   if d1 then begin
     v = self->_varStruct(/DERIVED)
-    v.id = 'achfx'
-    v.name = 'achfx'
-    v.unit = 'J m-2 h-1'
-    v.description = 'Flux rate'
+    v.id = 'achfx_rate'
+    v.name = 'achfx_rate'
+    v.unit = 'W m-2'
+    v.description = 'Sensible heat flux rate'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -333,14 +333,25 @@ pro wa_WPR::_addDerivedVars
   d1 = self->hasVar('aclhf')
   if d1 then begin
     v = self->_varStruct(/DERIVED)
-    v.id = 'aclhf'
-    v.name = 'aclhf'
-    v.unit = 'J m-2 h-1'
-    v.description = 'Flux rate'
+    v.id = 'aclhf_rate'
+    v.name = 'aclhf_rate'
+    v.unit = 'W m-2'
+    v.description = 'Latent heat flux rate'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
+    ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('acgrdflx')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'acgrdflx_rate'
+    v.name = 'acgrdflx_rate'
+    v.unit = 'W m-2'
+    v.description = 'Ground flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
   
   d1 = self->hasVar('psfc')
   if (d1) then begin
@@ -478,14 +489,14 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
-  ;Evapotranspiration sum for temporal res (eg. evap/d)
-  d1 = self->hasVar('et')
+  ;Evapotranspiration rate 
+  d1 = self->hasVar('aclhf_rate')
   if (d1) then begin
     v = self->_varStruct(/DERIVED)
-    v.id = 'et_sum'
-    v.name = 'et_sum'
+    v.id = 'et'
+    v.name = 'et'
     v.unit = 'mm ' + self.tres + '-1'
-    v.description = 'Total evapotranspiration'
+    v.description = 'Evapotranspiration rate'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -1105,23 +1116,26 @@ function wa_WPR::getVarData, id, $
         if ts ne 1 then value = value / ts
         _acc_to_step = TRUE
       end
-      'ACLHF': begin
+      'ACLHF_RATE': begin
       value = self->GetVarData('ACLHF', time, nt, t0 = t0, t1 = t1, MONTH=month)      
-      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
       if ts ne 1 then value = value / ts
       _acc_to_step = TRUE      
     end
-     'ACHFX': begin
+     'ACHFX_RATE': begin
       value = self->GetVarData('ACHFX', time, nt, t0 = t0, t1 = t1, MONTH=month)      
-      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE      
+    end
+    'ACGRDFLX_RATE': begin
+      value = self->GetVarData('ACGRDFLX', time, nt, t0 = t0, t1 = t1, MONTH=month)      
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
       if ts ne 1 then value = value / ts
       _acc_to_step = TRUE      
     end
       'ET': begin
-      value = self->GetVarData('ACLHF', time, nt, t0 = t0, t1 = t1, MONTH=month) / 2.5e6       ; Heat of vaporization
-      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
-      if ts ne 1 then value = value / ts
-      _acc_to_step = TRUE      
+      value = self->GetVarData('ACLHF_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month) / 2.45e6 *3600      ; Heat of vaporization  - W/m² into mm/h with 2.45e6 Joules/kg
     end
       'PRCP_NC': begin
         value = self->GetVarData('RAINNC', time, nt, t0 = t0, t1 = t1)
