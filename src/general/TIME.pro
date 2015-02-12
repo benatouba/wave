@@ -998,7 +998,7 @@ function TIME_to_STR, time, NODATE=nodate, NOTIME=notime, YMD = ymd, MASK = mask
 
     ; Minute
     p_min = strpos(smsk,'TT')
-    if p_h ne -1 then str_min = string(min,format='(I2)') 
+    if p_min ne -1 then str_min = string(min,format='(I2)') 
     
     ; Second
     p_s = strpos(smsk,'SS')
