@@ -1,3 +1,15 @@
+; docformat = 'rst'
+;+
+;
+;  Inherits w_geographic to read the bullshit files:
+;  http://land.copernicus.vgt.vito.be/geonetwork/srv/eng/main.home?any=a5078170-a0a7-11e0-8264-0800200c9a66
+;  
+;  it works ONLY for africa files.
+;  
+;  Maybe it is a half pixel wrong, no way to find out.
+;  
+;-
+
 function w_copernicus::init, file, _EXTRA=extra
 
   ; Set up environnement
