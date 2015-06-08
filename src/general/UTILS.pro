@@ -1959,7 +1959,7 @@ function utils_wrf_slp, Z, T, P, Q
   ZLO = FLTARR(nx,ny)
   
   nn = nx*ny
-  inds = indgen(nn)
+  inds = lindgen(nn)
   indsO = inds + klo[*] * nn
   indsI = inds + khi[*] * nn
   
