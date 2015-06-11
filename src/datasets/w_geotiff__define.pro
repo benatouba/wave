@@ -33,108 +33,122 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
 
   ; Set up environnement
   @WAVE.inc
-  COMPILE_OPT IDL2
-  
-  Catch, theError
-  IF theError NE 0 THEN BEGIN
-    Catch, /Cancel
+  compile_opt IDL2
+
+  catch, theError
+  if theError ne 0 then begin
+    catch, /Cancel
     ok = WAVE_Error_Message(!Error_State.Msg + ' Wont create the object. Returning... ')
-    RETURN, 0
-  ENDIF
-  
+    return, 0
+  endif
+
   ; Check arguments
-  if N_ELEMENTS(file) ne 1 then file = DIALOG_PICKFILE(TITLE='Please select tif file to read', /MUST_EXIST)
-  if ~ FILE_TEST(file) then Message, 'File not found or not valid: ' + file
-  if ~ QUERY_TIFF(file, info, GEOTIFF=geotiff) then Message, 'TIFF file not query-able'
+  if n_elements(file) ne 1 then file = dialog_pickfile(TITLE='Please select tif file to read', /MUST_EXIST)
+  if ~ file_test(file) then message, 'File not found or not valid: ' + file
+  if ~ query_tiff(file, info, GEOTIFF=geotiff) then message, 'TIFF file not query-able'
   self.file = file
-  self.geotiff = PTR_NEW(geotiff)
-  self.info = PTR_NEW(info)
-  
-  if N_ELEMENTS(grid) ne 0 then begin
+  self.geotiff = ptr_new(geotiff)
+  self.info = ptr_new(info)
+
+  if n_elements(grid) ne 0 then begin
     ; User defined grid geoloc
-    if ~ OBJ_VALID(grid) then Message, WAVE_Std_Message('grid', /ARG)
-    if ~ OBJ_ISA(grid, 'w_Grid2d') then Message, WAVE_Std_Message('grid', /ARG)
+    if ~ obj_valid(grid) then message, WAVE_Std_Message('grid', /ARG)
+    if ~ obj_isa(grid, 'w_Grid2d') then message, WAVE_Std_Message('grid', /ARG)
   endif else begin
-  
+
     ;Try to make geo-info alone (aaarg)
     nx = info.Dimensions[0]
     ny = info.Dimensions[1]
-    
+
     ; Get the fields of the geotiff structure.
-    fields = Tag_Names(geotiff)
-    
+    fields = tag_names(geotiff)
+
     ; We can only handle raster images with projected coordinate systems, unless this is
     ; a GeoTiff file with Geographic model.
-    gtModelIndex = Where(fields eq 'GTMODELTYPEGEOKEY', gtModelType)
+    gtModelIndex = where(fields eq 'GTMODELTYPEGEOKEY', gtModelType)
     if gtModelType gt 0 then begin
       ; This is for LatLon projection grids
       dx = (geotiff.ModelPixelScaleTag)[0]
       dy = (geotiff.ModelPixelScaleTag)[1]
-      
+
       ; Get the tie points (upper left + half pix).
-      if KEYWORD_SET(NO_DELTA) then begin
+      if keyword_set(NO_DELTA) then begin
         x0 = (geotiff.ModelTiePointTag)[3]
         y0 = (geotiff.ModelTiePointTag)[4]
       endif else begin
         x0 = (geotiff.ModelTiePointTag)[3] + dx/2
         y0 = (geotiff.ModelTiePointTag)[4] - dy/2
       endelse
-      
+
       case (geotiff.gtModelTypeGeoKey) of
         1: begin
-          d = Where(fields eq 'GEOGCITATIONGEOKEY', cnt)
+          d = where(fields eq 'GEOGCITATIONGEOKEY', cnt)
           if cnt ne 0 then begin
             ; I need to know the datum. Currently WGS84 should be enough
-            if geotiff.GEOGCITATIONGEOKEY ne 'GCS_WGS_1984' then Message, 'Projection unknown. Contact Fabi.'
-            d = Where(fields eq 'GTCITATIONGEOKEY', cnt)
+            if ~ (geotiff.GEOGCITATIONGEOKEY eq 'GCS_WGS_1984' or geotiff.GEOGCITATIONGEOKEY eq 'WGS 84') then message, 'Projection unknown. Contact Fabi.'
+            d = where(fields eq 'GTCITATIONGEOKEY', cnt)
             if cnt ne 0 then begin
-              ; I suppose its UTM. Let's parse
-              key = str_equiv(geotiff.GTCITATIONGEOKEY)
-              d = STRPOS(key, 'UTM_ZONE_')
-              if d eq -1 then Message, 'Projection unknown. Contact Fabi.'
-              zone = STRING((BYTE(key))[d+9:d+10])
-            endif else Message, 'Projection unknown. Contact Fabi.'
+                key = str_equiv(geotiff.GTCITATIONGEOKEY)
+              if key eq 'LOCAL TRANSVERSE MERCATOR' then begin
+                GIS_make_datum, ret, wgs
+                k0 = geotiff.PROJSCALEATNATORIGINGEOKEY
+                lon0 = geotiff.PROJNATORIGINLONGGEOKEY
+                ; 3 - Transverse Mercator
+                ;   a, b, lat0, lon0, x0, y0, k0, [datum], name
+                pars = w_str(wgs.ellipsoid.a) + ', ' + w_str(wgs.ellipsoid.b) + ', 0., ' + w_str(lon0, 8) + ', 0., 0., ' + w_str(k0, 4)
+                GIS_make_proj, ret, proj, PARAM= '3, ' + pars + ', WGS-84, LOCAL TRANSVERSE MERCATOR'
+              endif else begin
+                ; I suppose its UTM. Let's parse
+                d = strpos(key, 'UTM_ZONE_')
+                if d eq -1 then message, 'Projection unknown. Contact Fabi.'
+                zone = string((byte(key))[d+9:d+10])
+                if string((byte(key))[d+11]) eq 'S' then zone = '-' + zone
+                ;Projection
+                GIS_make_proj, ret, proj, PARAM='2, ' + zone
+              endelse
+            endif else message, 'Projection unknown. Contact Fabi.'
           endif else begin
-            d = Where(fields eq 'PROJECTEDCSTYPEGEOKEY', cnt)
+            d = where(fields eq 'PROJECTEDCSTYPEGEOKEY', cnt)
             if cnt ne 0 then begin
               ; I need to know the datum. Currently WGS84 should be enough
-              kkey = STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 0, 3)
-              zone = STRMID(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 3, 2)
+              kkey = strmid(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 0, 3)
+              zone = strmid(str_equiv(geotiff.PROJECTEDCSTYPEGEOKEY), 3, 2)
               case (kkey) of
                 '326': ; UTM Northern emisphere
                 '327': zone = '-' + zone ; UTM Southern emisphere
-                else: Message, 'Projection unknown. Contact Fabi.
+                else: message, 'Projection unknown. Contact Fabi.
               endcase
-            endif else  Message, 'Projection unknown. Contact Fabi.'
+            endif else  message, 'Projection unknown. Contact Fabi.'
+            ;Projection
+            GIS_make_proj, ret, proj, PARAM='2, ' + zone
           endelse
           
-          ;Projection
-          GIS_make_proj, ret, proj, PARAM='2, ' + zone
-          grid = OBJ_NEW('w_Grid2D', nx=nx, $
+          grid = obj_new('w_Grid2D', nx=nx, $
             ny=ny, $
             dx=dx, $
             dy=dy, $
             x0=x0, $
             y0=y0, $
             proj=proj)
+            
         end
         2: begin
-          d = Where(fields eq 'GEOGCITATIONGEOKEY', cnt)
+          d = where(fields eq 'GEOGCITATIONGEOKEY', cnt)
           if cnt ne 0 then begin
             ; I need to know the datum. Currently WGS84 should be enough
             if ~ (geotiff.GEOGCITATIONGEOKEY eq 'GCS_WGS_1984' $
               or geotiff.GEOGCITATIONGEOKEY eq 'WGS 84') $
-              then Message, 'Projection unknown. Contact Fabi.'
+              then message, 'Projection unknown. Contact Fabi.'
           endif else begin
-            d = Where(fields eq 'GEOGRAPHICTYPEGEOKEY', cnt)
+            d = where(fields eq 'GEOGRAPHICTYPEGEOKEY', cnt)
             if cnt ne 0 then begin
               ; I need to know the datum. Currently WGS84 should be enough
-              if geotiff.GEOGRAPHICTYPEGEOKEY ne 4326 then Message, 'Projection unknown. Contact Fabi.'
-            endif else   Message, 'Projection unknown. Contact Fabi.'
+              if geotiff.GEOGRAPHICTYPEGEOKEY ne 4326 then message, 'Projection unknown. Contact Fabi.'
+            endif else   message, 'Projection unknown. Contact Fabi.'
           endelse
           ;Projection
           GIS_make_proj, ret, proj, PARAM='1, WGS-84'
-          grid = OBJ_NEW('w_Grid2D', nx=nx, $
+          grid = obj_new('w_Grid2D', nx=nx, $
             ny=ny, $
             dx=dx, $
             dy=dy, $
@@ -142,24 +156,24 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
             y0=y0, $
             proj=proj)
         end
-        else: Message, 'Projection unknown. Contact Fabi.'
+        else: message, 'Projection unknown. Contact Fabi.'
       endcase
-    endif else Message, 'Projection unknown. Contact Fabi.'
+    endif else message, 'Projection unknown. Contact Fabi.'
   endelse
-    
+
   case (info.orientation) of
     0: self.order = 0
     1: self.order = 1
     4: self.order = 0
-    else: Message, 'GEOTIFF orientation not supported'
-  endcase 
-  
+    else: message, 'GEOTIFF orientation not supported'
+  endcase
+
   ok = self->w_GISdata::init(grid, _EXTRA=extra)
   if ~ ok then return, 0
   undefine, grid
-  
+
   return, 1
-  
+
 end
 
 ;+
