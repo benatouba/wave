@@ -281,7 +281,8 @@ end
 ;   the data array
 ;   
 ;-
-function w_TRMM::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
+function w_TRMM::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1, MONTHOFYEAR=monthofyear
+                            
 
   ; Set up environnement
   @WAVE.inc
@@ -300,7 +301,7 @@ function w_TRMM::getVarData, id, time, nt, INFO=info, T0=t0, T1=t1
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
   if TOTAL(self.subset) ne 0 then ok = self.obj->define_subset(SUBSET=self.subset) else ok = self.obj->define_subset()
-  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1)
+  out = self.obj->get_Var(id, time, nt, T0=t0, T1=t1, MONTHOFYEAR=monthofyear)
   
   p = where(out lt 0., cnt)
   if cnt ne 0 then out[p] = 0.
