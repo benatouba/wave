@@ -40,11 +40,11 @@ function w_copernicus::init, file, _EXTRA=extra
   GIS_make_proj, ret, proj, PARAM='1, ' + datum
   
   ; I assume the corners are not in the center
-  dx = (60d - double(string(geo->get_Gatt('LONG')))) / (geo->get_Dim('phony_dim_0'))
-  dy = (40d + double(string(geo->get_Gatt('LAT')))) / (geo->get_Dim('phony_dim_1'))
+  dx = (60d - double(string(geo->get_Gatt('LONG')))) / (geo->get_Dim('phony_dim_1'))
+  dy = (40d + double(string(geo->get_Gatt('LAT')))) / (geo->get_Dim('phony_dim_0'))
   
-  grid = obj_new('w_Grid2D', nx=geo->get_Dim('phony_dim_0'), $
-    ny=geo->get_Dim('phony_dim_1'), $
+  grid = obj_new('w_Grid2D', nx=geo->get_Dim('phony_dim_1'), $
+    ny=geo->get_Dim('phony_dim_0'), $
     dx=dx, $
     dy=dy, $
     x0=double(string(geo->get_Gatt('LONG')))+dx/2, $
