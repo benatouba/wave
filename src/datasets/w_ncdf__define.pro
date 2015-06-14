@@ -522,7 +522,18 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
   is_scale = self->w_NCDF::get_VAtt_Info(varid, 'scale_factor')
   if is_scale then value *= self->w_NCDF::get_VAtt(varid, 'scale_factor') 
   is_offset = self->w_NCDF::get_VAtt_Info(varid, 'add_offset')
-  if is_offset then value += self->w_NCDF::get_VAtt(varid, 'add_offset') 
+  if is_offset then value += self->w_NCDF::get_VAtt(varid, 'add_offset')
+  
+  ; Is there (floating) missing data?
+  miss_att = ['missing_value', '_fillvalue']
+  for i=0, N_ELEMENTS(miss_att)-1 do begin
+    is_missing = self->w_NCDF::get_VAtt_Info(varid, miss_att[i])
+    if ~ is_missing then continue
+    tname = TYPENAME(value)
+    if ~(tname eq 'DOUBLE' or tname eq 'FLOAT') then continue
+    pmissing = where(value eq self->w_NCDF::get_VAtt(varid, miss_att[i]), nmiss)
+    if nmiss gt 0 then value[pmissing] = !VALUES.F_NAN
+  endfor
   
   if N_ELEMENTS(count) ne 0 then begin ;Check if we have to change the variable metadata
     pr = where(count le 1, cnt)
