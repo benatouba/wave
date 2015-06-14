@@ -1569,6 +1569,7 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
     MISSING=missing, $
     METHOD=method, $
     N_VALID=n_valid, $
+    NB_FRACT=nb_fract, $
     IN_FWD_TRAFO=in_fwd_trafo
   
   ; SET UP ENVIRONNEMENT
@@ -1634,7 +1635,7 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
   if is_Valid then valid[pValid] = 1B
    
   CASE dataTypeName OF
-    'FLOAT' : out_data = FLTARR(self.tnt_c.nx, self.tnt_c.ny, n)
+    'FLOAT' : if N_ELEMENTS(NB_FRACT) ne 0 then out_data = FLTARR(self.tnt_c.nx, self.tnt_c.ny, nb_fract, n) else out_data = FLTARR(self.tnt_c.nx, self.tnt_c.ny, n)
     'DOUBLE': out_data = DBLARR(self.tnt_c.nx, self.tnt_c.ny, n)
     'BYTE': begin
       out_data = BYTARR(self.tnt_c.nx, self.tnt_c.ny, n)
@@ -1660,7 +1661,7 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
 
   for i = 0L, n-1 do begin
     _data = data[*,*,i]
-    _out_data = out_data[*,*,i]
+    if N_ELEMENTS(nb_fract) ne 0 then _out_data = out_data[*,*,*,i] else _out_data = out_data[*,*,i]
     _valid = valid[*,*,i]
     if do_valid then _n_valid = LONARR(self.tnt_c.nx, self.tnt_c.ny)
     for j = 0, N_ELEMENTS(dd) - 1 do begin
@@ -1674,12 +1675,26 @@ function w_Grid2D::fwd_transform_data, data, src_grid, $
         'MAX': _out_data[j] = MAX(d, /NAN)
         'SUM': _out_data[j] = TOTAL(d, /NAN)
         'STDDEV': _out_data[j] = STDDEV(d, /NAN)
+        'GRAD': _out_data[j] = MAX(d, /NAN)-MIN(d, /NAN)
         'MEDIAN': _out_data[j] = MEDIAN(d)
+        'DOMINANT': begin
+          hist=histogram(d, LOCATION=loc)
+          hmax=where(hist eq max(hist), cnt)
+          if cnt ne 1 then print, 'More than one dominant category'
+           _out_data[j] = loc[hmax[0]]
+        end   
+        'FRACTIONAL': begin
+          if N_ELEMENTS(nb_fract) eq 0 then message, "Please provide the number of fractional groups"
+          
+          hist=(histogram(d, LOCATION=loc, BINSIZE=1, MIN=1, MAX=nb_fract))/float(N_ELEMENTS(d))
+          ind = ARRAY_INDICES(_out_data, j)
+           _out_data[ind[0],ind[1],*] = hist
+        end   
         else: Message, 'Method currently not supported: ' + str_equiv(METHOD)
       endcase
       if do_valid then _n_valid[j] = cntv
     endfor
-    out_data[*,*,i] = _out_data
+    if N_ELEMENTS(nb_fract) ne 0 then out_data[*,*,*,i]= _out_data else out_data[*,*,i] = _out_data
     if do_valid then n_valid[*,*,i] = _n_valid
   endfor
   
