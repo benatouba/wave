@@ -66,7 +66,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, DOMAIN=domain, _EXTRA=ext
     utils_array_remove, matches, file_list
     filecnt = N_ELEMENTS(file_list)
   endif
-  
+;  
   fnames = FILE_BASENAME(file_list, '.nc')
   
 ;    years = LONARR(filecnt)
@@ -104,6 +104,7 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, DOMAIN=domain, _EXTRA=ext
     if v.type eq '2d_alternate' then v.type = '2d'
     ncObj = NCDF_FILE(file_list[i])    
     varNames = ncObj->GetVarNames()
+
     pos=where(str_equiv(varNames) eq 'TIMES', cnt)
     if cnt eq 0 then message, 'No times?? Need times variable!!'
     pos=where((str_equiv(varNames) ne 'TIMES') and (str_equiv(varNames) ne 'XLAT') and (str_equiv(varNames) ne 'XLONG'), cnt)
@@ -135,8 +136,16 @@ function wa_WPR::init, DIRECTORY=directory, YEAR=year, DOMAIN=domain, _EXTRA=ext
   endfor
   self.vars = PTR_NEW(vars)
 
-
   self->_addPressureLevels
+  
+  p_path=FILE_SEARCH(statdir+'/p_pl*', count=filecnt)
+  if filecnt eq 1 then begin
+    pf=w_ncdf(FILE=p_path)
+    p=pf->get_Var('P_PL')
+    p=p/100.
+    self.pressurelevels=PTR_NEW(p)
+  endif
+  
   self->_addDerivedVars
   
   w = OBJ_NEW('w_WRF', FILE=statdir+'/xlatlong_'+self.domain+'.nc')
@@ -200,7 +209,7 @@ function wa_WPR::_varStruct, DERIVED=derived, PL=pl
 end
 
 ;+
-; :Description:
+; :Description: 
 ;    Initialise the standard pressure levels.
 ;
 ; :Private:
@@ -230,7 +239,30 @@ pro wa_WPR::_addDerivedVars
   c = where(vars.derived eq 0, nc)
   if nc eq 0 then Message, 'Big problem'
   vars = vars[c]
- 
+
+  ;2m Temperature in kelvin
+  d1 = self->hasVar('t2c')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 't2'
+    v.name = 't2'
+    v.unit = 'K'
+    v.description = '2m Temperature'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif 
+  
+  ;2m Temperature in kelvin
+  d1 = self->hasVar('t2')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 't2c'
+    v.name = 't2c'
+    v.unit = 'degC'
+    v.description = '2m Temperature'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif 
  
   ;LW up in W/m²
   d1 = self->hasVar('TSK')
@@ -299,8 +331,20 @@ pro wa_WPR::_addDerivedVars
     v.type = '3d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
-
-
+  
+    ;Moist static energy in kJ/kg
+  d1 = self->hasVar('T2')
+  d2 = self->hasVar('T2C')
+  d3 = self->hasVar('Q2')
+  if (d1 or d2) and d2 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'mse2'
+    v.name = 'mse2'
+    v.unit = 'kJ/kg'
+    v.description = 'moist static energy'
+    v.type = '3d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
 
   
   ;Precipitation rate in mm h-1
@@ -353,6 +397,92 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
+      ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('acswdown')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'acswdown_rate'
+    v.name = 'acswdown_rate'
+    v.unit = 'W m-2'
+    v.description = 'Incoming short wave flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+      ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('acswup')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'acswup_rate'
+    v.name = 'acswup_rate'
+    v.unit = 'W m-2'
+    v.description = 'Outgoing short wave flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+      ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('aclwup')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'aclwup_rate'
+    v.name = 'aclwup_rate'
+    v.unit = 'W m-2'
+    v.description = 'Outgoing long wave flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+      ;Accumulated latent heat flux stepped
+  d1 = self->hasVar('aclwdown')
+  if d1 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'aclwdown_rate'
+    v.name = 'aclwdown_rate'
+    v.unit = 'W m-2'
+    v.description = 'Incoming long wave flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+    d1 = self->hasVar('aclwdown_rate')
+    d2 = self->hasVar('aclwup_rate')
+    d3 = self->hasVar('acswdown_rate')
+    d4 = self->hasVar('acswup_rate')
+  if d1 and d2 and d3 and d4 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'acnetrad'
+    v.name = 'acnetrad'
+    v.unit = 'W m-2'
+    v.description = 'Netrad flux rate'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+    
+    d3 = self->hasVar('acswdown_rate')
+    d4 = self->hasVar('acswup_rate')
+  if d3 and d4 then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'acalbedo'
+    v.name = 'acalbedo'
+    v.unit = 'W m-2'
+    v.description = 'Albedo from in/out shortwave flux rates'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
+    d1 = self->hasVar('p2hpa')
+  if (d1) then begin
+    v = self->_varStruct(/DERIVED)
+    v.id = 'psfc'
+    v.name = 'psfc'
+    v.unit = 'Pa'
+    v.description = 'Surface Pressure'
+    v.type = '2d'
+    if ~ self->hasVar(v.id) then vars = [vars,v]
+  endif
+  
   d1 = self->hasVar('psfc')
   if (d1) then begin
     v = self->_varStruct(/DERIVED)
@@ -364,17 +494,7 @@ pro wa_WPR::_addDerivedVars
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
   
-  d1 = self->hasVar('p2hpa')
-  if (d1) then begin
-    v = self->_varStruct(/DERIVED)
-    v.id = 'psfc'
-    v.name = 'psfc'
-    v.unit = 'Pa'
-    v.description = 'Surface Pressure'
-    v.type = '2d'
-    if ~ self->hasVar(v.id) then vars = [vars,v]
-  endif
-  
+
   ; Prcp rate of resolved/explicit precipitation
   d1 = self->hasVar('rainnc')
   if (d1) then begin
@@ -409,30 +529,6 @@ pro wa_WPR::_addDerivedVars
     v.name = 'td2'
     v.unit = 'C'
     v.description = '2m Dewpoint Temperature'
-    v.type = '2d'
-    if ~ self->hasVar(v.id) then vars = [vars,v]
-  endif
-  
-  ;2m Temperature in degree celsius
-  d1 = self->hasVar('t2')
-  if (d1) then begin
-    v = self->_varStruct(/DERIVED)
-    v.id = 't2c'
-    v.name = 't2c'
-    v.unit = 'C'
-    v.description = '2m Temperature'
-    v.type = '2d'
-    if ~ self->hasVar(v.id) then vars = [vars,v]
-  endif
-  
-  ;2m Temperature in kelvin
-  d1 = self->hasVar('t2c')
-  if (d1) then begin
-    v = self->_varStruct(/DERIVED)
-    v.id = 't2'
-    v.name = 't2'
-    v.unit = 'K'
-    v.description = '2m Temperature'
     v.type = '2d'
     if ~ self->hasVar(v.id) then vars = [vars,v]
   endif
@@ -1004,7 +1100,7 @@ function wa_WPR::getVarData, id, $
   if ~ self->hasVar(id, INFO=info) then Message, 'Variable Id not found: ' + str_equiv(id)
   
   ;Some check
-  if N_ELEMENTS(HOUROFDAY) ne 0 then Message, 'Hourofday maybe buggy. easy to check though'
+ ; if N_ELEMENTS(HOUROFDAY) ne 0 then Message, 'Hourofday maybe buggy. easy to check though'
   _acc_to_step = KEYWORD_SET(ACC_TO_STEP)
   _do_eta = N_ELEMENTS(ZLEVELS) ne 0
   _do_pres = N_ELEMENTS(PRESSURE_LEVELS) ne 0
@@ -1077,6 +1173,54 @@ function wa_WPR::getVarData, id, $
       return, value
     end
     
+    'ACSWUP_RATE': begin
+      value = self->GetVarData('ACSWUP', time, nt, t0 = t0, t1 = t1, MONTH=month)       ; J/m² into W/m2 
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then value = value / ts
+     ; _acc_to_step = TRUE      
+    end
+    
+    'ACSWDOWN_RATE': begin
+      value = self->GetVarData('ACSWDOWN', time, nt, t0 = t0, t1 = t1, MONTH=month)       ; J/m² into W/m2 
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then value = value / ts
+    ;  _acc_to_step = TRUE      
+    end
+    
+    'ACLWUP_RATE': begin
+      value = self->GetVarData('ACLWUP', time, nt, t0 = t0, t1 = t1, MONTH=month)       ; J/m² into W/m2 
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then value = value / ts
+    ;  _acc_to_step = TRUE      
+    end
+    
+    'ACLWDOWN_RATE': begin
+      value = self->GetVarData('ACLWDOWN', time, nt, t0 = t0, t1 = t1, MONTH=month)       ; J/m² into W/m2 
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then value = value / ts
+    ;  _acc_to_step = TRUE      
+    end
+    
+     'ACNETRAD': begin
+      value1 = self->GetVarData('ACLWDOWN_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month) 
+      value2 = self->GetVarData('ACLWUP_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      value3 = self->GetVarData('ACSWDOWN_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      value4 = self->GetVarData('ACSWUP_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month)      ; J/m² into W/m2 
+      
+      value = value1-value2+value3-value4     
+    end
+    
+    'ACALBEDO': begin
+      value3 = self->GetVarData('ACSWDOWN', time, nt, t0 = t0, t1 = t1, MONTH=month)
+      value4 = self->GetVarData('ACSWUP', time, nt, t0 = t0, t1 = t1, MONTH=month)      ; J/m² into W/m2 
+      ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
+      if ts ne 1 then begin
+        value3 = value3 / ts
+        value4 = value4/ ts
+      endif
+      value = value4/value3     
+    end
+    
 
 
       'TD2': begin
@@ -1097,6 +1241,12 @@ function wa_WPR::getVarData, id, $
         P = self->GetVarData('psfc', T0=t0, T1=t1, MONTH=month)
         QVAPOR = self->GetVarData('q2', T0=t0, T1=t1, MONTH=month)
         return, utils_wrf_rh(TEMPORARY(QVAPOR), TEMPORARY(P), TEMPORARY(tk))
+      end
+      'MSE2': begin
+        T = self->GetVarData('T2C ', time, nt, T0=t0, T1=t1, MONTH=month) + 273.15
+        Q = self->GetVarData('q2', T0=t0, T1=t1, MONTH=month)
+        value=(1005*T+2.5e6*Q+9.81*2)/1000  ; cp_dry[J/kg K]*Temp[K]+Vaporizaton heat[J/kg]*specific humidity[kg/kg]+grav. acceleration[ms-2]*height[m]
+        return, value
       end
       'WS10': begin
         u10 = self->GetVarData('U10', time, nt, T0=t0, T1=t1, MONTH=month)
@@ -1120,22 +1270,22 @@ function wa_WPR::getVarData, id, $
       value = self->GetVarData('ACLHF', time, nt, t0 = t0, t1 = t1, MONTH=month)      
       ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
       if ts ne 1 then value = value / ts
-      _acc_to_step = TRUE      
+     ; _acc_to_step = TRUE      
     end
      'ACHFX_RATE': begin
-      value = self->GetVarData('ACHFX', time, nt, t0 = t0, t1 = t1, MONTH=month)      
+      value = self->GetVarData('ACHFX', time, nt, t0 = t0, t1 = t1, MONTH=month)       ; J/m² into W/m2 
       ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
       if ts ne 1 then value = value / ts
-      _acc_to_step = TRUE      
+     ; _acc_to_step = TRUE      
     end
     'ACGRDFLX_RATE': begin
       value = self->GetVarData('ACGRDFLX', time, nt, t0 = t0, t1 = t1, MONTH=month)      
       ts = ((*self.time)[1] - (*self.time)[0]) / S_QMS
       if ts ne 1 then value = value / ts
-      _acc_to_step = TRUE      
+     ; _acc_to_step = TRUE      
     end
       'ET': begin
-      value = self->GetVarData('ACLHF_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month) / 2.45e6 *3600      ; Heat of vaporization  - W/m² into mm/h with 2.45e6 Joules/kg
+      value = self->GetVarData('ACLHF_RATE', time, nt, t0 = t0, t1 = t1, MONTH=month) / 2.5e6 *3600      ; Heat of vaporization  - W/m² into mm/h with 2.45e6 Joules/kg
     end
       'PRCP_NC': begin
         value = self->GetVarData('RAINNC', time, nt, t0 = t0, t1 = t1)
@@ -1156,7 +1306,7 @@ function wa_WPR::getVarData, id, $
         return, self->GetVarData('p2hpa', time, nt, T0=t0, T1=t1, MONTH=month)/0.01
       end
       'SLP': begin
-      ps = self->getVarData('PSFC', time, nt, T0=t0, T1=t1) * 0.01 ; in hPa
+      ps = self->getVarData('psfc', time, nt, T0=t0, T1=t1) * 0.01  ; in hPa
       T2 = self->getVarData('T2', T0=t0, T1=t1) - 273.15 ; in degC
       zs = self->getVarData('HGT', T0=t0, T1=t1) ; in m
       mdims = SIZE(t2, /DIMENSIONS)
@@ -1234,6 +1384,7 @@ function wa_WPR::getVarData, id, $
       endif
     endfor
     ; If we unstagger than the subset has to be larger of 1 in x or y 
+    
     if found_stag ne -1 then begin
       if TOTAL(self.subset) ne 0 then Message, 'UNSTAGG not possible with subsets. Maybe WAVE 2.0. Sorry.'
       if dim_stag eq 'WEST_EAST' then found_stag = 0
@@ -1442,7 +1593,7 @@ end
 ;    COMPRESS: set this keyword to use compression option and netcdf4
 ;
 ;-
-pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
+pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress, ST0=st0, ST1=st1
 
   ; Set up environnement
   @WAVE.inc
@@ -1461,11 +1612,14 @@ pro wa_WPR::makeMonthlyMeans, id, CLOBBER=clobber, COMPRESS=compress
   ot0 = MAKE_ABS_DATE(QMS=ot0)
   ot1 = MAKE_ABS_DATE(QMS=ot1)
   dplus1 = MAKE_ABS_DATE(QMS=(ot1.qms + D_QMS))
+  if N_ELEMENTS(ST0) ne 0 then ot0 = st0
+  if N_ELEMENTS(ST1) ne 0 then dplus1= st1
   if ot0.day ne 1 then message, 'Please do not make it too complicated buhuhu'
   if dplus1.day ne 1 then begin; message, 'Please do not make it too complicated buhuhu'
     hval=where(oabs.day eq 1)
     dplus1=oabs[hval[N_ELEMENTS(hval)-1]]
     print, 'Please do not make it too complicated buhuhu - ot1 is', time_to_str(ot1)
+    print, 'New ot1 is: ', time_to_str(dplus1)
   endif
   
   m0 = w_time_to_month(ot0)
