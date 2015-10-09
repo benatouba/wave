@@ -2086,6 +2086,11 @@ end
 ;                       * 2 = Boundary + Interior. All pixels falling on or within a region's boundary are set.
 ;                       * 3 = Pixel center point is used to test the appartenance to the ROI (requires more computing time)
 ;                             This is the default!
+;    POLYTYPE: when computing a mask with polygons or shapes. Specify the type of polygon to handle
+;              Valid values include::
+;                  * 0 = points
+;                  * 1 = path
+;                  * 2 = closed polygon (the default)
 ;    CHECK_INTERIOR: in, type=boolean
 ;                    Standard shapes' entities use 'parts' do define interior (island) vertices.
 ;                    If this is not the case (corrupted or bad quality files), set this keyword 
@@ -2110,6 +2115,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
                             REMOVE_ENTITITES=remove_entitites, $ 
                             KEEP_ENTITITES=keep_entitites, $
                             ROI_MASK_RULE=roi_mask_rule, $
+                            POLYTYPE=polytype, $
                             CHECK_INTERIOR=check_interior
 
   ; SET UP ENVIRONNEMENT
@@ -2133,7 +2139,8 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
   do_corner = N_ELEMENTS(CORNERS) ne 0
   
   if N_ELEMENTS(ROI_MASK_RULE) eq 0 then _roi_mask_rule = 3 else _roi_mask_rule = roi_mask_rule
-  
+  if N_ELEMENTS(POLYTYPE) eq 0 then _polytype = 2 else _polytype = polytype
+
   check_k = [do_shape, do_polygon, do_mask, do_border, do_grid, do_corner]
   if total(check_k) eq 0 then begin
     self->Destroy_ROI
@@ -2161,7 +2168,7 @@ function w_Grid2D::set_ROI, SHAPE=shape,  $
       idx = conn[index+2:index+nbElperConn+1]
       index += nbElperConn + 2
       if ~ OBJ_VALID(roi) then roi = OBJ_NEW('w_ROIGroup')
-      roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx])
+      roi_ = OBJ_NEW('IDLanROI', x[idx], y[idx], TYPE=_polytype)
       if is_int and check_int then begin
         p_in = where(roi->ContainsPoints(x[idx[0]], y[idx[0]]) eq 1, cnt_in)
         if cnt_in eq 0 then roi_->SetProperty, INTERIOR=0 else roi_->SetProperty, INTERIOR=1
