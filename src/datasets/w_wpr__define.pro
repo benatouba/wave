@@ -41,7 +41,7 @@ function w_WPR::init, DIRECTORY=directory, IGNORE_ALTERNATE=ignore_alternate, _E
   ; Check arguments
   if N_ELEMENTS(directory) eq 0 then directory = DIALOG_PICKFILE(TITLE='Please select WRF product directory to read', /MUST_EXIST, /DIRECTORY)
   if directory eq '' then MESSAGE, WAVE_Std_Message(/FILE)
-  if ~ FILE_TEST(directory, /DIRECTORY) then MESSAGE, WAVE_Std_Message(/FILE)
+  if ~ FILE_TEST(directory, /DIRECTORY) then MESSAGE, WAVE_Std_Message(FILE=directory)
   
   dir = utils_clean_path(directory)
   prdir = FILE_DIRNAME(dir)
