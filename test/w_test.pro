@@ -2948,6 +2948,9 @@ pro TEST_W_MAP
     v = v / nt
     ok = map->set_wind(u, v, wrf, density = 3, STDVEL=10)
     if not ok then error +=1
+    
+    ok  = map->_shading()
+    return
    
     cgWindow, 'add_img', map, /METHOD, MARGIN=1
     cgWindow, 'add_wind_legend', map, /METHOD, /ADDCMD
@@ -4915,6 +4918,24 @@ pro TEST_GEOTIF
   if error ne 0 then message, '% TEST_GEOTIF NOT passed', /CONTINUE else print, 'TEST_GEOTIF passed'
  
   
+end
+
+pro TEST_ENVI_ROI
+
+  error = 0
+
+  fdir = w_test_file_directory() + '/GEOTIFF/'
+  
+  dem = w_GEOTIFF(fdir + 'hef_srtm.tif')
+  
+  roi = (w_GEOTIFF(fdir + 'hef_roi.tif'))->getVarData()
+  
+  ok = dem->set_ROI(SHAPE=fdir + 'Hintereisferner.shp', ROI_MASK_RULE=3)
+  dem->get_roi, mask=mask
+  
+  if total(mask ne roi) gt 9 then error += 1
+  if error ne 0 then message, '% TEST_ENVI_ROI NOT passed', /CONTINUE else print, 'TEST_ENVI_ROI passed'
+
 end
 
 pro TEST_ROI_TO_SHAPE
