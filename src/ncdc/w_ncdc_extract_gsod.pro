@@ -6,9 +6,9 @@
 ;    file per selected station on a local directory.
 ;
 ; :Params:
-;    usaf: in, required, type=long
+;    usaf: in, required, type=string
 ;          an array of the requested station usaf ids (see `w_ncdc_gsod_select_ids`)
-;    wban: in, required, type=long
+;    wban: in, required, type=string
 ;          an array of the requested station wban ids (same size as `usaf`)
 ;    gsod_directory: in, required, type=string
 ;                    the path to the local or remote GSOD directory 
@@ -62,7 +62,7 @@ pro w_ncdc_extract_gsod, usaf, wban, gsod_directory, out_directory, S_YEAR=s_yea
   st_lats = STRARR(nostat)
   test_id = ncdc_history.usaf+ncdc_history.wban
   for i=0, nostat-1 do begin
-    uw=where(test_id eq usaf[i]+wban[i], cnt)
+    uw=where(test_id eq usaf[i]+ wban[i], cnt)
     if cnt eq 0 then MESSAGE, 'The station with USAF '+ usaf[i] + ' and WBAN ' + wban[i] + ' does not exist in NCDC history file.'
     st_names[i] = ncdc_history.name[uw]
     st_lons[i] = STRING(ncdc_history.lon[uw], FORMAT='(F10.5)')
