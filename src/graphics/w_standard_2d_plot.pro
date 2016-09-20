@@ -122,9 +122,6 @@ pro w_standard_2d_plot, map, $
   compile_opt idl2
   @WAVE.inc
   
-  pp = !ORDER ; To restore later
-  !ORDER = 0
-  
   ;******************
   ; Check arguments *
   ;******************
@@ -133,6 +130,9 @@ pro w_standard_2d_plot, map, $
     return
   endif
    
+  pp = !ORDER ; To restore later
+  !ORDER = 0
+  
   map->GetProperty, XSIZE=xsize, YSIZE=ysize, TNT_c = tnt_c
   
   if n_elements(title) eq 0 then title = ''
@@ -256,40 +256,40 @@ pro w_standard_2d_plot, map, $
       
       if xSize_map_bar ge 5. then str_xSize_map_bar = str_equiv(LONG(xSize_map_bar)) $
       else if xSize_map_bar ge 1. then str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F3.1)') $
-    else str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F4.2)')
-    
-    xLegend = pos[0] + [0., xSize_bar_device]
-    yLegend = pos[1] / 5. + [0.,0.]
-    cgPlotS, xLegend, yLegend, /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-    cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-    cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
-    cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_xSize_map_bar + unit, ALIGNMENT=0.5, $
-      CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+      else str_xSize_map_bar = STRING(xSize_map_bar, FORMAT='(F4.2)')
       
-  endif
-  
-  if ~KEYWORD_SET(NO_PROJ_INFO) then begin
-  
-    ; Projection
-    proj_name = 'Projection: ' + tnt_c.proj.name
-    cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
-    proj_name = 'Datum: ' + tnt_c.proj.datum.name
-    cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+      xLegend = pos[0] + [0., xSize_bar_device]
+      yLegend = pos[1] / 5. + [0.,0.]
+      cgPlotS, xLegend, yLegend, /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+      cgPlotS, [xLegend[0],xLegend[0]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+      cgPlotS, [xLegend[1],xLegend[1]], yLegend + [0.005,-0.005], /NORMAL, WINDOW=cgWIN, thick = 1. * sfac
+      cgText, (xLegend[1]-xLegend[0]) / 2. + xLegend[0],  yLegend + 0.01, str_xSize_map_bar + unit, ALIGNMENT=0.5, $
+        CHARSIZE=1.* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+        
+    endif
     
-  endif
-  
-  if ~KEYWORD_SET(NO_SOURCE_INFO) then begin
-  
-    ; Legend info
-    if N_ELEMENTS(SOURCE_INFO) eq 0 then source_info = cgSymbol('copyright') + ' '+ $
-      TIME_to_STR(QMS_TIME(), MASK='YYYY') +' TU Berlin!C!CChair of Climatology'
-    if arg_okay(source_info, TYPE=IDL_STRING) then begin
-      cgText, 0.80,  yLegend + 0.026, source_info, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
+    if ~KEYWORD_SET(NO_PROJ_INFO) then begin
+    
+      ; Projection
+      proj_name = 'Projection: ' + tnt_c.proj.name
+      cgText, xLegend[1] + 0.05,  yLegend + 0.02, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+      proj_name = 'Datum: ' + tnt_c.proj.datum.name
+      cgText, xLegend[1] + 0.05,  yLegend - 0.005, proj_name, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 1.*sfac, /NORMAL, WINDOW=cgWIN
+      
+    endif
+    
+    if ~KEYWORD_SET(NO_SOURCE_INFO) then begin
+    
+      ; Legend info
+      if N_ELEMENTS(SOURCE_INFO) eq 0 then source_info = cgSymbol('copyright') + ' '+ $
+        TIME_to_STR(QMS_TIME(), MASK='YYYY') +' TU Berlin!C!CChair of Climatology'
+      if arg_okay(source_info, TYPE=IDL_STRING) then begin
+        cgText, 0.80,  yLegend + 0.026, source_info, ALIGNMENT=0., CHARSIZE=0.7* sfac, CHARTHICK = 0.*sfac, /NORMAL, WINDOW=cgWIN
+      endif
+      
     endif
     
   endif
-  
-endif
   
   ; Output
   if visible then begin
