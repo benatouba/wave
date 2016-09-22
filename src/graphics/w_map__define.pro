@@ -602,6 +602,7 @@ end
 ;
 ; :History:
 ;     Written by FaM, 2011.
+;     22.09.2016 - Text for points can now be in the same color. - DF
 ;-  
 function w_Map::_draw_points, WINDOW = window
 
@@ -616,7 +617,7 @@ function w_Map::_draw_points, WINDOW = window
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
     cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
-    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA
+    cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA, COLOR=p.color
   endfor
   
   return, 1

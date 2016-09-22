@@ -17,9 +17,12 @@
 ;         set to the UTM zone if you want to use a specific utm
 ;    GRID_out: out, optional
 ;              the Mercator grid, if you want it for any reason
+;    NO_COUNTRIES: in, optional
+;                  Set keyword to avoid plotting country boarders.
 ;
 ; :History:
 ;     Written by FaM, 2012.
+;     22.09.2016 - Addec keyword NO_COUNTRIES. - DF
 ;
 ;-
 function w_make_mercamap, $
@@ -29,7 +32,8 @@ function w_make_mercamap, $
     XSIZE=xsize, $
     YSIZE=ysize, $
     UTM=utm, $
-    GRID_out=grid_out
+    GRID_out=grid_out, $
+    NO_COUNTRIES=no_countries
 
   if N_ELEMENTS(center) eq 0 then center = [13.4, 52.52]
   if N_ELEMENTS(XX) eq 0 then xx = 2000000.
@@ -72,7 +76,7 @@ function w_make_mercamap, $
   grid = OBJ_NEW('w_Grid2D', PROJ=proj, X0=x0, Y0=y0, X1=x1, y1=y1, NX=xsize, NY=ysize)
   if ~ OBJ_VALID(grid) then Message, 'Grid not ok'
   
-  map = OBJ_NEW('w_Map', grid, XSIZE=xsize)
+  map = OBJ_NEW('w_Map', grid, XSIZE=xsize, NO_COUNTRIES=no_countries)
   if ~ OBJ_VALID(map) then Message, 'map not ok'
   
   if ARG_PRESENT(GRID_OUT) then map->GetProperty, grid=grid_out
