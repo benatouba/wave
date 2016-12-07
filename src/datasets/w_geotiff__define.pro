@@ -100,6 +100,7 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
               endif else begin
                 ; I suppose its UTM. Let's parse
                 d = strpos(key, 'UTM_ZONE_')
+                if d eq -1 then d = strpos(geotiff.GTCITATIONGEOKEY, 'UTM zone ') ; Alternative
                 if d eq -1 then message, 'Projection unknown. Contact Fabi.'
                 zone = string((byte(key))[d+9:d+10])
                 if string((byte(key))[d+11]) eq 'S' then zone = '-' + zone
