@@ -1614,6 +1614,10 @@ end
 ;            the parameter of the form
 ;    PARAM_3:in, optional, type = float
 ;            the parameter of the form
+;            
+; :History:
+;     Written by FaM.
+;     Changes: 08.12.2016 - Small change in ellipse coordinates to handle 1D array. - DF
 ;          
 ;-    
 function w_Map::set_form, x, y, $
@@ -1657,14 +1661,14 @@ function w_Map::set_form, x, y, $
     
   case str_equiv(FORM) of
     'ELLIPSE': begin
-       self.grid->transform, x, y, _x, _y, SRC=src
+       self.grid->transform, x, y, _x, _y, SRC=src       
        if N_ELEMENTS(PARAM_1) eq 0 then Message, 'PARAM_1 (major semi-axis) required'
        if N_ELEMENTS(PARAM_2) eq 0 then Message, 'PARAM_2 (minor semi-axis) required'
        if N_ELEMENTS(PARAM_3) eq 0 then param_3 = 0.       
        npts = 36 * 3
        points = (2 * !PI / (npts-1)) * findgen(npts)
-       xx = _x + cos(points) * cos(param_3 * !DTOR) * param_1 - sin(points) * sin(param_3 * !DTOR) * param_2
-       yy = _y + cos(points) * sin(param_3 * !DTOR) * param_1 + sin(points) * cos(param_3 * !DTOR) * param_2
+       xx = _x[0] + cos(points) * cos(param_3 * !DTOR) * param_1 - sin(points) * sin(param_3 * !DTOR) * param_2
+       yy = _y[0] + cos(points) * sin(param_3 * !DTOR) * param_1 + sin(points) * cos(param_3 * !DTOR) * param_2
        _src = self.grid
     end
     'RECTANGLE': begin
