@@ -2167,7 +2167,7 @@ end
 ;                it is either U or WS 
 ;    wind_data2: in, required, type = array
 ;                the data serie to aggregate. Depending on the keywords UV or WSWD,
-;                it is either V or WS 
+;                it is either V or WD 
 ;    time: in, required, type = {ABS_DATE}/qms
 ;          the associated time (same size as data)
 ;    agg_ws: out, type = array
