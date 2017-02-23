@@ -1987,6 +1987,9 @@ end
 ;    HOUR: in, optional, default = none
 ;         set to an hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
+;    MINUTE: in, optional, default = none
+;            set to a minutely interval (e.g: 1, or 15) to compute
+;            minutely or 15-minutely statistics
 ;    NEW_TIME: in, optional, type = {ABS_DATE}/qms, default = none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
@@ -2007,7 +2010,7 @@ end
 pro TS_AGG, data, time, agg, agg_time, $
     MISSING=missing, $ 
     AGG_METHOD=agg_method, $
-    DAY=day, HOUR=hour, $ 
+    DAY=day, HOUR=hour, MINUTE=minute, $ 
     NEW_TIME=new_time, $ 
     MIN_NSIG=min_nsig, $ 
     DOUBLE=double
@@ -2037,8 +2040,17 @@ pro TS_AGG, data, time, agg, agg_time, $
   _data = _data[sor]
   
   ; Automatic aggregation
-  if N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
-    
+  if N_ELEMENTS(minute) ne 0 or N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
+    if N_ELEMENTS(minute) ne 0 then begin
+      d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
+      start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      start_d += (D.minute/minute*minute) * M_QMS
+      d = MAKE_ABS_DATE(QMS=qms1[n-1])
+      end_D = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
+      end_d += (D.minute/minute*minute) * M_QMS
+      end_d += (minute*((d.minute mod minute) gt 0)) * M_QMS
+      qms2 = MAKE_ENDED_TIME_SERIE(start_d, end_D, TIMESTEP=M_QMS * LONG64(MINUTE))
+    endif
     if N_ELEMENTS(hour) ne 0 then begin      
       d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
       start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
@@ -2071,7 +2083,7 @@ pro TS_AGG, data, time, agg, agg_time, $
     TS_AGG, data, time, nsig, $
       MISSING=missing, $
       AGG_METHOD='N_SIG', $
-      DAY=day, HOUR=hour, $
+      DAY=day, HOUR=hour, MINUTE=minute, $
       NEW_TIME=new_time
     
     case N_ELEMENTS(MIN_NSIG) of
@@ -2199,6 +2211,9 @@ end
 ;    HOUR: in, optional, default = none
 ;         set to an hourly interval (e.g: 1, or 6) to compute 
 ;         hourly or six-hourly statistics
+;    MINUTE: in, optional, default = none
+;            set to a minutely interval (e.g: 1, or 15) to compute
+;            minutely or 15-minutely statistics
 ;    NEW_TIME: in, optional, type = {ABS_DATE}/qms ,default = none
 ;              ignored if `DAY` or `HOUR` are set. set this value to 
 ;              any time serie of n+1 elements. The ouptut will contain
@@ -2213,7 +2228,7 @@ end
 ;-
 pro TS_AGG_WIND, wind_data1, wind_data2, time, $
                        AGG_WS=AGG_WS, AGG_WD=agg_wd, AGG_U=agg_u, AGG_V=agg_v, AGG_TIME=agg_time, $
-                        UV=uv, WSWD=wswd, MISSING=missing, DAY=day, HOUR=hour, NEW_TIME=new_time, DOUBLE=double
+                        UV=uv, WSWD=wswd, MISSING=missing, DAY=day, HOUR=hour, MINUTE=minute, NEW_TIME=new_time, DOUBLE=double
     
      
   ; Set Up environnement
@@ -2239,19 +2254,19 @@ pro TS_AGG_WIND, wind_data1, wind_data2, time, $
   endif
   
   TS_AGG, ws, time, agg_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
-            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+            DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
             
   ; Temporary vector means
   TS_AGG, u, time, agg_u, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
-            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+            DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
   TS_AGG, v, time, agg_v, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
-            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double           
+            DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double           
   MET_u_v_to_ws_wd, ret, agg_u, agg_v, WD=agg_wd
   
   p = where(agg_wd lt 0.,cnt) ;for missing values
   if cnt gt 0 then begin
   TS_AGG, wd, time, dummy_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
-            DAY = day, HOUR = hour, NEW_TIME = new_time, DOUBLE = double
+            DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
    agg_wd[p] = dummy_ws[p]
   endif
   undefine, agg_u, agg_v ; no need
