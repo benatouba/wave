@@ -108,6 +108,6 @@ pro w_gr_image, info, x, y, $
     XTITLE=plotxtitle, $
     YRANGE=plotyrange, $
     YTITLE=plotytitle, $
-    _REF_EXTRA=extra
+    _STRICT_EXTRA=extra
     
 end

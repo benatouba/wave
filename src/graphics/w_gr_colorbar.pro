@@ -227,7 +227,7 @@ pro w_gr_Colorbar, info, $
     XLOG=xlog, $
     YLOG=ylog, $
     WINDOW=window, $
-    _REF_EXTRA=extra
+    _STRICT_EXTRA=extra
   
   ; Set the current colors back.
   TVLCT, rr, gg, bb
