@@ -179,14 +179,14 @@ function w_gr_DataLevels_dataloc, info, data
   ; Some temporary checks
   p_ooBot = where(info.valid and loc lt 0, cnt_ooBot)
   if cnt_ooBot ne 0 and ~ info.is_ooBot then begin
-   Message, 'Internal error by OO_Bot. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
+   Message, 'Internal error by OO_Bot. VALUE_LOCATE ist schuld. Könnte problematisch sein.', /INFORMATIONAL
   endif
   p_ooTop = where(loc ge (N_ELEMENTS(info.levels)-1), cnt_ooTop)  
   if cnt_ooTop ne 0 and ~ info.is_ooTop then begin
     ; check for the "on the bound" case 
     ponthbound = where(ABS(data-Max(info.levels)) le info.epsilon, cnton)
     if cnton ne cnt_ooTop then begin
-      Message, 'Internal error by OO_Top. VALUE_LOCATE ist schuld. Sollte nicht zu schlimm sein, aber zeig es mal Fabi, falls sowas passiert.', /INFORMATIONAL
+      Message, 'Internal error by OO_Top. VALUE_LOCATE ist schuld. Könnte problematisch sein.', /INFORMATIONAL
     endif
     if ~ info.dcbar then loc[p_ooTop] = N_ELEMENTS(info.levels)-2
   endif
@@ -563,7 +563,7 @@ function w_gr_DataLevels, data, $
        is_hist = TRUE
      endif else begin   
        case dataTypeName of
-         'FLOAT':  _levels = cgScaleVector(FINDGEN(_n_levels), _min_level, _max_level + same_minmax, /PRESERVE_TYPE)
+         'FLOAT':  _levels = cgScaleVector(FINDGEN(_n_levels), _min_level, _max_level + same_minmax, /PRESERVE_TYPE, /DOUBLE)
          'DOUBLE':  _levels = cgScaleVector(DINDGEN(_n_levels), _min_level, _max_level + same_minmax, /PRESERVE_TYPE)
           else: begin
             _levels = ROUND((FLOAT(_max_level + same_minmax - _min_level) / (_n_levels-1)) * Indgen(_n_levels) + _min_level)
