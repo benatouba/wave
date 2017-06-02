@@ -656,8 +656,8 @@ function w_GEO_nc::get_TimeSerie, Varid, $ ; The netCDF variable ID, returned fr
     dims = dims, $
     dimnames = dimnames) then Message, '$Varid is not a correct variable ID'
   
-  if ~arg_okay(i, /NUMERIC, /SCALAR) then  Message, WAVE_Std_Message('i', /ARG)
-  if ~arg_okay(j, /NUMERIC, /SCALAR) then  Message, WAVE_Std_Message('j', /ARG)
+  if ~arg_okay(i, /NUMERIC, N_ELEM=1) then  Message, WAVE_Std_Message('i', /ARG)
+  if ~arg_okay(j, /NUMERIC, N_ELEM=1) then  Message, WAVE_Std_Message('j', /ARG)
   
   i =  FLOOR(i)
   j =  FLOOR(j)
