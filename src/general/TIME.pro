@@ -2041,6 +2041,7 @@ pro TS_AGG, data, time, agg, agg_time, $
   
   ; Automatic aggregation
   if N_ELEMENTS(minute) ne 0 or N_ELEMENTS(hour) ne 0 or N_ELEMENTS(day) ne 0 then begin
+    if N_ELEMENTS(new_time) ne 0 then message, 'New_time cannot be set together with other time step keywords.'
     if N_ELEMENTS(minute) ne 0 then begin
       d = MAKE_ABS_DATE(QMS=qms1[0]-1LL)
       start_d = QMS_TIME(YEAR=D.year,MONTH=D.month,DAY=D.day,HOUR=D.hour)
