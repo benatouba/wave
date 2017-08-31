@@ -31,6 +31,7 @@ pushd, root
 .run TIME.pro
 .run UTILS.pro
 .run AWS.pro
+.run w_aws_read_data_file.pro
 
 ; Compile objects
 .run w_grid2d__define.pro
