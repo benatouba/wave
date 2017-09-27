@@ -87,6 +87,8 @@
 ;       set this keyword to a value less than zero (e.g., 0.5). If you prefer a 
 ;       longer length, set this keyword to a value greater than zero. The "standard"
 ;       length will be multiplied by this value.
+;    FONTSIZEFACTOR: in, optional, type=float, default=1.0
+;       Some factor controlling the font size of scale bar etc.
 ;
 ; :History:
 ;     Written by FaM, DiS, 2011, 2012.
@@ -114,7 +116,8 @@ pro w_standard_2d_plot, map, $
     NO_LEGEND=no_legend, $
     NO_SOURCE_INFO=no_source_info, $
     NO_SCALE_INFO=no_scale_info, $
-    NO_PROJ_INFO=no_proj_info
+    NO_PROJ_INFO=no_proj_info, $
+    FONTSIZEFACTOR=fontsizefactor
     
   ;--------------------------
   ; Set up environment
@@ -166,7 +169,11 @@ pro w_standard_2d_plot, map, $
   imy0 = 0.08
   pos = [imx0,imy0,imx0+imgX,imy0+imgY]
   
-  sfac = 1. ; Font size factor
+  if ~isa(fontsizefactor) then begin
+    sfac = 1. ; Font size factor
+  endif else begin
+    sfac = fontsizefactor
+  endelse
   
   xyFactor = FLOAT(imgX)/imgY
   SetDefaultValue, OOB_FACTOR, xyFactor
