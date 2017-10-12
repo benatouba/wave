@@ -453,7 +453,7 @@ end
 ;    the ncdf_file object
 ;
 ;-
-function w_WPP::_define_file, FORCE=force, PRINT=print
+function w_WPP::_define_file, FORCE=force, PRINT=print, MONTH = month
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -526,8 +526,11 @@ function w_WPP::_define_file, FORCE=force, PRINT=print
       nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
     end
   endcase
-  
-  time_str = TIME_to_STR(QMS_TIME(YEAR=self.active_year, month=1, day=1), MASK=' since YYYY-MM-DD HH:TT:SS')
+  if KEYWORD_SET(month) then begin
+    time_str = TIME_to_STR(QMS_TIME(YEAR=self.active_year, month=month, day=1), MASK=' since YYYY-MM-DD HH:TT:SS')
+  endif else begin
+    time_str = TIME_to_STR(QMS_TIME(YEAR=self.active_year, month=1, day=1), MASK=' since YYYY-MM-DD HH:TT:SS')
+  endelse
   case (self.active_agg) of
     's': time_str = 'hours since 2000-01-01 00:00:00' 
     'h': time_str = 'hours'  + time_str
@@ -674,7 +677,7 @@ end
 ;   Adds the active variable data at the right place into the right file
 ;
 ;-
-pro w_WPP::_add_var_to_h_file
+pro w_WPP::_add_var_to_h_file, MONTH=month
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -687,8 +690,11 @@ pro w_WPP::_add_var_to_h_file
   if total(data_check[*self.active_index]) ne 0 then Message, 'Check?'
   
   p0 = min(*self.active_index)
-  
-  tref = QMS_TIME(year=self.active_year,month=1,day=1)
+  if KEYWORD_SET(month) then begin
+    tref = QMS_TIME(year=self.active_year,month=month,day=1)
+  endif else begin
+    tref = QMS_TIME(year=self.active_year,month=1,day=1)
+  endelse
   time = LONG(((*self.active_time)[*self.active_index]-tref) / (MAKE_TIME_STEP(hour=1)).dms)
   
   ; Vardata
@@ -834,7 +840,8 @@ function w_WPP::check_filelist, year, $
     FILES=files, $
     NMISSING=nmissing, $
     DAYSMISSING=daysmissing, $
-    VALID=valid
+    VALID=valid, $
+    MONTH = month
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -848,28 +855,37 @@ function w_WPP::check_filelist, year, $
   ENDIF
 
   if ~arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('YEAR', /ARG)
-
-  ; Complete timeserie for the year
   if self.domain eq 1 then h=3 else h=1
-  t0 = QMS_TIME(year=year,month=1,day=1,hour=h)
-  t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+  if KEYWORD_SET(month) then begin
+    t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
+    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    ndays = GEN_month_days(month, year)
+    pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'+ $
+      STRING(month, FORMAT='(I2)')+'*'
+    ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=month), $
+      QMS_TIME(year=year,day=ndays,month=month), $
+      TIMESTEP=D_QMS)
+  endif else begin
+    t0 = QMS_TIME(year=year,month=1,day=1,hour=h)
+    t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+    ; check if files for this year are here
+    GEN_date_doy, ret, ndays, YEAR=year, month=12, day=31
+    pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
+    ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=1), $
+      QMS_TIME(year=year,day=31,month=12), $
+      TIMESTEP=D_QMS)
+  endelse
   time = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(HOUR=h), NSTEPS=nt)
   self.active_n_time = nt
   PTR_FREE, self.active_time
   self.active_time = PTR_NEW(time)
   
-  ; check if files for this year are here
-  GEN_date_doy, ret, ndays, YEAR=year, month=12, day=31
-  pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'
   matches = Where(StrMatch(*self.ifiles, pattern), nfiles)
   if nfiles eq 0 then Message, 'Zero files found, big problem.'  
   files = (*self.ifiles)[matches] ; Just this one year first  
   files = files[UNIQ(files,SORT(files))]
   
   ; Now check for the single days
-  ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=1), $
-                             QMS_TIME(year=year,day=31,month=12), $
-                             TIMESTEP=D_QMS)
   valid = BYTARR(ndays) + 1B 
   ofiles = STRARR(ndays)
   for i=0L, ndays-1 do begin
@@ -994,7 +1010,7 @@ end
 ;                        if set the programm will not ask you for permission if files 
 ;                        are missing (dangerous)
 ;-
-pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
+pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
 
   ; Set up environnement and Error handling
   @WAVE.inc
@@ -1038,7 +1054,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   self.logger->addText, '', PRINT=print  
   logt0 = SYSTIME(/SECONDS)
  
-  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, DAYSMISSING=daysmissing) then begin
+  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, DAYSMISSING=daysmissing, MONTH = month) then begin
   
    self.logger->addText, 'Not enough files to complete (missing ' + str_equiv(nmissing) + ')', PRINT=print
    for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='YYYY.MM.DD'), PRINT=print
@@ -1070,7 +1086,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   for i=0, self.n_vars-1 do begin
     self->_set_active_var, vars[i], year, 'h', IS_STATIC=is_static
     if is_static then continue
-    objs[i] = self->_define_file(FORCE=force, PRINT=print)
+    objs[i] = self->_define_file(FORCE=force, PRINT=print, MONTH = month)
   endfor
   
   self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Done generating product files', PRINT=print
@@ -1124,7 +1140,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     for i=0, self.n_vars-1 do begin
       self->_set_active_var, vars[i], year, 'h', objs[i], IS_STATIC=is_static
       if is_static then continue
-      self->_add_var_to_h_file
+      self->_add_var_to_h_file, MONTH = month
     endfor
     
     ;Clean
@@ -1197,7 +1213,7 @@ end
 ;           if set (default), the log messages are printed in the console as well
 ;
 ;-
-pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
+pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
 
   ; Set up environnement and Error handling
   @WAVE.inc
@@ -1216,6 +1232,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   endif
  
   if ~(agg eq 'd' or agg eq 'm' or agg eq 'y') then Message, '$AGG not valid' 
+ 
 
   logf = self.log_directory + '/wpp_process_m_' + agg + '_' + str_equiv(year) + '_log_' + TIME_to_STR(QMS_TIME(), MASK='YYYY_MM_DD_HHTTSS') + '.log'
   self.Logger = Obj_New('ErrorLogger', logf, ALERT=1, DELETE_ON_DESTROY=0, TIMESTAMP=0)
@@ -1225,9 +1242,14 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force
   obj_destroy, self.active_wrf
   ptr_free, self.active_time
   ptr_free, self.active_index
+  if KEYWORD_SET(month) then begin
+    t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
+    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+  endif else begin
+    t0 = QMS_TIME(year=year, month=01, day=01, hour=0)
+    t1 = QMS_TIME(year=year+1, month=01, day=01, hour=0)  
+  endelse
   
-  t0 = QMS_TIME(year=year, month=01, day=01, hour=0)
-  t1 = QMS_TIME(year=year+1, month=01, day=01, hour=0)  
   case (agg) of
     'd': begin
       ts = MAKE_ENDED_TIME_SERIE(t0, t1, TIMESTEP=MAKE_TIME_STEP(DAY=1), NSTEPS=nsteps)
@@ -1315,12 +1337,13 @@ end
 ;           if set (default), the log messages are printed in the console as well
 ;
 ;-
-pro w_WPP::process_all_means, year, PRINT=print, FORCE=force
+pro w_WPP::process_all_means, year, PRINT=print, FORCE=force, MONTH=month
 
-  self->process_means, 'd', year, PRINT=print, FORCE=force
-  self->process_means, 'm', year, PRINT=print, FORCE=force
-  self->process_means, 'y', year, PRINT=print, FORCE=force
-  
+  self->process_means, 'd', year, PRINT=print, FORCE=force, MONTH=month
+  self->process_means, 'm', year, PRINT=print, FORCE=force, MONTH=month
+  if ~KEYWORD_SET(month) then begin
+    self->process_means, 'y', year, PRINT=print, FORCE=force
+  endif
 end
 
 
@@ -1343,10 +1366,10 @@ end
 ;                        are missing (dangerous)
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
+pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
 
-  self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing
-  self->process_all_means, year, PRINT=print, FORCE=force
+  self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+  self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
   
 end
 
