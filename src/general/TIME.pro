@@ -2228,7 +2228,7 @@ end
 ;     Written by FaM, 2012.
 ;-
 pro TS_AGG_WIND, wind_data1, wind_data2, time, $
-                       AGG_WS=AGG_WS, AGG_WD=agg_wd, AGG_U=agg_u, AGG_V=agg_v, AGG_TIME=agg_time, $
+                       AGG_WS=AGG_WS, AGG_WD=agg_wd, AGG_U=agg_u, AGG_V=agg_v, AGG_TIME=agg_time, MIN_NSIG = min_nsig, $
                         UV=uv, WSWD=wswd, MISSING=missing, DAY=day, HOUR=hour, MINUTE=minute, NEW_TIME=new_time, DOUBLE=double
     
      
@@ -2254,19 +2254,19 @@ pro TS_AGG_WIND, wind_data1, wind_data2, time, $
     MET_ws_wd_to_u_v, ret, ws, wd, U=u, V=v
   endif
   
-  TS_AGG, ws, time, agg_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+  TS_AGG, ws, time, agg_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', MIN_NSIG = min_nsig, $
             DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
             
   ; Temporary vector means
-  TS_AGG, u, time, agg_u, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+  TS_AGG, u, time, agg_u, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', MIN_NSIG = min_nsig, $
             DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
-  TS_AGG, v, time, agg_v, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+  TS_AGG, v, time, agg_v, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', MIN_NSIG = min_nsig, $
             DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double           
   MET_u_v_to_ws_wd, ret, agg_u, agg_v, WD=agg_wd
   
   p = where(agg_wd lt 0.,cnt) ;for missing values
   if cnt gt 0 then begin
-  TS_AGG, wd, time, dummy_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', $
+  TS_AGG, wd, time, dummy_ws, agg_time, MISSING = missing, AGG_METHOD = 'MEAN', MIN_NSIG = min_nsig, $
             DAY = day, HOUR = hour, MINUTE=minute, NEW_TIME = new_time, DOUBLE = double
    agg_wd[p] = dummy_ws[p]
   endif
