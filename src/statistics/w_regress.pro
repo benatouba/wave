@@ -24,6 +24,8 @@
 ;           see IDL documentation
 ;    MEASURE_ERRORS: out
 ;           see IDL documentation
+;    NAN: in, optional, type=boolean, default=0
+;           set this keyword to internally remove xy pairs where either value is NaN
 ;    SIGMA: out
 ;           see IDL documentation
 ;    STATUS: out
@@ -51,6 +53,7 @@ function w_regress, x, y, $
   FTEST=ftest, $
   MCORRELATION=mcorrelation, $
   MEASURE_ERRORS=measure_errors, $
+  NAN=nan, $
   SIGMA=sigma, $
   STATUS=status, $
   YFIT=yfit, $
@@ -61,14 +64,21 @@ function w_regress, x, y, $
   @WAVE.inc
   COMPILE_OPT IDL2  
   
+  _x = x
+  _y = y
+  if KEYWORD_SET(NAN) then begin
+    p = where(finite(_x) and finite(_y), /NULL)
+    _x = _x[p]
+    _y = _y[p]
+  endif
   
-  Np = N_ELEMENTS(y)
-  if N_ELEMENTS(x) eq Np then Nv = 1 else Nv = N_ELEMENTS(x[*,0])
+  Np = N_ELEMENTS(_y)
+  if N_ELEMENTS(_x) eq Np then Nv = 1 else Nv = N_ELEMENTS(_x[*,0])
   Df = Np - Nv - 1  ; Degrees of freedom
   
   SetDefaultValue, p_value, 0.05
   
-  r = regress(x, y, $
+  r = regress(_x, _y, $
   CHISQ=chisq, $
   CONST=const, $
   CORRELATION=correlation, $
