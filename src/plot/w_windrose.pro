@@ -136,6 +136,8 @@ end
 ;        set this keyword to creat gray scale plots
 ;    COLORTABLE: in, optional
 ;                index of the color table to use (used by CGLOADCT)
+;    REVERSE: in, optional
+;             set this keyword to reverse colortable
 ;    FORMAT: in, optional
 ;            color bar labels stirng format (e.g: '(F4.2)')
 ;    CHARSIZE: in, optional
@@ -158,6 +160,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
     TITLE=title, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
     TICKS_ANGLE=ticks_angle, $
     LEVELS=levels, $
     OOB_TOP_COLOR=oob_top_color, $ 
@@ -310,7 +313,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   if do_var2 then begin
     TVLCT, rr, gg, bb, /GET
     if n_elements(colortable) eq 0 then ct = 34 else ct = colortable
-    if KEYWORD_SET(GS) then CGLOADCT, 0 else CGLOADCT, ct
+    if KEYWORD_SET(GS) then CGLOADCT, 0, REVERSE=reverse else CGLOADCT, ct, REVERSE=reverse
     for i=0, nbins-1 do begin
       radius = perc[i] * max_radius /  maxscale
       if (R[i] gt R[i+1]-1) then continue
@@ -456,6 +459,8 @@ end
 ;        set this keyword to creat gray scale plots
 ;    COLORTABLE: in, optional
 ;                index of the color table to use (used by CGLOADCT)
+;    REVERSE: in, optional
+;             set this keyword to reverse colortable
 ;    FORMAT: in, optional
 ;            color bar labels stirng format (e.g: '(F4.2)')
 ;    CHARSIZE: in, optional
@@ -490,6 +495,7 @@ pro w_WindRose, wind_dir, wind_speed, $
     IM_RESIZE=im_resize, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
     FORMAT=format, $
     CHARSIZE=charsize, $
     CALM_LEGEND=calm_legend
@@ -533,6 +539,7 @@ pro w_WindRose, wind_dir, wind_speed, $
     TICKS_ANGLE=ticks_angle, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
     LEGINFO=leginfo, $
     CALM_PERC=calm_perc, $
     OOB_TOP_COLOR=oob_top_color, $ 
