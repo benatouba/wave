@@ -24,12 +24,15 @@
 ;    _EXTRA: in, optional
 ;            any keyword accepted by `w_GISdata::defineSubset`
 ;            
+;    PROJ:   in, optional, type: TNT projection
+;            Provide projection for geotiff if it is known but not in the geotiff itself.
+;            
 ;               
 ; :Returns: 
 ;    1 if the object is created successfully, 0 if not
 ;
 ;-
-function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
+function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra, PROJ=proj
 
   ; Set up environnement
   @WAVE.inc
@@ -159,7 +162,30 @@ function w_GEOTIFF::init, file, grid, NO_DELTA=no_delta, _EXTRA=extra
         end
         else: message, 'Projection unknown. Contact Fabi.'
       endcase
-    endif else message, 'Projection unknown. Contact Fabi.'
+    endif else if n_elements(PROJ) ne 0 then begin
+      
+      ; This is for LatLon projection grids
+      dx = (geotiff.ModelPixelScaleTag)[0]
+      dy = (geotiff.ModelPixelScaleTag)[1]
+
+      ; Get the tie points (upper left + half pix).
+      if keyword_set(NO_DELTA) then begin
+        x0 = (geotiff.ModelTiePointTag)[3]
+        y0 = (geotiff.ModelTiePointTag)[4]
+      endif else begin
+        x0 = (geotiff.ModelTiePointTag)[3] + dx/2
+        y0 = (geotiff.ModelTiePointTag)[4] - dy/2
+      endelse
+      
+      grid = obj_new('w_Grid2D', nx=nx, $
+        ny=ny, $
+        dx=dx, $
+        dy=dy, $
+        x0=x0, $
+        y0=y0, $
+        proj=proj)
+    
+    endif else message, 'Projection unknown. Contact Fabi.'   
   endelse
 
   case (info.orientation) of
