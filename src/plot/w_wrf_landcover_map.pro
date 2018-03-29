@@ -41,7 +41,7 @@ pro w_wrf_Landcover_map, map, wrf, bar_tags, bar_title, ALL_CLASSES=all_classes,
   if ~OBJ_VALID(map) and ~OBJ_ISA(map, 'w_Map') then message, WAVE_Std_Message('map', /ARG)
   if ~OBJ_VALID(wrf) and ~OBJ_ISA(wrf, 'w_wrf') then message, WAVE_Std_Message('wrf', /ARG)
   
-  IF N_ELEMENTS(to_plot) eq 0 then to_plot = (wrf->get_var('lucat'))[*,*,0]
+  IF N_ELEMENTS(to_plot) eq 0 then to_plot = (wrf->get_var('lu_index'))[*,*,0]
   
   levels = [INDGEN(24)+1,28]
   
