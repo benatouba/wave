@@ -861,7 +861,7 @@ function w_WPP::check_filelist, year, $
     t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
     ndays = GEN_month_days(month, year)
     pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'+ $
-      STRING(month, FORMAT='(I2)')+'*'
+      STRING(month, FORMAT='(I02)')+'*'
     ts = MAKE_ENDED_TIME_SERIE(QMS_TIME(year=year,day=1,month=month), $
       QMS_TIME(year=year,day=ndays,month=month), $
       TIMESTEP=D_QMS)
