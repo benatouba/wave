@@ -1068,6 +1068,11 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
         if N_ELEMENTS(ZLEVELS) eq 1 then levs = levs[zlevels]
         if N_ELEMENTS(ZLEVELS) eq 2 then levs = levs[zlevels[0]:zlevels[1]]
         nl = N_ELEMENTS(levs)
+        if n_elements(t0) gt 0 or n_elements(t1) gt 0 then begin
+          p0 = 0 > min(where(time ge t0)) < (n_elements(time)-1)
+          p1 = 0 > max(where(time le t1)) < (n_elements(time)-1)
+          nt = (p1 - p0) + 1
+        endif
         out = FLTARR(self.tnt_c.nx, self.tnt_c.ny, nl, nt)
         for i=0, nl-1 do out[*,*,i,*] = levs[i]
         return, out
@@ -1209,7 +1214,7 @@ function w_WPR::getVarData, id, time, nt, INFO=info, YEARS=years, ZLEVELS=zlevel
       _y = *self.years
       if do_y then _y = years
       if do_ts then begin
-        self->getTime, ot, cnot 
+        self->getTime, ot, cnot
         p0 = 0
         p1 = cnot-1
         if check_WTIME(t0, OUT_QMS=it0) and cnot gt 1 then p0 = 0 > min(where(ot ge it0)) < (cnot-1)

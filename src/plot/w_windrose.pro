@@ -136,6 +136,12 @@ end
 ;        set this keyword to creat gray scale plots
 ;    COLORTABLE: in, optional
 ;                index of the color table to use (used by CGLOADCT)
+;    REVERSE: in, optional
+;             set this keyword to reverse colortable
+;    LINE_COLOR: in, optional
+;                the color to use for the lines around cake pieces (camemberts)
+;    NO_COORDS: in, optional
+;               set to suppress drawing axis and circles of the coordinate system
 ;    FORMAT: in, optional
 ;            color bar labels stirng format (e.g: '(F4.2)')
 ;    CHARSIZE: in, optional
@@ -158,6 +164,9 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
     TITLE=title, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
+    LINE_COLOR=line_color, $
+    NO_COORDS=no_coords, $
     TICKS_ANGLE=ticks_angle, $
     LEVELS=levels, $
     OOB_TOP_COLOR=oob_top_color, $ 
@@ -184,6 +193,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   if N_ELEMENTS(TICKS_ANGLE) eq 0 then ticks_angle = 1
   if N_ELEMENTS(ADD_VAR) eq 0 then _var2 = wind_speed else _var2 = add_var
   if N_ELEMENTS(DEF_CALM) eq 0 then _def_calm = 0. else _def_calm = DEF_CALM
+  if N_ELEMENTS(LINE_COLOR) eq 0 then _line_color = 'black' else _line_color = LINE_COLOR
   
   wid = cgQuery(/CURRENT, COUNT=cnt)
   if cnt eq 0 then begin 
@@ -310,7 +320,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   if do_var2 then begin
     TVLCT, rr, gg, bb, /GET
     if n_elements(colortable) eq 0 then ct = 34 else ct = colortable
-    if KEYWORD_SET(GS) then CGLOADCT, 0 else CGLOADCT, ct
+    if KEYWORD_SET(GS) then CGLOADCT, 0, REVERSE=reverse else CGLOADCT, ct, REVERSE=reverse
     for i=0, nbins-1 do begin
       radius = perc[i] * max_radius /  maxscale
       if (R[i] gt R[i+1]-1) then continue
@@ -324,7 +334,7 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
         wcir = w_windrose_circle(xcenter, ycenter, wradius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
         rrr = KEYWORD_SET(WINDOW) or KEYWORD_SET(addcmd)
         cgColorFill, [reform(wcir[0,*]), xcenter], [reform(wcir[1,*]), ycenter], WINDOW=rrr or KEYWORD_SET(addcmd), COLOR=leginfo.colors[nl-1-j], /NORMAL
-        cgPlotS, wcir, WINDOW=window, ADDCMD=addcmd, /NORMAL
+        cgPlotS, wcir, WINDOW=window, ADDCMD=addcmd, /NORMAL, COLOR=_line_color
       endfor
     endfor
     TVLCT, rr, gg, bb
@@ -334,42 +344,44 @@ pro w_WindRose_addrose, wind_dir, wind_speed,  $
   for i=0, nbins-1 do begin
     radius = perc[i] * max_radius /  maxscale
     cir = w_windrose_circle(xcenter, ycenter, radius, nPts=npts, ANGLE_RANGE=[locs_rad[i],locs_rad[i+1]], ELL_FACTOR=_wf)
-    cgPlotS, [reform(cir[0,*]),xcenter,cir[0,1]], [reform(cir[1,*]), ycenter,cir[1,1]], WINDOW=window, ADDCMD=addcmd, /NORMAL
+    cgPlotS, [reform(cir[0,*]),xcenter,cir[0,1]], [reform(cir[1,*]), ycenter,cir[1,1]], WINDOW=window, ADDCMD=addcmd, COLOR=_line_color, /NORMAL
   endfor
 
   ; Axes Circles
-  for i=1, npercsteps do cgPlotS, w_windrose_circle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
-  
-  ; Axes
-  x_radius = max_radius*rx
-  y_radius = max_radius*ry
-  as = _charsize * 1.
-  delta_x = as * rx * 0.005
-  delta_y = as * ry * 0.02
-  cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
-  cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
-  cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
-  cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, ALIGNMENT=1., /NORMAL, CHARSIZE=as
-  cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
-  cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
-  
-  ; Ticks
-  case (ticks_angle) of
-    0: angle_ticks = 4. * !PI / 8.
-    1: angle_ticks = 2. * !PI / 8.
-    2: angle_ticks = 0
-    3: angle_ticks = - 2. * !PI / 8.
-    4: angle_ticks = - 4. * !PI / 8.
-    5: angle_ticks = - 6. * !PI / 8.
-    6: angle_ticks = - 8. * !PI / 8.
-    7: angle_ticks = - 10. * !PI / 8.
-    else: message, WAVE_Std_Message('ticks_angle', /RANGE)
-  endcase
-  for i=1, npercsteps do begin
-    xt = xcenter + Cos(angle_ticks) * rx * step_radius*i
-    yt = ycenter + Sin(angle_ticks) * ry * step_radius*i
-    cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, ADDCMD=addcmd, COLOR=cgColor('dark grey'), /NORMAL, CHARSIZE=_charsize
-  endfor
+  if ~keyword_set(no_coords) then begin
+    for i=1, npercsteps do cgPlotS, w_windrose_circle(xcenter, ycenter, step_radius*i, nPts=361, ELL_FACTOR=_wf), WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+    
+    ; Axes
+    x_radius = max_radius*rx
+    y_radius = max_radius*ry
+    as = _charsize * 1.
+    delta_x = as * rx * 0.005
+    delta_y = as * ry * 0.02
+    cgPlotS, [xcenter-x_radius, xcenter+x_radius], [ycenter,ycenter], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+    cgPlotS, [xcenter, xcenter], [ycenter-y_radius,ycenter+y_radius], WINDOW=window, ADDCMD=addcmd, LINESTYLE = 1, COLOR=cgColor('dark grey'), /NORMAL
+    cgText, xcenter+delta_x, ycenter+y_radius-delta_y, 'N', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
+    cgText, xcenter+x_radius-delta_x, ycenter-delta_y, 'E', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, ALIGNMENT=1., /NORMAL, CHARSIZE=as
+    cgText, xcenter+delta_x, ycenter-y_radius+delta_x, 'S', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
+    cgText, xcenter-x_radius+delta_x, ycenter-delta_y, 'W', COLOR=cgColor('dark grey'), WINDOW=window, ADDCMD=addcmd, /NORMAL, CHARSIZE=as
+    
+    ; Ticks
+    case (ticks_angle) of
+      0: angle_ticks = 4. * !PI / 8.
+      1: angle_ticks = 2. * !PI / 8.
+      2: angle_ticks = 0
+      3: angle_ticks = - 2. * !PI / 8.
+      4: angle_ticks = - 4. * !PI / 8.
+      5: angle_ticks = - 6. * !PI / 8.
+      6: angle_ticks = - 8. * !PI / 8.
+      7: angle_ticks = - 10. * !PI / 8.
+      else: message, WAVE_Std_Message('ticks_angle', /RANGE)
+    endcase
+    for i=1, npercsteps do begin
+      xt = xcenter + Cos(angle_ticks) * rx * step_radius*i
+      yt = ycenter + Sin(angle_ticks) * ry * step_radius*i
+      cgText,xt, yt, str_equiv(STRING(percsteps[i], FORMAT='(I3)')+'%') ,WINDOW=window, ADDCMD=addcmd, COLOR=cgColor('dark grey'), /NORMAL, CHARSIZE=_charsize
+    endfor
+  endif
   
   ; White center circle
   cir = w_windrose_circle(xcenter, ycenter, step_radius/10., nPts=361, ELL_FACTOR=_wf)
@@ -456,6 +468,12 @@ end
 ;        set this keyword to creat gray scale plots
 ;    COLORTABLE: in, optional
 ;                index of the color table to use (used by CGLOADCT)
+;    REVERSE: in, optional
+;             set this keyword to reverse colortable
+;    LINE_COLOR: in, optional
+;                the color to use for the line around cake pieces ("camemberts")
+;    NO_COORDS: in, optional
+;               set to suppress drawing axis and circles of the coordinate system
 ;    FORMAT: in, optional
 ;            color bar labels stirng format (e.g: '(F4.2)')
 ;    CHARSIZE: in, optional
@@ -490,6 +508,9 @@ pro w_WindRose, wind_dir, wind_speed, $
     IM_RESIZE=im_resize, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
+    LINE_COLOR=line_color, $
+    NO_COORDS=no_coords, $
     FORMAT=format, $
     CHARSIZE=charsize, $
     CALM_LEGEND=calm_legend
@@ -533,6 +554,8 @@ pro w_WindRose, wind_dir, wind_speed, $
     TICKS_ANGLE=ticks_angle, $
     GS=gs, $
     COLORTABLE=colortable, $
+    REVERSE=reverse, $
+    LINE_COLOR=line_color, $
     LEGINFO=leginfo, $
     CALM_PERC=calm_perc, $
     OOB_TOP_COLOR=oob_top_color, $ 
@@ -546,7 +569,7 @@ pro w_WindRose, wind_dir, wind_speed, $
   
   ; Var2 legend
   if do_var2 and do_legend then begin
-    pbar = [0.87, 0.01, 0.9, 0.20]
+    pbar = [0.87, 0.01, 0.9, 0.30]
     w_windrose_addlegend, leginfo, TITLE=VAR_TITLE, UNIT=VAR_UNITS, ADDCMD=window, CHARSIZE=charsize, FORMAT=format, POSITION=pbar, OOB_FACTOR=oob_factor
   endif
   
