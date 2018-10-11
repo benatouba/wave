@@ -531,7 +531,8 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
     INTERPOLATE = interpolate, $ ; bilinear interoplation of the image
     RANGE = range, $ ; user defined range
     wid = wid, $
-    Group_Leader = group
+    Group_Leader = group, $
+    PNG=png ; Filename to write PNG of the initial output to.
     
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -873,6 +874,12 @@ pro w_QuickPlot, data, $ ; The image to plot (2D, 3D, or 4D)
   thisContainer->Add, maxvalueObj
   
   s = Size(*imagePtr, /Dimensions)
+  
+  if isa(PNG) then begin
+    thisWindow->GetProperty, Image_Data=snapshot
+    image2D = Color_Quan(snapshot, 1, r, g, b)
+    Write_PNG, png, image2d, r, g, b
+  endif
   
   ; Create an info structure to hold program information.
   
