@@ -5,7 +5,7 @@
 ; Version     :  WAVE 0.1                                              *
 ; Language    :  IDL 7.0 and higher                                    *
 ; Date        :  04-Jan-2009                                           *
-; Last Update :  26-May-2016 AH                                        *
+; Last Update :  24-Mar-2019 DiS                                       *
 ;                                                                      *
 ;                                                                      *
 ; IDL macro for starting the WAVE library system.                      *
@@ -54,6 +54,7 @@ pushd, root
 .run w_quickplot.pro
 .run w_standard_2d_plot.pro
 .run w_windrose.pro
+.run w_climatediagram.pro
 
 resolve_all, /QUIET, /CONTINUE
 

@@ -1,3 +1,145 @@
+;-----------------------------------------------------------------------
+;
+; Last update: 19.03.2019 DiS
+
+pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=lat, HGT=hgt,      $
+  PR_UPPER=Pr_upper, PR_LOWER=Pr_lower, TA_UPPER=Ta_upper, TA_LOWER=Ta_lower, $
+  FILENAME=filename, CLOSE=close
+
+  ;******************
+  ; Check arguments *
+  ;******************
+
+  if n_elements(Pr_clim ne 12) or n_elements(Ta_clim) ne 12 then return
+
+  Pr_mean = round(Pr_clim) > 0
+  Ta_mean = float(Ta_clim)
+
+  ;*****************
+  ; Check keywords *
+  ;*****************
+
+  if n_elements(name) ne 1 then title = '' else title = strtrim(name, 2)
+  if n_elements(period) eq 1 then title += ' (' + strtrim(period, 2) + ')'
+
+  if n_elements(lon)  ne 1 then slon  = '' else slon  = str_equiv(lon)
+  if n_elements(lat)  ne 1 then slat  = '' else slat  = str_equiv(lat)
+  if n_elements(hgt)  ne 1 then shgt  = '' else shgt  = str_equiv(round(hgt))
+
+  if n_elements(lon) eq 1 or n_elements(lat) eq 1 or n_elements(hgt) eq 1 then begin
+    subtitle = '('
+    if n_elements(lon) eq 1 then subtitle += 'lon: ' + slon + ' deg, '
+    if n_elements(lat) eq 1 then subtitle += 'lat: ' + slat + ' deg, '
+    if n_elements(hgt) eq 1 then subtitle += 'alt: ' + shgt + ' m a.s.l.'
+    subtitle += ')'
+  endif else begin
+    subtitle = ''
+  endelse
+
+  months = ['J','F','M','A','M','J','J','A','S','O','N','D']
+
+  ;********************
+  ; Bounds specified? *
+  ;********************
+
+  do_Pr_bounds = n_elements(Pr_upper) eq 12 and n_elements(Pr_lower) eq 12
+  do_Ta_bounds = n_elements(Ta_upper) eq 12 and n_elements(Ta_lower) eq 12
+
+  if do_Pr_bounds then begin
+    Pr_max = round(Pr_upper) > 0
+    Pr_min = round(Pr_lower) > 0
+    p = where(Pr_max ge Pr_mean and Pr_min le Pr_mean, cnt)
+    if cnt lt 12 then return
+  endif else begin
+    Pr_max = Pr_mean
+    Pr_min = Pr_mean
+  endelse
+
+  if do_Ta_bounds then begin
+    Ta_max = float(Ta_upper)
+    Ta_min = float(Ta_lower)
+    p = where(Ta_max ge Ta_mean and Ta_min le Ta_mean, cnt)
+    if cnt lt 12 then return
+  endif else begin
+    Ta_max = Ta_mean
+    Ta_min = Ta_mean
+  endelse
+
+  ;***************
+  ; Axis scaling *
+  ;***************
+
+  Pr_l =   0.
+  Pr_h = 100.*ceil(max(Pr_max)/100.)
+  Ta_l = 5.*floor(min(Ta_min)/5.)
+  Ta_h = 5.*ceil(max(Ta_max)/5.)
+
+  ;*********************
+  ; Plot precipitation *
+  ;*********************
+
+  Pr_title = 'precipitation (mm/month)'
+
+  plt = barplot(1+indgen(12), Pr_mean, YRANGE=[Pr_l,Pr_h], FILL_COLOR='blue', $
+    YTITLE=Pr_title, DIM=[1200,900], POS=[0.06,0.03,0.94,0.85], AXIS_STYLE=1, $
+    XRANGE=[0.5,12.5], XMAJOR=12, XTICKVAL=1+indgen(12), XTICKNAME=months, XTICKLEN=0.02, XMINOR=0)
+
+  if do_Pr_bounds then begin
+    plt = errorplot(1+indgen(12), 0.5*(Pr_max+Pr_min), 0.5*(Pr_max-Pr_min), /OVERPLOT, $
+      ERRORBAR_COLOR='black', ERRORBAR_THICK=3)
+  endif
+
+  ;***********************
+  ; Plot air temperature *
+  ;***********************
+
+  Ta_title = 'air temperature (deg C)'
+
+  ax = axis(1, LOCATION='right', TITLE=Ta_title, AXIS_RANGE=[round(Ta_l),round(Ta_h)], $
+    COORD=[Ta_l,(Ta_h-Ta_l)/(Pr_h-Pr_l)], MAJOR=1+round((Ta_h-Ta_l)/5), MINOR=4)
+
+  if do_Ta_bounds then begin
+    ymax = (Ta_max-Ta_l)*(Pr_h-Pr_l)/(Ta_h-Ta_l)
+    ymin = (Ta_min-Ta_l)*(Pr_h-Pr_l)/(Ta_h-Ta_l)
+
+    plt = polygon([1+indgen(12),reverse(1+indgen(12))], [ymax,reverse(ymin)], /DATA, /OVERPLOT, $
+      FILL_COLOR='red', FILL_TRANSPARENCY=70)
+  endif
+
+  y = (Ta_mean-Ta_l)*(Pr_h-Pr_l)/(Ta_h-Ta_l)
+
+  plt = plot(1+indgen(12), y, LINESTYLE='-', COLOR='red', THICK=5, /OVERPLOT)
+
+  ;*************************
+  ; Add title and subtitle *
+  ;*************************
+
+  txt = text(0.5, 0.96, title, ALIGN=0.5, FONT_SIZE=15, FONT_STYLE=1)
+  txt = text(0.5, 0.92, subtitle, ALIGN=0.5, FONT_SIZE=12)
+
+  ;***************************
+  ; Add info on annal values *
+  ;***************************
+
+  Pr_year = round(total(Pr_mean))
+  Ta_year = mean(Ta_mean)
+
+  sPr_year = str_equiv(Pr_year) + ' mm/year'
+  sTa_year = str_equiv(string(Ta_year, FORMAT='(F5.1)')) + ' deg C'
+
+  txt = text(0.48, 0.87, sPr_year, ALIGN=1.0, FONT_STYLE=1, COLOR='blue')
+  txt = text(0.52, 0.87, sTa_year, ALIGN=0.0, FONT_STYLE=1, COLOR='red')
+
+  ;**************************************************
+  ; Optionally save figure to file and close window *
+  ;**************************************************
+
+  if n_elements(filename) eq 1 then plt.save, filename, WIDTH=1200, RESOL=120
+
+  if keyword_set(close) then plt.close
+
+end
+
 ;+
 ; :Description:
 ;    This procedure generates a climate diagram which shows monthly mean values of temperature and precipitation.
@@ -38,21 +180,52 @@
 ;         set to a filename to generate an encapsulated postscript output
 ;    STD_PNG: in, optional, type = string
 ;             set to a filename to generate a standard png output (without image magick)
+;    CLOSE:   in, optional, type = boolean
+;             if set then close the window after execution
 ;
 ; :Example:
-;   IDL> w_climate_diagram, [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1], NAME='Berlin',$
+;   IDL> w_climateDiagram, [45,35,40,40,55,70,55,65,45,35,50,55], [-1,0,4,8,15,17,18,17,14,9,4,1], NAME='Berlin',$
 ;        LAT=52.27, LON=13.18, HEIGHT=58, TIMEPERIOD='1961-1990', VALYEARS_TEMP=[30,30,30,30,30,30,30,30,30,30,30,30],$
 ;        VALYEARS_PRCP=[30,30,30,30,30,30,30,30,30,30,30,30]
 ;
 ; :History:
-;     Written by JaH, 2012.
+;    Written by: JaH, 2012.
+;    Modified  : 22-Mar-2019 DiS
+;                Completely revised; this routines only serves as wrapper for w_climate_diagram (see below)
 ;
 ;-
 pro w_climateDiagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HEIGHT=height, TIMEPERIOD=timeperiod, $
-                       MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
-                       VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, EPS=eps, PNG=png, STD_PNG=std_png
+                      MAX_TEMP=max_temp, MIN_TEMP=min_temp, MAX_PRCP=max_prcp, MIN_PRCP=min_prcp, $
+                      VALYEARS_TEMP=valyears_temp, VALYEARS_PRCP=valyears_prcp, EPS=eps, PNG=png, STD_PNG=std_png, $
+                      CLOSE=close
+
+  if n_elements(eps) eq 1 then $
+    w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HGT=height, PERIOD=timeperiod, $
+                       PR_UPPER=max_prcp, PR_LOWER=min_prcp, TA_UPPER=max_temp, TA_LOWER=min_temp, $
+                       FILENAME=eps, CLOSE=close
+
+  if n_elements(png) eq 1 then $
+    w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HGT=height, PERIOD=timeperiod, $
+                       PR_UPPER=max_prcp, PR_LOWER=min_prcp, TA_UPPER=max_temp, TA_LOWER=min_temp, $
+                       FILENAME=png, CLOSE=close
+
+  if n_elements(std_png) eq 1 then $
+    w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HGT=height, PERIOD=timeperiod, $
+                       PR_UPPER=max_prcp, PR_LOWER=min_prcp, TA_UPPER=max_temp, TA_LOWER=min_temp, $
+                       FILENAME=std_png, CLOSE=close
+
+  if n_elements(eps) eq 1 or n_elements(png) eq 1 or n_elements(std_png) eq 1 then return
+
+  w_climate_diagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, HGT=height, PERIOD=timeperiod, $
+                     PR_UPPER=max_prcp, PR_LOWER=min_prcp, TA_UPPER=max_temp, TA_LOWER=min_temp
   
-  labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return
+  
+  ;***********************
+  ; Old code (erroneous) *
+  ;***********************
+  
+  labels = ['J','F','M','A','M','J','J','A','S','O','N','D']
      
   if N_ELEMENTS(lat) ne 0 then begin
     _lat = STRING(lat,FORMAT='(F7.2)')
@@ -80,24 +253,27 @@ pro w_climateDiagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, H
   sumPrcp = STRING(total(precipitation), FORMAT='(I4)')
 
   ; trick
-  cgDisplay, /PIXMAP, /FREE, /WINDOW 
-  cgbarplot, precipitation, BARCOORDS=x, xstyle=9, YSTYLE=8,  yrange=[0, maxiprcp]
+  cgDisplay, 1200, 900, /PIXMAP, /FREE, /WINDOW 
+  cgbarplot, precipitation, color='blue', barnames=labels, YSTYLE=4, $
+    XSTYLE=9, $
+    position=[0.18, 0.15, 0.85, 0.78], BARCOORDS=x
   cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, YTICK_GET=yt
   WDELETE, !D.WINDOW  
   
-  cgWindow
-  cgControl, EXECUTE=0
+  cgWindow, WXSIZE=1200, WYSIZE=900
+  ;cgControl, EXECUTE=0
   cgbarplot, precipitation, color='blue', barnames=labels, YSTYLE=4, $
-     yrange=[0, maxiprcp], XSTYLE=9, $
+    XSTYLE=9, $
     position=[0.18, 0.15, 0.85, 0.78], /window
     
-  cgaxis, yaxis=0, yrange=[0, maxiprcp], color = 'Blue', /save, ytitle='precipitation [mm/m]', /window
+  cgaxis, yaxis=0, color = 'Blue', /save, ytitle='precipitation (mm/month)', /window
+;  cgaxis, yaxis=0, yrange=[0, maxiprcp], color = 'Blue', /save, ytitle='precipitation (mm/month)', /window
 
   if (N_ELEMENTS(max_prcp) ne 0)  and (N_ELEMENTS(min_prcp) ne 0) then $
      cgerrplot, x, min_prcp, max_prcp, color='dodger blue', /addcmd
     
-  cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, color = 'Red', /save ,ytitle='temperature [$\deg$C]', /window
-  cgplot, x, temperature, color='red', /overplot, /window, THICK=12
+  cgaxis, yaxis=1, yrange=[min(minitemp),max(maxitemp)], ystyle=0, color = 'Red', /save ,ytitle='air temperature ($\deg$C)', /window
+  cgplot, x, temperature, color='red', /overplot, /window, THICK=9
   
   if (N_ELEMENTS(max_temp) ne 0) and (N_ELEMENTS(min_temp) ne 0) then $
      cgerrplot, x, min_temp, max_temp, color='red',  /addcmd
@@ -129,5 +305,8 @@ pro w_climateDiagram, precipitation, temperature, NAME=name, LAT=lat, LON=lon, H
   if N_ELEMENTS(eps) ne 0 then cgControl, CREATE_PS=eps, /PS_ENCAPSULATED, /PS_METRIC
   if N_ELEMENTS(png) ne 0 then cgControl, CREATE_PNG=png, IM_RESIZE=im_resize, /IM_RASTER
   if N_ELEMENTS(std_png) ne 0 then cgControl, CREATE_PNG=std_png, IM_RASTER=0
+
+  if keyword_set(close) then cgControl, /DESTROY
   
 end
+
