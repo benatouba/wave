@@ -56,7 +56,9 @@ function w_windrose_circle, xcenter, ycenter, radius, NPTS=npts, ANGLE_RANGE=ang
 END
 
 pro w_windrose_addlegend, leginfo, TITLE=title, UNIT=unit, WINDOW=window, ADDCMD=addcmd, CHARSIZE=charsize, POSITION=position, FORMAT=format, OOB_FACTOR=oob_factor
-
+  
+  compile_opt idl2
+  
   if N_ELEMENTS(FORMAT) eq 0 then FORMAT = '(G0)'
   
   wid = cgQuery(/CURRENT, COUNT=cnt)

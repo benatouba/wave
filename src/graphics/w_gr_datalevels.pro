@@ -560,6 +560,9 @@ function w_gr_DataLevels, data, $
        uu = UNIQ(r)
        if N_ELEMENTS(uu) ne N_ELEMENTS(r) then Message, 'sorry, histequal not working with this data / n_level combination...'
        _levels = locs[r] 
+       
+;       IF MAX(_levels, loc_max) NE _max_level THEN _levels[loc_max] = _max_level ; work around to avoid error with VALUE_LOCATE - DF
+       
        is_hist = TRUE
      endif else begin   
        case dataTypeName of
@@ -589,7 +592,7 @@ function w_gr_DataLevels, data, $
     if size(colors, /n_dimensions) eq 2 then begin ;Palette
       _colors = cgColor24(colors)
     endif else begin
-      _colors = cgColor(colors)
+      _colors = cgColor(colors, /DECOMPOSED)
     endelse
   endif else begin ;Auto colors
     if N_ELEMENTS(CMIN) ne 0 then begin
@@ -625,14 +628,14 @@ function w_gr_DataLevels, data, $
 
   ; OOB colors
   if oob_bot_str then begin
-    _colors = [cgColor(oob_bot_color), _colors]
+    _colors = [cgColor(oob_bot_color, /DECOMPOSED), _colors]
   endif else begin
-    if ~ is_ooBot and oob_bot_arrow and ~ KEYWORD_SET(oob_bot_color) then _colors[0] = cgColor('white')
+    if ~ is_ooBot and oob_bot_arrow and ~ KEYWORD_SET(oob_bot_color) then _colors[0] = cgColor('white', /DECOMPOSED)
   endelse
   if oob_top_str then begin
-    _colors = [_colors, cgColor(oob_top_color)]
+    _colors = [_colors, cgColor(oob_top_color, /DECOMPOSED)]
   endif else begin
-    if ~ is_ooTop and oob_top_arrow and ~ KEYWORD_SET(oob_top_color) then _colors[N_ELEMENTS(_colors)-1] = cgColor('white')
+    if ~ is_ooTop and oob_top_arrow and ~ KEYWORD_SET(oob_top_color) then _colors[N_ELEMENTS(_colors)-1] = cgColor('white', /DECOMPOSED)
   endelse
       
   ; Neutral Color
@@ -648,6 +651,7 @@ function w_gr_DataLevels, data, $
   ; some common sense
   _levels = _levels[SORT(_levels)]
   if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then Message, 'Levels are not unique?'
+;  if N_ELEMENTS(UNIQ(_levels)) ne N_ELEMENTS(_levels) then return, !NULL
   
   is_ooTopColor = oob_top_arrow
   is_ooBotColor = oob_bot_arrow
