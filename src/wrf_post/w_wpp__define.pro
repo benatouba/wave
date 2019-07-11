@@ -858,7 +858,11 @@ function w_WPP::check_filelist, year, $
   if self.domain eq 1 then h=3 else h=1
   if KEYWORD_SET(month) then begin
     t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
-    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    if month eq 12 then begin
+      t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+    endif else begin
+      t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    endelse   
     ndays = GEN_month_days(month, year)
     pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'+ $
       STRING(month, FORMAT='(I02)')+'*'
@@ -1244,7 +1248,11 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
   ptr_free, self.active_index
   if KEYWORD_SET(month) then begin
     t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
-    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    if month eq 12 then begin
+      t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+    endif else begin
+      t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    endelse
   endif else begin
     t0 = QMS_TIME(year=year, month=01, day=01, hour=0)
     t1 = QMS_TIME(year=year+1, month=01, day=01, hour=0)  
