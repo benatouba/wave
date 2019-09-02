@@ -1,10 +1,61 @@
 ;-----------------------------------------------------------------------
+;+
+; NAME:
+;       w_Climate_Diagram
 ;
-; Last update: 19.03.2019 DiS
+; PURPOSE:
+;       This procedure plots a climate diagram from monthly sums of precipitation and
+;       monthly mean air temperature for the twelve calender months (starting from January).
+;       Optionally lowest and highest monthly values of precipitation and air temperature
+;       may be plotted, too.
+;       
+;       Meta-data for the station and the time period may be plotted, if specified in the 
+;       corresponding keywords.
+;       
+;       Axis scaling may either be auto-computed or specified by the user. The plot is either
+;       shown in a window or s
+;
+; CATEGORY:
+;       Climatology
+;
+; CALLING SEQUENCE:
+;       w_Climate_Diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=lat, HGT=hgt,      $
+;                          PR_LOWER=Pr_lower, PR_UPPER=Pr_upper, TA_LOWER=Ta_lower, TA_UPPER=Ta_upper, $
+;                          PR_RANGE=Pr_range, TA_RANGE=Ta_range,                                       $
+;                          FILENAME=filename, /CLOSE, PLOT_OBJ=plot_obj
+;
+; INPUT:
+;       Pr_clim: monthly sums of precipitation (mm/month) for the twelve calender months 
+;       Ta_clim: monthly mean air temperature (deg C) for the twelve calender months
+;
+; KEYWORDS:
+;       name     (I): string with name of the station to be shown in title of the plot
+;       period   (I): string with time period for which the climate data are valid 
+;       lon      (I): station longitude (decimal degrees) 
+;       lat      (I): station latitude (decimal degrees)
+;       hgt      (I): station height (m asl)
+;       Pr_lower (I): lowest monthly precipition (mm/month) in period
+;       Pr_upper (I): highest monthly precipition (mm/month) in period
+;       Ta_lower (I): lowest monthly air temperature (deg C) in period
+;       Ta_upper (I): highest monthly precipition (deg C) in period
+;       Pr_range (I): axis range for monthly precipition (mm/month)
+;       Ta_range (I): axis range for monthly air temperature (deg C)
+;       filename (I): string with file name (including extension) for saving the plot to a file
+;       /CLOSE   (I): set keyword to close the plot file (the plot is not shown in a window)
+;       /SHOW    (I): set keyword to show the plot even when a file name is specified
+;       plot_obj (O): named variable in which the plot object is returned if shown
+;
+; MODIFICATION HISTORY:
+;       Written by: D. Scherer 2019
+;       Modified:   05-Apr-2019 DiS
+;                   Added to TNT 2019.0
+;-
+;-----------------------------------------------------------------------
 
-pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=lat, HGT=hgt,      $
-  PR_UPPER=Pr_upper, PR_LOWER=Pr_lower, TA_UPPER=Ta_upper, TA_LOWER=Ta_lower, $
-  FILENAME=filename, CLOSE=close
+pro w_Climate_Diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=lat, HGT=hgt,      $
+                       PR_LOWER=Pr_lower, PR_UPPER=Pr_upper, TA_LOWER=Ta_lower, TA_UPPER=Ta_upper, $
+                       PR_RANGE=Pr_range, TA_RANGE=Ta_range,                                       $
+                       FILENAME=filename, CLOSE=close, SHOW=show, PLOT_OBJ=plot_obj       
 
   ;******************
   ; Check arguments *
@@ -19,12 +70,12 @@ pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=
   ; Check keywords *
   ;*****************
 
-  if n_elements(name) ne 1 then title = '' else title = strtrim(name, 2)
+  if n_elements(name)   ne 1 then title = '' else title = strtrim(name, 2)
   if n_elements(period) eq 1 then title += ' (' + strtrim(period, 2) + ')'
 
-  if n_elements(lon)  ne 1 then slon  = '' else slon  = str_equiv(lon)
-  if n_elements(lat)  ne 1 then slat  = '' else slat  = str_equiv(lat)
-  if n_elements(hgt)  ne 1 then shgt  = '' else shgt  = str_equiv(round(hgt))
+  if n_elements(lon) ne 1 then slon = '' else slon = str_equiv(lon)
+  if n_elements(lat) ne 1 then slat = '' else slat = str_equiv(lat)
+  if n_elements(hgt) ne 1 then shgt = '' else shgt = str_equiv(round(hgt))
 
   if n_elements(lon) eq 1 or n_elements(lat) eq 1 or n_elements(hgt) eq 1 then begin
     subtitle = '('
@@ -36,11 +87,7 @@ pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=
     subtitle = ''
   endelse
 
-  months = ['J','F','M','A','M','J','J','A','S','O','N','D']
-
-  ;********************
-  ; Bounds specified? *
-  ;********************
+  ; Bounds specified?
 
   do_Pr_bounds = n_elements(Pr_upper) eq 12 and n_elements(Pr_lower) eq 12
   do_Ta_bounds = n_elements(Ta_upper) eq 12 and n_elements(Ta_lower) eq 12
@@ -65,14 +112,46 @@ pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=
     Ta_min = Ta_mean
   endelse
 
-  ;***************
-  ; Axis scaling *
-  ;***************
+  ; Axis scaling
 
-  Pr_l =   0.
-  Pr_h = 100.*ceil(max(Pr_max)/100.)
-  Ta_l = 5.*floor(min(Ta_min)/5.)
-  Ta_h = 5.*ceil(max(Ta_max)/5.)
+  if arg_okay(Pr_range, /NUMERIC, N_ELEM=2) then begin
+    Pr_l = Pr_range[0]
+    Pr_h = Pr_range[1]
+  endif else begin
+    Pr_l = 0.
+    Pr_h = 20.*ceil(max(Pr_max)/20.)
+  endelse
+
+  if arg_okay(Ta_range, /NUMERIC, N_ELEM=2) then begin
+    Ta_l = Ta_range[0]
+    Ta_h = Ta_range[1]
+  endif else begin
+    Ta_l = 5.*floor(min(Ta_min)/5.)
+    Ta_h = 5.*ceil(max(Ta_max)/5.)
+  endelse
+
+  ; Output
+
+  do_save = arg_okay(filename, N_ELEM=1, TNAME='STRING')
+  if do_save then fname = strtrim(filename, 2)
+
+  buffer = do_save && ~ keyword_set(show)
+
+  ;***********************
+  ; Plot climate diagram *
+  ;***********************
+
+  ; General settings
+
+  resol  = 120                   ; dpi
+  width  = resol*18.3/2.54       ; 183 mm two-column print width (Nature)
+  height = 0.75*width            ; 4:3 aspect ratio
+  dim    = [width,height]        ; size of plot window
+  pos    = [0.06,0.03,0.94,0.85] ; position of graph in plot
+
+  x      = 1 + indgen(12)
+  months = ['J','F','M','A','M','J','J','A','S','O','N','D']
+  xrange = [0.5,12.5]
 
   ;*********************
   ; Plot precipitation *
@@ -80,9 +159,10 @@ pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=
 
   Pr_title = 'precipitation (mm/month)'
 
-  plt = barplot(1+indgen(12), Pr_mean, YRANGE=[Pr_l,Pr_h], FILL_COLOR='blue', $
-    YTITLE=Pr_title, DIM=[1200,900], POS=[0.06,0.03,0.94,0.85], AXIS_STYLE=1, $
-    XRANGE=[0.5,12.5], XMAJOR=12, XTICKVAL=1+indgen(12), XTICKNAME=months, XTICKLEN=0.02, XMINOR=0)
+  plt = barplot(x, Pr_mean, FILL_COLOR='blue', AXIS_STYLE=1,                         $
+    XTICKVAL=x, XTICKNAME=months, XRANGE=xrange, XMAJOR=12, XMINOR=0, XTICKLEN=0.02, $
+    YTITLE=Pr_title, YRANGE=[Pr_l,Pr_h],                                             $
+    DIM=dim, POS=pos, BUFFER=buffer)
 
   if do_Pr_bounds then begin
     plt = errorplot(1+indgen(12), 0.5*(Pr_max+Pr_min), 0.5*(Pr_max-Pr_min), /OVERPLOT, $
@@ -134,7 +214,9 @@ pro w_climate_diagram, Pr_clim, Ta_clim, NAME=name, PERIOD=period, LON=lon, LAT=
   ; Optionally save figure to file and close window *
   ;**************************************************
 
-  if n_elements(filename) eq 1 then plt.save, filename, WIDTH=1200, RESOL=120
+  if do_save eq 1 then plt.save, fname, WIDTH=width, RESOL=resol
+
+  plot_obj = plt
 
   if keyword_set(close) then plt.close
 
