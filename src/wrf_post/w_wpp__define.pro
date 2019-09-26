@@ -1124,9 +1124,9 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
       p1 = where(*self.active_time eq wt1, cnt)
       if cnt ne 1 then Message, 'T1 not found?'
       nt = p1-p0+1
-      if self.domain eq 1 then if nt ne 8 then Message, 'Times?'
-      if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
-      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg.'      
+      if self.domain eq 1 then if nt ne 8 then Message, 'Expected 8 time steps. Found: '+str_equiv(nt)
+      if self.domain ge 2 then if nt ne 24 then Message, 'Expected 24 time steps. Found: '+str_equiv(nt)
+      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg. (Unexpected time in file)'
     endif
     
     if self.active_valid then begin
