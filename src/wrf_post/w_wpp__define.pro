@@ -1012,6 +1012,13 @@ end
 ;-
 pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
 
+  if n_elements(year) gt 1 then begin
+    for iy=0, n_elements(year)-1 do begin
+      self.process_h, year[iy], PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
+    endfor
+    return
+  endif
+
   ; Set up environnement and Error handling
   @WAVE.inc
   COMPILE_OPT IDL2
@@ -1203,6 +1210,8 @@ end
 ;    Process one year into daily, monthly and yearly files (must follow a call from process_h)
 ;    
 ; :Params:
+;    agg:  in, required, type=string
+;          which aggregation level ("d", "m", or "y")
 ;    year: in, required, type=numeric
 ;          the year to process
 ;
@@ -1214,6 +1223,13 @@ end
 ;
 ;-
 pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
+
+  if n_elements(year) gt 1 then begin
+    for iy=0, n_elements(year)-1 do begin
+      self.process_mean, agg, year[iy], PRINT=print, FORCE=force, MONTH = month
+    endfor
+    return
+  endif
 
   ; Set up environnement and Error handling
   @WAVE.inc
