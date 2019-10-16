@@ -858,7 +858,11 @@ function w_WPP::check_filelist, year, $
   if self.domain eq 1 then h=3 else h=1
   if KEYWORD_SET(month) then begin
     t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
-    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    if month eq 12 then begin
+      t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+    endif else begin
+      t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    endelse   
     ndays = GEN_month_days(month, year)
     pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ STRING(year, FORMAT='(I4)') +'*'+ $
       STRING(month, FORMAT='(I02)')+'*'
@@ -1129,7 +1133,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
       nt = p1-p0+1
       if self.domain eq 1 then if nt ne 8 then Message, 'Expected 8 time steps. Found: '+str_equiv(nt)
       if self.domain ge 2 then if nt ne 24 then Message, 'Expected 24 time steps. Found: '+str_equiv(nt)
-      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg. (Unexpected time in file)'      
+      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg. (Unexpected time in file)'
     endif
     
     if self.active_valid then begin
@@ -1260,7 +1264,11 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
   ptr_free, self.active_index
   if KEYWORD_SET(month) then begin
     t0 = QMS_TIME(year=year,month=month,day=1,hour=h)
-    t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    if month eq 12 then begin
+      t1 = QMS_TIME(year=year+1,month=1,day=1,hour=0)
+    endif else begin
+      t1 = QMS_TIME(year=year,month=month+1,day=1,hour=0)
+    endelse
   endif else begin
     t0 = QMS_TIME(year=year, month=01, day=01, hour=0)
     t1 = QMS_TIME(year=year+1, month=01, day=01, hour=0)  
