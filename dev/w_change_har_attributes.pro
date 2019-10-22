@@ -127,7 +127,7 @@ function change_har_attributes_file, file
   LEVEL_INFO = sObj->GetGlobalAttrValue('LEVEL_INFO')
   
   projection = 'Lambert Conformal Conic' 
-  title = 'High Asia Reanalysis - HAR V1 - ' + dStr
+  title = 'HAR V2 ' + dStr
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, '.00000000', '.0')
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, ',      ', ', ')
   
@@ -261,10 +261,10 @@ pro w_change_har_attributes
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  dir = '/cfs/tip-pr1/HAR/d10km/'
+  dir = '/home/wang/Data/HARV2/d10km/m/2d/'
   
   ; files = FILE_SEARCH(dir, '*tibet*.nc', COUNT=cnt)
-  files = FILE_SEARCH(dir, '*har*.nc', COUNT=cnt)
+  files = FILE_SEARCH(dir, '*HARV2*.nc', COUNT=cnt)
   ok = LONARR(cnt)
   
   cgProgressBar = Obj_New("CGPROGRESSBAR", /Cancel)
