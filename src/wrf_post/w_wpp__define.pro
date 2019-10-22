@@ -1016,6 +1016,13 @@ end
 ;-
 pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
 
+  if n_elements(year) gt 1 then begin
+    for iy=0, n_elements(year)-1 do begin
+      self.process_h, year[iy], PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
+    endfor
+    return
+  endif
+
   ; Set up environnement and Error handling
   @WAVE.inc
   COMPILE_OPT IDL2
@@ -1124,9 +1131,9 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
       p1 = where(*self.active_time eq wt1, cnt)
       if cnt ne 1 then Message, 'T1 not found?'
       nt = p1-p0+1
-      if self.domain eq 1 then if nt ne 8 then Message, 'Times?'
-      if self.domain ge 2 then if nt ne 24 then Message, 'Times?'
-      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg.'      
+      if self.domain eq 1 then if nt ne 8 then Message, 'Expected 8 time steps. Found: '+str_equiv(nt)
+      if self.domain ge 2 then if nt ne 24 then Message, 'Expected 24 time steps. Found: '+str_equiv(nt)
+      if TOTAL(*self.active_index - (INDGEN(nt)+p0[0])) ne 0 then Message, 'Aaaarg. (Unexpected time in file)'
     endif
     
     if self.active_valid then begin
@@ -1207,6 +1214,8 @@ end
 ;    Process one year into daily, monthly and yearly files (must follow a call from process_h)
 ;    
 ; :Params:
+;    agg:  in, required, type=string
+;          which aggregation level ("d", "m", or "y")
 ;    year: in, required, type=numeric
 ;          the year to process
 ;
@@ -1218,6 +1227,13 @@ end
 ;
 ;-
 pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
+
+  if n_elements(year) gt 1 then begin
+    for iy=0, n_elements(year)-1 do begin
+      self.process_mean, agg, year[iy], PRINT=print, FORCE=force, MONTH = month
+    endfor
+    return
+  endif
 
   ; Set up environnement and Error handling
   @WAVE.inc
