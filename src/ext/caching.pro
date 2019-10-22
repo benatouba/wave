@@ -81,6 +81,9 @@ pro caching_log, text, LOGGER=logger, PRINT=print, QUIET=quiet
 end
 
 pro change_year_1000_to_1900, origname
+  if ~file_test(origname) then begin
+    message, "File not found: "+origname
+  endif
   nc = NCDF_FILE(origname, /MODIFY)
   if fix(nc.GetGlobalAttrValue("JULYR")) lt 1900 then begin
     nc.WriteGlobalAttr, "JULYR", 900 + fix(nc.GetGlobalAttrValue("JULYR"))
@@ -88,8 +91,8 @@ pro change_year_1000_to_1900, origname
     nc.WriteGlobalAttr, "START_DATE", '19'+strmid(nc.GetGlobalAttrValue("START_DATE"), 2)
     nc.WriteVarAttr, "XTIME", "units", strmid(nc.getVarAttrValue("XTIME", "units"), 0, 14)+'19'+strmid(nc.getVarAttrValue("XTIME", "units"), 16)
     nc.WriteVarAttr, "XTIME", "description", strmid(nc.getVarAttrValue("XTIME", "description"), 0, 14)+'19'+strmid(nc.getVarAttrValue("XTIME", "description"), 16)
-    nc.Close_File
-  endif else nc.Close_File
+  endif
+  nc.Close_File
 end
 
 ;+
@@ -193,6 +196,7 @@ function caching, filename , $
         if err[0] ne '' then message, 'Error on uncompress: ' + err
         outname = strcompress((strsplit(ret[1], ':', /extract))[1], /remove_all)
         if ~ file_test(outname) then message, 'Error on uncompress filename'
+        change_year_1000_to_1900, outname
         save, outname, filename=lfile
         ; if it was deleted by someone else
         if file_test(lockfile) then file_delete, lockfile
@@ -239,6 +243,7 @@ function caching, filename , $
     endif
   endif
   
+  change_year_1000_to_1900, cachefile
   ; Normal case  
   if keyword_set(delete) and file_test(cachefile) then begin
     file_delete, cachefile
