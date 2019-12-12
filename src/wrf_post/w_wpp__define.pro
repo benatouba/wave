@@ -1230,7 +1230,7 @@ pro w_WPP::process_means, agg, year, PRINT=print, FORCE=force, MONTH = month
 
   if n_elements(year) gt 1 then begin
     for iy=0, n_elements(year)-1 do begin
-      self.process_mean, agg, year[iy], PRINT=print, FORCE=force, MONTH = month
+      self.process_means, agg, year[iy], PRINT=print, FORCE=force, MONTH = month
     endfor
     return
   endif
