@@ -18,9 +18,12 @@
 ;           if set (default), the log messages are printed in the console as well
 ;    CACHING: in, optional, type=boolean, default=1
 ;             if set (default), the input files are first copied to a local cache directory before reading
-;
+;    YEAR_OFFSET: in, optional, type=int, default=0
+;             Add this year when reading PP files to avoid issues with out-of-range year errors.
+;             This changes the PP files in cache. The original PP files are not touched. If CACHING is not
+;             set, an error is raised.
 ;-
-Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
+Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching, YEAR_OFFSET=year_offset
 
   ; Set up environnement and Error handling
   @WAVE.inc
@@ -37,6 +40,12 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
     endelse
     return, 0
   endif
+  
+  year_off = arg_default(0, year_offset)
+  if year_off ne 0 and ~keyword_set(CACHING) then begin
+    message, "YEAR_OFFSET may only be used if CACHING is set! This prevents changing original PP files."
+  endif
+  self.year_offset = year_off
   
   ; Check if everything needed is here  
   if N_ELEMENTS(NAMELIST) eq 0 then namelist = DIALOG_PICKFILE(TITLE='Please select the namelist.wpp file', /MUST_EXIST, FILTER='*.wpp')
@@ -69,9 +78,11 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching
   if ~ self->_list_files() then MESSAGE, 'No files found. Check the directory of the search pattern'  
   self.Logger->AddText, 'Found ' + str_equiv(self.n_ifiles) + ' files', PRINT=print
   self.Logger->AddText, '', PRINT=print
+  self.ifile_year_offset_done = PTR_NEW(bytarr(self.n_ifiles))
   
   ; Parse the variable files. Need a WRF template for this
   if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath) else file = (*self.ifiles)[0]
+  w_WPP_change_year_in_files, file, self.year_offset
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
   if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE)  
   self.Logger->AddText, 'Parse variable definitions ...', PRINT=print  
@@ -957,6 +968,8 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
   ; Tpl Object  
   if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
     else file = (*self.ifiles)[0]
+  w_WPP_change_year_in_files, file, self.year_offset
+  (*self.ifile_year_offset_done)[0] = 1
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
  
   self.logger->addText, 'Generating product files ...', PRINT=print
@@ -976,6 +989,7 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
 
   OBJ_DESTROY, self.active_wrf    
   if self.do_cache then file = caching((*self.ifiles)[0], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+  (*self.ifile_year_offset_done)[0] = 0 ; Cached file was deleted here.
       
   delta =  LONG(SYSTIME(/SECONDS) - logt0)
   deltah =  delta / 60L / 60L
@@ -1086,6 +1100,13 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   ; Tpl Object  
   if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
     else file = files[0]
+    
+  w_WPP_change_year_in_files, file, self.year_offset ; This is ok here, because if CACHING is not TRUE then w_WPP::init won't work
+  p = where(equal(file, *self.ifiles), cnt)
+  if cnt ne 1 then message, "file cached file not found in self.ifiles"
+  (*self.ifile_year_offset_done)[p] = 1
+    
+    
   self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
   self.active_valid = valid[0]
   
@@ -1114,6 +1135,12 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     if f ne 0 then begin
       if self.do_cache then file = caching(files[f], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
         else file = files[f]
+      
+      w_WPP_change_year_in_files, file, self.year_offset ; This is ok here, because if CACHING is not TRUE then w_WPP::init won't work
+      p = where(equal(file, *self.ifiles), cnt)
+      if cnt ne 1 then message, "file cached file not found in self.ifiles"
+      (*self.ifile_year_offset_done)[p] = 1  
+      
       self.active_wrf = OBJ_NEW('w_WRF', FILE=file)
       self.active_valid = valid[f]
     endif
@@ -1157,9 +1184,14 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     ;Clean
     OBJ_DESTROY, self.active_wrf    
     if self.do_cache then begin     
-     del = f eq N_ELEMENTS(files)-1
-     if ~ del then del = self.active_valid or valid[f+1]
-     if del then file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+      del = f eq N_ELEMENTS(files)-1
+      if ~ del then del = self.active_valid or valid[f+1]
+      if del then begin
+        file = caching(files[f], CACHEPATH=self.cachepath, /DELETE, logger=self.logger, PRINT=print)
+        p = where(equal(files[f], *self.ifiles), cnt)
+        if cnt ne 1 then message, "cached file not found in self.ifiles"
+        (*self.ifile_year_offset_done)[p] = 0
+      endif
     endif
     
     ; Log
@@ -1397,6 +1429,37 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
   
 end
 
+; year_offset = 900
+pro w_WPP_change_year_in_files, file, year_offset
+  compile_opt idl2
+  
+  if year_offset eq 0 then return
+  
+  nc = NCDF_FILE(file, /MODIFY)
+  
+  nc.WriteGlobalAttr, "JULYR", year_offset + nc.GetGlobalAttrValue("JULYR")
+  
+  orig = fix(strmid(nc.GetGlobalAttrValue("SIMULATION_START_DATE"), 0, 4))
+  new = string(orig + year_offset, FORMAT='(I04)') + strmid(nc.GetGlobalAttrValue("SIMULATION_START_DATE"), 4)
+  nc.WriteGlobalAttr, "SIMULATION_START_DATE", new
+  
+  orig = fix(strmid(nc.GetGlobalAttrValue("START_DATE"), 0, 4))
+  new = string(orig + year_offset, FORMAT='(I04)') + strmid(nc.GetGlobalAttrValue("START_DATE"), 4)
+  nc.WriteGlobalAttr, "START_DATE", new
+  
+  orig = fix(strmid(nc.GetVarAttrValue("XTIME", "units"), 14, 4))
+  new = strmid(nc.getVarAttrValue("XTIME", "units"), 0, 14) + string(orig + year_offset, FORMAT="(I04)") + $
+    strmid(nc.getVarAttrValue("XTIME", "units"), 18)
+  nc.WriteVarAttr, "XTIME", "units", new
+
+  orig = fix(strmid(nc.GetVarAttrValue("XTIME", "description"), 14, 4))
+  new = strmid(nc.getVarAttrValue("XTIME", "description"), 0, 14) + string(orig + year_offset, FORMAT="(I04)") + $
+    strmid(nc.getVarAttrValue("XTIME", "description"), 18)
+  nc.WriteVarAttr, "XTIME", "description", new
+  
+  nc.Close_File
+end
+
 ;+
 ;   Class definition module. 
 ;
@@ -1459,7 +1522,9 @@ pro w_WPP__Define, class
     n_pressure_levels     : 0L           ,  $ ; Number of pressure levels
     pressure_levels       : PTR_NEW()    ,  $ ; From the namelist: pressure levels
     n_vars                : 0L           ,  $ ; Number or variables
-    vars                  : PTR_NEW()       $ ; Array of {w_WPP_var}
+    vars                  : PTR_NEW()    ,  $ ; Array of {w_WPP_var}
+    year_offset           : 0L           ,  $ ; Year to be added to date in PP files (cf. documentation of init method)
+    ifile_year_offset_done: PTR_NEW()       $ ; For each ifile: 1 if year_offset has been added, 0 otherwise
     }
    
 END
