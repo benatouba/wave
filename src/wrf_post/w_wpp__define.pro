@@ -40,13 +40,7 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching, YEAR_OFFS
     endelse
     return, 0
   endif
-  
-  year_off = arg_default(0, year_offset)
-  if year_off ne 0 and ~keyword_set(CACHING) then begin
-    message, "YEAR_OFFSET may only be used if CACHING is set! This prevents changing original PP files."
-  endif
-  self.year_offset = year_off
-  
+    
   ; Check if everything needed is here  
   if N_ELEMENTS(NAMELIST) eq 0 then namelist = DIALOG_PICKFILE(TITLE='Please select the namelist.wpp file', /MUST_EXIST, FILTER='*.wpp')
   if namelist eq '' then Message, WAVE_Std_Message(/FILE)  
@@ -54,6 +48,12 @@ Function w_WPP::Init, NAMELIST=namelist, PRINT=print, CACHING=caching, YEAR_OFFS
   if N_ELEMENTS(CACHING) eq 0 then self.do_cache = 1B else self.do_cache = caching
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   if ~ self->_Parse_Namelist() then Message, 'Unable to parse the namelist file. Please check it.'
+  
+  year_off = arg_default(0, year_offset)
+  if year_off ne 0 and ~self.do_cache then begin
+    message, "YEAR_OFFSET may only be used if CACHING is set! This prevents changing original PP files."
+  endif
+  self.year_offset = year_off
   
   ; Let's go
   if self.do_cache then begin
