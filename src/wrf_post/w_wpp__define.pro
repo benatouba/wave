@@ -1399,7 +1399,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
   endif
   
   n_year = N_ELEMENTS(year) - 1
-  if i_ncore eq 1 or n_year eq 1 then begin
+  if i_ncore eq 1 or n_year eq 0 then begin
     self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
     self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
   endif else begin
@@ -1409,7 +1409,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
     
     codes = ['Idle','Executing','Completed','Error','Aborted']
     status = replicate(1, i_ncore)
-    br = objarr(i_ncore)
+    processes = objarr(i_ncore)
     stride = n_year / fix(i_ncore) ; how many years are processed by a single cpu
     for i=0, i_ncore - 1 do begin
       
@@ -1421,17 +1421,17 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
         i_years = year[start : ende]
       endelse
       ; Start a new subprocess
-      br[i] = IDL_IDLbridge()
-      br[i] -> EXECUTE, '@WAVEstart.mac'
-      br[i] -> SetVar, 'namelist', self.namelist
-      br[i] -> SetVar, 'years', i_years
-      br[i] -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
-      br[i] -> EXECUTE, "wpp -> process, years", /NOWAIT
+      processes[i] = IDL_IDLbridge()
+      processes[i] -> EXECUTE, '@WAVEstart.mac'
+      processes[i] -> SetVar, 'namelist', self.namelist
+      processes[i] -> SetVar, 'years', i_years
+      processes[i] -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
+      processes[i] -> EXECUTE, "wpp -> process, years", /NOWAIT
     endfor
     while any_true(status eq 1) do begin
       wait, 60*30
       for i=0, i_ncore-1 do begin
-        status[i] = br[i] -> Status()
+        status[i] = processes[i] -> Status()
       endfor
     endwhile
     
