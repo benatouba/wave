@@ -1422,16 +1422,17 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
       endelse
       ; Start a new subprocess
       processes[i] = IDL_IDLbridge()
-      processes[i] -> EXECUTE, '@WAVEstart.mac'
-      processes[i] -> SetVar, 'namelist', self.namelist
-      processes[i] -> SetVar, 'years', i_years
-      processes[i] -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
-      processes[i] -> EXECUTE, "wpp -> process, years", /NOWAIT
+      (processes[i]) -> EXECUTE, "!PATH = '" + !PATH + "'"
+      (processes[i]) -> EXECUTE, '@WAVEstart.mac'
+      (processes[i]) -> SetVar, 'namelist', self.namelist
+      (processes[i]) -> SetVar, 'years', i_years
+      (processes[i]) -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
+      (processes[i]) -> EXECUTE, "wpp -> process, years", /NOWAIT
     endfor
     while any_true(status eq 1) do begin
       wait, 60*30
       for i=0, i_ncore-1 do begin
-        status[i] = processes[i] -> Status()
+        status[i] = (processes[i]) -> Status()
       endfor
     endwhile
     
