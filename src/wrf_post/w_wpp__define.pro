@@ -1421,10 +1421,10 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
         i_years = year[start : ende]
       endelse
       ; Start a new subprocess
-      processes[i] = IDL_IDLbridge()
+      processes[i] = IDL_IDLbridge(OUTPUT=log_directory + "/log_for_core_"+str_equiv(i)+".txt")
       (processes[i]) -> EXECUTE, "!PATH = '" + !PATH + "'"
       (processes[i]) -> EXECUTE, '@WAVEstart.mac'
-      (processes[i]) -> SetVar, 'namelist', self.namelist
+      (processes[i]) -> SetVar, 'namelist', self.namelist_file
       (processes[i]) -> SetVar, 'years', i_years
       (processes[i]) -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
       (processes[i]) -> EXECUTE, "wpp -> process, years", /NOWAIT
