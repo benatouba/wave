@@ -1398,8 +1398,8 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
     message, "Parallel processing is only supported for whole years"
   endif
   
-  n_year = N_ELEMENTS(year) - 1
-  if i_ncore eq 1 or n_year eq 0 then begin
+  n_year = N_ELEMENTS(year)
+  if i_ncore eq 1 or n_year eq 1 then begin
     self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
     self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
   endif else begin
@@ -1410,27 +1410,28 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
     codes = ['Idle','Executing','Completed','Error','Aborted']
     status = replicate(1, i_ncore)
     processes = objarr(i_ncore)
-    stride = n_year / fix(i_ncore) ; how many years are processed by a single cpu
+    is_started = BYTARR(n_years)
     for i=0, i_ncore - 1 do begin
-      
-      start = i*stride + i
-      ende =  start+stride
-      if ende gt n_year then begin
-        i_years = year[start:*]
-      endif else begin
-        i_years = year[start : ende]
-      endelse
-      ; Start a new subprocess
       processes[i] = IDL_IDLbridge(OUTPUT=self.log_directory + "/log_for_core_"+str_equiv(i)+".txt")
       (processes[i]) -> EXECUTE, "!PATH = '" + !PATH + "'"
       (processes[i]) -> EXECUTE, '@WAVEstart.mac'
       (processes[i]) -> SetVar, 'namelist', self.namelist_file
-      (processes[i]) -> SetVar, 'years', i_years
       (processes[i]) -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
-      (processes[i]) -> EXECUTE, "wpp -> process, years", /NOWAIT
     endfor
-    while any_true(status eq 1) do begin
-      wait, 60*30
+    while any_true(status eq 1) and any_true(is_started eq 0) do begin
+      p_not_started = where(is_started eq 0, cnt_not_started)
+      p_idle = where(status eq 0, cnt_idle)
+      if cnt_idle ne 0 then begin
+        n_todo = min(cnt_idle, cnt_not_started) 
+        for i_idle=0, n_todo -1 do begin
+          p_idx = p_idle[i_idle]
+          i_year = years[p_not_started[i_idle]]
+          print, "core "+str_equiv(p_idx)+" starts year "+str_equiv(i_year)
+          (processes[p_idx]) -> EXECUTE, "wpp -> process, " + str_equiv(i_year), /NOWAIT
+          is_started[p_not_started[i_idle]] = 1 
+        endfor
+      endif
+      wait, 60*15
       for i=0, i_ncore-1 do begin
         status[i] = (processes[i]) -> Status()
       endfor
