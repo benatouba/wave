@@ -1390,11 +1390,52 @@ end
 ;                        are missing (dangerous)
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, N_CORE=n_core
 
-  self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
-  self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
+  i_ncore = arg_default(1, n_core)
+  i_print = arg_default(1, print) 
+  if N_ELEMENTS(MONTH) gt 0 and i_ncore ne 1 then begin
+    message, "Parallel processing is only supported for whole years"
+  endif
   
+  n_year = N_ELEMENTS(year) - 1
+  if i_ncore eq 1 or n_year eq 1 then begin
+    self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+    self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
+  endif else begin
+    if i_ncore gt n_year then begin
+      i_ncore = n_year ; number of cores can not be higher then number of years
+    endif
+    
+    codes = ['Idle','Executing','Completed','Error','Aborted']
+    status = replicate(1, i_ncore)
+    br = objarr(i_ncore)
+    stride = n_year / fix(i_ncore) ; how many years are processed by a single cpu
+    for i=0, i_ncore - 1 do begin
+      
+      start = i*stride + i
+      ende =  start+stride
+      if ende gt n_year then begin
+        i_years = year[start:*]
+      endif else begin
+        i_years = year[start : ende]
+      endelse
+      ; Start a new subprocess
+      br[i] = IDL_IDLbridge()
+      br[i] -> EXECUTE, '@WAVEstart.mac'
+      br[i] -> SetVar, 'namelist', self.namelist
+      br[i] -> SetVar, 'years', i_years
+      br[i] -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
+      br[i] -> EXECUTE, "wpp -> process, years", /NOWAIT
+    endfor
+    while any_true(status eq 1) do begin
+      wait, 60*30
+      for i=0, i_ncore-1 do begin
+        status[i] = br[i] -> Status()
+      endfor
+    endwhile
+    
+  endelse
 end
 
 ;+
