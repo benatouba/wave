@@ -1388,6 +1388,9 @@ end
 ;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
 ;                        if set the programm will not ask you for permission if files 
 ;                        are missing (dangerous)
+;    N_CORE: in, optional
+;            if set multiple cores are used. Each core process one year at a time.
+;            an extra core is used to periodically check the status of each core 
 ;
 ;-
 pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, N_CORE=n_core
@@ -1436,7 +1439,6 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
         status[i] = (processes[i]) -> Status()
       endfor
     endwhile
-    
   endelse
 end
 
