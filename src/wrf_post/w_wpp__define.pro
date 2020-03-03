@@ -1411,9 +1411,9 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
     endif
     
     codes = ['Idle','Executing','Completed','Error','Aborted']
-    status = replicate(1, i_ncore)
+    status = replicate(0, i_ncore)
     processes = objarr(i_ncore)
-    is_started = BYTARR(n_years)
+    is_started = BYTARR(n_year)
     for i=0, i_ncore - 1 do begin
       processes[i] = IDL_IDLbridge(OUTPUT=self.log_directory + "/log_for_core_"+str_equiv(i)+".txt")
       (processes[i]) -> EXECUTE, "!PATH = '" + !PATH + "'"
@@ -1421,19 +1421,21 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
       (processes[i]) -> SetVar, 'namelist', self.namelist_file
       (processes[i]) -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
     endfor
-    while any_true(status eq 1) and any_true(is_started eq 0) do begin
+    first_run = 1
+    while first_run or (any_true(status eq 1) and any_true(is_started eq 0)) do begin
       p_not_started = where(is_started eq 0, cnt_not_started)
       p_idle = where(status eq 0, cnt_idle)
       if cnt_idle ne 0 then begin
         n_todo = min(cnt_idle, cnt_not_started) 
         for i_idle=0, n_todo -1 do begin
           p_idx = p_idle[i_idle]
-          i_year = years[p_not_started[i_idle]]
+          i_year = year[p_not_started[i_idle]]
           print, "core "+str_equiv(p_idx)+" starts year "+str_equiv(i_year)
           (processes[p_idx]) -> EXECUTE, "wpp -> process, " + str_equiv(i_year), /NOWAIT
           is_started[p_not_started[i_idle]] = 1 
         endfor
       endif
+      first_run = 0
       wait, 60*15
       for i=0, i_ncore-1 do begin
         status[i] = (processes[i]) -> Status()
