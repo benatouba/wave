@@ -127,7 +127,7 @@ function change_har_attributes_file, file
   LEVEL_INFO = sObj->GetGlobalAttrValue('LEVEL_INFO')
   
   projection = 'Lambert Conformal Conic' 
-  title = 'HAR V2 ' + dStr
+  title = 'HAR v2 ' + dStr
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, '.00000000', '.0')
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, ',      ', ', ')
   
