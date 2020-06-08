@@ -616,7 +616,7 @@ function w_Map::_draw_points, WINDOW = window
     p = (*self.points)[i]
     if p.coord[0] lt 0 or p.coord[0] gt self.Xsize then continue
     if p.coord[1] lt 0 or p.coord[1] gt self.Ysize then continue
-    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window
+    cgPlots, p.coord[0], p.coord[1], /DATA,  Color=p.color, PSYM=p.psym, SYMSIZE = p.symsize, NOCLIP=0, WINDOW = window, THICK=p.thick
     cgText, p.coord[0]+p.dpText[0]*self.Xsize, p.coord[1]+p.dpText[1]+p.dpText[1]*self.Ysize, p.text, ALIGNMENT=p.align, CHARSIZE=p.charsize, NOCLIP=0, WINDOW = window, /DATA, COLOR=p.color
   endfor
   
@@ -1420,7 +1420,7 @@ function w_Map::set_shape_file, SHPFILE=shpfile, SHP_SRC=shp_src, COUNTRIES=coun
    GIS_make_datum, ret, shp_src, NAME='WGS-84'
    return, self->set_shape_file(SHPFILE=WAVE_resource_dir+'/shapes/world_borders/world_borders.shp', SHP_SRC=shp_src, $
             COLOR=color, THICK=thick, STYLE=style, REMOVE_ENTITITES=remove_entitites, $
-             KEEP_ENTITITES=keep_entitites, ENTRULE=entrule)
+             KEEP_ENTITITES=keep_entitites, ENTRULE=entrule, FILL=fill)
   endif  
   
   ;******************
@@ -1700,9 +1700,11 @@ end
 ;    COLOR: in, optional, type = string
 ;           the color of the points
 ;    PSYM:in, optional, type = int, default=16
-;          the style of the the points (see symcat for plenty of possibilities)
+;          the style of the points (see symcat for plenty of possibilities)
 ;    SYMSIZE:in, optional, type = float
-;            the size of the the points
+;            the size of the points
+;    SYMTHICK: in, optional, type = float
+;            the thickness of the points' outline
 ;    TEXT:in, optional, type = float
 ;          points annotation
 ;    DELTA_TEXT:in, optional, type = float
@@ -1715,9 +1717,9 @@ end
 ; :History:
 ;     Written by FaM, 2011.
 ;-    
-function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsize, $
+function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsize, SYMTHICK=symthick, $
                                   TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize
-
+                                  
   ; Set up environnement
   @WAVE.inc
   COMPILE_OPT IDL2  
@@ -1755,12 +1757,14 @@ function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsiz
   _color = 'black'
   _psym = 16
   _symsize = 1.
+  _symthick = 1.
   _align = 0.
   _dpText = [0.005,0.005]
   _CHARSIZE = 1.
   if N_ELEMENTS(COLOR) eq 1 then _color = COLOR
   if N_ELEMENTS(PSYM) eq 1 then _psym = PSYM
   if N_ELEMENTS(SYMSIZE) eq 1 then _symsize = SYMSIZE
+  if N_ELEMENTS(SYMTHICK) eq 1 then _symthick = symthick
   if N_ELEMENTS(DELTA_TEXT) eq 2 then _dpText = DELTA_TEXT
   if N_ELEMENTS(ALIGN) eq 1 then _align = ALIGN
   if N_ELEMENTS(CHARSIZE) eq 1 then _charsize = CHARSIZE
@@ -1775,6 +1779,7 @@ function w_Map::set_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsiz
     point[i].dpText = _dpText
     point[i].coord = [_x[i],_y[i]]
     point[i].charsize = _charsize
+    point[i].thick = _symthick
   endfor
 
   if self.npoints eq 0 then begin
@@ -1923,7 +1928,7 @@ end
 ;
 ;-
 function w_Map::set_filled_point, x, y, SRC=src, COLOR=color, PSYM=psym, SYMSIZE=symsize, CIRCLE_COLOR=circle_color, CIRCLE_THICK=circle_thick, $
-                                  TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize, THICK=thick
+                                  TEXT=text, DELTA_TEXT=delta_text, ALIGN=align, CHARSIZE=charsize
 
   ; Set up environnement
   @WAVE.inc
@@ -3044,8 +3049,8 @@ PRO w_Map__Define
             charsize       : 0D            , $ ; point annotation size
             align          : 0D            , $ ; annotation alignement
             dpText         : [0D,0D]       , $ ; delta pos of the text with respect to the point
-            coord          : [0D,0D]         $ ; coordinates of the point       
-            }
+            coord          : [0D,0D]       , $ ; coordinates of the point
+            thick          : 0.}
   
   ; This is the information for one text to draw
   struct = {w_Map_TEXT                     , $ 

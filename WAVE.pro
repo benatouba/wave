@@ -77,8 +77,9 @@ pro WAVE_init
   TIME_init
   AWS_init
   !ORDER = 0 
-  DEVICE, DECOMPOSED=1
-  
+  if TNT_is_gui then begin
+    DEVICE, DECOMPOSED=1
+  endif
   print, ''
   print, '*******************'
   print, '* Ride the Wave ! *'

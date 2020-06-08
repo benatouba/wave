@@ -1388,13 +1388,60 @@ end
 ;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
 ;                        if set the programm will not ask you for permission if files 
 ;                        are missing (dangerous)
+;    N_CORE: in, optional
+;            if set multiple cores are used. Each core process one year at a time.
+;            an extra core is used to periodically check the status of each core 
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, N_CORE=n_core
 
-  self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
-  self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
+  i_ncore = arg_default(1, n_core)
+  i_print = arg_default(1, print) 
+  if N_ELEMENTS(MONTH) gt 0 and i_ncore ne 1 then begin
+    message, "Parallel processing is only supported for whole years"
+  endif
   
+  n_year = N_ELEMENTS(year)
+  if i_ncore eq 1 or n_year eq 1 then begin
+    self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+    self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
+  endif else begin
+    if i_ncore gt n_year then begin
+      i_ncore = n_year ; number of cores can not be higher then number of years
+    endif
+    
+    codes = ['Idle','Executing','Completed','Error','Aborted']
+    status = replicate(0, i_ncore)
+    processes = objarr(i_ncore)
+    is_started = BYTARR(n_year)
+    for i=0, i_ncore - 1 do begin
+      processes[i] = IDL_IDLbridge(OUTPUT=self.log_directory + "/log_for_core_"+str_equiv(i)+".txt")
+      (processes[i]) -> EXECUTE, "!PATH = '" + !PATH + "'"
+      (processes[i]) -> EXECUTE, '@WAVEstart.mac'
+      (processes[i]) -> SetVar, 'namelist', self.namelist_file
+      (processes[i]) -> EXECUTE, "wpp = OBJ_NEW('w_wpp', NAMELIST=namelist)"
+    endfor
+    first_run = 1
+    while first_run or (any_true(status eq 1) and any_true(is_started eq 0)) do begin
+      p_not_started = where(is_started eq 0, cnt_not_started)
+      p_idle = where(status eq 0, cnt_idle)
+      if cnt_idle ne 0 then begin
+        n_todo = min(cnt_idle, cnt_not_started) 
+        for i_idle=0, n_todo -1 do begin
+          p_idx = p_idle[i_idle]
+          i_year = year[p_not_started[i_idle]]
+          print, "core "+str_equiv(p_idx)+" starts year "+str_equiv(i_year)
+          (processes[p_idx]) -> EXECUTE, "wpp -> process, " + str_equiv(i_year), /NOWAIT
+          is_started[p_not_started[i_idle]] = 1 
+        endfor
+      endif
+      first_run = 0
+      wait, 60*15
+      for i=0, i_ncore-1 do begin
+        status[i] = (processes[i]) -> Status()
+      endfor
+    endwhile
+  endelse
 end
 
 ;+

@@ -127,7 +127,7 @@ function change_har_attributes_file, file
   LEVEL_INFO = sObj->GetGlobalAttrValue('LEVEL_INFO')
   
   projection = 'Lambert Conformal Conic' 
-  title = 'HAR V2 ' + dStr
+  title = 'HAR v2 ' + dStr
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, '.00000000', '.0')
   PROJ_ENVI_STRING = utils_replace_string(PROJ_ENVI_STRING, ',      ', ', ')
   
@@ -255,30 +255,67 @@ pro w_change_check_har_attributes
   
 end
 
-pro w_change_har_attributes
+;+
+; Change attributes to make wave products COORDS conform
+;
+;
+; :Params:
+;   directory (in): The directory to search for files
+;   pattern   (in): The Pattern to use for searching files, default is '*.nc'
+;   savefile  (in): Optional, information which files are ok is saved in the savefile
+;   info     (out): A struct with the tags ok and file for each processed file. 
+ 
+;-
+
+pro w_change_har_attributes, directory, PATTERN=pattern, SAVEFILE=savefile, INFO=info
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
   COMPILE_OPT IDL2
   
-  dir = '/home/wang/Data/HARV2/d10km/m/2d/'
   
-  ; files = FILE_SEARCH(dir, '*tibet*.nc', COUNT=cnt)
-  files = FILE_SEARCH(dir, '*HARV2*.nc', COUNT=cnt)
+  dir = directory
+  i_pattern = arg_default('*.nc', pattern)
+  
+  files = FILE_SEARCH(dir, i_pattern, COUNT=cnt)
+  if cnt eq 0 then begin
+    message, "No files found for pattern " +pattern+ " in " + dir
+  endif
   ok = LONARR(cnt)
   
-  cgProgressBar = Obj_New("CGPROGRESSBAR", /Cancel)
-  cgProgressBar->Start    
+  if TNT_is_gui then begin
+    cgProgressBar = Obj_New("CGPROGRESSBAR", /Cancel)
+    cgProgressBar->Start
+  endif else begin
+    frq = cnt-1 / 100
+  endelse
+      
   for i=0, cnt-1 do begin
     inF = files[i]
-    ;  outF = utils_replace_string(inF, '/tibet_', '/har_')
-    ;  FILE_MOVE, inF, outF, /VERBOSE
     ok[i] = change_har_attributes_file(inF)
-    cgProgressBar->update, (i / DOUBLE(cnt-1)) * 100
+    if TNT_is_gui then begin
+      cgProgressBar->update, (i / DOUBLE(cnt-1)) * 100
+    endif else begin
+      if i mod frq eq 0 then begin
+        print, "Done" + str_equiv(i) + " from " +str_equiv(cnt-1) + " ( " +str_equiv((i / DOUBLE(cnt-1)) * 100) +" %)" 
+      endif
+    endelse
   endfor
-  cgProgressBar->Destroy
   
-  save, files, ok, FILENAME='w_change_har_attributes_definitiv_har10.sav'
+  if TNT_is_gui then begin
+    cgProgressBar->Destroy
+  endif
+  
+  if N_ELEMENTS(savefile) ne 0 then begin
+    save, files, ok, FILENAME=savefile
+  endif
+  
+  if n_elements(info) ne 0 then begin
+    info = {ok:0b, file:''}
+    info = replicate(info, cnt)
+    info.ok = ok
+    info.file = files
+  endif
   
 end
 ;

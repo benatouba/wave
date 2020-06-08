@@ -35,7 +35,7 @@ function w_ts_fill_missing, data, time, new_time, FILL_VALUE=fill_value, SUBSCRI
   
   ON_ERROR, 2
   
-  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /NUMERIC)
+;  if ~ arg_okay(data, /NUMERIC) then message, WAVE_Std_Message('data', /NUMERIC)
   if ~ check_WTIME(time, OUT_QMS=qms1) then message, WAVE_Std_Message('time', /ARG)
   if ~ check_WTIME(new_time, OUT_QMS=qms2) then message, WAVE_Std_Message('new_time', /ARG)
   
@@ -48,10 +48,11 @@ function w_ts_fill_missing, data, time, new_time, FILL_VALUE=fill_value, SUBSCRI
       'BYTE': _fill = 0B
       'LONG': _fill = -9999L
       'INT': _fill = -9999
+      'STRING': _fill = ''
       else: Message, 'Data type too exotic for me'
     endcase
   endif else begin
-    if ~ arg_okay(FILL_VALUE, /NUMERIC, /SCALAR) then Message, WAVE_Std_Message('FILL_VALUE', /ARG)
+    if ~ arg_okay(FILL_VALUE, /SCALAR) then Message, WAVE_Std_Message('FILL_VALUE', /ARG)
     _fill = fill_value
   endelse
   
