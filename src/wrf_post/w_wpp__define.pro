@@ -520,7 +520,7 @@ function w_WPP::_define_file, FORCE=force, PRINT=print, MONTH = month
       grid_string = '10km'
       nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
     end
-    else: begin
+    3: begin
       nested_string = 'YES'
       grid_string = '02km'
       nt_per_day = (self.active_agg EQ 'h') ? 24 : 1
