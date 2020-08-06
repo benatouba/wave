@@ -830,8 +830,13 @@ end
 ;              the number of missing files (if any)
 ;    DAYSMISSING: out
 ;                 the days of missing files (if any)
+;    DAYSDUPLICATE: out
+;                   the days of duplicate files (if any)
 ;    VALID: out
 ;           byte array of same size as `FILES`
+;    
+;    USE_NEWEST_DUPLICATE: in, optional, type=boolean, default=0
+;                           if multiple files are available for a day the newest file is used
 ;
 ; :Returns:
 ;    1 if enough files have been found, 0 if not
@@ -840,8 +845,10 @@ function w_WPP::check_filelist, year, $
     FILES=files, $
     NMISSING=nmissing, $
     DAYSMISSING=daysmissing, $
+    DAYSDUPLICATE=daysduplicate, $
     VALID=valid, $
-    MONTH = month
+    MONTH = month, $
+    USE_NEWEST_DUPLICATE = use_newest_duplicate
 
   ; SET UP ENVIRONNEMENT
   @WAVE.inc
@@ -853,7 +860,8 @@ function w_WPP::check_filelist, year, $
     ok = WAVE_Error_Message(!Error_State.Msg)
     return, 0
   ENDIF
-
+  _use_newest = arg_default(0, use_newest_duplicate)
+  
   if ~arg_okay(year, /NUMERIC) then Message, WAVE_Std_Message('YEAR', /ARG)
   if self.domain eq 1 then h=3 else h=1
   if KEYWORD_SET(month) then begin
@@ -891,21 +899,40 @@ function w_WPP::check_filelist, year, $
   
   ; Now check for the single days
   valid = BYTARR(ndays) + 1B 
+  missing = BYTARR(ndays)
+  duplicate = BYTARR(ndays)
   ofiles = STRARR(ndays)
   for i=0L, ndays-1 do begin
     pattern = '*d'+STRING(self.domain, FORMAT='(I02)')+'_'+ TIME_to_STR(ts[i], MASK='yyyy*mm*dd') +'_*'
     matches = Where(StrMatch(files, pattern), nfiles)
-    if nfiles eq 1 then begin
+    if nfiles eq 0 then begin
+      valid[i] = 0
+      missing[i] = 1
+      ofiles[i] = files[0]
+    endif else if nfiles eq 1 then begin
       ofiles[i] = files[matches]       
     endif else begin
-      valid[i] = 0
-      ofiles[i] = files[0]
+      if _use_newest then begin
+        mtimes = FILE_MODTIME(files[matches])
+        tmp = max(mtimes, i_max)
+        ofiles[i] = (files[matches])[i]
+        duplicate[i] = 1
+      endif else begin
+        valid[i] = 0
+        ofiles[i] = files[0]
+        duplicate[i] = 1
+      endelse
     endelse
   endfor
+  
   files = ofiles
-  pmissing = where(~ valid, nmissing)
+  
+  pmissing = where(missing, nmissing)
   if nmissing ne 0 then daysmissing = ts[pmissing]
-  if nmissing eq 0 then return, 1 else return, 0
+  pduplicate = where(dublicate, nduplicate)
+  if nduplicate ne 0 then daysduplicate = ts[pduplicate]
+  
+  return, all_true(valid)
    
 end
 
@@ -937,7 +964,7 @@ pro w_WPP::process_static, PRINT=print, FORCE=force
     endelse
     return
   endif
-  
+
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
   ; Logger
@@ -1013,8 +1040,10 @@ end
 ;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
 ;                        if set the programm will not ask you for permission if files 
 ;                        are missing (dangerous)
+;    USE_NEWEST_DUPLICATE; in, optional, type=boolean, default=0
+;                           if multiple files are available for a day the newest file is used 
 ;-
-pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month
+pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH = month, USE_NEWEST_DUPLICATE=use_newest_duplicate
 
   if n_elements(year) gt 1 then begin
     for iy=0, n_elements(year)-1 do begin
@@ -1044,6 +1073,7 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
     return
   endif
   
+  _use_newest = arg_default(0, use_newest_duplicate)
   if N_ELEMENTS(PRINT) eq 0 then print = 1    
   
   ; Logger
@@ -1064,24 +1094,42 @@ pro w_WPP::process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_promp
   self.logger->addText, '[' + TIME_to_STR(QMS_TIME()) + ']' + ' Start to process hourly files for year ' + str_equiv(year) + ' ...', PRINT=print
   self.logger->addText, '', PRINT=print  
   logt0 = SYSTIME(/SECONDS)
- 
-  if ~ self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, DAYSMISSING=daysmissing, MONTH = month) then begin
+  files_ok = self->check_filelist(year, FILES=files, NMISSING=nmissing, VALID=valid, $ 
+                                  DAYSMISSING=daysmissing, DAYSDUPLICATE=daysduplicate, $  
+                                  MONTH=month, USE_NEWEST_DUPLICATE=use_newest_duplicate)
   
-   self.logger->addText, 'Not enough files to complete (missing ' + str_equiv(nmissing) + ')', PRINT=print
-   for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='YYYY.MM.DD'), PRINT=print
- 
-   messg = 'Continue without those files? (y or n)'
-   if KEYWORD_SET(NO_PROMPT_MISSING) then begin
-     Message, messg, /INFORMATIONAL
-     Print, 'y'
-     messg = 'y'
-   endif else begin
-     READ, messg, PROMPT=messg
-   endelse
-   GEN_str_log, ret, messg, ok   
-   if ~ ok then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
-   endif
-      
+  if ~files_ok then begin
+    ; Handle Missing files
+    if nmissing ne 0 then begin
+      self.logger->addText, 'Not enough files to complete (missing ' + str_equiv(nmissing) + ')', PRINT=print
+      for d=0, nmissing-1 do self.logger->addText, ' Missing day: ' + TIME_to_STR(daysmissing[d], MASK='YYYY.MM.DD'), PRINT=print
+  
+      messg = 'Continue without those files? (y or n)'
+      if KEYWORD_SET(NO_PROMPT_MISSING) then begin
+        Message, messg, /INFORMATIONAL
+        Print, 'y'
+        messg = 'y'
+      endif else begin
+        READ, messg, PROMPT=messg
+      endelse
+      GEN_str_log, ret, messg, ok_missing
+      if ~ ok_missing then Message, 'Stopped. Not enough files to aggregate year : ' + str_equiv(year)
+    endif 
+    
+    ;Handle duplicate files
+    nduplicate = n_elements(daysduplicate) 
+    if nduplicate ne 0 then begin
+      self.logger->addText, 'Some files are duplicate (Number of duplicate files ' + str_equiv(nduplicate) + ')', PRINT=print
+      for d=0, nduplicate-1 do self.logger->addText, 'Duplicate day: ' + TIME_to_STR(daysduplicate[d], MASK='YYYY.MM.DD'), PRINT=print
+      if _use_newest then begin
+        self.logger -> addText, "Some files where duplicate, the newest file is used", PRINT=print
+      endif else begin
+        Message, 'Stopped. Dupliate files in Year : ' + str_equiv(year)
+      endelse
+    endif
+  endif
+    
+    
   ; Define
   ; Tpl Object  
   if self.do_cache then file = caching(files[0], CACHEPATH=self.cachepath, logger=self.logger, PRINT=print) $
@@ -1371,7 +1419,6 @@ pro w_WPP::process_all_means, year, PRINT=print, FORCE=force, MONTH=month
 end
 
 
-
 ;+
 ; :Description:
 ;    Process one year into ALL files
@@ -1388,12 +1435,14 @@ end
 ;    NO_PROMPT_MISSING: in, optional, type=boolean, default=0
 ;                        if set the programm will not ask you for permission if files 
 ;                        are missing (dangerous)
+;    USE_NEWEST_DUPLICATE; in, optional, type=boolean, default=0
+;                           if multiple files are available for a day the newest file is used
 ;    N_CORE: in, optional
 ;            if set multiple cores are used. Each core process one year at a time.
 ;            an extra core is used to periodically check the status of each core 
 ;
 ;-
-pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, N_CORE=n_core
+pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, N_CORE=n_core, USE_NEWEST_DUPLICATE=use_newest_duplicate
 
   i_ncore = arg_default(1, n_core)
   i_print = arg_default(1, print) 
@@ -1403,7 +1452,7 @@ pro w_WPP::process, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_
   
   n_year = N_ELEMENTS(year)
   if i_ncore eq 1 or n_year eq 1 then begin
-    self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month
+    self->process_h, year, PRINT=print, FORCE=force, NO_PROMPT_MISSING=no_prompt_missing, MONTH=month, USE_NEWEST_DUPLICATE=use_newest_duplicate
     self->process_all_means, year, PRINT=print, FORCE=force, MONTH=month
   endif else begin
     if i_ncore gt n_year then begin
