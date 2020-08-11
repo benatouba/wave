@@ -915,7 +915,7 @@ function w_WPP::check_filelist, year, $
       if _use_newest then begin
         mtimes = FILE_MODTIME(files[matches])
         tmp = max(mtimes, i_max)
-        ofiles[i] = (files[matches])[i]
+        ofiles[i] = (files[matches])[i_max]
         duplicate[i] = 1
       endif else begin
         valid[i] = 0
@@ -929,7 +929,7 @@ function w_WPP::check_filelist, year, $
   
   pmissing = where(missing, nmissing)
   if nmissing ne 0 then daysmissing = ts[pmissing]
-  pduplicate = where(dublicate, nduplicate)
+  pduplicate = where(duplicate, nduplicate)
   if nduplicate ne 0 then daysduplicate = ts[pduplicate]
   
   return, all_true(valid)
