@@ -101,6 +101,7 @@ function change_cer_attributes_file, file
   sObj->WriteGlobalAttr, 'CREATED_BY', CREATED_BY
   sObj->WriteGlobalAttr, 'INSTITUTION', INSTITUTION
   sObj->WriteGlobalAttr, 'CREATION_DATE', CREATION_DATE
+  sObj->WriteGlobalAttr, 'HISTORY', TIME_to_STR() + ' Modified attributes to make file COORDS conform.'
   sObj->WriteGlobalAttr, 'SOFTWARE_NOTES', SOFTWARE_NOTES
   sObj->WriteGlobalAttr, 'VARNAME', VARNAME
 
