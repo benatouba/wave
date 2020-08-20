@@ -223,11 +223,9 @@ pro w_change_cer_attributes, directory, PATTERN=pattern, SAVEFILE=savefile, INFO
     save, files, ok, FILENAME=savefile
   endif
 
-  if n_elements(info) ne 0 then begin
-    info = {ok:0b, file:''}
-    info = replicate(info, cnt)
-    info.ok = ok
-    info.file = files
-  endif
+  info = {ok:0b, file:''}
+  info = replicate(info, cnt)
+  info.ok = ok
+  info.file = files
 
 end
