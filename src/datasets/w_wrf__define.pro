@@ -699,7 +699,7 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
       ;POTEVP
       d1 = self->get_Var_Info('POTEVP', DIMNAMES=dnames,DIMS=dims)
       if (d1) then begin
-        var = {name:'POTEVAP',unit:'w m-2',ndims:N_elements(dims),description:'Potential evaporation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        var = {name:'POTEVAP',unit:'mm h-1',ndims:N_elements(dims),description:'Potential evaporation (step-wize)',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
         dvars = [dvars,var]
       endif
       
@@ -1342,6 +1342,9 @@ function w_WRF::get_TimeSerie,varid, x, y, $
       value = self->w_GEO_nc::get_TimeSerie('POTEVP', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
         dims = dims, $ ;
         dimnames = dimnames)
+      value = value * 1000 ; convert m to mm
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
@@ -1785,6 +1788,9 @@ function w_WRF::get_Var, Varid, $
       value = self->get_Var('POTEVP', time, nt, t0 = t0, t1 = t1,  $
         dims = dims, $
         dimnames = dimnames)
+      value = value * 1000 ; convert m to mm
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
     
