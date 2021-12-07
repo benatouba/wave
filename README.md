@@ -10,7 +10,7 @@
 -   [Author](#Author)
 -   [Copyright](#Copyright)
 
-## Installation
+## Installation {#Installation}
 
 Find the install manual for Windows from IDL (german) here:
 [Intranet](https://www.klima.tu-berlin.de/fg_doku/doku.php?id=idl)
@@ -29,14 +29,14 @@ Start IDL and make sure the folder is in your path environment. Then run
 
 This compiles the library.
 
-## Overview
+## Overview {#Overview}
 
-### Naming Convention
+### Naming Convention {#Naming-Convention}
 
 -   files starting with **"w\_"** are objects or **routines having the same name** as the file
 -   files in **capital letters** contain a bundle of **standalone routines/functions**
 
-### Project Structure
+### Project Structure {#Project-Structure}
 
 | Folder           |                                                                                                                                                                                                                                                                                                                                                                           Description                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -57,15 +57,15 @@ This compiles the library.
 | src/wrf_post     |                                                                                                                                                                                                                                                                      WRF post-processing tools such as `POST_crop_file` to remove useless indexes from a WRF file, `POST_aggregate_directory` to aggregate single files into a larger one and selecting variables using configuration files                                                                                                                                                                                                                                                                      |
 | test             |                                                                                                                                                                                                                                                                                                                                      Testing routines (`w_test.pro`) and some examples for the new users (`w_examples.pro`)                                                                                                                                                                                                                                                                                                                                      |
 
-## Author
+## Author {#Author}
 
 FG Klimatologie - TU Berlin
 
-## History
+## History {#History}
 
 WAVE 0.1 was completely re-written from scratch and released on XX.xx.2011
 
-## Copyright:
+## Copyright {#Copyright}
 
 WAVE is for FG Klima use only.
 
