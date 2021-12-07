@@ -1,5 +1,15 @@
 # WAVE library
 
+## Table of Content
+
+-   [Installation](#Installation)
+-   [Overview](#Overview)
+    -   [Naming Convention](#Naming-Convention)
+    -   [Project Structure](#Project-Structure)
+-   [History](#History)
+-   [Author](#Author)
+-   [Copyright](#Copyright)
+
 ## Installation
 
 Find the install manual for Windows from IDL (german) here:
@@ -21,12 +31,12 @@ This compiles the library.
 
 ## Overview
 
-### General format of WAVE ".pro" files:
+### Naming Convention
 
 -   files starting with **"w\_"** are objects or **routines having the same name** as the file
 -   files in **capital letters** contain a bundle of **standalone routines/functions**
 
-### Project structure
+### Project Structure
 
 | Folder           |                                                                                                                                                                                                                                                                                                                                                                           Description                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -46,13 +56,12 @@ This compiles the library.
 | src/plot/astron  |                                                                                                                                                                                                                                                                                                                                                       Some routines "borrowed" from the IDL astron library                                                                                                                                                                                                                                                                                                                                                       |
 | src/wrf_post     |                                                                                                                                                                                                                                                                      WRF post-processing tools such as `POST_crop_file` to remove useless indexes from a WRF file, `POST_aggregate_directory` to aggregate single files into a larger one and selecting variables using configuration files                                                                                                                                                                                                                                                                      |
 | test             |                                                                                                                                                                                                                                                                                                                                      Testing routines (`w_test.pro`) and some examples for the new users (`w_examples.pro`)                                                                                                                                                                                                                                                                                                                                      |
-| --------------   |                                                                                                                                                                                                                                                                                                                                                                             :-----:                                                                                                                                                                                                                                                                                                                                                                              |
 
-#### Author
+## Author
 
 FG Klimatologie - TU Berlin
 
-#### History
+## History
 
 WAVE 0.1 was completely re-written from scratch and released on XX.xx.2011
 
