@@ -23,6 +23,14 @@ Start IDL and make sure the folder is in your path environment. Then run
 
 This compiles the library.
 
+Note that the WAVE is dependent on the TNT library which can be installed and compiled similarly:
+```sh
+git clone https://gitlab.klima.tu-berlin.de/klima/TNT.git
+```
+```idl
+@TNTstart.mac
+```
+
 ## Overview
 
 ### Naming Convention
