@@ -1,0 +1,18 @@
+domain = 2 ; The domain to process
+dom_suffix = ; If you have more than one domain having the same resolution, a suffix is needed (eg _01, _02, ...)
+input_directory = /sim/wrf/datasets/GAR/rc_test_large_tropical/output/ ; where to find the orginal WRF files
+log_directory =  /home/schmidt/product_generation/log ; where to put the output files (logs and products)
+product_directory =  /sim/wrf/datasets/GAR/rc_test_large_tropical/products/ ; alternative product directory. Set to '-' for default (output_directory/products)
+pressure_levels = 1000, 975, 925, 900, 850, 800, 700, 650, 600, 550, 500, 450, 400, 350, 300, 250, 200, 150, 100, 75 ; pressure levels (remove this line if no pressure levels have to be computed)
+search_pattern = *wrfout_d{domain}* ;.{gz,nc,nc4} ; File search pattern (MUST contain a {domain} field!)
+path_to_variables_2d_file = .  ;variables_2d_wpp.csv
+path_to_variables_3d_file = .  ;variables_3d_wpp.csv
+path_to_variables_soil_file = .  ;variables_soil_wpp.csv
+path_to_variables_static_file = .  ;variables_static_wpp.csv
+compress_level = 4 ;gzip compression level (0=no compression, 9=max compression)
+shuffle = 1 ; shuffle filter (1 or 0)
+project_acronym = rc; project short name (to be added as prefix to the product filenames)
+created_by = Benjamin Schmidt - benjamin.schmidt@tu-berlin.de
+institution = Technische Universität Berlin, Institut für Ökologie, Fachgebiet Klimatologie
+title = DARWIN rc
+notes = File generated with the output of successive model runs of 36H (first 12 hours discarded for spin-up)
