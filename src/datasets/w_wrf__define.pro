@@ -703,6 +703,20 @@ pro w_WRF::get_Varlist, varid, varnames, varndims, varunits, vardescriptions, va
         dvars = [dvars,var]
       endif
       
+      ;surface runoff amount
+      d1 = self->get_Var_Info('SFROFF', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SURFACE_RUNOFF_AMOUNT',unit:'mm',ndims:N_elements(dims),description:'Surface runoff amount',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+      
+      ;subsurface runoff amount
+      d1 = self->get_Var_Info('UDROFF', DIMNAMES=dnames,DIMS=dims)
+      if (d1) then begin
+        var = {name:'SUBSURFACE_RUNOFF_AMOUNT',unit:'mm',ndims:N_elements(dims),description:'Subsurface runoff amount',type:'FLOAT', dims:PTR_NEW(dims), dimnames:PTR_NEW(dnames)}
+        dvars = [dvars,var]
+      endif
+
       ;Mixing ratios
       ; qvapor: Liquid water mixing ratio [kg.kg-1]
       d1 = self->get_Var_Info('QVAPOR', DIMNAMES=dnames,DIMS=dims)
@@ -1348,6 +1362,24 @@ function w_WRF::get_TimeSerie,varid, x, y, $
       _acc_to_step = TRUE
     end
     
+    'SURFACE_RUNOFF_AMOUNT': begin
+      value = self->w_GEO_nc::get_TimeSerie('SFROFF', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'SUBSURFACE_RUNOFF_AMOUNT': begin
+      value = self->w_GEO_nc::get_TimeSerie('UDROFF', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
+        dims = dims, $ ;
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
     'LWDOWN': begin
       value = self->w_GEO_nc::get_TimeSerie('GLW', point_i, point_j, time, nt, t0 = t0, t1 = t1, K = K , $
         dims = dims, $ ;
@@ -1793,6 +1825,24 @@ function w_WRF::get_Var, Varid, $
       if ts ne 1 then value = value / ts
       _acc_to_step = TRUE
     end
+    
+    'SURFACE_RUNOFF_AMOUNT': begin
+      value = self->get_Var('SFROFF', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end
+    
+    'SUBSURFACE_RUNOFF_AMOUNT': begin
+      value = self->get_Var('UDROFF', time, nt, t0 = t0, t1 = t1,  $
+        dims = dims, $
+        dimnames = dimnames)
+      ts = ((*self.time)[1] - (*self.time)[0]) / H_QMS
+      if ts ne 1 then value = value / ts
+      _acc_to_step = TRUE
+    end    
     
     'LWDOWN': begin
       value = self->get_Var('GLW', time, nt, t0 = t0, t1 = t1,  $
