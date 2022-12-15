@@ -152,7 +152,6 @@ function w_WPP::_parse_Namelist
     if N_ELEMENTS(line) ne 2 then continue ; we just accept one = sign
     key = str_equiv(line[0])
     val = GEN_strtrim(line[1], /ALL)
-    
     case (key) of
       'DOMAIN': begin
         self.domain = LONG(val)

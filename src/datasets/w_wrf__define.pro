@@ -2022,7 +2022,7 @@ function w_WRF::get_Var, Varid, $
           tmptmptk = (tmptk[e,ph])[*]
           if max(ABS(tmptmptk-mean(tmptmptk))) lt 0.00001 then begin
             a = 0.
-            lr_corr = 1.
+            b = 1.
           endif else begin
             a = REGRESS((tmpz[e,ph])[*], tmptmptk, CONST=b)
           endelse
