@@ -1,4 +1,11 @@
-WAVE library
+# WAVE library
+
+## Installation tutorial for IDL and libraries: 
+[Fachgebietswiki](https://www.klima.tu-berlin.de/fg_doku/doku.php?id=idl)
+
+## Getting Started: 
+See the [Wiki](https://gitlab.klima.tu-berlin.de/klima/WAVE/-/wikis/home)
+
 
 Copyright:
 Technische Uiversität Berlin
@@ -6,10 +13,4 @@ Institut für Ökologie - Fachgebiet Klimatologie
 Rothenburgstr. 12
 D-12165 Berlin
 Tel.: +49-30-314-71495
-www.klima.tu-berlin.de 
-
-Overview, installation and tutorials: 
-http://www.klima.tu-berlin.de/index.php?show=wave_start&lan=de
-
-Online Documentation : 
-http://www.klima.tu-berlin.de/intranet/wave_doc/index.html
+[Website](https://www.klima.tu-berlin.de/)
