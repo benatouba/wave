@@ -721,13 +721,13 @@ pro w_WPP::_add_var_to_h_file, MONTH=month
       endelse
     end
     else:  begin
-      data = data[*,*,*,1:*]
+      data = data[*,*,*,1:*] ; TODO: This is quite slow. Can we avoid getting an array that is too large?
       offset=[0,0,0,p0]
     end
   endcase
   
-  ;If this is fake, replace with nans
-  if ~ self.active_valid then data[*] = !VALUES.F_NAN
+  ;If this is fake, replace with nans (+= is faster than data[*] = nan)
+  if ~ self.active_valid then data += !VALUES.F_NAN
     
   ; Fill with data
   dObj->WriteVarData, 'time', time, OFFSET=offset[N_ELEMENTS(offset)-1]

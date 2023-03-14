@@ -2234,7 +2234,7 @@ function w_WRF::get_Var, Varid, $
         dims = dims, $
         dimnames = dimnames)
       v10 = self->get_Var('V10', T0=t0, T1=t1)      
-      value = SQRT(u10^2 + v10^2)
+      value = SQRT(temporary(u10)^2 + temporary(v10)^2)
     end
     
     'WD10': begin
@@ -2258,7 +2258,7 @@ function w_WRF::get_Var, Varid, $
         dims = dims, $
         dimnames = dimnames, /UNSTAGGER)
       v = self->get_Var('V', T0=t0, T1=t1, /UNSTAGGER)      
-      value = SQRT(u^2 + v^2)
+      value = SQRT(temporary(u)^2 + temporary(v)^2)
     end
 
     'WD': begin
@@ -2435,7 +2435,7 @@ function w_WRF::get_Var, Varid, $
           dims = dims, $
           dimnames = dimnames)
       v = self->get_Var('V_INTVAPORFLUX', time, nt, t0 = t0, t1 = t1)
-      value = SQRT(u^2 + v^2)
+      value = SQRT(temporary(u)^2 + temporary(v)^2)
     end
 
     'INTLIQUIDFLUX': begin
@@ -2443,7 +2443,7 @@ function w_WRF::get_Var, Varid, $
           dims = dims, $
           dimnames = dimnames)
       v = self->get_Var('V_INTLIQUIDFLUX', time, nt, t0 = t0, t1 = t1)
-      value = SQRT(u^2 + v^2)
+      value = SQRT(temporary(u)^2 + temporary(v)^2)
     end
 
     'INTSOLIDFLUX': begin
@@ -2451,7 +2451,7 @@ function w_WRF::get_Var, Varid, $
           dims = dims, $
           dimnames = dimnames)
       v = self->get_Var('V_INTSOLIDFLUX', time, nt, t0 = t0, t1 = t1)
-      value = SQRT(u^2 + v^2)
+      value = SQRT(temporary(u)^2 + temporary(v)^2)
     end
 
     else:

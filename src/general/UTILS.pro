@@ -2110,8 +2110,46 @@ function utils_wrf_intrp3d, varin, z_in, loc_param, EXTRAPOLATE=extrapolate
       endfor
     endfor
   endif else if nd eq 4 then begin
-    out_var = FLTARR(dims[0], dims[1], nlocs, dims[3])
-    for t=0, dims[3]-1 do out_var[*,*,*,t] = utils_wrf_intrp3d(REFORM(varin[*,*,*,t]), REFORM(z_in[*,*,*,t]), loc_param, EXTRAPOLATE=extrapolate)
+    
+    if ~keyword_set(EXTRAPOLATE) then begin
+      ; This is the fast way, no extrapolate implemented (yet?)
+      
+      ; reform to 2 dims
+      
+      varin_2d = reform(transpose(varin, [0, 1, 3, 2]), [long(dims[0]) * dims[1] * dims[3], dims[2]])
+      z_in_2d = reform(transpose(z_in, [0, 1, 3, 2]), [long(dims[0]) * dims[1] * dims[3], dims[2]])
+      
+      len_2d = (z_in_2d.dim)[0]
+      n_z_orig = (z_in_2d.dim)[1]
+      
+      relative_locs = fltarr(len_2d, nlocs) - 1
+      for i=0, n_z_orig-1 do begin
+        i_z = z_in_2D[*, i]
+        if i ne n_z_orig-1 then begin
+          i_z_1 = z_in_2d[*, i+1]
+        endif
+        for j=0, nlocs-1 do begin
+          if i ne n_z_orig-1 then begin
+            p = where(loc_param[j] le i_z and loc_param[j] gt i_z_1, cnt)
+            if cnt gt 0 then relative_locs[p, j] = i + (loc_param[j] - i_z[p]) / (i_z_1[p] - i_z[p])
+          endif else begin
+            p = where(loc_param[j] eq i_z, cnt)
+            if cnt gt 0 then relative_locs[p, j] = i
+          endelse
+        endfor
+      endfor
+      
+      x_2d = (lonarr(nlocs)+1) ## lindgen(len_2d)
+      out_var = BILINEAR(varin_2d, x_2d, relative_locs, MISSING=!VALUES.f_nan)
+  
+      ; reform back to 4 dims
+      out_var = transpose(reform(out_var, [dims[0], dims[1], dims[3], nlocs]), [0, 1, 3, 2])
+      
+    endif else begin
+      ; this is the slower way (extrapolate possible)
+      out_var = FLTARR(dims[0], dims[1], nlocs, dims[3])
+      for t=0, dims[3]-1 do out_var[*,*,*,t] = utils_wrf_intrp3d(REFORM(varin[*,*,*,t]), REFORM(z_in[*,*,*,t]), loc_param, EXTRAPOLATE=extrapolate)
+    endelse
   endif else Message, WAVE_Std_Message('varIn', /ARG)
   
   return, out_var
