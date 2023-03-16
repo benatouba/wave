@@ -417,7 +417,8 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                             description = description, $
                             varname = varname , $ 
                             dims = dims, $ 
-                            dimnames = dimnames 
+                            dimnames = dimnames, $
+                            caching = caching 
                         
   
   ; SET UP ENVIRONNEMENT
@@ -578,7 +579,8 @@ function w_GEO_nc::get_Var, Varid, $ ; The netCDF variable ID, returned from a p
                                      description = description, $
                                      varname = varname , $
                                      dims = dims, $
-                                     dimnames = dimnames)
+                                     dimnames = dimnames, $
+                                     caching = caching)
   
   return, value
   

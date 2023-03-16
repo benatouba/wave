@@ -2466,7 +2466,7 @@ function w_WRF::get_Var, Varid, $
       description = description, $
       varname = varname , $
       dims = dims, $
-      dimnames = dimnames)
+      dimnames = dimnames, caching=1)
       
   endif
   

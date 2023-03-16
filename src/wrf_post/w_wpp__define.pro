@@ -721,6 +721,7 @@ pro w_WPP::_add_var_to_h_file, MONTH=month
       endelse
     end
     else:  begin
+      if data.ndim eq 3 then stop
       data = data[*,*,*,1:*] ; TODO: This is quite slow. Can we avoid getting an array that is too large?
       offset=[0,0,0,p0]
     end

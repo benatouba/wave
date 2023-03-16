@@ -105,7 +105,9 @@ Function w_NCDF::Init, FILE=file
   self->w_NCDF::get_dimList, dimIds, dimNames, dimSizes
   self.dimNames = PTR_NEW(dimNames, /NO_COPY)
   self.dimSizes = PTR_NEW(dimSizes, /NO_COPY)
-    
+      
+  self.cache = list()
+      
   RETURN, 1
   
 END
@@ -497,7 +499,8 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                         description = description, $
                         varname = varname , $ ; 
                         dims = dims, $ ;
-                        dimnames = dimnames ;
+                        dimnames = dimnames, $
+                        caching = caching
                         
   
   ; SET UP ENVIRONNEMENT
@@ -513,10 +516,43 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
                             dims = dims, $ 
                             dimnames = dimnames) then Message, '$' + str_equiv(VarId) + ' is not a correct variable ID.'
 
+  is_cached = 0
+  if keyword_set(caching) then begin
+    ; Is already in cache?
+    my_cache = self.cache
+    if OBJ_VALID(my_cache) then begin
+      for i=0, n_elements(my_cache)-1 do begin
+        if my_cache[i].varid eq varid then begin
+          complete_data = my_cache[i].data
+          is_cached = 1
+        endif
+      endfor
+    endif
+  endif
+
   if N_ELEMENTS(STRIDE) ne 0 then begin
    if max(stride) ne 1 then _stride = stride ; this is because stride is much slowier
   endif
-  NCDF_VARGET, self.Cdfid, vid, Value, COUNT=count, OFFSET=offset, STRIDE=_stride
+  
+  if keyword_set(caching) then begin
+    NCDF_VARGET, self.Cdfid, vid, complete_data;, COUNT=count, OFFSET=offset, STRIDE=_stride
+    dims = complete_data.dim
+    case n_elements(dims) of
+      1: Value = (complete_data[offset: -1: stride])[0:count -1]
+      2: Value = (complete_data[offset[0]: -1: stride[0], $
+        offset[1]: -1: stride[1]])[0:count[0] -1, 0:count[1] -1]
+      3: Value = (complete_data[offset[0]: -1: stride[0], $
+        offset[1]: -1: stride[1], $
+        offset[2]: -1: stride[2]])[0:count[0] -1, 0:count[1] -1, 0:count[2] -1]
+      4: Value = (complete_data[offset[0]: -1: stride[0], $
+        offset[1]: -1: stride[1], $
+        offset[2]: -1: stride[2], $
+        offset[3]: -1: stride[3]])[0:count[0] -1, 0:count[1] -1, 0:count[2] -1, 0:count[3] -1]
+      else: message, "Too many dimensions"
+    endcase
+  endif else begin
+    NCDF_VARGET, self.Cdfid, vid, value, COUNT=count, OFFSET=offset, STRIDE=_stride
+  endelse
   
   ; Is the variable scaled ?
   is_scale = self->w_NCDF::get_VAtt_Info(varid, 'scale_factor')
@@ -541,6 +577,10 @@ function w_NCDF::get_Var, Varid, $ ; The netCDF variable ID, returned from a pre
     dims = size(Value, /DIMENSIONS)
     pr = where(dims le 1, cnt)
     if cnt eq N_ELEMENTS(dims) then dims = 1 else if cnt ne 0 then utils_array_remove, pr, dims
+  endif
+  
+  if ~is_cached and keyword_set(caching) then begin
+    self.cache.add, {varid: varid, data: complete_data}
   endif
   
   return, reform(value)
@@ -1116,7 +1156,8 @@ pro w_NCDF__Define
             dimNames:    PTR_NEW()    ,  $ ; An array of (nDims) strings containing the dimension names. 
             gattNames:   PTR_NEW()    ,  $ ; An array of (Ngatts) strings containing the attribute names. 
             dimSizes:    PTR_NEW()    ,  $ ; An array of (nDims) longs containing the dimension sizes. 
-            RecDim:             0L       $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
+            RecDim:             0L    ,  $ ; The ID of the unlimited dimension, if there is one, for this NetCDF file. If there is no unlimited dimension, RecDim is set to -1. 
+            cache:          LIST()       $
             }
     
 end
